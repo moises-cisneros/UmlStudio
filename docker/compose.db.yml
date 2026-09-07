@@ -1,0 +1,38 @@
+services:
+  db:
+    image: redis/redis-stack-server:7.4.0-v8
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - dbdata:/data
+    networks:
+      - umlstudio-network
+    command:
+      - redis-stack-server
+      - --dir
+      - /data
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  dbdata:
+
+networks:
+  umlstudio-network:
+    name: umlstudio-network
+    external: true

@@ -1,0 +1,57 @@
+{
+  "name": "umlstudio",
+  "version": "1.0.0",
+  "description": "UmlStudio — UML Class Diagram Modeling Studio.",
+  "private": true,
+  "packageManager": "pnpm@11.8.0+sha512.c1f5e7c4cb241c8f174b743851d82f42b802324afc8b0f116b96adb15aa06664948dde36960a3ba1079ba5b4b29dd0140135b94b5b5f5263592249d68e555f26",
+  "scripts": {
+    "build": "pnpm run build:lib && concurrently \"pnpm run build:server\" \"pnpm run build:webapp\"",
+    "build:lib": "pnpm --filter @umlstudio/core run build",
+    "build:server": "pnpm --filter @umlstudio/server run build",
+    "build:webapp": "pnpm --filter @umlstudio/webapp run build",
+    "dev": "pnpm --filter @umlstudio/ui run build && node scripts/dev.mjs",
+    "dev:lib": "pnpm --filter @umlstudio/core run build:watch",
+    "dev:server": "pnpm run ensure:localdb && pnpm --filter @umlstudio/server run dev",
+    "dev:webapp": "pnpm --filter @umlstudio/webapp run start",
+    "start": "concurrently \"pnpm run start:server\" \"pnpm run start:webapp\"",
+    "start:server": "pnpm --filter @umlstudio/server run start",
+    "start:webapp": "pnpm --filter @umlstudio/webapp run start",
+    "start:webapp:host": "pnpm --filter @umlstudio/webapp run start:host",
+    "start:localdb": "docker compose -f docker/compose.local.db.yml up -d",
+    "wait:localdb": "node scripts/wait-for-redis.mjs",
+    "ensure:localdb": "pnpm run start:localdb && pnpm run wait:localdb",
+    "lint": "concurrently \"pnpm run lint:ui\" \"pnpm run lint:lib\" \"pnpm run lint:server\" \"pnpm run lint:webapp\"",
+    "lint:ui": "pnpm --filter @umlstudio/ui run lint",
+    "lint:lib": "pnpm --filter @umlstudio/core run lint",
+    "lint:server": "pnpm --filter @umlstudio/server run lint",
+    "lint:webapp": "pnpm --filter @umlstudio/webapp run lint",
+    "lint:fix": "concurrently \"pnpm run lint:fix:ui\" \"pnpm run lint:fix:lib\" \"pnpm run lint:fix:server\" \"pnpm run lint:fix:webapp\"",
+    "lint:fix:ui": "pnpm --filter @umlstudio/ui run lint:fix",
+    "lint:fix:lib": "pnpm --filter @umlstudio/core run lint:fix",
+    "lint:fix:server": "pnpm --filter @umlstudio/server run lint:fix",
+    "lint:fix:webapp": "pnpm --filter @umlstudio/webapp run lint:fix",
+    "format": "prettier --ignore-path .prettierignore --write \"**/*.+(js|mjs|cjs|ts|tsx|json|md|mdx|yml|yaml)\"",
+    "format:check": "prettier --ignore-path .prettierignore --check \"**/*.+(js|mjs|cjs|ts|tsx|json|md|mdx|yml|yaml)\"",
+    "test": "pnpm --filter @umlstudio/core run test",
+    "knip": "knip",
+    "prepare": "husky || true"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=11.8.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.1.0",
+    "@commitlint/config-conventional": "21.1.0",
+    "@types/node": "catalog:",
+    "concurrently": "10.0.3",
+    "husky": "9.1.7",
+    "knip": "6.20.0",
+    "lint-staged": "17.0.8",
+    "prettier": "3.8.4"
+  },
+  "lint-staged": {
+    "*.{js,jsx,mjs,cjs,ts,tsx,json,md,mdx,yml,yaml}": "prettier --ignore-unknown --write"
+  }
+}
