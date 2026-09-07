@@ -1,0 +1,61 @@
+{
+  "name": "@umlstudio/ui",
+  "private": true,
+  "version": "0.0.2",
+  "type": "module",
+  "exports": {
+    "./components/*": {
+      "types": "./dist/components/*.d.ts",
+      "default": "./src/components/*"
+    },
+    "./styles/theme.css": "./src/styles/theme.css",
+    "./styles/tokens.css": "./src/styles/tokens.css",
+    "./lib/utils": "./src/lib/utils.ts",
+    "./lib/color-swatch-tokens": {
+      "types": "./dist/lib/color-swatch-tokens.d.ts",
+      "default": "./src/lib/color-swatch-tokens.ts"
+    },
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "default": "./src/theme.ts"
+    }
+  },
+  "scripts": {
+    "build": "pnpm run build:css && pnpm run build:types",
+    "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly --noEmit false --outDir dist",
+    "build:types:watch": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly --noEmit false --outDir dist --watch --preserveWatchOutput",
+    "build:css": "tailwindcss -i src/styles/components.css -o dist/components.css",
+    "build:css:watch": "tailwindcss -i src/styles/components.css -o dist/components.css --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix ."
+  },
+  "peerDependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "dependencies": {
+    "@base-ui/react": "catalog:",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "lucide-react": "catalog:",
+    "tailwind-merge": "catalog:",
+    "tailwindcss": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint-react/eslint-plugin": "catalog:",
+    "@eslint/js": "catalog:",
+    "@tailwindcss/cli": "4.3.1",
+    "@tailwindcss/vite": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-react-hooks": "catalog:",
+    "globals": "catalog:",
+    "jsdom": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:"
+  }
+}

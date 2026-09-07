@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@source "../components";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --font-sans: "Inter", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --color-background: var(--umlstudio-background);
+  --color-foreground: var(--umlstudio-foreground);
+
+  --color-primary: var(--umlstudio-primary);
+  --color-primary-foreground: var(--home-accent-contrast);
+
+  --color-secondary: var(--home-surface-raised);
+  --color-secondary-foreground: var(--home-text-secondary);
+
+  --color-accent: var(--home-surface-raised-hover);
+  --color-accent-foreground: var(--home-text-primary);
+  --color-accent-hover: var(--home-surface-raised-hover);
+  --color-accent-strong: var(--home-accent-strong);
+  --color-accent-soft: var(--home-accent-soft);
+
+  --color-muted: var(--home-surface-sunken);
+  --color-muted-foreground: var(--home-text-muted);
+
+  --color-border: var(--home-border-default);
+  --color-border-subtle: var(--home-border-subtle);
+  --color-input: var(--home-border-default);
+  --color-ring: var(--umlstudio-primary);
+
+  --color-surface: var(--home-surface-base);
+  --color-surface-raised: var(--home-surface-raised);
+  --color-surface-alt: var(--home-surface-row-alt);
+
+  --color-popover: var(--home-surface-raised);
+  --color-popover-foreground: var(--home-text-primary);
+  --color-card: var(--home-surface-raised);
+  --color-card-foreground: var(--home-text-primary);
+
+  --color-destructive: var(--umlstudio-danger);
+  --color-destructive-foreground: var(--primitive-white);
+
+  --color-swatch-slate: var(--umlstudio-swatch-slate);
+  --color-swatch-red: var(--umlstudio-swatch-red);
+  --color-swatch-orange: var(--umlstudio-swatch-orange);
+  --color-swatch-amber: var(--umlstudio-swatch-amber);
+  --color-swatch-green: var(--umlstudio-swatch-green);
+  --color-swatch-teal: var(--umlstudio-swatch-teal);
+  --color-swatch-blue: var(--umlstudio-swatch-blue);
+  --color-swatch-violet: var(--umlstudio-swatch-violet);
+  --color-swatch-pink: var(--umlstudio-swatch-pink);
+
+  --radius-sm: var(--home-radius-sm);
+  --radius-md: var(--home-radius-md);
+  --radius-lg: var(--home-radius-lg);
+  --radius-xl: var(--home-radius-xl);
+
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.2;
+}

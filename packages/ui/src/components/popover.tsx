@@ -1,0 +1,161 @@
+import * as React from "react"
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
+
+import { cn } from "../lib/utils"
+
+function useAnchorLossGuard(open: boolean): {
+  actionsRef: React.RefObject<{ close: () => void; unmount: () => void } | null>
+  positionerRef: React.RefCallback<HTMLDivElement>
+} {
+  const [positioner, setPositioner] = React.useState<HTMLDivElement | null>(
+    null
+  )
+  const actionsRef = React.useRef<{
+    close: () => void
+    unmount: () => void
+  } | null>(null)
+
+  React.useEffect(() => {
+    if (!open || positioner == null) return
+
+    let hadLayout = false
+    const isHidden = () => {
+      const rect = positioner.getBoundingClientRect()
+      if (rect.width > 0 || rect.height > 0) hadLayout = true
+      if (!hadLayout) return false
+      return (
+        positioner.hasAttribute("data-anchor-hidden") ||
+        (rect.width === 0 && rect.height === 0)
+      )
+    }
+
+    const check = () => {
+      if (isHidden()) actionsRef.current?.close()
+    }
+
+    check()
+
+    const observer = new MutationObserver(check)
+    observer.observe(positioner, {
+      attributes: true,
+      attributeFilter: ["data-anchor-hidden", "style"],
+    })
+
+    return () => observer.disconnect()
+  }, [open, positioner])
+
+  return { actionsRef, positionerRef: setPositioner }
+}
+
+const AnchorLossGuardContext = React.createContext<
+  ((node: HTMLDivElement | null) => void) | null
+>(null)
+
+function Popover({
+  open: openProp,
+  defaultOpen = false,
+  onOpenChange: onOpenChangeProp,
+  ...props
+}: PopoverPrimitive.Root.Props) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen)
+  const open = openProp ?? uncontrolledOpen
+  const guard = useAnchorLossGuard(open)
+  return (
+    <AnchorLossGuardContext.Provider value={guard.positionerRef}>
+      <PopoverPrimitive.Root
+        data-slot="popover"
+        open={open}
+        actionsRef={guard.actionsRef}
+        onOpenChange={(nextOpen, eventDetails) => {
+          setUncontrolledOpen(nextOpen)
+          onOpenChangeProp?.(nextOpen, eventDetails)
+        }}
+        {...props}
+      />
+    </AnchorLossGuardContext.Provider>
+  )
+}
+
+function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
+  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
+}
+
+function PopoverContent({
+  className,
+  align = "center",
+  alignOffset = 0,
+  side = "bottom",
+  sideOffset = 4,
+  ...props
+}: PopoverPrimitive.Popup.Props &
+  Pick<
+    PopoverPrimitive.Positioner.Props,
+    "align" | "alignOffset" | "side" | "sideOffset"
+  >) {
+  const positionerRef = React.use(AnchorLossGuardContext)
+  return (
+    <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Positioner
+        ref={positionerRef ?? undefined}
+        align={align}
+        alignOffset={alignOffset}
+        side={side}
+        sideOffset={sideOffset}
+        className="isolate z-50"
+      >
+        <PopoverPrimitive.Popup
+          data-slot="popover-content"
+          className={cn(
+            "z-50 flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            className
+          )}
+          {...props}
+        />
+      </PopoverPrimitive.Positioner>
+    </PopoverPrimitive.Portal>
+  )
+}
+
+function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="popover-header"
+      className={cn("flex flex-col gap-0.5 text-sm", className)}
+      {...props}
+    />
+  )
+}
+
+function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
+  return (
+    <PopoverPrimitive.Title
+      data-slot="popover-title"
+      className={cn("font-medium", className)}
+      {...props}
+    />
+  )
+}
+
+function PopoverDescription({
+  className,
+  ...props
+}: PopoverPrimitive.Description.Props) {
+  return (
+    <PopoverPrimitive.Description
+      data-slot="popover-description"
+      className={cn("text-muted-foreground", className)}
+      {...props}
+    />
+  )
+}
+
+export {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+}
+
+export { AnchorLossGuardContext, useAnchorLossGuard }
