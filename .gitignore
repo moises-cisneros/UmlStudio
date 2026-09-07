@@ -1,0 +1,98 @@
+# Node.js dependencies
+node_modules/
+
+# Logs
+pnpm-debug.log*
+*.log
+
+# Build artifacts
+dist/
+build/
+coverage/
+storybook-static/
+
+# Temporary files and cache
+.tmp/
+.cache/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*.bak
+.ai/
+.codegraph/
+
+# Environment variables
+.env
+.env.*.local
+
+# Editor-specific settings
+*.sublime-workspace
+*.sublime-project
+
+# OS-specific files
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing artifacts
+jest-cache/
+jest-output/
+**/test-results/
+**/playwright-report/
+**/blob-report/
+
+# Lint and Prettier caches
+eslintcache
+.prettiercache
+
+library/stats.html
+
+# Capacitor native projects
+android/
+/ios/
+
+# Fastlane
+**/fastlane/report.xml
+**/fastlane/README.md
+**/fastlane/test_output
+**/fastlane/screenshots
+**/fastlane/screenshots-framed
+**/fastlane/screenshots-preview
+**/fastlane/screenshots-review.html
+**/fastlane/device-frames
+**/.DerivedData*/
+
+# Capacitor generated icons
+icons/
+venv/
+.context/
+docs/.docusaurus/
+docs/build/
+
+# Stray pnpm store if pnpm is run outside the workspace root
+.pnpm-store/
+
+# Temp dir used by scripts/check-doc-snippets.mjs (removed on each run)
+docs/.snippet-typecheck/
+
+# Live-update publish artifacts (built by scripts/build-live-update.mjs)
+**/live-updates-dist/
+
+# IDE
+.vscode/
+.claude/
+.cursor/
+.opencode/
+.hermes/
+.agents/
+.github/
+.agent/
+
+# Docs
+docs/
+CLAUDE.md
+AGENTS.md
+openspec/
+.openspec/

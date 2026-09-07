@@ -1,0 +1,129 @@
+services:
+  webapp:
+    image: "ghcr.io/umlstudio/umlstudio/webapp:${IMAGE_TAG:-latest}"
+    restart: unless-stopped
+    expose:
+      - "8080"
+    networks:
+      - umlstudio-network
+    volumes:
+      - "${LIVE_UPDATE_DIR:-/opt/umlstudio/app/live-updates}:/usr/share/nginx/html/live-updates:ro"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=umlstudio-network"
+      - "traefik.http.routers.http-webapp.entryPoints=http"
+      - "traefik.http.routers.http-webapp.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-webapp.rule=Host(`${APP_HOSTNAME:?APP_HOSTNAME must be set}`)"
+      - "traefik.http.routers.http-webapp.service=http-webapp"
+      - "traefik.http.routers.http-webapp.priority=2"
+      - "traefik.http.routers.https-webapp.entryPoints=https"
+      - "traefik.http.routers.https-webapp.middlewares=secure-headers"
+      - "traefik.http.routers.https-webapp.rule=Host(`${APP_HOSTNAME}`)"
+      - "traefik.http.routers.https-webapp.service=https-webapp"
+      - "traefik.http.routers.https-webapp.tls=true"
+      - "traefik.http.routers.https-webapp.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-webapp.priority=3"
+      - "traefik.http.services.http-webapp.loadbalancer.server.port=8080"
+      - "traefik.http.services.https-webapp.loadbalancer.server.port=8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:8080/",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  server:
+    image: "ghcr.io/umlstudio/umlstudio/server:${IMAGE_TAG:-latest}"
+    restart: unless-stopped
+    expose:
+      - "8000"
+      - "4444"
+    environment:
+      # Engages production gating in the Express logger; see standalone/server/src/logger.ts.
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=8000
+      - WS_PORT=4444
+      - REDIS_URL=redis://db:6379
+      - OWNER_SECRET=${OWNER_SECRET:?OWNER_SECRET must be set}
+      - CORS_ORIGIN=${CORS_ORIGIN:-capacitor://localhost,ionic://localhost}
+    networks:
+      - umlstudio-network
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=umlstudio-network"
+      # HTTP API: /api (no stripprefix — server mounts routes under /api internally)
+      - "traefik.http.routers.http-server-api.entryPoints=http"
+      - "traefik.http.routers.http-server-api.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-server-api.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.http-server-api.service=http-server-api"
+      - "traefik.http.routers.http-server-api.priority=10"
+      - "traefik.http.routers.https-server-api.entryPoints=https"
+      - "traefik.http.routers.https-server-api.middlewares=secure-headers"
+      - "traefik.http.routers.https-server-api.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.https-server-api.service=https-server-api"
+      - "traefik.http.routers.https-server-api.tls=true"
+      - "traefik.http.routers.https-server-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-server-api.priority=20"
+      - "traefik.http.services.http-server-api.loadbalancer.server.port=8000"
+      - "traefik.http.services.https-server-api.loadbalancer.server.port=8000"
+      # WebSocket relay: /ws → port 4444 (Traefik v3 forwards Upgrade headers automatically)
+      - "traefik.http.routers.http-server-ws.entryPoints=http"
+      - "traefik.http.routers.http-server-ws.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-server-ws.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.http-server-ws.service=http-server-ws"
+      - "traefik.http.routers.http-server-ws.priority=10"
+      - "traefik.http.routers.https-server-ws.entryPoints=https"
+      - "traefik.http.routers.https-server-ws.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.https-server-ws.service=https-server-ws"
+      - "traefik.http.routers.https-server-ws.tls=true"
+      - "traefik.http.routers.https-server-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-server-ws.priority=20"
+      - "traefik.http.services.http-server-ws.loadbalancer.server.port=4444"
+      - "traefik.http.services.https-server-ws.loadbalancer.server.port=4444"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+networks:
+  umlstudio-network:
+    name: umlstudio-network
+    external: true
