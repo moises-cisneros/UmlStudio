@@ -1,7 +1,7 @@
-import { useCallback } from "react"
-import { useReactFlow, type Node, type XYPosition } from "@xyflow/react"
-import { useShallow } from "zustand/shallow"
-import { CANVAS, DROPS, type DropElementConfig } from "@/constants"
+import { useCallback } from "react";
+import { useReactFlow, type Node, type XYPosition } from "@xyflow/react";
+import { useShallow } from "zustand/shallow";
+import { CANVAS, DROPS, type DropElementConfig } from "@/constants";
 import {
   buildPaletteNode,
   getPositionOnCanvas,
@@ -9,14 +9,14 @@ import {
   resizeAllParents,
   resolveTapPosition,
   snapToGrid,
-} from "@/utils"
-import { canDropIntoParent } from "@/utils/parentConstraints"
-import { useDiagramStore } from "@/store/context"
-import { log } from "../logger"
+} from "@/utils";
+import { canDropIntoParent } from "@/utils/parentConstraints";
+import { useDiagramStore } from "@/store/context";
+import { log } from "../logger";
 
 export function usePalettePlacement(dropElementConfig: DropElementConfig) {
-  const snapPx = CANVAS.SNAP_TO_GRID_PX
-  const { screenToFlowPosition, getIntersectingNodes } = useReactFlow()
+  const snapPx = CANVAS.SNAP_TO_GRID_PX;
+  const { screenToFlowPosition, getIntersectingNodes } = useReactFlow();
   const {
     diagramId,
     nodes,
@@ -38,13 +38,13 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
       setSelectedElementsId: state.setSelectedElementsId,
       lastPlacedElementId: state.lastPlacedElementId,
       setLastPlacedElementId: state.setLastPlacedElementId,
-    }))
-  )
+    })),
+  );
 
   const getCanvas = useCallback(
     () => document.getElementById(`react-flow-library-${diagramId}`),
-    [diagramId]
-  )
+    [diagramId],
+  );
 
   const findDropParent = useCallback(
     (hitPoint: XYPosition): Node | undefined => {
@@ -57,92 +57,92 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
         (node) =>
           isParentNodeType(node.type) &&
           node.type &&
-          canDropIntoParent(dropElementConfig.type, node.type)
-      )
-      return intersecting[intersecting.length - 1]
+          canDropIntoParent(dropElementConfig.type, node.type),
+      );
+      return intersecting[intersecting.length - 1];
     },
-    [getIntersectingNodes, dropElementConfig.type]
-  )
+    [getIntersectingNodes, dropElementConfig.type],
+  );
 
   const nestInParent = useCallback(
     (absolute: XYPosition): { position: XYPosition; parentId?: string } => {
-      const parent = findDropParent(absolute)
-      if (!parent) return { position: absolute }
-      const parentOnCanvas = getPositionOnCanvas(parent, nodes)
+      const parent = findDropParent(absolute);
+      if (!parent) return { position: absolute };
+      const parentOnCanvas = getPositionOnCanvas(parent, nodes);
       return {
         position: {
           x: absolute.x - parentOnCanvas.x,
           y: absolute.y - parentOnCanvas.y,
         },
         parentId: parent.id,
-      }
+      };
     },
-    [findDropParent, nodes]
-  )
+    [findDropParent, nodes],
+  );
 
   const commitNode = useCallback(
     (
       build: (prev: Node[]) => Node,
       parentId: string | undefined,
-      select: boolean
+      select: boolean,
     ) => {
       setNodes((prev) => {
-        const newNode = build(prev)
-        const next = [...prev, newNode]
-        if (parentId) resizeAllParents(newNode, next)
+        const newNode = build(prev);
+        const next = [...prev, newNode];
+        if (parentId) resizeAllParents(newNode, next);
         return select
           ? next.map((node) =>
               node.id === newNode.id
                 ? node
                 : node.selected
                   ? { ...node, selected: false }
-                  : node
+                  : node,
             )
-          : next
-      })
+          : next;
+      });
     },
-    [setNodes]
-  )
+    [setNodes],
+  );
 
   const dropAtPointer = useCallback(
     (
       event: { clientX: number; clientY: number },
-      grabOffset: XYPosition
+      grabOffset: XYPosition,
     ): boolean => {
-      const canvas = getCanvas()
+      const canvas = getCanvas();
       if (!canvas) {
-        log.warn("Canvas element not found")
-        return false
+        log.warn("Canvas element not found");
+        return false;
       }
 
-      const bounds = canvas.getBoundingClientRect()
+      const bounds = canvas.getBoundingClientRect();
       const outside =
         event.clientX < bounds.left ||
         event.clientY < bounds.top ||
         event.clientX > bounds.right ||
-        event.clientY > bounds.bottom
-      if (outside) return false
+        event.clientY > bounds.bottom;
+      if (outside) return false;
 
       const parent = findDropParent(
         screenToFlowPosition(
           { x: event.clientX, y: event.clientY },
-          { snapToGrid: true }
-        )
-      )
+          { snapToGrid: true },
+        ),
+      );
       const absolute = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
-      })
-      absolute.x -= Math.floor(grabOffset.x / snapPx) * snapPx
-      absolute.y -= Math.floor(grabOffset.y / snapPx) * snapPx
+      });
+      absolute.x -= Math.floor(grabOffset.x / snapPx) * snapPx;
+      absolute.y -= Math.floor(grabOffset.y / snapPx) * snapPx;
 
-      let position = absolute
+      let position = absolute;
       if (parent) {
-        const parentOnCanvas = getPositionOnCanvas(parent, nodes)
+        const parentOnCanvas = getPositionOnCanvas(parent, nodes);
         position = {
           x: absolute.x - parentOnCanvas.x,
           y: absolute.y - parentOnCanvas.y,
-        }
+        };
       }
 
       commitNode(
@@ -151,9 +151,9 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
             parentId: parent?.id,
           }),
         parent?.id,
-        false
-      )
-      return true
+        false,
+      );
+      return true;
     },
     [
       getCanvas,
@@ -163,37 +163,37 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
       snapPx,
       nodes,
       commitNode,
-    ]
-  )
+    ],
+  );
 
   const placeAtViewportCenter = useCallback(() => {
-    const canvas = getCanvas()
+    const canvas = getCanvas();
     if (!canvas) {
-      log.warn("Canvas element not found")
-      return
+      log.warn("Canvas element not found");
+      return;
     }
-    const rect = canvas.getBoundingClientRect()
-    const nodeWidth = dropElementConfig.dropWidth ?? dropElementConfig.width
-    const nodeHeight = dropElementConfig.dropHeight ?? dropElementConfig.height
+    const rect = canvas.getBoundingClientRect();
+    const nodeWidth = dropElementConfig.dropWidth ?? dropElementConfig.width;
+    const nodeHeight = dropElementConfig.dropHeight ?? dropElementConfig.height;
 
     const center = screenToFlowPosition({
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
-    })
-    const topLeft = screenToFlowPosition({ x: rect.left, y: rect.top })
-    const bottomRight = screenToFlowPosition({ x: rect.right, y: rect.bottom })
+    });
+    const topLeft = screenToFlowPosition({ x: rect.left, y: rect.top });
+    const bottomRight = screenToFlowPosition({ x: rect.right, y: rect.bottom });
 
     const anchor =
       lastPlacedElementId !== null &&
       selectedElementIds.length === 1 &&
       selectedElementIds[0] === lastPlacedElementId
         ? nodes.find((node) => node.id === lastPlacedElementId)
-        : undefined
+        : undefined;
 
     const absolute = resolveTapPosition({
       centeredPosition: snapToGrid(
         { x: center.x - nodeWidth / 2, y: center.y - nodeHeight / 2 },
-        snapPx
+        snapPx,
       ),
       anchorAbsolute: anchor ? getPositionOnCanvas(anchor, nodes) : null,
       nodeWidth,
@@ -206,23 +206,23 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
       },
       stepPx: DROPS.TAP_CASCADE_PX,
       snapPx,
-    })
+    });
 
-    const { position, parentId } = nestInParent(absolute)
+    const { position, parentId } = nestInParent(absolute);
     const newNode = buildPaletteNode(dropElementConfig, position, {
       parentId,
       selected: true,
-    })
-    commitNode(() => newNode, parentId, true)
-    setSelectedElementsId([newNode.id])
+    });
+    commitNode(() => newNode, parentId, true);
+    setSelectedElementsId([newNode.id]);
     if (edges.some((edge) => edge.selected)) {
       setEdges(
         edges.map((edge) =>
-          edge.selected ? { ...edge, selected: false } : edge
-        )
-      )
+          edge.selected ? { ...edge, selected: false } : edge,
+        ),
+      );
     }
-    setLastPlacedElementId(newNode.id)
+    setLastPlacedElementId(newNode.id);
   }, [
     getCanvas,
     dropElementConfig,
@@ -237,7 +237,7 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
     setSelectedElementsId,
     lastPlacedElementId,
     setLastPlacedElementId,
-  ])
+  ]);
 
-  return { dropAtPointer, placeAtViewportCenter }
+  return { dropAtPointer, placeAtViewportCenter };
 }

@@ -6,23 +6,23 @@ import {
   useNodeId,
   useStore,
   type NodeResizerProps,
-} from "@xyflow/react"
+} from "@xyflow/react";
 
-const HANDLE_STYLE = { width: 10, height: 10 }
+const HANDLE_STYLE = { width: 10, height: 10 };
 
-const LINE_CLASS = "umlstudio-resize-line"
+const LINE_CLASS = "umlstudio-resize-line";
 
-const HANDLE_CLASS = "umlstudio-resize-handle"
+const HANDLE_CLASS = "umlstudio-resize-handle";
 
 const CORNERS = [
   "top-left",
   "top-right",
   "bottom-left",
   "bottom-right",
-] as const
+] as const;
 
 const isAxisLocked = (min?: number, max?: number): boolean =>
-  min !== undefined && max !== undefined && min >= max
+  min !== undefined && max !== undefined && min >= max;
 
 export function NodeResizer(props: NodeResizerProps) {
   const {
@@ -36,19 +36,19 @@ export function NodeResizer(props: NodeResizerProps) {
     lineStyle,
     lineClassName,
     ...resizeParams
-  } = props
+  } = props;
 
-  const contextNodeId = useNodeId()
-  const nodeId = props.nodeId ?? contextNodeId
+  const contextNodeId = useNodeId();
+  const nodeId = props.nodeId ?? contextNodeId;
   const isNodeSelected = useStore((state) =>
-    nodeId ? !!state.nodeLookup.get(nodeId)?.selected : undefined
-  )
+    nodeId ? !!state.nodeLookup.get(nodeId)?.selected : undefined,
+  );
 
-  if (!isVisible) return null
-  if (isNodeSelected === false) return null
+  if (!isVisible) return null;
+  if (isNodeSelected === false) return null;
 
-  const widthLocked = isAxisLocked(minWidth, maxWidth)
-  const heightLocked = isAxisLocked(minHeight, maxHeight)
+  const widthLocked = isAxisLocked(minWidth, maxWidth);
+  const heightLocked = isAxisLocked(minHeight, maxHeight);
 
   if (!widthLocked && !heightLocked) {
     return (
@@ -60,19 +60,19 @@ export function NodeResizer(props: NodeResizerProps) {
           .join(" ")}
         lineClassName={[LINE_CLASS, lineClassName].filter(Boolean).join(" ")}
       />
-    )
+    );
   }
 
-  if (widthLocked && heightLocked) return null
+  if (widthLocked && heightLocked) return null;
 
-  const shared = { minWidth, minHeight, maxWidth, maxHeight, ...resizeParams }
+  const shared = { minWidth, minHeight, maxWidth, maxHeight, ...resizeParams };
   const lines = heightLocked
     ? (["left", "right"] as const)
-    : (["top", "bottom"] as const)
-  const freeAxis = heightLocked ? "horizontal" : "vertical"
+    : (["top", "bottom"] as const);
+  const freeAxis = heightLocked ? "horizontal" : "vertical";
   const cornerClass = heightLocked
     ? "umlstudio-resize-corner--x"
-    : "umlstudio-resize-corner--y"
+    : "umlstudio-resize-corner--y";
 
   return (
     <>
@@ -100,5 +100,5 @@ export function NodeResizer(props: NodeResizerProps) {
         />
       ))}
     </>
-  )
+  );
 }
