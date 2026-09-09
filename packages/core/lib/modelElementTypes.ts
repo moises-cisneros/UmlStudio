@@ -1,12 +1,10 @@
 export const DiagramNodeTypeRecord = {
   package: "package",
   class: "class",
-  colorDescription: "colorDescription",
-  titleAndDesctiption: "titleAndDesctiption",
-} as const
+} as const;
 
 export type DiagramNodeType =
-  (typeof DiagramNodeTypeRecord)[keyof typeof DiagramNodeTypeRecord]
+  (typeof DiagramNodeTypeRecord)[keyof typeof DiagramNodeTypeRecord];
 
 export const DiagramEdgeTypeRecord = {
   ClassAggregation: "ClassAggregation",
@@ -16,7 +14,7 @@ export const DiagramEdgeTypeRecord = {
   ClassBidirectional: "ClassBidirectional",
   ClassUnidirectional: "ClassUnidirectional",
   ClassDependency: "ClassDependency",
-} as const
+} as const;
 
 export type DiagramEdgeType =
-  (typeof DiagramEdgeTypeRecord)[keyof typeof DiagramEdgeTypeRecord]
+  (typeof DiagramEdgeTypeRecord)[keyof typeof DiagramEdgeTypeRecord];

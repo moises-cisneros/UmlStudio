@@ -1,14 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any --
- * The v3 → v4 converter walks legacy JSON payloads with no shared schema, so
- * every entry point has to accept `any` until it's narrowed inline. Replacing
- * these with proper types would require defining the full v3/v2 envelope and
- * isn't in scope here. */
-import type { UMLModel, UmlStudioNode, UmlStudioEdge, Assessment } from "../typings"
-import { transformEdges } from "../services/migration/EdgeTransformer"
-import { STRAIGHT_HOOK_EDGE_TYPES } from "../edges/edgeRoutingBehavior"
-import { UMLDiagramType } from "../types/DiagramType"
-import { ClassStereotype } from "../types/nodes/enums"
-import type { IPoint } from "../edges/Connection"
+import type {
+  UMLModel,
+  UmlStudioNode,
+  UmlStudioEdge,
+  Assessment,
+} from "../typings";
+import { transformEdges } from "../services/migration/EdgeTransformer";
+import { STRAIGHT_HOOK_EDGE_TYPES } from "../edges/edgeRoutingBehavior";
+import { UMLDiagramType } from "../types/DiagramType";
+import { ClassStereotype } from "../types/nodes/enums";
+import type { IPoint } from "../edges/Connection";
 import type {
   V3DiagramFormat,
   V3UMLModel,
@@ -28,32 +28,32 @@ import type {
   BPMNGatewayProps,
   BPMNEventProps,
   ReachabilityGraphMarkingProps,
-} from "./v3Typings"
-import { log } from "../logger"
-import { applyTags, taggableElements } from "./tagUtils"
-import { INTERFACE } from "./geometry/routingConstants"
+} from "./v3Typings";
+import { log } from "../logger";
+import { applyTags, taggableElements } from "./tagUtils";
+import { INTERFACE } from "./geometry/routingConstants";
 
-import type { ClassNodeProps } from "../types/nodes/NodeProps"
-type MessageData = { id: string; text: string; direction: "target" | "source" }
+import type { ClassNodeProps } from "../types/nodes/NodeProps";
+type MessageData = { id: string; text: string; direction: "target" | "source" };
 
-export const CURRENT_MODEL_VERSION = "4.2.0" as const
-const STRAIGHT_WAYPOINT_MODEL_MINOR = 2
+export const CURRENT_MODEL_VERSION = "4.3.0" as const;
+const STRAIGHT_WAYPOINT_MODEL_MINOR = 2;
 
 function normalizeImportedInterfaceGeometry(
   nodeType: string,
   position: { x: number; y: number },
   width: number,
-  height: number
+  height: number,
 ): { position: { x: number; y: number }; width: number; height: number } {
   const isInterfaceNode =
-    nodeType === "componentInterface" || nodeType === "deploymentInterface"
+    nodeType === "componentInterface" || nodeType === "deploymentInterface";
 
   if (!isInterfaceNode) {
-    return { position, width, height }
+    return { position, width, height };
   }
 
   if (width === INTERFACE.SIZE && height === INTERFACE.SIZE) {
-    return { position, width, height }
+    return { position, width, height };
   }
 
   return {
@@ -63,23 +63,23 @@ function normalizeImportedInterfaceGeometry(
     },
     width: INTERFACE.SIZE,
     height: INTERFACE.SIZE,
-  }
+  };
 }
 
 interface V2DiagramFormat {
-  version: string
+  version: string;
   size: {
-    width: number
-    height: number
-  }
-  type: string
+    width: number;
+    height: number;
+  };
+  type: string;
   interactive: {
-    elements: string[]
-    relationships: string[]
-  }
-  elements: V3UMLElement[]
-  relationships: V3UMLRelationship[]
-  assessments: V3Assessment[]
+    elements: string[];
+    relationships: string[];
+  };
+  elements: V3UMLElement[];
+  relationships: V3UMLRelationship[];
+  assessments: V3Assessment[];
 }
 
 export function convertV2ToV4(v2Data: V2DiagramFormat): UMLModel {
@@ -98,38 +98,38 @@ export function convertV2ToV4(v2Data: V2DiagramFormat): UMLModel {
       relationships: {},
       assessments: {},
     },
-  }
+  };
 
   if (v2Data.interactive?.elements) {
     v2Data.interactive.elements.forEach((id) => {
-      v3Data.model.interactive.elements[id] = true
-    })
+      v3Data.model.interactive.elements[id] = true;
+    });
   }
 
   if (v2Data.interactive?.relationships) {
     v2Data.interactive.relationships.forEach((id) => {
-      v3Data.model.interactive.relationships[id] = true
-    })
+      v3Data.model.interactive.relationships[id] = true;
+    });
   }
 
   if (v2Data.elements) {
     v2Data.elements.forEach((element) => {
-      v3Data.model.elements[element.id] = element
-    })
+      v3Data.model.elements[element.id] = element;
+    });
   }
   if (v2Data.relationships) {
     v2Data.relationships.forEach((relationship) => {
-      v3Data.model.relationships[relationship.id] = relationship
-    })
+      v3Data.model.relationships[relationship.id] = relationship;
+    });
   }
 
   if (v2Data.assessments) {
     v2Data.assessments.forEach((assessment) => {
-      v3Data.model.assessments[assessment.modelElementId] = assessment
-    })
+      v3Data.model.assessments[assessment.modelElementId] = assessment;
+    });
   }
 
-  return convertV3ToV4(v3Data)
+  return convertV3ToV4(v3Data);
 }
 
 export function isV2Format(data: any): data is V2DiagramFormat {
@@ -146,7 +146,7 @@ export function isV2Format(data: any): data is V2DiagramFormat {
     Array.isArray(data.interactive.elements) &&
     Array.isArray(data.interactive.relationships) &&
     !data.model
-  )
+  );
 }
 
 export function convertV3HandleToV4(v3Handle: string): string {
@@ -170,9 +170,9 @@ export function convertV3HandleToV4(v3Handle: string): string {
     Topleft: "top-left",
     Bottomright: "bottom-right",
     Bottomleft: "bottom-left",
-  }
+  };
 
-  return handleMap[v3Handle] || v3Handle.toLowerCase()
+  return handleMap[v3Handle] || v3Handle.toLowerCase();
 }
 
 export function convertV3NodeTypeToV4(v3Type: string): string {
@@ -248,17 +248,14 @@ export function convertV3NodeTypeToV4(v3Type: string): string {
     SfcTransitionBranch: "sfcTransitionBranch",
     SfcJump: "sfcJump",
     SfcPreviewSpacer: "sfcPreviewSpacer",
+  };
 
-    ColorDescription: "colorDescription",
-    TitleAndDescription: "titleAndDesctiption",
-  }
-
-  return typeMap[v3Type] || v3Type.toLowerCase()
+  return typeMap[v3Type] || v3Type.toLowerCase();
 }
 
 export function convertV3EdgeTypeToV4(
   v3Type: string,
-  flowType?: string
+  flowType?: string,
 ): string {
   const edgeTypeMap: Record<string, string> = {
     ClassBidirectional: "ClassBidirectional",
@@ -302,37 +299,37 @@ export function convertV3EdgeTypeToV4(
     SyntaxTreeLink: "SyntaxTreeLink",
 
     FlowchartFlowline: "FlowChartFlowline",
-  }
+  };
   if (v3Type === "BPMNFlow" && flowType) {
     const flowTypeMap: Record<string, string> = {
       sequence: "BPMNSequenceFlow",
       message: "BPMNMessageFlow",
       association: "BPMNAssociationFlow",
       dataAssociation: "BPMNDataAssociationFlow",
-    }
-    return flowTypeMap[flowType] || "BPMNSequenceFlow"
+    };
+    return flowTypeMap[flowType] || "BPMNSequenceFlow";
   }
 
-  return edgeTypeMap[v3Type] || v3Type
+  return edgeTypeMap[v3Type] || v3Type;
 }
 
 function calculateRelativePosition(
   child: V3UMLElement,
-  parent: V3UMLElement
+  parent: V3UMLElement,
 ): { x: number; y: number } {
   return {
     x: child.bounds.x - parent.bounds.x,
     y: child.bounds.y - parent.bounds.y,
-  }
+  };
 }
 
 function sortedByBoundsY(elements: V3UMLElement[]): V3UMLElement[] {
-  return elements.sort((a, b) => (a.bounds?.y ?? 0) - (b.bounds?.y ?? 0))
+  return elements.sort((a, b) => (a.bounds?.y ?? 0) - (b.bounds?.y ?? 0));
 }
 
 function convertV3NodeDataToV4(
   element: V3UMLElement,
-  allElements: Record<string, V3UMLElement>
+  allElements: Record<string, V3UMLElement>,
 ): any {
   const baseData = {
     name: element.name,
@@ -341,15 +338,15 @@ function convertV3NodeDataToV4(
     ...(element.textColor && { textColor: element.textColor }),
     ...(element.highlight && { highlight: element.highlight }),
     ...(element.assessmentNote && { assessmentNote: element.assessmentNote }),
-  }
+  };
 
   switch (element.type) {
     case "Class":
     case "AbstractClass":
     case "Interface":
     case "Enumeration": {
-      const attributes: Array<{ id: string; name: string }> = []
-      const methods: Array<{ id: string; name: string }> = []
+      const attributes: Array<{ id: string; name: string }> = [];
+      const methods: Array<{ id: string; name: string }> = [];
       sortedByBoundsY(Object.values(allElements)).forEach((childElement) => {
         if (childElement.owner === element.id) {
           if (childElement.type === "ClassAttribute") {
@@ -362,7 +359,7 @@ function convertV3NodeDataToV4(
               ...(childElement.textColor && {
                 textColor: childElement.textColor,
               }),
-            })
+            });
           } else if (childElement.type === "ClassMethod") {
             methods.push({
               id: childElement.id,
@@ -373,19 +370,19 @@ function convertV3NodeDataToV4(
               ...(childElement.textColor && {
                 textColor: childElement.textColor,
               }),
-            })
+            });
           }
         }
-      })
+      });
 
-      let stereotype: ClassStereotype | undefined
-      let isAbstract = false
+      let stereotype: ClassStereotype | undefined;
+      let isAbstract = false;
       if (element.type === "AbstractClass") {
-        isAbstract = true
+        isAbstract = true;
       } else if (element.type === "Interface") {
-        stereotype = ClassStereotype.Interface
+        stereotype = ClassStereotype.Interface;
       } else if (element.type === "Enumeration") {
-        stereotype = ClassStereotype.Enumeration
+        stereotype = ClassStereotype.Enumeration;
       }
 
       const classData: ClassNodeProps = {
@@ -394,13 +391,13 @@ function convertV3NodeDataToV4(
         attributes,
         ...(stereotype && { stereotype }),
         ...(isAbstract && { isAbstract: true }),
-      }
-      return classData
+      };
+      return classData;
     }
 
     case "ObjectName": {
-      const attributes: Array<{ id: string; name: string }> = []
-      const methods: Array<{ id: string; name: string }> = []
+      const attributes: Array<{ id: string; name: string }> = [];
+      const methods: Array<{ id: string; name: string }> = [];
 
       sortedByBoundsY(Object.values(allElements)).forEach((childElement) => {
         if (childElement.owner === element.id) {
@@ -414,7 +411,7 @@ function convertV3NodeDataToV4(
               ...(childElement.textColor && {
                 textColor: childElement.textColor,
               }),
-            })
+            });
           } else if (childElement.type === "ObjectMethod") {
             methods.push({
               id: childElement.id,
@@ -425,22 +422,22 @@ function convertV3NodeDataToV4(
               ...(childElement.textColor && {
                 textColor: childElement.textColor,
               }),
-            })
+            });
           }
         }
-      })
+      });
 
       const objectData: ObjectNodeProps = {
         ...baseData,
         methods,
         attributes,
-      }
-      return objectData
+      };
+      return objectData;
     }
 
     case "CommunicationObject": {
-      const attributes: Array<{ id: string; name: string }> = []
-      const methods: Array<{ id: string; name: string }> = []
+      const attributes: Array<{ id: string; name: string }> = [];
+      const methods: Array<{ id: string; name: string }> = [];
       sortedByBoundsY(Object.values(allElements)).forEach((childElement) => {
         if (childElement.owner === element.id) {
           if (childElement.type === "ObjectAttribute") {
@@ -453,7 +450,7 @@ function convertV3NodeDataToV4(
               ...(childElement.textColor && {
                 textColor: childElement.textColor,
               }),
-            })
+            });
           } else if (childElement.type === "ObjectMethod") {
             methods.push({
               id: childElement.id,
@@ -464,32 +461,32 @@ function convertV3NodeDataToV4(
               ...(childElement.textColor && {
                 textColor: childElement.textColor,
               }),
-            })
+            });
           }
         }
-      })
+      });
       const communicationData: CommunicationObjectNodeProps = {
         ...baseData,
         methods,
         attributes,
-      }
-      return communicationData
+      };
+      return communicationData;
     }
 
     case "Component": {
       const componentData: ComponentNodeProps = {
         ...baseData,
         isComponentHeaderShown: element.displayStereotype !== false,
-      }
-      return componentData
+      };
+      return componentData;
     }
 
     case "ComponentSubsystem": {
       const subsystemData: ComponentSubsystemNodeProps = {
         ...baseData,
         isComponentSubsystemHeaderShown: element.displayStereotype !== false,
-      }
-      return subsystemData
+      };
+      return subsystemData;
     }
 
     case "DeploymentNode": {
@@ -497,29 +494,29 @@ function convertV3NodeDataToV4(
         ...baseData,
         isComponentHeaderShown: element.displayStereotype !== false,
         stereotype: element.stereotype || "",
-      }
-      return deploymentData
+      };
+      return deploymentData;
     }
 
     case "DeploymentComponent": {
       const deploymentComponentData: DeploymentComponentProps = {
         ...baseData,
         isComponentHeaderShown: element.displayStereotype !== false,
-      }
-      return deploymentComponentData
+      };
+      return deploymentComponentData;
     }
 
     case "PetriNetPlace": {
-      let capacity: number | "Infinity" = "Infinity"
+      let capacity: number | "Infinity" = "Infinity";
       if (element.capacity !== undefined) {
         if (typeof element.capacity === "number") {
-          capacity = element.capacity
+          capacity = element.capacity;
         } else if (typeof element.capacity === "string") {
           if (element.capacity === "Infinity" || element.capacity === "∞") {
-            capacity = "Infinity"
+            capacity = "Infinity";
           } else {
-            const parsed = parseFloat(element.capacity)
-            capacity = isNaN(parsed) ? "Infinity" : parsed
+            const parsed = parseFloat(element.capacity);
+            capacity = isNaN(parsed) ? "Infinity" : parsed;
           }
         }
       }
@@ -528,8 +525,8 @@ function convertV3NodeDataToV4(
         ...baseData,
         tokens: element.amountOfTokens || 0,
         capacity,
-      }
-      return petriNetData
+      };
+      return petriNetData;
     }
 
     case "BPMNTask": {
@@ -537,48 +534,48 @@ function convertV3NodeDataToV4(
         ...baseData,
         taskType: (element.taskType as any) || "default",
         marker: (element.marker as any) || "none",
-      }
-      return bpmnTaskData
+      };
+      return bpmnTaskData;
     }
 
     case "BPMNGateway": {
       const bpmnGatewayData: BPMNGatewayProps = {
         ...baseData,
         gatewayType: (element.gatewayType as any) || "exclusive",
-      }
-      return bpmnGatewayData
+      };
+      return bpmnGatewayData;
     }
 
     case "BPMNStartEvent": {
       const bpmnStartEventData: BPMNEventProps = {
         ...baseData,
         eventType: (element.eventType as any) || "default",
-      }
-      return bpmnStartEventData
+      };
+      return bpmnStartEventData;
     }
 
     case "BPMNIntermediateEvent": {
       const bpmnIntermediateEventData: BPMNEventProps = {
         ...baseData,
         eventType: (element.eventType as any) || "default",
-      }
-      return bpmnIntermediateEventData
+      };
+      return bpmnIntermediateEventData;
     }
 
     case "BPMNEndEvent": {
       const bpmnEndEventData: BPMNEventProps = {
         ...baseData,
         eventType: (element.eventType as any) || "default",
-      }
-      return bpmnEndEventData
+      };
+      return bpmnEndEventData;
     }
 
     case "ReachabilityGraphMarking": {
       const reachabilityData: ReachabilityGraphMarkingProps = {
         ...baseData,
         isInitialMarking: element.isInitialMarking || false,
-      }
-      return reachabilityData
+      };
+      return reachabilityData;
     }
 
     case "BPMNSubprocess":
@@ -589,21 +586,21 @@ function convertV3NodeDataToV4(
     case "BPMNDataStore":
     case "BPMNPool":
     case "BPMNGroup":
-      return baseData
+      return baseData;
 
     default:
-      return baseData
+      return baseData;
   }
 }
 export function convertV3MessagesToV4(
-  messages: V3Messages | MessageData[] | undefined
+  messages: V3Messages | MessageData[] | undefined,
 ): MessageData[] {
   if (!messages) {
-    return []
+    return [];
   }
 
   if (Array.isArray(messages)) {
-    return messages as MessageData[]
+    return messages as MessageData[];
   }
 
   if (typeof messages === "object" && messages !== null) {
@@ -611,32 +608,32 @@ export function convertV3MessagesToV4(
       text: message.name,
       direction: message.direction === "source" ? "target" : "source",
       id: message.id,
-    }))
+    }));
   }
 
-  return []
+  return [];
 }
 
 function convertV3ElementToV4Node(
   element: V3UMLElement,
-  allElements: Record<string, V3UMLElement>
+  allElements: Record<string, V3UMLElement>,
 ): UmlStudioNode {
-  const nodeType = convertV3NodeTypeToV4(element.type)
-  let position = { x: element.bounds.x, y: element.bounds.y }
+  const nodeType = convertV3NodeTypeToV4(element.type);
+  let position = { x: element.bounds.x, y: element.bounds.y };
   if (element.owner) {
-    const parent = allElements[element.owner]
+    const parent = allElements[element.owner];
     if (parent) {
-      position = calculateRelativePosition(element, parent)
+      position = calculateRelativePosition(element, parent);
     }
   }
 
-  const data = convertV3NodeDataToV4(element, allElements)
+  const data = convertV3NodeDataToV4(element, allElements);
   const normalizedGeometry = normalizeImportedInterfaceGeometry(
     nodeType,
     position,
     element.bounds.width,
-    element.bounds.height
-  )
+    element.bounds.height,
+  );
 
   const baseNode: UmlStudioNode = {
     id: element.id,
@@ -650,27 +647,27 @@ function convertV3ElementToV4Node(
     },
     data,
     ...(element.owner && { parentId: element.owner }),
-  }
+  };
 
-  return baseNode
+  return baseNode;
 }
 
 function convertV3RelationshipToV4Edge(
-  relationship: V3UMLRelationship
+  relationship: V3UMLRelationship,
 ): UmlStudioEdge {
   const edgeType = convertV3EdgeTypeToV4(
     relationship.type,
-    relationship.flowType
-  )
-  let points: IPoint[] = []
+    relationship.flowType,
+  );
+  let points: IPoint[] = [];
   if (relationship.path && relationship.path.length > 0) {
     points = relationship.path.map((point) => ({
       x: point.x + relationship.bounds.x,
       y: point.y + relationship.bounds.y,
-    }))
+    }));
   }
   if (STRAIGHT_HOOK_EDGE_TYPES.has(edgeType as string)) {
-    points = []
+    points = [];
   }
 
   const edge: UmlStudioEdge = {
@@ -700,9 +697,9 @@ function convertV3RelationshipToV4Edge(
       }),
       points: points,
     },
-  }
+  };
 
-  return edge
+  return edge;
 }
 
 function convertV3AssessmentToV4(v3Assessment: V3Assessment): Assessment {
@@ -717,14 +714,15 @@ function convertV3AssessmentToV4(v3Assessment: V3Assessment): Assessment {
     ...(v3Assessment.correctionStatus && {
       correctionStatus: v3Assessment.correctionStatus,
     }),
-  }
+  };
 }
 
 export function convertV3ToV4(v3Data: V3DiagramFormat | V3UMLModel): UMLModel {
   const model: V3UMLModel =
-    (v3Data as V3DiagramFormat).model || (v3Data as V3UMLModel)
-  const id = (v3Data as V3DiagramFormat).id || "converted-diagram-" + Date.now()
-  const title = (v3Data as V3DiagramFormat).title || ""
+    (v3Data as V3DiagramFormat).model || (v3Data as V3UMLModel);
+  const id =
+    (v3Data as V3DiagramFormat).id || "converted-diagram-" + Date.now();
+  const title = (v3Data as V3DiagramFormat).title || "";
 
   const nodes: UmlStudioNode[] = Object.values(model.elements)
     .filter(
@@ -734,23 +732,25 @@ export function convertV3ToV4(v3Data: V3DiagramFormat | V3UMLModel): UMLModel {
           "ClassMethod",
           "ObjectAttribute",
           "ObjectMethod",
-        ].includes(element.type)
+          "ColorDescription",
+          "TitleAndDescription",
+        ].includes(element.type),
     )
-    .map((element) => convertV3ElementToV4Node(element, model.elements))
+    .map((element) => convertV3ElementToV4Node(element, model.elements));
 
   const edges: UmlStudioEdge[] = Object.values(model.relationships).map(
-    (relationship) => convertV3RelationshipToV4Edge(relationship)
-  )
+    (relationship) => convertV3RelationshipToV4Edge(relationship),
+  );
 
-  const assessments: Record<string, Assessment> = {}
+  const assessments: Record<string, Assessment> = {};
   if (model.assessments) {
     Object.entries(model.assessments).forEach(([id, v3Assessment]) => {
       try {
-        assessments[id] = convertV3AssessmentToV4(v3Assessment)
+        assessments[id] = convertV3AssessmentToV4(v3Assessment);
       } catch (error) {
-        log.warn(`Failed to convert assessment for element ${id}:`, error)
+        log.warn(`Failed to convert assessment for element ${id}:`, error);
       }
-    })
+    });
   }
 
   return {
@@ -763,22 +763,22 @@ export function convertV3ToV4(v3Data: V3DiagramFormat | V3UMLModel): UMLModel {
     assessments,
     interactive:
       model.interactive &&
-      (Object.values(model.interactive.elements ?? {}).some(Boolean) ||
-        Object.values(model.interactive.relationships ?? {}).some(Boolean))
+        (Object.values(model.interactive.elements ?? {}).some(Boolean) ||
+          Object.values(model.interactive.relationships ?? {}).some(Boolean))
         ? {
-            elements: Object.fromEntries(
-              Object.entries(model.interactive.elements ?? {}).filter(
-                ([, included]) => included
-              )
+          elements: Object.fromEntries(
+            Object.entries(model.interactive.elements ?? {}).filter(
+              ([, included]) => included,
             ),
-            relationships: Object.fromEntries(
-              Object.entries(model.interactive.relationships ?? {}).filter(
-                ([, included]) => included
-              )
+          ),
+          relationships: Object.fromEntries(
+            Object.entries(model.interactive.relationships ?? {}).filter(
+              ([, included]) => included,
             ),
-          }
+          ),
+        }
         : undefined,
-  }
+  };
 }
 
 export function isV3Format(data: any): data is V3DiagramFormat {
@@ -791,7 +791,7 @@ export function isV3Format(data: any): data is V3DiagramFormat {
     data.model.elements &&
     data.model.relationships &&
     typeof data.model.elements === "object" &&
-    typeof data.model.relationships === "object"
+    typeof data.model.relationships === "object";
 
   const flat =
     data &&
@@ -801,9 +801,9 @@ export function isV3Format(data: any): data is V3DiagramFormat {
     data.elements &&
     data.relationships &&
     typeof data.elements === "object" &&
-    typeof data.relationships === "object"
+    typeof data.relationships === "object";
 
-  return !!(wrapped || flat)
+  return !!(wrapped || flat);
 }
 
 export function isV4Format(data: any): data is UMLModel {
@@ -818,64 +818,64 @@ export function isV4Format(data: any): data is UMLModel {
         edge != null &&
         typeof edge === "object" &&
         ((edge as { data?: unknown }).data == null ||
-          typeof (edge as { data: unknown }).data === "object")
+          typeof (edge as { data: unknown }).data === "object"),
     )
-  )
+  );
 }
 
 export function normalizeClassStereotypes(model: UMLModel): UMLModel {
   const V4_STEREOTYPE: Record<string, ClassStereotype> = {
     Interface: ClassStereotype.Interface,
     Enumeration: ClassStereotype.Enumeration,
-  }
+  };
   for (const node of model.nodes) {
-    if (node.type !== "class") continue
-    const data = node.data as ClassNodeProps
-    const raw = data.stereotype as unknown as string | undefined
+    if (node.type !== "class") continue;
+    const data = node.data as ClassNodeProps;
+    const raw = data.stereotype as unknown as string | undefined;
     if (raw === "Abstract") {
-      data.isAbstract = true
-      delete (data as { stereotype?: unknown }).stereotype
-      if (typeof node.height === "number") node.height -= 10
+      data.isAbstract = true;
+      delete (data as { stereotype?: unknown }).stereotype;
+      if (typeof node.height === "number") node.height -= 10;
       if (node.measured && typeof node.measured.height === "number") {
-        node.measured.height -= 10
+        node.measured.height -= 10;
       }
     } else if (raw && raw in V4_STEREOTYPE) {
-      data.stereotype = V4_STEREOTYPE[raw]
+      data.stereotype = V4_STEREOTYPE[raw];
     }
     if (data.stereotype && data.isAbstract) {
-      data.isAbstract = false
+      data.isAbstract = false;
     }
   }
-  return model
+  return model;
 }
 
 export function normalizeElementTags(model: UMLModel): UMLModel {
   for (const { data } of taggableElements(model.nodes)) {
-    if ("tags" in data) applyTags(data, data.tags)
+    if ("tags" in data) applyTags(data, data.tags);
   }
-  return model
+  return model;
 }
 
 export function normalizeStraightEdgeWaypoints(model: UMLModel): UMLModel {
-  const match = /^4\.(\d+)\.(\d+)$/.exec(model.version)
-  if (!match) return model
-  const minor = Number(match[1])
+  const match = /^4\.(\d+)\.(\d+)$/.exec(model.version);
+  if (!match) return model;
+  const minor = Number(match[1]);
   if (minor < STRAIGHT_WAYPOINT_MODEL_MINOR) {
     for (const edge of model.edges) {
-      if (!STRAIGHT_HOOK_EDGE_TYPES.has(edge.type ?? "")) continue
+      if (!STRAIGHT_HOOK_EDGE_TYPES.has(edge.type ?? "")) continue;
       const data = edge.data as
         | (Record<string, unknown> & { points?: unknown })
         | null
-        | undefined
-      if (data && Array.isArray(data.points)) data.points = []
+        | undefined;
+      if (data && Array.isArray(data.points)) data.points = [];
     }
-    model.version = CURRENT_MODEL_VERSION
+    model.version = CURRENT_MODEL_VERSION;
   }
-  return model
+  return model;
 }
 
 function stripRuntimeInteractionState(model: UMLModel): UMLModel {
-  let changed = false
+  let changed = false;
 
   const nodes = model.nodes.map((node) => {
     if (
@@ -883,59 +883,87 @@ function stripRuntimeInteractionState(model: UMLModel): UMLModel {
       !("dragging" in node) &&
       !("resizing" in node)
     ) {
-      return node
+      return node;
     }
 
-    changed = true
+    changed = true;
     const persistentNode = { ...node } as UmlStudioNode & {
-      selected?: unknown
-      dragging?: unknown
-      resizing?: unknown
-    }
-    delete persistentNode.selected
-    delete persistentNode.dragging
-    delete persistentNode.resizing
-    return persistentNode
-  })
+      selected?: unknown;
+      dragging?: unknown;
+      resizing?: unknown;
+    };
+    delete persistentNode.selected;
+    delete persistentNode.dragging;
+    delete persistentNode.resizing;
+    return persistentNode;
+  });
 
   const edges = model.edges.map((edge) => {
-    if (!("selected" in edge)) return edge
+    if (!("selected" in edge)) return edge;
 
-    changed = true
+    changed = true;
     const persistentEdge = { ...edge } as UmlStudioEdge & {
-      selected?: unknown
-    }
-    delete persistentEdge.selected
-    return persistentEdge
-  })
+      selected?: unknown;
+    };
+    delete persistentEdge.selected;
+    return persistentEdge;
+  });
 
-  return changed ? { ...model, nodes, edges } : model
+  return changed ? { ...model, nodes, edges } : model;
 }
 
 export function normalizeModel(model: UMLModel): UMLModel {
   return stripRuntimeInteractionState(
     normalizeElementTags(
-      normalizeClassStereotypes(normalizeStraightEdgeWaypoints(model))
-    )
-  )
+      normalizeClassStereotypes(
+        sanitizeLegacyNodes(normalizeStraightEdgeWaypoints(model)),
+      ),
+    ),
+  );
+}
+
+/**
+ * Sanitize-on-load for the removed non-UML legacy node types. Persisted v4
+ * snapshots (Yjs docs, Redis snapshots, IndexedDB `umlstudio-local`) that
+ * still contain them are healed on first open: offending nodes are
+ * discarded, all remaining nodes, edges and `model.title` are preserved,
+ * and the model is stamped with the current 4.x version. Comparison is
+ * case-insensitive so no casing variant of the removed types can slip
+ * through.
+ */
+function sanitizeLegacyNodes(model: UMLModel): UMLModel {
+  const LEGACY_NODE_TYPES: ReadonlySet<string> = new Set([
+    "colordescription",
+    "titleanddesctiption",
+  ]);
+  const isLegacyNodeType = (type: unknown): boolean =>
+    typeof type === "string" && LEGACY_NODE_TYPES.has(type.toLowerCase());
+  if (!model.nodes.some((node) => isLegacyNodeType(node.type))) {
+    return model;
+  }
+  return {
+    ...model,
+    version: CURRENT_MODEL_VERSION,
+    nodes: model.nodes.filter((node) => !isLegacyNodeType(node.type)),
+  };
 }
 
 export function importDiagram(data: any | V3UMLModel): UMLModel {
-  let model: UMLModel
+  let model: UMLModel;
 
   if (isV4Format(data)) {
-    model = data
+    model = data;
   } else if (isV3Format(data)) {
-    model = convertV3ToV4(data)
+    model = convertV3ToV4(data);
   } else if (isV2Format(data)) {
-    model = convertV2ToV4(data)
+    model = convertV2ToV4(data);
   } else if (data.model) {
-    return importDiagram(data.model)
+    return importDiagram(data.model);
   } else {
     throw new Error(
-      "Unsupported diagram format. Only 2.x.x, 3.x.x and 4.x.x formats are supported."
-    )
+      "Unsupported diagram format. Only 2.x.x, 3.x.x and 4.x.x formats are supported.",
+    );
   }
 
-  return transformEdges(normalizeModel(model))
+  return transformEdges(normalizeModel(model));
 }

@@ -44,10 +44,7 @@
               }
             },
             "additionalProperties": false,
-            "required": [
-              "x",
-              "y"
-            ]
+            "required": ["x", "y"]
           },
           "data": {
             "type": "object",
@@ -67,10 +64,7 @@
               }
             },
             "additionalProperties": false,
-            "required": [
-              "height",
-              "width"
-            ]
+            "required": ["height", "width"]
           }
         },
         "additionalProperties": false,
@@ -155,26 +149,16 @@
                 "type": "string"
               },
               "status": {
-                "enum": [
-                  "CORRECT",
-                  "INCORRECT",
-                  "NOT_VALIDATED"
-                ],
+                "enum": ["CORRECT", "INCORRECT", "NOT_VALIDATED"],
                 "type": "string"
               }
             },
             "additionalProperties": false,
-            "required": [
-              "status"
-            ]
+            "required": ["status"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "elementType",
-          "modelElementId",
-          "score"
-        ]
+        "required": ["elementType", "modelElementId", "score"]
       }
     },
     "interactive": {
@@ -194,10 +178,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "elements",
-        "relationships"
-      ]
+      "required": ["elements", "relationships"]
     }
   },
   "additionalProperties": false,
@@ -212,12 +193,7 @@
   ],
   "definitions": {
     "DiagramNodeType": {
-      "enum": [
-        "class",
-        "colorDescription",
-        "package",
-        "titleAndDesctiption"
-      ],
+      "enum": ["class", "package"],
       "type": "string"
     },
     "DiagramEdgeType": {
@@ -243,9 +219,7 @@
           }
         }
       },
-      "required": [
-        "points"
-      ]
+      "required": ["points"]
     },
     "IPoint": {
       "type": "object",
@@ -258,10 +232,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "x",
-        "y"
-      ]
+      "required": ["x", "y"]
     }
   },
   "$schema": "http://json-schema.org/draft-07/schema#",
