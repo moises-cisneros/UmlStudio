@@ -1,13 +1,13 @@
-import React, { useState, KeyboardEvent, ChangeEvent } from "react"
-import { GripVertical, Plus, Trash2 } from "lucide-react"
-import { IconButton, TextField, Typography } from "@/components/ui"
-import { NodeStyleEditor } from "@/components/styleEditor"
-import { useLabels } from "@/i18n/useLabels"
-import { generateUUID, withTags } from "@/utils"
-import { useDiagramStore } from "@/store"
-import { useShallow } from "zustand/shallow"
-import { ClassNodeElement, ClassNodeProps } from "@/types"
-import { TagChips, TagPicker } from "../TagPicker"
+import React, { useState, KeyboardEvent, ChangeEvent } from "react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { IconButton, TextField, Typography } from "@/components/ui";
+import { NodeStyleEditor } from "@/components/styleEditor";
+import { useLabels } from "@/i18n/useLabels";
+import { generateUUID, withTags } from "@/utils";
+import { useDiagramStore } from "@/store";
+import { useShallow } from "zustand/shallow";
+import { ClassNodeElement, ClassNodeProps } from "@/types";
+import { TagChips, TagPicker } from "../TagPicker";
 import {
   DndContext,
   closestCenter,
@@ -16,26 +16,26 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from "@dnd-kit/core"
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Props {
-  nodeId: string
+  nodeId: string;
 }
 
 interface SortableMethodRowProps {
-  id: string
-  item: ClassNodeElement
-  onMethodChange: (id: string, key: string, value: string) => void
-  onTagsChange: (id: string, tags: string[]) => void
-  onDelete: (id: string) => void
+  id: string;
+  item: ClassNodeElement;
+  onMethodChange: (id: string, key: string, value: string) => void;
+  onTagsChange: (id: string, tags: string[]) => void;
+  onDelete: (id: string) => void;
 }
 
 const SortableMethodRow: React.FC<SortableMethodRowProps> = ({
@@ -45,7 +45,7 @@ const SortableMethodRow: React.FC<SortableMethodRowProps> = ({
   onTagsChange,
   onDelete,
 }) => {
-  const t = useLabels()
+  const t = useLabels();
   const {
     attributes,
     listeners,
@@ -53,14 +53,14 @@ const SortableMethodRow: React.FC<SortableMethodRowProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id })
+  } = useSortable({ id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 999 : undefined,
-  }
+  };
 
   return (
     <div
@@ -118,47 +118,49 @@ const SortableMethodRow: React.FC<SortableMethodRowProps> = ({
         onChange={(tags) => onTagsChange(item.id, tags)}
       />
     </div>
-  )
-}
+  );
+};
 
 export const EditableMethodsList: React.FC<Props> = ({ nodeId }) => {
-  const t = useLabels()
+  const t = useLabels();
   const { nodes, setNodes } = useDiagramStore(
-    useShallow((state) => ({ setNodes: state.setNodes, nodes: state.nodes }))
-  )
-  const [newItem, setNewItem] = useState("")
+    useShallow((state) => ({ setNodes: state.setNodes, nodes: state.nodes })),
+  );
+  const [newItem, setNewItem] = useState("");
 
   const nodeData = nodes.find((node) => node.id === nodeId)?.data as
     | ClassNodeProps
-    | undefined
-  const methods = nodeData?.methods ?? []
+    | undefined;
+  const methods = nodeData?.methods ?? [];
 
   const patchMethods = (updatedMethods: typeof methods) => {
     setNodes((nodes) =>
       nodes.map((node) =>
         node.id === nodeId
           ? { ...node, data: { ...node.data, methods: updatedMethods } }
-          : node
-      )
-    )
-  }
+          : node,
+      ),
+    );
+  };
 
   const handleMethodChange = (id: string, key: string, value: string) => {
     patchMethods(
-      methods.map((item) => (item.id === id ? { ...item, [key]: value } : item))
-    )
-  }
+      methods.map((item) =>
+        item.id === id ? { ...item, [key]: value } : item,
+      ),
+    );
+  };
 
   const handleTagsChange = (id: string, tags: string[]) => {
     patchMethods(
-      methods.map((item) => (item.id === id ? withTags(item, tags) : item))
-    )
-  }
+      methods.map((item) => (item.id === id ? withTags(item, tags) : item)),
+    );
+  };
 
   const handleItemDelete = (id: string) => {
     setNodes((nodes) =>
       nodes.map((node) => {
-        if (node.id !== nodeId) return node
+        if (node.id !== nodeId) return node;
         return {
           ...node,
           data: {
@@ -167,47 +169,47 @@ export const EditableMethodsList: React.FC<Props> = ({ nodeId }) => {
           },
           height: node.height! - 30,
           measured: { ...node.measured, height: node.height! - 30 },
-        }
-      })
-    )
-  }
+        };
+      }),
+    );
+  };
 
   const handleAddItem = () => {
-    if (newItem.trim() === "") return
-    const newMethod = { id: generateUUID(), name: newItem }
+    if (newItem.trim() === "") return;
+    const newMethod = { id: generateUUID(), name: newItem };
     setNodes((nodes) =>
       nodes.map((node) => {
-        if (node.id !== nodeId) return node
+        if (node.id !== nodeId) return node;
         return {
           ...node,
           data: { ...node.data, methods: [...methods, newMethod] },
           height: node.height! + 30,
           measured: { ...node.measured, height: node.height! + 30 },
-        }
-      })
-    )
-    setNewItem("")
-  }
+        };
+      }),
+    );
+    setNewItem("");
+  };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") handleAddItem()
-  }
+    if (event.key === "Enter") handleAddItem();
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
+    }),
+  );
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    const oldIndex = methods.findIndex((m) => m.id === active.id)
-    const newIndex = methods.findIndex((m) => m.id === over.id)
-    patchMethods(arrayMove(methods, oldIndex, newIndex))
-  }
+    const oldIndex = methods.findIndex((m) => m.id === active.id);
+    const newIndex = methods.findIndex((m) => m.id === over.id);
+    patchMethods(arrayMove(methods, oldIndex, newIndex));
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -247,8 +249,8 @@ export const EditableMethodsList: React.FC<Props> = ({ nodeId }) => {
             setNewItem(e.target.value)
           }
           onBlur={() => {
-            if (newItem.trim() !== "") handleAddItem()
-            else setNewItem("")
+            if (newItem.trim() !== "") handleAddItem();
+            else setNewItem("");
           }}
           onKeyDown={handleKeyDown}
         />
@@ -261,5 +263,5 @@ export const EditableMethodsList: React.FC<Props> = ({ nodeId }) => {
         </IconButton>
       </div>
     </div>
-  )
-}
+  );
+};
