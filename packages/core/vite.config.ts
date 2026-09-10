@@ -1,20 +1,20 @@
-import { defineConfig, type Plugin } from "vite"
-import react from "@vitejs/plugin-react"
-import dts from "vite-plugin-dts"
-import { resolve } from "path"
-import { readFileSync } from "fs"
+import { defineConfig, type Plugin } from "vite";
+import react from "@vitejs/plugin-react";
+import dts from "vite-plugin-dts";
+import { resolve } from "path";
+import { readFileSync } from "fs";
 import type {
   ExtractorMessage,
   IExtractorInvokeOptions,
-} from "@microsoft/api-extractor"
+} from "@microsoft/api-extractor";
 
 const dtsInvokeOptions: IExtractorInvokeOptions = {
   messageCallback(message: ExtractorMessage) {
     if (message.messageId === "console-compiler-version-notice") {
-      message.handled = true
+      message.handled = true;
     }
   },
-}
+};
 
 function emitFontLicense(): Plugin {
   return {
@@ -26,11 +26,11 @@ function emitFontLicense(): Plugin {
         fileName: "LICENSE-InterFont",
         source: readFileSync(
           resolve(__dirname, "../../assets/fonts/LICENSE-InterFont"),
-          "utf8"
+          "utf8",
         ),
-      })
+      });
     },
-  }
+  };
 }
 
 const REACT_PEERS = [
@@ -42,7 +42,7 @@ const REACT_PEERS = [
   "react-dom/client",
   "@xyflow/react",
   "@xyflow/system",
-]
+];
 
 const RUNTIME_DEPS = [
   /^@base-ui\/react(\/.*)?$/,
@@ -50,10 +50,10 @@ const RUNTIME_DEPS = [
   /^@dnd-kit\//,
   /^zustand(\/.*)?$/,
   "@chenglou/pretext",
-]
+];
 
 const ROUTING_KERNEL =
-  /packages\/core\/lib\/(?:utils\/geometry\/|utils\/(?:edgeUtils|connectionModes)\.ts|edges\/Connection\.ts)/
+  /packages\/core\/lib\/(?:utils\/geometry\/|utils\/(?:edgeUtils|connectionModes)\.ts|edges\/Connection\.ts)/;
 
 export default defineConfig({
   base: "./",
@@ -92,8 +92,6 @@ export default defineConfig({
     rollupOptions: {
       external: [
         /^@resvg\/resvg-wasm/,
-        "jspdf",
-        "svg2pdf.js",
         "yjs",
         /^y-protocols(\/.*)?$/,
         ...REACT_PEERS,
@@ -115,4 +113,4 @@ export default defineConfig({
       "@umlstudio/ui": resolve(__dirname, "../ui/src"),
     },
   },
-})
+});
