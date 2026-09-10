@@ -1,3 +1,2 @@
-export * from "./classDiagram"
-export * from "./types"
-export * from "./TitleAndDescriptionNode"
+export * from "./classDiagram";
+export * from "./types";
