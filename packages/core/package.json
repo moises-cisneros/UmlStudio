@@ -60,9 +60,7 @@
     "zustand": "catalog:"
   },
   "optionalDependencies": {
-    "@resvg/resvg-wasm": "catalog:",
-    "jspdf": "catalog:",
-    "svg2pdf.js": "catalog:"
+    "@resvg/resvg-wasm": "catalog:"
   },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "catalog:",
