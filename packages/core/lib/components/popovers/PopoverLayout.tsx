@@ -1,13 +1,13 @@
-import React from "react"
-import { Typography } from "@/components/ui"
-import { useLabels } from "@/i18n/useLabels"
+import React from "react";
+import { Typography } from "@/components/ui";
+import { useLabels } from "@/i18n/useLabels";
 
-const SECTION_GAP = 12
-const FIELD_GAP = 8
+const SECTION_GAP = 12;
+const FIELD_GAP = 8;
 
 interface PopoverLayoutProps {
-  title?: React.ReactNode
-  children: React.ReactNode
+  title?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export const PopoverLayout: React.FC<PopoverLayoutProps> = ({
@@ -35,13 +35,13 @@ export const PopoverLayout: React.FC<PopoverLayoutProps> = ({
     )}
     {children}
   </div>
-)
+);
 
 interface PopoverSectionProps {
-  title?: React.ReactNode
-  action?: React.ReactNode
-  divider?: boolean
-  children: React.ReactNode
+  title?: React.ReactNode;
+  action?: React.ReactNode;
+  divider?: boolean;
+  children: React.ReactNode;
 }
 
 export const PopoverSection: React.FC<PopoverSectionProps> = ({
@@ -85,33 +85,33 @@ export const PopoverSection: React.FC<PopoverSectionProps> = ({
     )}
     {children}
   </div>
-)
+);
 
 export const hasDistinctEndpointNames = (
   source?: string,
-  target?: string
+  target?: string,
 ): boolean => {
-  const s = source?.trim()
-  const t = target?.trim()
-  return Boolean(s && t && s !== t)
-}
+  const s = source?.trim();
+  const t = target?.trim();
+  return Boolean(s && t && s !== t);
+};
 
 export const ConnectionInfo: React.FC<{
-  source?: string
-  target?: string
+  source?: string;
+  target?: string;
 }> = ({ source, target }) =>
   hasDistinctEndpointNames(source, target) ? (
     <Typography variant="body2" style={{ opacity: 0.7 }}>
       {source} → {target}
     </Typography>
-  ) : null
+  ) : null;
 
 export const AssessmentHeader: React.FC<{
-  type: string
-  name: string
-  action?: React.ReactNode
+  type: string;
+  name: string;
+  action?: React.ReactNode;
 }> = ({ type, name, action }) => {
-  const t = useLabels()
+  const t = useLabels();
   return (
     <div
       style={{
@@ -120,12 +120,12 @@ export const AssessmentHeader: React.FC<{
         gap: FIELD_GAP,
       }}
     >
-            <Typography variant="subtitle2" style={{ flex: 1 }}>
+      <Typography variant="subtitle2" style={{ flex: 1 }}>
         {t.assessmentFor(type)}
         {name && " "}
         {name && <span data-slot="assessment-name-chip">{name}</span>}
       </Typography>
       {action}
     </div>
-  )
-}
+  );
+};

@@ -1,27 +1,27 @@
-import { FC, useMemo, SVGProps } from "react"
-import { wrapTextInRect, type SvgFontSpec } from "@/utils/svgTextLayout"
-import { FONT_FAMILY } from "@/fontStack"
+import { FC, useMemo, SVGProps } from "react";
+import { wrapTextInRect, type SvgFontSpec } from "@/utils/svgTextLayout";
+import { FONT_FAMILY } from "@/fontStack";
 
-type VerticalAnchor = "top" | "middle" | "bottom"
-type TextAnchor = "start" | "middle" | "end"
+type VerticalAnchor = "top" | "middle" | "bottom";
+type TextAnchor = "start" | "middle" | "end";
 
 type Props = Omit<SVGProps<SVGTextElement>, "x" | "y"> & {
-  text: string
-  x: number
-  y: number
-  maxWidth: number
-  fontSize: number
-  fontWeight?: string | number
-  fontFamily?: string
-  fontStyle?: string
-  lineHeight?: number
-  verticalAnchor?: VerticalAnchor
-  textAnchor?: TextAnchor
-  fill?: string
-  maxLines?: number
-}
+  text: string;
+  x: number;
+  y: number;
+  maxWidth: number;
+  fontSize: number;
+  fontWeight?: string | number;
+  fontFamily?: string;
+  fontStyle?: string;
+  lineHeight?: number;
+  verticalAnchor?: VerticalAnchor;
+  textAnchor?: TextAnchor;
+  fill?: string;
+  maxLines?: number;
+};
 
-const DEFAULT_FONT_FAMILY = FONT_FAMILY
+const DEFAULT_FONT_FAMILY = FONT_FAMILY;
 
 export const MultilineText: FC<Props> = ({
   text,
@@ -40,12 +40,12 @@ export const MultilineText: FC<Props> = ({
   pointerEvents = "none",
   ...rest
 }) => {
-  const resolvedLineHeight = lineHeight ?? Math.round(fontSize * 1.2)
+  const resolvedLineHeight = lineHeight ?? Math.round(fontSize * 1.2);
 
   const font: SvgFontSpec = useMemo(
     () => ({ fontSize, fontWeight, fontFamily, fontStyle }),
-    [fontSize, fontWeight, fontFamily, fontStyle]
-  )
+    [fontSize, fontWeight, fontFamily, fontStyle],
+  );
 
   const wrapped = useMemo(
     () =>
@@ -53,32 +53,32 @@ export const MultilineText: FC<Props> = ({
         lineHeight: resolvedLineHeight,
         maxLines,
       }),
-    [text, maxWidth, font, resolvedLineHeight, maxLines]
-  )
+    [text, maxWidth, font, resolvedLineHeight, maxLines],
+  );
 
   if (!text || wrapped.lines.length === 0) {
-    return null
+    return null;
   }
 
   const displayLines =
     wrapped.overflow && wrapped.lines.length > 0
       ? wrapped.lines.map((line, i) =>
-          i === wrapped.lines.length - 1 ? `${line.trimEnd()}…` : line
+          i === wrapped.lines.length - 1 ? `${line.trimEnd()}…` : line,
         )
-      : wrapped.lines
+      : wrapped.lines;
 
-  const n = displayLines.length
+  const n = displayLines.length;
 
-  let firstLineCenterY: number
+  let firstLineCenterY: number;
   if (verticalAnchor === "top") {
-    firstLineCenterY = y
+    firstLineCenterY = y;
   } else if (verticalAnchor === "bottom") {
-    firstLineCenterY = y - (n - 1) * resolvedLineHeight
+    firstLineCenterY = y - (n - 1) * resolvedLineHeight;
   } else {
-    firstLineCenterY = y - ((n - 1) * resolvedLineHeight) / 2
+    firstLineCenterY = y - ((n - 1) * resolvedLineHeight) / 2;
   }
 
-  const accessibleName = text.trim() ? text : undefined
+  const accessibleName = text.trim() ? text : undefined;
 
   const textEl = (
     <text
@@ -94,7 +94,7 @@ export const MultilineText: FC<Props> = ({
       pointerEvents={pointerEvents}
       {...rest}
     >
-            {displayLines.map((line, i) => (
+      {displayLines.map((line, i) => (
         <tspan
           key={i}
           x={x}
@@ -106,15 +106,15 @@ export const MultilineText: FC<Props> = ({
         </tspan>
       ))}
     </text>
-  )
+  );
 
   if (!accessibleName) {
-    return textEl
+    return textEl;
   }
 
   return (
     <g role="img" aria-label={accessibleName}>
       {textEl}
     </g>
-  )
-}
+  );
+};
