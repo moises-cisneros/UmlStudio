@@ -1,0 +1,82 @@
+/**
+ * UmlStudio Design System — UML Class Diagram Domain Tokens
+ * Node compartments, visibility markers, connectors and magnetic handles.
+ */
+
+:root,
+[data-theme="light"] {
+  /* UML Node Cards (Light) */
+  --uml-node-bg: #ffffff;
+  --uml-node-bg-hover: #faf9fd;
+  --uml-node-border: #cbd5e1;
+  --uml-node-border-active: var(--color-palette-dodger-blue);
+  --uml-node-border-width: 1.5px;
+  --uml-node-radius: var(--radius-lg);
+  --uml-node-shadow: var(--shadow-node);
+  --uml-node-shadow-active: var(--shadow-node-active);
+
+  /* UML Node Header (Light) */
+  --uml-node-header-bg: #f5f2f9;
+  --uml-node-header-border: #e2e8f0;
+  --uml-node-header-title: #0f172a;
+  --uml-node-stereotype-color: #5b21b6;
+  --uml-node-stereotype-bg: rgba(194, 187, 240, 0.3);
+
+  /* Visibility Markers (Light) */
+  --uml-visibility-public: #059669;       /* + Green */
+  --uml-visibility-private: #dc2626;      /* - Coral Red */
+  --uml-visibility-protected: #d97706;    /* # Amber */
+  --uml-visibility-package: #4f46e5;      /* ~ Indigo/Periwinkle */
+
+  /* Connectors / Edges (Light) */
+  --uml-edge-stroke: #64748b;
+  --uml-edge-stroke-active: var(--color-palette-dodger-blue);
+  --uml-edge-width: 2px;
+  --uml-edge-marker-fill: #ffffff;
+  --uml-edge-marker-stroke: #64748b;
+
+  /* Magnetic Handles */
+  --uml-handle-size: 8px;
+  --uml-handle-bg: var(--color-palette-dodger-blue);
+  --uml-handle-border: #ffffff;
+  --uml-handle-glow: rgba(53, 144, 243, 0.4);
+}
+
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  /* UML Node Cards (Dark) */
+  --uml-node-bg: #151d2e;
+  --uml-node-bg-hover: #1b253b;
+  --uml-node-border: #293548;
+  --uml-node-border-active: var(--color-palette-dodger-blue);
+  --uml-node-border-width: 1.5px;
+  --uml-node-radius: var(--radius-lg);
+  --uml-node-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
+  --uml-node-shadow-active: 0 0 0 2px var(--color-palette-dodger-blue), 0 0 20px rgba(98, 191, 237, 0.35);
+
+  /* UML Node Header (Dark) */
+  --uml-node-header-bg: #192338;
+  --uml-node-header-border: #243046;
+  --uml-node-header-title: #f8fafc;
+  --uml-node-stereotype-color: var(--color-palette-periwinkle);
+  --uml-node-stereotype-bg: rgba(194, 187, 240, 0.15);
+
+  /* Visibility Markers (Dark) */
+  --uml-visibility-public: #34d399;       /* + Green */
+  --uml-visibility-private: #f87171;      /* - Red */
+  --uml-visibility-protected: #fbbf24;    /* # Amber */
+  --uml-visibility-package: var(--color-palette-baby-blue); /* ~ Baby Blue */
+
+  /* Connectors / Edges (Dark) */
+  --uml-edge-stroke: #94a3b8;
+  --uml-edge-stroke-active: var(--color-palette-deep-sky);
+  --uml-edge-width: 2px;
+  --uml-edge-marker-fill: #0b0f19;
+  --uml-edge-marker-stroke: #94a3b8;
+
+  /* Magnetic Handles */
+  --uml-handle-size: 8px;
+  --uml-handle-bg: var(--color-palette-deep-sky);
+  --uml-handle-border: #0b0f19;
+  --uml-handle-glow: rgba(98, 191, 237, 0.6);
+}

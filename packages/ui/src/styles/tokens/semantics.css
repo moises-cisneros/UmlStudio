@@ -1,0 +1,225 @@
+/**
+ * UmlStudio Design System — Semantic Surface & Color Tokens
+ * Light and Dark themes mapped cleanly to the Coolors rebranding palette.
+ */
+
+/* =========================================================================
+  LIGHT THEME (Default / Canvas)
+/* ========================================================================= */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces & Backgrounds */
+  --umlstudio-background: #ffffff;
+  --umlstudio-background-variant: #fbf9fc;
+  --umlstudio-surface: #ffffff;
+  --umlstudio-surface-sunken: #f5eff7;
+  --umlstudio-surface-hover: #f1f5fa;
+  --umlstudio-surface-active: #e6eef8;
+
+  /* Brand & Primary Actions (Dodger Blue #3590F3) */
+  --umlstudio-primary: var(--color-palette-dodger-blue);
+  --umlstudio-primary-foreground: #ffffff;
+  --umlstudio-secondary: #54606f;
+  --umlstudio-accent: var(--color-palette-deep-sky);
+  --umlstudio-accent-soft: var(--color-palette-baby-blue);
+  --umlstudio-tint: var(--color-palette-periwinkle);
+
+  /* Foreground / Typography */
+  --umlstudio-foreground: #12161f;
+  --umlstudio-text-secondary: #54606f;
+  --umlstudio-text-muted: #64748b;
+  --umlstudio-gray: var(--primitive-gray-100);
+  --umlstudio-gray-variant: var(--primitive-gray-700);
+
+  /* Borders & Dividers */
+  --umlstudio-border: #cbd5e1;
+  --umlstudio-border-subtle: #e2e8f0;
+  --umlstudio-border-strong: #94a3b8;
+
+  /* Status Colors */
+  --umlstudio-success: var(--primitive-success-base);
+  --umlstudio-warning: var(--primitive-warning-yellow);
+  --umlstudio-danger: var(--primitive-danger-color);
+  --umlstudio-info: var(--primitive-info-base);
+
+  /* Home Compatibility Layer (Semantic Mirrors) */
+  --home-surface-base: var(--umlstudio-background);
+  --home-surface-sunken: var(--umlstudio-surface-sunken);
+  --home-surface-raised: var(--umlstudio-surface);
+  --home-surface-raised-hover: var(--umlstudio-surface-hover);
+  --home-surface-raised-active: var(--umlstudio-surface-active);
+  --home-surface-row-alt: var(--umlstudio-background-variant);
+  --home-text-primary: var(--umlstudio-foreground);
+  --home-text-secondary: var(--umlstudio-text-secondary);
+  --home-text-strong: var(--umlstudio-foreground);
+  --home-text-muted: var(--umlstudio-text-muted);
+  --home-border-default: var(--umlstudio-border);
+  --home-border-strong: var(--umlstudio-border-strong);
+  --home-border-subtle: var(--umlstudio-border-subtle);
+  --home-accent-base: var(--umlstudio-primary);
+  --home-accent-soft: #d3e7fb;
+  --home-accent-strong: var(--color-palette-dodger-blue);
+  --home-accent-ring: var(--color-palette-dodger-blue);
+  --home-accent-contrast: #ffffff;
+
+  /* Badges & Tags */
+  --primitive-badge-bg: #dbeafe;
+  --primitive-badge-fold: var(--color-palette-dodger-blue);
+  --primitive-text-on-badge: #1e3a8a;
+  --home-badge-bg: var(--primitive-badge-bg);
+  --home-badge-fold: var(--primitive-badge-fold);
+  --home-text-on-badge: var(--primitive-text-on-badge);
+
+  --primitive-tag-type-bg: #e0e7ff;
+  --primitive-tag-type-text: #3730a3;
+  --primitive-tag-local-bg: #fef3c7;
+  --primitive-tag-local-text: #92400e;
+  --primitive-tag-shared-bg: #ccfbf1;
+  --primitive-tag-shared-text: #115e59;
+  --home-tag-type-bg: var(--primitive-tag-type-bg);
+  --home-tag-type-text: var(--primitive-tag-type-text);
+  --home-tag-local-bg: var(--primitive-tag-local-bg);
+  --home-tag-local-text: var(--primitive-tag-local-text);
+  --home-tag-shared-bg: var(--primitive-tag-shared-bg);
+  --home-tag-shared-text: var(--primitive-tag-shared-text);
+
+  /* Chrome Glass Surface */
+  --umlstudio-chrome-surface: #ffffff;
+  --umlstudio-chrome-surface-hover: #f1f5f9;
+  --umlstudio-chrome-surface-active: #e2e8f0;
+  --umlstudio-chrome-border: rgba(15, 23, 42, 0.12);
+  --umlstudio-chrome-border-strong: rgba(15, 23, 42, 0.25);
+  --umlstudio-chrome-text: #0f172a;
+  --umlstudio-chrome-text-muted: #64748b;
+  --umlstudio-chrome-accent: var(--color-palette-dodger-blue);
+  --umlstudio-chrome-glass: rgba(255, 255, 255, 0.85);
+  --umlstudio-chrome-glass-solid: #ffffff;
+
+  /* Grid and Canvas */
+  --umlstudio-grid: var(--primitive-grid);
+
+  /* Swatches */
+  --umlstudio-swatch-slate: var(--primitive-swatch-slate);
+  --umlstudio-swatch-red: var(--primitive-swatch-red);
+  --umlstudio-swatch-orange: var(--primitive-swatch-orange);
+  --umlstudio-swatch-amber: var(--primitive-swatch-amber);
+  --umlstudio-swatch-green: var(--primitive-swatch-green);
+  --umlstudio-swatch-teal: var(--primitive-swatch-teal);
+  --umlstudio-swatch-blue: var(--primitive-swatch-blue);
+  --umlstudio-swatch-violet: var(--primitive-swatch-violet);
+  --umlstudio-swatch-pink: var(--primitive-swatch-pink);
+}
+
+/* =========================================================================
+   DARK THEME (Technical Precision Studio)
+   ========================================================================= */
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Deep Obsidian Technical Surfaces */
+  --umlstudio-background: #0b0f19;
+  --umlstudio-background-variant: #101626;
+  --umlstudio-surface: #151d2e;
+  --umlstudio-surface-sunken: #0c101a;
+  --umlstudio-surface-hover: #1e293f;
+  --umlstudio-surface-active: #273550;
+
+  /* Brand & Primary Actions */
+  --umlstudio-primary: var(--color-palette-dodger-blue);
+  --umlstudio-primary-foreground: #ffffff;
+  --umlstudio-secondary: #94a3b8;
+  --umlstudio-accent: var(--color-palette-deep-sky);
+  --umlstudio-accent-soft: rgba(98, 191, 237, 0.2);
+  --umlstudio-tint: var(--color-palette-periwinkle);
+
+  /* Typography & Foreground */
+  --umlstudio-foreground: #f8fafc;
+  --umlstudio-text-secondary: #cbd5e1;
+  --umlstudio-text-muted: #94a3b8;
+  --umlstudio-gray: #1e293b;
+  --umlstudio-gray-variant: #475569;
+
+  /* Technical Borders */
+  --umlstudio-border: #243046;
+  --umlstudio-border-subtle: #192233;
+  --umlstudio-border-strong: #3b4c68;
+
+  /* Functional Status Colors */
+  --umlstudio-success: #34d399;
+  --umlstudio-warning: #fbbf24;
+  --umlstudio-danger: #f87171;
+  --umlstudio-info: #38bdf8;
+
+  /* Grid dots in dark mode */
+  --primitive-grid: rgba(98, 191, 237, 0.08);
+
+  /* Home Compatibility Layer (Dark) */
+  --home-surface-base: var(--umlstudio-background);
+  --home-surface-sunken: var(--umlstudio-surface-sunken);
+  --home-surface-raised: var(--umlstudio-surface);
+  --home-surface-raised-hover: var(--umlstudio-surface-hover);
+  --home-surface-raised-active: var(--umlstudio-surface-active);
+  --home-surface-row-alt: var(--umlstudio-background-variant);
+  --home-text-primary: var(--umlstudio-foreground);
+  --home-text-secondary: var(--umlstudio-text-secondary);
+  --home-text-strong: #ffffff;
+  --home-text-muted: var(--umlstudio-text-muted);
+  --home-border-default: var(--umlstudio-border);
+  --home-border-strong: var(--umlstudio-border-strong);
+  --home-border-subtle: var(--umlstudio-border-subtle);
+  --home-accent-base: var(--color-palette-dodger-blue);
+  --home-accent-soft: rgba(53, 144, 243, 0.2);
+  --home-accent-strong: #ffffff;
+  --home-accent-ring: var(--color-palette-dodger-blue);
+  --home-accent-contrast: #ffffff;
+
+  /* Badges & Tags Dark */
+  --primitive-badge-bg: #1e293b;
+  --primitive-badge-fold: var(--color-palette-dodger-blue);
+  --primitive-text-on-badge: #e2e8f0;
+  --home-badge-bg: var(--primitive-badge-bg);
+  --home-badge-fold: var(--primitive-badge-fold);
+  --home-text-on-badge: var(--primitive-text-on-badge);
+
+  --primitive-tag-type-bg: #1e1b4b;
+  --primitive-tag-type-text: #c7d2fe;
+  --primitive-tag-local-bg: #451a03;
+  --primitive-tag-local-text: #fde68a;
+  --primitive-tag-shared-bg: #134e4a;
+  --primitive-tag-shared-text: #99f6e4;
+  --home-tag-type-bg: var(--primitive-tag-type-bg);
+  --home-tag-type-text: var(--primitive-tag-type-text);
+  --home-tag-local-bg: var(--primitive-tag-local-bg);
+  --home-tag-local-text: var(--primitive-tag-local-text);
+  --home-tag-shared-bg: var(--primitive-tag-shared-bg);
+  --home-tag-shared-text: var(--primitive-tag-shared-text);
+
+  /* Chrome Floating Glass (Dark) */
+  --umlstudio-chrome-surface: rgba(22, 29, 46, 0.88);
+  --umlstudio-chrome-surface-hover: rgba(30, 41, 63, 0.92);
+  --umlstudio-chrome-surface-active: rgba(39, 53, 80, 0.95);
+  --umlstudio-chrome-border: rgba(98, 191, 237, 0.2);
+  --umlstudio-chrome-border-strong: rgba(98, 191, 237, 0.4);
+  --umlstudio-chrome-text: #f8fafc;
+  --umlstudio-chrome-text-muted: #94a3b8;
+  --umlstudio-chrome-accent: var(--color-palette-dodger-blue);
+  --umlstudio-chrome-glass: rgba(21, 29, 46, 0.75);
+  --umlstudio-chrome-glass-solid: #151d2e;
+
+  /* Grid and Canvas */
+  --umlstudio-grid: var(--primitive-grid);
+
+  /* Swatches */
+  --umlstudio-swatch-slate: var(--primitive-swatch-slate);
+  --umlstudio-swatch-red: var(--primitive-swatch-red);
+  --umlstudio-swatch-orange: var(--primitive-swatch-orange);
+  --umlstudio-swatch-amber: var(--primitive-swatch-amber);
+  --umlstudio-swatch-green: var(--primitive-swatch-green);
+  --umlstudio-swatch-teal: var(--primitive-swatch-teal);
+  --umlstudio-swatch-blue: var(--primitive-swatch-blue);
+  --umlstudio-swatch-violet: var(--primitive-swatch-violet);
+  --umlstudio-swatch-pink: var(--primitive-swatch-pink);
+}

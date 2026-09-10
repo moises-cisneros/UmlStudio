@@ -1,0 +1,65 @@
+/**
+ * UmlStudio Design System — Metrics & Elevation Tokens
+ * Border radii, technical elevations, shadows and micro-animation easings.
+ */
+
+:root {
+  /* Border Radii */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* UmlStudio & Home Legacy Radius Aliases */
+  --umlstudio-radius: var(--radius-md);
+  --umlstudio-radius-sm: var(--radius-sm);
+  --umlstudio-radius-md: var(--radius-md);
+  --umlstudio-radius-lg: var(--radius-lg);
+  --home-radius-sm: var(--radius-xs);
+  --home-radius-md: var(--radius-md);
+  --home-radius-lg: var(--radius-lg);
+  --home-radius-xl: 15px;
+
+  /* Chrome Component Metrics */
+  --umlstudio-chrome-radius-sm: var(--radius-md);
+  --umlstudio-chrome-radius-md: var(--radius-lg);
+  --umlstudio-chrome-radius-lg: var(--radius-xl);
+  --umlstudio-chrome-edge: 10px;
+  --umlstudio-chrome-gap: 8px;
+  --umlstudio-chrome-btn: 32px;
+  --umlstudio-chrome-pad: 6px;
+  --umlstudio-chrome-hit: 44px;
+  --umlstudio-chrome-icon: 18px;
+  --umlstudio-chrome-island-h: calc(var(--umlstudio-chrome-btn) + 2 * var(--umlstudio-chrome-pad) + 2px);
+
+  /* Elevation & Shadows */
+  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08);
+  --shadow-card-hover: 0 4px 6px -1px rgba(15, 23, 42, 0.12), 0 2px 4px -2px rgba(15, 23, 42, 0.08);
+  --shadow-node: 0 2px 8px -2px rgba(15, 23, 42, 0.12), 0 1px 4px -1px rgba(15, 23, 42, 0.06);
+  --shadow-node-active: 0 0 0 2px var(--color-palette-dodger-blue), 0 8px 16px -4px rgba(53, 144, 243, 0.25);
+  --shadow-floating: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  --shadow-overlay: rgba(0, 0, 0, 0.18);
+  --umlstudio-shadow: 0 4px 12px var(--shadow-overlay);
+  --home-shadow-card-hover: rgba(0, 0, 0, 0.1);
+  --home-shadow-overlay: var(--shadow-overlay);
+  --home-shadow-md: var(--umlstudio-shadow);
+  --home-shadow-overlay-box: 0 8px 20px var(--home-shadow-overlay);
+
+  /* Micro-animation Timings & Easings */
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 280ms;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --umlstudio-chrome-duration-hover: var(--duration-fast);
+  --umlstudio-chrome-duration-enter: var(--duration-slow);
+  --umlstudio-chrome-ease-standard: var(--ease-standard);
+  --umlstudio-chrome-ease-decelerate: var(--ease-decelerate);
+}
