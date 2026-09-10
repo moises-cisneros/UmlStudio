@@ -1,0 +1,10 @@
+/**
+ * UmlStudio Design System — Master Token Index
+ * Central orchestration of primitives, typography, metrics, semantics and UML tokens.
+ */
+
+@import "./primitives.css";
+@import "./typography.css";
+@import "./metrics.css";
+@import "./semantics.css";
+@import "./uml.css";

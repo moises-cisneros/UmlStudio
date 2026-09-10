@@ -1,0 +1,139 @@
+/**
+ * UmlStudio Design System — Primitive Tokens
+ * Base color palettes, brand scales, system neutrals and functional swatches.
+ */
+
+:root {
+  /* Safe area insets */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+
+  /* Neutrals Base */
+  --primitive-white: #ffffff;
+  --primitive-black: #000000;
+  --primitive-gray-50: #f8f9fa;
+  --primitive-gray-100: #e9ecef;
+  --primitive-gray-200: #dee2e6;
+  --primitive-gray-700: #495057;
+
+  /* Coolors Brand Palette */
+  --color-palette-lavender-veil: #f1e3f3;
+  --color-palette-periwinkle: #c2bbf0;
+  --color-palette-baby-blue: #8fb8ed;
+  --color-palette-deep-sky: #62bfed;
+  --color-palette-dodger-blue: #3590f3;
+
+  /* Direct Aliases from Coolors specification */
+  --lavender-veil: #f1e3f3;
+  --periwinkle: #c2bbf0;
+  --baby-blue-ice: #8fb8ed;
+  --deep-sky-blue: #62bfed;
+  --dodger-blue: #3590f3;
+
+  /* HSL Component Variants */
+  --color-palette-lavender-veil-hsl: 293 40% 92%;
+  --color-palette-periwinkle-hsl: 248 64% 84%;
+  --color-palette-baby-blue-hsl: 214 72% 75%;
+  --color-palette-deep-sky-hsl: 200 79% 66%;
+  --color-palette-dodger-blue-hsl: 211 89% 58%;
+
+  --lavender-veil-hsl: hsla(293, 40%, 92%, 1);
+  --periwinkle-hsl: hsla(248, 64%, 84%, 1);
+  --baby-blue-ice-hsl: hsla(214, 72%, 75%, 1);
+  --deep-sky-blue-hsl: hsla(200, 79%, 66%, 1);
+  --dodger-blue-hsl: hsla(211, 89%, 58%, 1);
+
+  /* Brand Role Equivalents */
+  --primitive-brand-primary: var(--color-palette-dodger-blue);
+  --primitive-brand-accent: var(--color-palette-deep-sky);
+  --primitive-brand-soft: var(--color-palette-baby-blue);
+  --primitive-brand-periwinkle: var(--color-palette-periwinkle);
+  --primitive-brand-highlight: var(--color-palette-lavender-veil);
+
+  /* Curated Linear & Radial Gradients (Requested Set) */
+  --gradient-top: linear-gradient(0deg, #f1e3f3, #c2bbf0, #8fb8ed, #62bfed, #3590f3);
+  --gradient-right: linear-gradient(90deg, #f1e3f3, #c2bbf0, #8fb8ed, #62bfed, #3590f3);
+  --gradient-bottom: linear-gradient(180deg, #f1e3f3, #c2bbf0, #8fb8ed, #62bfed, #3590f3);
+  --gradient-left: linear-gradient(270deg, #f1e3f3, #c2bbf0, #8fb8ed, #62bfed, #3590f3);
+  --gradient-top-right: linear-gradient(45deg, #f1e3f3, #c2bbf0, #8fb8ed, #62bfed, #3590f3);
+  --gradient-bottom-right: linear-gradient(135deg, #f1e3f3, #c2bbf0, #8fb8ed, #62bfed, #3590f3);
+  --gradient-top-left: linear-gradient(225deg, #f1e3f3, #c2bbf0, #8fb8ed, #62bfed, #3590f3);
+  --gradient-bottom-left: linear-gradient(315deg, #f1e3f3, #c2bbf0, #8fb8ed, #62bfed, #3590f3);
+  --gradient-radial: radial-gradient(#f1e3f3, #c2bbf0, #8fb8ed, #62bfed, #3590f3);
+
+  /* Semantic Brand Gradient Aliases */
+  --gradient-brand-horizontal: var(--gradient-right);
+  --gradient-brand-vertical: var(--gradient-bottom);
+  --gradient-brand-diagonal: var(--gradient-bottom-right);
+  --gradient-brand-subtle: linear-gradient(135deg, rgba(194, 187, 240, 0.3), rgba(98, 191, 237, 0.25));
+  --gradient-brand-radial: radial-gradient(circle at 50% 50%, #c2bbf0 0%, #3590f3 100%);
+  --gradient-brand-glow: radial-gradient(circle at top, rgba(98, 191, 237, 0.2), transparent 70%);
+
+  /* Functional Status Colors */
+  --primitive-success-base: #10b981;
+  --primitive-warning-yellow: #f59e0b;
+  --primitive-warning-bg: #fff3cd;
+  --primitive-warning-border: #ffeeba;
+  --primitive-danger-color: #ef4444;
+  --primitive-danger-bg: #f8d7da;
+  --primitive-danger-border: #f5c6cb;
+  --primitive-info-base: #0ea5e9;
+
+  /* Diagram Guides & Grid */
+  --primitive-guide-vertical: #d63031;
+  --primitive-guide-horizontal: var(--color-palette-dodger-blue);
+  --primitive-grid: rgba(36, 39, 36, 0.08);
+
+  /* Swatches (Palette picker) */
+  --primitive-swatch-slate: #64748b;
+  --primitive-swatch-red: #dc2626;
+  --primitive-swatch-orange: #ea580c;
+  --primitive-swatch-amber: #d97706;
+  --primitive-swatch-green: #16a34a;
+  --primitive-swatch-teal: #0d9488;
+  --primitive-swatch-blue: var(--color-palette-dodger-blue);
+  --primitive-swatch-violet: #7c3aed;
+  --primitive-swatch-pink: #db2777;
+
+  /* Interactive Elements */
+  --primitive-interactive-selection: var(--color-palette-dodger-blue);
+  --primitive-dropzone-accent: var(--color-palette-dodger-blue);
+
+  /* Collaboration cursors */
+  --primitive-collab-1: #ffb61e;
+  --primitive-collab-2: #37b24d;
+  --primitive-collab-3: #1c7ed6;
+  --primitive-collab-4: #f03e3e;
+  --primitive-collab-5: #ae3ec9;
+  --primitive-collab-6: #0ca678;
+  --primitive-collab-7: #f76707;
+  --primitive-collab-8: #1098ad;
+
+  /* Assessment state */
+  --primitive-assessment-positive-text: #166534;
+  --primitive-assessment-positive-bg: #dcfce7;
+  --primitive-assessment-negative-text: #991b1b;
+  --primitive-assessment-negative-bg: #fee2e2;
+  --primitive-assessment-zero-text: #1e40af;
+  --primitive-assessment-zero-bg: #dbeafe;
+  --primitive-assessment-ungraded-text: #475569;
+  --primitive-assessment-ungraded-bg: #f1f5f9;
+
+  /* Banner & Toast */
+  --primitive-banner-warning-bg: #fff7e6;
+  --primitive-banner-warning-border: #f6d28b;
+  --primitive-banner-warning-icon: #b7791f;
+  --primitive-banner-warning-text: #122038;
+  --primitive-banner-warning-muted: #4e5e79;
+  --primitive-banner-warning-btn-bg: #f7faff;
+  --primitive-banner-warning-btn-text: #8c5a10;
+  --primitive-banner-warning-btn-border: #f6d28b;
+  --primitive-banner-warning-btn-hover: #f5e8c8;
+
+  --primitive-toast-success: #197d4e;
+  --primitive-toast-error: #c33640;
+  --primitive-toast-warning: #b7791f;
+  --primitive-toast-info: #1f5e9e;
+}

@@ -1,0 +1,41 @@
+/**
+ * UmlStudio Design System — Typography Tokens
+ * Canonical Inter typography scale, font weights and leading metrics.
+ */
+
+:root {
+  /* Font Families */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Type Scale */
+  --text-display: 1.5rem;          /* 24px - Modal & Dashboard headers */
+  --text-display-lh: 1.3;
+
+  --text-title: 1.125rem;          /* 18px - Panel & Drawer titles */
+  --text-title-lh: 1.35;
+
+  --text-node-title: 0.9375rem;    /* 15px - UML Class / Interface names */
+  --text-node-title-lh: 1.4;
+
+  --text-body: 0.875rem;           /* 14px - Standard UI text */
+  --text-body-lh: 1.5;
+
+  --text-member: 0.8125rem;         /* 13px - Attributes & Methods */
+  --text-member-lh: 1.45;
+
+  --text-caption: 0.6875rem;       /* 11px - Stereotypes & Multiplicities */
+  --text-caption-lh: 1.25;
+
+  /* Tracking (Letter Spacing) */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.04em;
+  --tracking-stereotype: 0.06em;
+}

@@ -6,10 +6,13 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
-  --font-sans: "Inter", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
   --color-background: var(--umlstudio-background);
   --color-foreground: var(--umlstudio-foreground);
 
+  /* Primary Brand Action (Dodger Blue #3590F3) */
   --color-primary: var(--umlstudio-primary);
   --color-primary-foreground: var(--home-accent-contrast);
 
@@ -42,6 +45,27 @@
   --color-destructive: var(--umlstudio-danger);
   --color-destructive-foreground: var(--primitive-white);
 
+  /* Coolors Brand Tokens */
+  --color-brand-lavender: var(--color-palette-lavender-veil);
+  --color-brand-lavender-veil: var(--color-palette-lavender-veil);
+  --color-brand-periwinkle: var(--color-palette-periwinkle);
+  --color-brand-baby-blue: var(--color-palette-baby-blue);
+  --color-brand-baby-blue-ice: var(--color-palette-baby-blue);
+  --color-brand-deep-sky: var(--color-palette-deep-sky);
+  --color-brand-deep-sky-blue: var(--color-palette-deep-sky);
+  --color-brand-dodger-blue: var(--color-palette-dodger-blue);
+
+  /* UML Diagram Tokens */
+  --color-uml-header: var(--uml-node-header-bg);
+  --color-uml-border: var(--uml-node-border);
+  --color-uml-edge: var(--uml-edge-stroke);
+  --color-uml-edge-active: var(--uml-edge-stroke-active);
+  --color-uml-public: var(--uml-visibility-public);
+  --color-uml-private: var(--uml-visibility-private);
+  --color-uml-protected: var(--uml-visibility-protected);
+  --color-uml-package: var(--uml-visibility-package);
+
+  /* Palette Swatches */
   --color-swatch-slate: var(--umlstudio-swatch-slate);
   --color-swatch-red: var(--umlstudio-swatch-red);
   --color-swatch-orange: var(--umlstudio-swatch-orange);
@@ -52,10 +76,11 @@
   --color-swatch-violet: var(--umlstudio-swatch-violet);
   --color-swatch-pink: var(--umlstudio-swatch-pink);
 
-  --radius-sm: var(--home-radius-sm);
-  --radius-md: var(--home-radius-md);
-  --radius-lg: var(--home-radius-lg);
-  --radius-xl: var(--home-radius-xl);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 
   --text-caption: 0.8125rem;
   --text-caption--line-height: 1.2;
