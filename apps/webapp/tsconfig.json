@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "useDefineForClassFields": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "types": ["node"],
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@fonts/*": ["../../assets/fonts/*"],
+      "@umlstudio/core": ["../../packages/core/dist/index.d.ts"],
+      "@umlstudio/core/*": ["../../packages/core/dist/*"],
+      "@umlstudio/ui/lib/utils": ["../../packages/ui/src/lib/utils.ts"],
+      "@umlstudio/ui/theme": ["../../packages/ui/src/theme.ts"],
+      "@umlstudio/ui/components/*": ["../../packages/ui/src/components/*"],
+      "@umlstudio/ui/styles/*": ["../../packages/ui/src/styles/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
