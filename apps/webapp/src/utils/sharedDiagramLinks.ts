@@ -1,0 +1,90 @@
+import { Capacitor } from "@capacitor/core";
+import { DiagramView } from "@/types";
+import { serverURL } from "@/constants";
+
+export type SharedDiagramViewOption = {
+  value: DiagramView;
+  label: string;
+  badge: string;
+  description: string;
+};
+
+export const SHARED_DIAGRAM_VIEW_OPTIONS: readonly SharedDiagramViewOption[] = [
+  {
+    value: DiagramView.COLLABORATE,
+    label: "Collaborate",
+    badge: "Collaborate",
+    description: "Open the same shared copy as a live collaboration session.",
+  },
+  {
+    value: DiagramView.EDIT,
+    label: "Edit",
+    badge: "Edit",
+    description: "Anyone with this link can open and edit this shared copy.",
+  },
+  {
+    value: DiagramView.GIVE_FEEDBACK,
+    label: "Give feedback",
+    badge: "Feedback",
+    description: "Let reviewers add feedback without changing modelling mode.",
+  },
+  {
+    value: DiagramView.SEE_FEEDBACK,
+    label: "Review feedback",
+    badge: "Review",
+    description: "Open feedback in read-only review mode.",
+  },
+];
+
+export const DEFAULT_SHARED_DIAGRAM_VIEW = DiagramView.COLLABORATE;
+
+export const isDiagramView = (value: unknown): value is DiagramView =>
+  typeof value === "string" &&
+  (Object.values(DiagramView) as string[]).includes(value);
+
+export const normalizeSharedDiagramView = (value: unknown): DiagramView =>
+  isDiagramView(value) ? value : DEFAULT_SHARED_DIAGRAM_VIEW;
+
+export const getSharedDiagramViewOption = (
+  view: unknown,
+): SharedDiagramViewOption => {
+  const normalizedView = normalizeSharedDiagramView(view);
+  return (
+    SHARED_DIAGRAM_VIEW_OPTIONS.find(
+      (option) => option.value === normalizedView,
+    ) ?? SHARED_DIAGRAM_VIEW_OPTIONS[0]
+  );
+};
+
+export const getSharedDiagramViewBadge = (view: unknown): string =>
+  getSharedDiagramViewOption(view).badge;
+
+export const sharedDiagramRoute = (
+  diagramId: string,
+  view: DiagramView = DEFAULT_SHARED_DIAGRAM_VIEW,
+) =>
+  ({
+    to: "/shared/$diagramId",
+    params: { diagramId },
+    search: { view },
+  }) as const;
+
+export const resolveShareOrigin = (): string => {
+  if (Capacitor.isNativePlatform() && serverURL) {
+    return serverURL;
+  }
+  return typeof window !== "undefined" ? window.location.origin : "";
+};
+
+export const resolveServerOrigin = (): string => {
+  if (serverURL) return serverURL;
+  if (Capacitor.isNativePlatform()) return "";
+  return typeof window !== "undefined" ? window.location.origin : "";
+};
+
+export const buildSharedDiagramUrl = (
+  diagramId: string,
+  view: DiagramView = DEFAULT_SHARED_DIAGRAM_VIEW,
+  origin = resolveShareOrigin(),
+): string =>
+  `${origin}/shared/${encodeURIComponent(diagramId)}?view=${encodeURIComponent(view)}`;

@@ -1,18 +1,13 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { useThemeStore } from "./stores/useThemeStore.tsx";
-import { usePersistenceModelStore } from "./stores/usePersistenceModelStore.tsx";
-import { runLegacyMigrationIfNeeded } from "./services/legacyMigration";
 import { log } from "./logger";
 import {
   setLogger as setUmlStudioLogger,
   setLogLevel as setUmlStudioLogLevel,
 } from "@umlstudio/core";
 import { Keyboard } from "@capacitor/keyboard";
-import {
-  notifyLiveUpdateReady,
-  checkForLiveUpdate,
-} from "./services/liveUpdate";
+
 
 const rootElement = document.getElementById("root");
 
@@ -59,25 +54,8 @@ const umlstudioSink = {
 setUmlStudioLogger(umlstudioSink);
 setUmlStudioLogLevel(import.meta.env.DEV ? "debug" : "warn");
 
-function startLegacyMigration() {
-  if (usePersistenceModelStore.persist.hasHydrated()) {
-    void runLegacyMigrationIfNeeded();
-  } else {
-    const unsubscribe = usePersistenceModelStore.persist.onFinishHydration(
-      () => {
-        unsubscribe();
-        void runLegacyMigrationIfNeeded();
-      },
-    );
-  }
-}
-
-startLegacyMigration();
-
 if (rootElement) {
   createRoot(rootElement).render(<App />);
-  void notifyLiveUpdateReady();
-  void checkForLiveUpdate();
 } else {
   log.error("Root element not found");
 }
