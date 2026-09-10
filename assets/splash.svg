@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" width="2732" height="2732">
+  <defs>
+    <!-- Dark Canvas Gradient -->
+    <linearGradient id="splash-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070A12" />
+      <stop offset="50%" stop-color="#0B1120" />
+      <stop offset="100%" stop-color="#14142B" />
+    </linearGradient>
+
+    <!-- Central Ambient Glow -->
+    <radialGradient id="center-glow" cx="50%" cy="46%" r="40%">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.22" />
+      <stop offset="50%" stop-color="#6366F1" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#070A12" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Brand Cyan-to-Indigo Stroke Gradient -->
+    <linearGradient id="splash-stroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#60A5FA" />
+      <stop offset="100%" stop-color="#818CF8" />
+    </linearGradient>
+
+    <!-- Card Fill -->
+    <linearGradient id="splash-card-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="splash-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="32" stdDeviation="48" flood-color="#000000" flood-opacity="0.7" />
+      <feDropShadow dx="0" dy="12" stdDeviation="24" flood-color="#38BDF8" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Solid Clean Background -->
+  <rect width="2732" height="2732" fill="url(#splash-bg)" />
+  <rect width="2732" height="2732" fill="url(#center-glow)" />
+
+  <!-- ====================================================================== -->
+  <!-- CENTERED MINIMALIST LOGO MARK -->
+  <!-- ====================================================================== -->
+  <g transform="translate(1366, 1120)" filter="url(#splash-shadow)">
+    <!-- Main Class Box Container -->
+    <rect x="-320" y="-360" width="640" height="460" rx="44" ry="44" fill="url(#splash-card-fill)" stroke="url(#splash-stroke)" stroke-width="26" />
+
+    <!-- Compartment Divider 1 -->
+    <line x1="-320" y1="-220" x2="320" y2="-220" stroke="url(#splash-stroke)" stroke-width="20" stroke-linecap="round" />
+
+    <!-- Compartment Divider 2 -->
+    <line x1="-320" y1="-70" x2="320" y2="-70" stroke="url(#splash-stroke)" stroke-width="20" stroke-linecap="round" />
+
+    <!-- Compartment 1: Header Identity Pill -->
+    <rect x="-80" y="-300" width="160" height="22" rx="11" fill="#38BDF8" />
+
+    <!-- Compartment 2: Minimalist Attribute Bars -->
+    <rect x="-240" y="-160" width="220" height="20" rx="10" fill="#F8FAFC" fill-opacity="0.75" />
+    <rect x="-240" y="-120" width="320" height="18" rx="9" fill="#94A3B8" fill-opacity="0.5" />
+
+    <!-- Compartment 3: Minimalist Method Bars -->
+    <rect x="-240" y="-15" width="270" height="20" rx="10" fill="#818CF8" fill-opacity="0.85" />
+    <rect x="-240" y="25" width="180" height="18" rx="9" fill="#818CF8" fill-opacity="0.5" />
+
+    <!-- Generalization Inheritance Triangle -->
+    <polygon points="0,100 -58,180 58,180" fill="#070A12" stroke="url(#splash-stroke)" stroke-width="24" stroke-linejoin="round" />
+
+    <!-- Vertical Relationship Stem -->
+    <line x1="0" y1="180" x2="0" y2="310" stroke="url(#splash-stroke)" stroke-width="24" stroke-linecap="round" />
+
+    <!-- Terminal Anchor Point -->
+    <circle cx="0" cy="310" r="22" fill="#38BDF8" stroke="#070A12" stroke-width="8" />
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- MINIMALIST BRAND TYPOGRAPHY -->
+  <!-- ====================================================================== -->
+  <text x="1366" y="1660" text-anchor="middle" fill="#FFFFFF" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="112" font-weight="800" letter-spacing="3">UmlStudio</text>
+  <text x="1366" y="1740" text-anchor="middle" fill="#64748B" font-family="'Inter', system-ui, sans-serif" font-size="34" font-weight="600" letter-spacing="10">UML CLASS MODELING</text>
+</svg>

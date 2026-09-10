@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D18" />
+      <stop offset="50%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#181A3A" />
+    </linearGradient>
+
+    <!-- Squircle Border Subtle Gradient -->
+    <linearGradient id="border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.5" />
+      <stop offset="50%" stop-color="#818CF8" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#C084FC" stop-opacity="0.4" />
+    </linearGradient>
+
+    <!-- Brand Cyan-to-Indigo Stroke Gradient -->
+    <linearGradient id="brand-stroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#60A5FA" />
+      <stop offset="100%" stop-color="#818CF8" />
+    </linearGradient>
+
+    <!-- Soft Radial Glow -->
+    <radialGradient id="ambient-glow" cx="50%" cy="45%" r="45%">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.22" />
+      <stop offset="60%" stop-color="#6366F1" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#090D18" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Card Fill -->
+    <linearGradient id="card-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="glyph-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="20" stdDeviation="28" flood-color="#000000" flood-opacity="0.6" />
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#38BDF8" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Base Canvas -->
+  <rect x="56" y="56" width="912" height="912" rx="220" ry="220" fill="url(#bg-grad)" />
+  <rect x="56" y="56" width="912" height="912" rx="220" ry="220" fill="url(#ambient-glow)" />
+  <rect x="56" y="56" width="912" height="912" rx="220" ry="220" fill="none" stroke="url(#border-grad)" stroke-width="3.5" />
+
+  <!-- ====================================================================== -->
+  <!-- MINIMALIST UML CLASS & INHERITANCE GLYPH -->
+  <!-- ====================================================================== -->
+  <g filter="url(#glyph-shadow)">
+    <!-- Main Class Box Container -->
+    <rect x="252" y="210" width="520" height="370" rx="36" ry="36" fill="url(#card-fill)" stroke="url(#brand-stroke)" stroke-width="22" />
+
+    <!-- Compartment Divider 1 (Header / Name separator) -->
+    <line x1="252" y1="325" x2="772" y2="325" stroke="url(#brand-stroke)" stroke-width="16" stroke-linecap="round" />
+
+    <!-- Compartment Divider 2 (Attributes / Methods separator) -->
+    <line x1="252" y1="445" x2="772" y2="445" stroke="url(#brand-stroke)" stroke-width="16" stroke-linecap="round" />
+
+    <!-- Compartment 1: Header Identity Pill -->
+    <rect x="447" y="260" width="130" height="18" rx="9" fill="#38BDF8" />
+
+    <!-- Compartment 2: Minimalist Attribute Bars -->
+    <rect x="312" y="375" width="180" height="16" rx="8" fill="#F8FAFC" fill-opacity="0.75" />
+    <rect x="312" y="405" width="260" height="14" rx="7" fill="#94A3B8" fill-opacity="0.5" />
+
+    <!-- Compartment 3: Minimalist Method Bars -->
+    <rect x="312" y="490" width="220" height="16" rx="8" fill="#818CF8" fill-opacity="0.85" />
+    <rect x="312" y="520" width="150" height="14" rx="7" fill="#818CF8" fill-opacity="0.5" />
+
+    <!-- Generalization Inheritance Triangle (pointing UP to base of class) -->
+    <polygon points="512,580 464,642 560,642" fill="#090D18" stroke="url(#brand-stroke)" stroke-width="20" stroke-linejoin="round" />
+
+    <!-- Vertical Relationship Stem -->
+    <line x1="512" y1="642" x2="512" y2="760" stroke="url(#brand-stroke)" stroke-width="20" stroke-linecap="round" />
+
+    <!-- Terminal Anchor Point -->
+    <circle cx="512" cy="760" r="18" fill="#38BDF8" stroke="#090D18" stroke-width="6" />
+  </g>
+</svg>
