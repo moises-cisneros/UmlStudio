@@ -1,5 +1,5 @@
-export * from "./typings"
-export { UmlStudioEditor } from "./umlstudio-editor"
+export * from "./typings";
+export { UmlStudioEditor } from "./umlstudio-editor";
 export type {
   OverlayRegion,
   OverlaySide,
@@ -7,7 +7,7 @@ export type {
   OverlayControlOptions,
   OverlayControlInput,
   OverlayControlSnapshot,
-} from "./overlay/types"
+} from "./overlay/types";
 export {
   paletteControl,
   zoomControl,
@@ -19,20 +19,25 @@ export {
   type PaletteControlOptions,
   type ZoomControlOptions,
   type MiniMapControlOptions,
-} from "./chrome/builtins/controls"
+} from "./chrome/builtins/controls";
 export {
   getAssessmentNameForArtemis,
   getEdgeAssessmentDataById,
   getNodeAssessmentDataByNodeElementId,
   type AssessmentViewData,
-} from "./utils/helpers"
-export { importDiagram } from "./utils/versionConverter"
-export { collabColorFromName, randomCollabName } from "./utils/collaboration"
-export { FONT_FAMILY } from "./fontStack"
-export { log, setLogLevel, setLogger } from "./logger"
-export type { LogLevel } from "./logger"
-export { DEFAULT_LABELS, type UmlStudioLabels } from "./i18n/labels"
-export { useLabels } from "./i18n/useLabels"
+} from "./utils/helpers";
+export { importDiagram } from "./utils/versionConverter";
+export {
+  importXmiDiagram,
+  type XmiImportOptions,
+  type XmiImportResult,
+} from "./import/xmiImport";
+export { collabColorFromName, randomCollabName } from "./utils/collaboration";
+export { FONT_FAMILY } from "./fontStack";
+export { log, setLogLevel, setLogger } from "./logger";
+export type { LogLevel } from "./logger";
+export { DEFAULT_LABELS, type UmlStudioLabels } from "./i18n/labels";
+export { useLabels } from "./i18n/useLabels";
 export {
   UMLSTUDIO_SHORTCUTS,
   matchesShortcutCombo,
@@ -42,31 +47,31 @@ export {
   type UmlStudioShortcut,
   type UmlStudioShortcutCombo,
   type UmlStudioShortcutId,
-} from "./keyboard"
-export { createUmlStudioTheme, type UmlStudioTheme } from "@umlstudio/ui/theme"
+} from "./keyboard";
+export { createUmlStudioTheme, type UmlStudioTheme } from "@umlstudio/ui/theme";
 
 export {
   UmlStudio,
   UmlStudioDefaultControls,
   type UmlStudioProps,
-} from "./components/react/UmlStudio"
+} from "./components/react/UmlStudio";
 export {
   UmlStudioProvider,
   useUmlStudioEditor,
   useUmlStudioEditorOrThrow,
-} from "./components/react/context"
-export { useUmlStudioSubscription } from "./components/react/useUmlStudioSubscription"
+} from "./components/react/context";
+export { useUmlStudioSubscription } from "./components/react/useUmlStudioSubscription";
 export {
   UmlStudioControl,
   type UmlStudioControlProps,
-} from "./components/react/UmlStudioControl"
+} from "./components/react/UmlStudioControl";
 export {
   useControl,
   UmlStudioPalette,
   UmlStudioZoom,
   UmlStudioMiniMap,
-} from "./components/react/builtins"
+} from "./components/react/builtins";
 export {
   UmlStudioSelectionToolbar,
   type UmlStudioSelectionToolbarProps,
-} from "./components/react/UmlStudioSelectionToolbar"
+} from "./components/react/UmlStudioSelectionToolbar";

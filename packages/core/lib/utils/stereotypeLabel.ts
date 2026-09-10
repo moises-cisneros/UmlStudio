@@ -1,1 +1,1 @@
-export const stereotypeLabel = (keyword: string): string => `«${keyword}»`
+export const stereotypeLabel = (keyword: string): string => `«${keyword}»`;

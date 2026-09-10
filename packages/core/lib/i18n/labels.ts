@@ -1,119 +1,119 @@
 export interface UmlStudioLabels {
-  zoomToolbar: string
-  zoomIn: string
-  zoomOut: string
-  fitView: string
-  resetZoom: string
-  zoomReadout: (percent: number) => string
-  undo: string
-  undoHint: string
-  redo: string
-  redoHint: string
-  multiSelection: string
-  multiSelectionHint: string
-  scrollLockHint?: (modifier: string) => string
-  scrollLockHintTouch?: string
-  moveEdgeWaypoint?: string
+  zoomToolbar: string;
+  zoomIn: string;
+  zoomOut: string;
+  fitView: string;
+  resetZoom: string;
+  zoomReadout: (percent: number) => string;
+  undo: string;
+  undoHint: string;
+  redo: string;
+  redoHint: string;
+  multiSelection: string;
+  multiSelectionHint: string;
+  scrollLockHint?: (modifier: string) => string;
+  scrollLockHintTouch?: string;
+  moveEdgeWaypoint?: string;
 
-  miniMap: string
-  showMinimap: string
-  showMinimapHint: string
-  hideMinimap: string
+  miniMap: string;
+  showMinimap: string;
+  showMinimapHint: string;
+  hideMinimap: string;
 
-  selectionActions: string
-  elementPalette: string
-  addElement: string
-  paletteModelView: string
-  paletteSelectElementsView: string
-  paletteHighlightHint: string
+  selectionActions: string;
+  elementPalette: string;
+  addElement: string;
+  paletteModelView: string;
+  paletteSelectElementsView: string;
+  paletteHighlightHint: string;
 
-  edge: string
-  label: string
-  type: string
-  connection: string
-  stereotype: string
-  object: string
-  source: string
-  target: string
-  style: string
-  selectPlaceholder: string
+  edge: string;
+  label: string;
+  type: string;
+  connection: string;
+  stereotype: string;
+  object: string;
+  source: string;
+  target: string;
+  style: string;
+  selectPlaceholder: string;
 
-  addComment: string
-  points: string
-  negativePointsAllowed: string
-  feedback: string
-  deleteAssessment: string
-  deleteAssessmentFor: (name: string) => string
-  assessmentFor: (type: string) => string
-  previousAssessment?: string
-  nextAssessment: string
-  noComment: string
-  notGraded: string
-  node: string
-  attribute: string
-  method: string
-  nodeTypeLabel: (nodeType?: string) => string
+  addComment: string;
+  points: string;
+  negativePointsAllowed: string;
+  feedback: string;
+  deleteAssessment: string;
+  deleteAssessmentFor: (name: string) => string;
+  assessmentFor: (type: string) => string;
+  previousAssessment?: string;
+  nextAssessment: string;
+  noComment: string;
+  notGraded: string;
+  node: string;
+  attribute: string;
+  method: string;
+  nodeTypeLabel: (nodeType?: string) => string;
 
-  class: string
-  classType: string
-  abstractClass: string
-  interface: string
-  enumeration: string
-  reorderAttribute: string
-  newAttribute: string
-  addAttribute: string
-  deleteAttribute: string
-  attributes: string
-  reorderMethod: string
-  newMethod: string
-  addMethod: string
-  deleteMethod: string
-  methods: string
+  class: string;
+  classType: string;
+  abstractClass: string;
+  interface: string;
+  enumeration: string;
+  reorderAttribute: string;
+  newAttribute: string;
+  addAttribute: string;
+  deleteAttribute: string;
+  attributes: string;
+  reorderMethod: string;
+  newMethod: string;
+  addMethod: string;
+  deleteMethod: string;
+  methods: string;
 
-  editTagsFor: (subject: string) => string
-  newTag: string
-  addTag: string
-  noTags: string
-  removeTag: (tag: string) => string
+  editTagsFor: (subject: string) => string;
+  newTag: string;
+  addTag: string;
+  noTags: string;
+  removeTag: (tag: string) => string;
 
-  edgeType: string
-  swapSourceTarget: string
-  multiplicityLabel: (name: string) => string
-  roleLabel: (name: string) => string
-  deleteElement: string
-  editElement: string
-  deleteEdge: string
-  editEdge: string
-  resetEdgeRouting: string
+  edgeType: string;
+  swapSourceTarget: string;
+  multiplicityLabel: (name: string) => string;
+  roleLabel: (name: string) => string;
+  deleteElement: string;
+  editElement: string;
+  deleteEdge: string;
+  editEdge: string;
+  resetEdgeRouting: string;
 
-  biAssociation: string
-  uniAssociation: string
-  aggregation: string
-  composition: string
-  inheritance: string
-  dependency: string
-  realization: string
+  biAssociation: string;
+  uniAssociation: string;
+  aggregation: string;
+  composition: string;
+  inheritance: string;
+  dependency: string;
+  realization: string;
 
-  namePlaceholder: string
-  stereotypeToggleLabel: (name: string) => string
-  stereotypeToggleTooltip: (shown: boolean, name: string) => string
+  namePlaceholder: string;
+  stereotypeToggleLabel: (name: string) => string;
+  stereotypeToggleTooltip: (shown: boolean, name: string) => string;
 
-  attributeWord: string
-  methodWord: string
-  classWord: string
-  nodeWord: string
+  attributeWord: string;
+  methodWord: string;
+  classWord: string;
+  nodeWord: string;
 }
 
 function defaultNodeTypeLabel(nodeType?: string): string {
-  if (!nodeType) return "Element"
+  if (!nodeType) return "Element";
 
   return nodeType
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/^./, (c) => c.toUpperCase())
-    .trim()
+    .trim();
 }
 
-export type ResolvedUmlStudioLabels = Required<UmlStudioLabels>
+export type ResolvedUmlStudioLabels = Required<UmlStudioLabels>;
 
 const RESOLVED_DEFAULT_LABELS: ResolvedUmlStudioLabels = Object.freeze({
   zoomToolbar: "Zoom toolbar",
@@ -213,14 +213,14 @@ const RESOLVED_DEFAULT_LABELS: ResolvedUmlStudioLabels = Object.freeze({
   methodWord: "method",
   classWord: "class",
   nodeWord: "node",
-})
+});
 
-export const DEFAULT_LABELS: UmlStudioLabels = RESOLVED_DEFAULT_LABELS
+export const DEFAULT_LABELS: UmlStudioLabels = RESOLVED_DEFAULT_LABELS;
 
 export function mergeLabels(
-  overrides?: Partial<UmlStudioLabels>
+  overrides?: Partial<UmlStudioLabels>,
 ): ResolvedUmlStudioLabels {
   return overrides
     ? { ...RESOLVED_DEFAULT_LABELS, ...overrides }
-    : RESOLVED_DEFAULT_LABELS
+    : RESOLVED_DEFAULT_LABELS;
 }

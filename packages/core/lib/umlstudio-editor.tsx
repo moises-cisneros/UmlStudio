@@ -1,8 +1,11 @@
-import ReactDOM from "react-dom/client"
-import { assessedIdsFor, hasAssessmentToShow } from "@/utils/assessmentPresence"
-import type { CSSProperties } from "react"
-import { AppWithProvider } from "./App"
-import { ReactFlowInstance, type Node, type Edge } from "@xyflow/react"
+import ReactDOM from "react-dom/client";
+import {
+  assessedIdsFor,
+  hasAssessmentToShow,
+} from "@/utils/assessmentPresence";
+import type { CSSProperties } from "react";
+import { AppWithProvider } from "./App";
+import { ReactFlowInstance, type Node, type Edge } from "@xyflow/react";
 import {
   parseDiagramType,
   mapFromReactFlowNodeToUmlStudioNode,
@@ -13,21 +16,24 @@ import {
   getElementIdsByTag,
   resolveTagConfig,
   applyElementTags,
-} from "./utils"
-import { CURRENT_MODEL_VERSION, normalizeModel } from "./utils/versionConverter"
-import { UMLDiagramType } from "./types"
-import { createDiagramStore, type DiagramStore } from "@/store/diagramStore"
-import { createMetadataStore, type MetadataStore } from "@/store/metadataStore"
-import { createPopoverStore, type PopoverStore } from "@/store/popoverStore"
+} from "./utils";
+import {
+  CURRENT_MODEL_VERSION,
+  normalizeModel,
+} from "./utils/versionConverter";
+import { UMLDiagramType } from "./types";
+import { createDiagramStore, type DiagramStore } from "@/store/diagramStore";
+import { createMetadataStore, type MetadataStore } from "@/store/metadataStore";
+import { createPopoverStore, type PopoverStore } from "@/store/popoverStore";
 import {
   createAssessmentSelectionStore,
   type AssessmentSelectionStore,
-} from "@/store/assessmentSelectionStore"
-import { createAlignmentGuidesStore } from "@/store/alignmentGuidesStore"
+} from "@/store/assessmentSelectionStore";
+import { createAlignmentGuidesStore } from "@/store/alignmentGuidesStore";
 import {
   createEdgeGeometryStore,
   type EdgeGeometryStore,
-} from "@/store/edgeGeometryStore"
+} from "@/store/edgeGeometryStore";
 import {
   DiagramStoreContext,
   MetadataStoreContext,
@@ -36,16 +42,16 @@ import {
   AlignmentGuidesStoreContext,
   EdgeGeometryStoreContext,
   OverlayStoreContext,
-} from "./store/context"
-import { createOverlayStore, type OverlayStore } from "./overlay/overlayStore"
+} from "./store/context";
+import { createOverlayStore, type OverlayStore } from "./overlay/overlayStore";
 import {
   assertBuiltInControlRegion,
   preserveBuiltInControlKind,
   defaultControls,
-} from "./chrome/builtins/controls"
-import { mergeLabels } from "./i18n/labels"
-import { insetAwareFitView } from "./overlay/fitView"
-import { RegionMount } from "./overlay/RegionMount"
+} from "./chrome/builtins/controls";
+import { mergeLabels } from "./i18n/labels";
+import { insetAwareFitView } from "./overlay/fitView";
+import { RegionMount } from "./overlay/RegionMount";
 import {
   type InsetContribution,
   type OverlayControlInput,
@@ -54,23 +60,25 @@ import {
   type OverlaySide,
   OVERLAY_REGIONS,
   ZERO_INSETS,
-} from "./overlay/types"
-import { getPerfCounters } from "./sync/perfCounters"
-import { MessageType, SendBroadcastMessage, YjsSync } from "./sync/yjsSync"
-import { getNodesMap } from "./sync/ydoc"
-import * as Y from "yjs"
-import { StoreApi } from "zustand"
-import * as UmlStudio from "./typings"
-import { FONT_FAMILY, DEFAULT_FONT_SIZE } from "./fontStack"
-import { getAssessmentElementCenter } from "./utils/assessmentFocus"
+} from "./overlay/types";
+import { getPerfCounters } from "./sync/perfCounters";
+import { MessageType, SendBroadcastMessage, YjsSync } from "./sync/yjsSync";
+import { getNodesMap } from "./sync/ydoc";
+import * as Y from "yjs";
+import { StoreApi } from "zustand";
+import * as UmlStudio from "./typings";
+import { FONT_FAMILY, DEFAULT_FONT_SIZE } from "./fontStack";
+import { getAssessmentElementCenter } from "./utils/assessmentFocus";
 
-const normalizeCollaborationOptions = (options?: UmlStudio.UmlStudioOptions) => {
-  const collaboration = options?.collaboration
+const normalizeCollaborationOptions = (
+  options?: UmlStudio.UmlStudioOptions,
+) => {
+  const collaboration = options?.collaboration;
   const enabled =
     collaboration?.enabled ??
     options?.collaborationEnabled ??
-    Boolean(collaboration?.user)
-  const showVisualsByDefault = enabled && Boolean(collaboration?.user)
+    Boolean(collaboration?.user);
+  const showVisualsByDefault = enabled && Boolean(collaboration?.user);
 
   return {
     enabled,
@@ -80,8 +88,8 @@ const normalizeCollaborationOptions = (options?: UmlStudio.UmlStudioOptions) => 
     showSelectionHighlights:
       collaboration?.showSelectionHighlights ?? showVisualsByDefault,
     showFollow: collaboration?.showFollow ?? showVisualsByDefault,
-  }
-}
+  };
+};
 
 const disabledCollaboration = {
   enabled: false,
@@ -89,19 +97,19 @@ const disabledCollaboration = {
   showCursors: false,
   showSelectionHighlights: false,
   showFollow: false,
-}
+};
 
 function cloneInsetSnapshot(
-  inset: InsetContribution | undefined
+  inset: InsetContribution | undefined,
 ): InsetContribution | undefined {
-  if (inset === undefined || inset === "auto") return inset
-  return Object.freeze({ ...inset })
+  if (inset === undefined || inset === "auto") return inset;
+  return Object.freeze({ ...inset });
 }
 
 function cloneStyleSnapshot(
-  style: CSSProperties | undefined
+  style: CSSProperties | undefined,
 ): CSSProperties | undefined {
-  return style ? Object.freeze({ ...style }) : undefined
+  return style ? Object.freeze({ ...style }) : undefined;
 }
 
 const noopCollaborationAwareness = {
@@ -113,91 +121,91 @@ const noopCollaborationAwareness = {
   subscribeToAwarenessChanges: () => () => {},
   subscribeToCollaboratorChanges: () => () => {},
   getLocalAwarenessClientId: () => 0,
-}
+};
 
 export class UmlStudioEditor {
-  private root: ReactDOM.Root
-  private reactFlowInstance: ReactFlowInstance | null = null
-  private readonly syncManager: YjsSync
-  private readonly ydoc: Y.Doc
-  private readonly diagramStore: StoreApi<DiagramStore>
-  private readonly metadataStore: StoreApi<MetadataStore>
-  private readonly popoverStore: StoreApi<PopoverStore>
-  private readonly assessmentSelectionStore: StoreApi<AssessmentSelectionStore>
-  private readonly edgeGeometryStore: StoreApi<EdgeGeometryStore>
-  private readonly overlayStore: StoreApi<OverlayStore>
-  private readonly hostRegionEls = new Map<OverlayRegion, HTMLElement>()
-  private readonly controlGenerations = new Map<string, number>()
-  private subscribers: UmlStudio.Subscribers = {}
+  private root: ReactDOM.Root;
+  private reactFlowInstance: ReactFlowInstance | null = null;
+  private readonly syncManager: YjsSync;
+  private readonly ydoc: Y.Doc;
+  private readonly diagramStore: StoreApi<DiagramStore>;
+  private readonly metadataStore: StoreApi<MetadataStore>;
+  private readonly popoverStore: StoreApi<PopoverStore>;
+  private readonly assessmentSelectionStore: StoreApi<AssessmentSelectionStore>;
+  private readonly edgeGeometryStore: StoreApi<EdgeGeometryStore>;
+  private readonly overlayStore: StoreApi<OverlayStore>;
+  private readonly hostRegionEls = new Map<OverlayRegion, HTMLElement>();
+  private readonly controlGenerations = new Map<string, number>();
+  private subscribers: UmlStudio.Subscribers = {};
   constructor(element: HTMLElement, options?: UmlStudio.UmlStudioOptions) {
     if (!(element instanceof HTMLElement)) {
-      throw new Error("Element is required to initialize UmlStudio")
+      throw new Error("Element is required to initialize UmlStudio");
     }
 
     if (options?.theme) {
       for (const [key, value] of Object.entries(options.theme)) {
-        if (value !== undefined) element.style.setProperty(key, value)
+        if (value !== undefined) element.style.setProperty(key, value);
       }
     }
     if (options?.dataTheme !== undefined) {
-      element.setAttribute("data-theme", options.dataTheme)
+      element.setAttribute("data-theme", options.dataTheme);
     }
 
-    this.ydoc = new Y.Doc()
-    this.diagramStore = createDiagramStore(this.ydoc)
+    this.ydoc = new Y.Doc();
+    this.diagramStore = createDiagramStore(this.ydoc);
     this.metadataStore = createMetadataStore(
       this.ydoc,
-      () => this.diagramStore.getState().previewMode
-    )
-    this.popoverStore = createPopoverStore()
-    this.assessmentSelectionStore = createAssessmentSelectionStore()
-    const alignmentGuidesStore = createAlignmentGuidesStore()
-    this.edgeGeometryStore = createEdgeGeometryStore()
-    this.overlayStore = createOverlayStore()
+      () => this.diagramStore.getState().previewMode,
+    );
+    this.popoverStore = createPopoverStore();
+    this.assessmentSelectionStore = createAssessmentSelectionStore();
+    const alignmentGuidesStore = createAlignmentGuidesStore();
+    this.edgeGeometryStore = createEdgeGeometryStore();
+    this.overlayStore = createOverlayStore();
     this.syncManager = new YjsSync(
       this.ydoc,
       this.diagramStore,
-      this.metadataStore
-    )
-    const collaboration = normalizeCollaborationOptions(options)
+      this.metadataStore,
+    );
+    const collaboration = normalizeCollaborationOptions(options);
     if (collaboration.enabled && collaboration.user) {
       this.syncManager.setLocalAwarenessState({
         user: collaboration.user,
         selectedElementId: null,
-      })
+      });
     }
 
     const diagramId =
-      options?.model?.id || Math.random().toString(36).substring(2, 15)
+      options?.model?.id || Math.random().toString(36).substring(2, 15);
 
     this.root = ReactDOM.createRoot(element, {
       identifierPrefix: `umlstudio-${diagramId}`,
-    })
+    });
 
-    this.diagramStore.getState().setDiagramId(diagramId)
+    this.diagramStore.getState().setDiagramId(diagramId);
 
-    const diagramName = options?.model?.title ?? ""
+    const diagramName = options?.model?.title ?? "";
     const diagramType =
-      options?.type || options?.model?.type || UMLDiagramType.ClassDiagram
+      options?.type || options?.model?.type || UMLDiagramType.ClassDiagram;
     this.metadataStore
       .getState()
-      .updateMetaData(diagramName, parseDiagramType(diagramType))
+      .updateMetaData(diagramName, parseDiagramType(diagramType));
 
     if (options?.model) {
-      const model = normalizeModel(options.model)
-      const nodes = model.nodes || []
-      const edges = model.edges || []
-      const assessments = model.assessments || {}
-      this.diagramStore.getState().setNodesAndEdges(nodes, edges)
-      this.diagramStore.getState().setAssessments(assessments)
-      this.diagramStore.getState().setInteractive(model.interactive)
+      const model = normalizeModel(options.model);
+      const nodes = model.nodes || [];
+      const edges = model.edges || [];
+      const assessments = model.assessments || {};
+      this.diagramStore.getState().setNodesAndEdges(nodes, edges);
+      this.diagramStore.getState().setAssessments(assessments);
+      this.diagramStore.getState().setInteractive(model.interactive);
     }
 
     if (options?.mode) {
-      this.metadataStore.getState().setMode(options.mode)
+      this.metadataStore.getState().setMode(options.mode);
     }
     if (options?.view) {
-      this.metadataStore.getState().setView(options.view)
+      this.metadataStore.getState().setView(options.view);
     }
     const availableViews = options?.availableViews
       ? Array.from(
@@ -205,44 +213,48 @@ export class UmlStudioEditor {
             UmlStudio.UmlStudioView.Modelling,
             ...options.availableViews,
             ...(options.view ? [options.view] : []),
-          ])
+          ]),
         )
       : options?.view === UmlStudio.UmlStudioView.Highlight
         ? [UmlStudio.UmlStudioView.Modelling, UmlStudio.UmlStudioView.Highlight]
-        : undefined
+        : undefined;
     if (availableViews) {
-      this.metadataStore.getState().setAvailableViews(availableViews)
+      this.metadataStore.getState().setAvailableViews(availableViews);
     }
     if (options?.enablePopups !== undefined) {
-      this.popoverStore.getState().setPopupEnabled(options.enablePopups)
+      this.popoverStore.getState().setPopupEnabled(options.enablePopups);
     }
     if (options?.readonly !== undefined) {
-      this.metadataStore.getState().setReadonly(options.readonly)
+      this.metadataStore.getState().setReadonly(options.readonly);
     }
     if (options?.debug !== undefined) {
-      this.metadataStore.getState().setDebug(options.debug)
+      this.metadataStore.getState().setDebug(options.debug);
     }
     if (options?.scrollLock !== undefined) {
-      this.metadataStore.getState().setScrollLock(options.scrollLock)
+      this.metadataStore.getState().setScrollLock(options.scrollLock);
     }
     if (options?.keyboardShortcuts !== undefined) {
       this.metadataStore
         .getState()
-        .setKeyboardShortcuts(options.keyboardShortcuts)
+        .setKeyboardShortcuts(options.keyboardShortcuts);
     }
     if (options?.labels !== undefined) {
-      this.metadataStore.getState().setLabels(mergeLabels(options.labels))
+      this.metadataStore.getState().setLabels(mergeLabels(options.labels));
     }
     if (options?.tags !== undefined) {
-      this.metadataStore.getState().setTagConfig(resolveTagConfig(options.tags))
+      this.metadataStore
+        .getState()
+        .setTagConfig(resolveTagConfig(options.tags));
     }
     for (const control of options?.controls ?? defaultControls())
-      this.addControl(control)
+      this.addControl(control);
 
-    this.diagramStore.getState().setCollaborationEnabled(collaboration.enabled)
+    this.diagramStore.getState().setCollaborationEnabled(collaboration.enabled);
 
-    if (this.metadataStore.getState().mode === UmlStudio.UmlStudioMode.Modelling) {
-      this.diagramStore.getState().initializeUndoManager()
+    if (
+      this.metadataStore.getState().mode === UmlStudio.UmlStudioMode.Modelling
+    ) {
+      this.diagramStore.getState().initializeUndoManager();
     }
 
     this.root.render(
@@ -286,130 +298,130 @@ export class UmlStudioEditor {
             </AssessmentSelectionStoreContext.Provider>
           </PopoverStoreContext.Provider>
         </MetadataStoreContext.Provider>
-      </DiagramStoreContext.Provider>
-    )
+      </DiagramStoreContext.Provider>,
+    );
   }
 
   private setReactFlowInstance(instance: ReactFlowInstance) {
-    this.reactFlowInstance = instance
+    this.reactFlowInstance = instance;
   }
 
   public getNodes(): Node[] {
     if (this.reactFlowInstance) {
-      return this.reactFlowInstance.getNodes()
+      return this.reactFlowInstance.getNodes();
     }
-    return []
+    return [];
   }
 
   public getEdges(): Edge[] {
-    return this.reactFlowInstance ? this.reactFlowInstance.getEdges() : []
+    return this.reactFlowInstance ? this.reactFlowInstance.getEdges() : [];
   }
 
   public getViewport(): { x: number; y: number; zoom: number } | null {
     if (!this.reactFlowInstance) {
-      return null
+      return null;
     }
-    return this.reactFlowInstance.getViewport()
+    return this.reactFlowInstance.getViewport();
   }
 
   public screenToFlowPosition(position: { x: number; y: number }) {
     if (!this.reactFlowInstance) {
-      return null
+      return null;
     }
     return this.reactFlowInstance.screenToFlowPosition(position, {
       snapToGrid: false,
-    })
+    });
   }
 
   public flowToScreenPosition(position: { x: number; y: number }) {
     if (!this.reactFlowInstance) {
-      return null
+      return null;
     }
-    return this.reactFlowInstance.flowToScreenPosition(position)
+    return this.reactFlowInstance.flowToScreenPosition(position);
   }
 
   public fitView(options?: {
-    padding?: number | Partial<Record<OverlaySide, number>>
-    duration?: number
-    respectInsets?: boolean
+    padding?: number | Partial<Record<OverlaySide, number>>;
+    duration?: number;
+    respectInsets?: boolean;
   }): void {
-    const duration = options?.duration ?? 200
-    const respectInsets = options?.respectInsets ?? true
-    const explicit = options?.padding
-    const maxAttempts = 10
-    let attempts = 0
+    const duration = options?.duration ?? 200;
+    const respectInsets = options?.respectInsets ?? true;
+    const explicit = options?.padding;
+    const maxAttempts = 10;
+    let attempts = 0;
 
     const attempt = () => {
-      attempts++
-      const rf = this.reactFlowInstance
-      if (!rf) return
-      const rfNodes = rf.getNodes()
-      const expected = this.diagramStore.getState().nodes.length
-      if (expected === 0) return
+      attempts++;
+      const rf = this.reactFlowInstance;
+      if (!rf) return;
+      const rfNodes = rf.getNodes();
+      const expected = this.diagramStore.getState().nodes.length;
+      if (expected === 0) return;
       const allMeasured =
         rfNodes.length >= expected &&
         rfNodes.every(
           (n) =>
             (n.measured?.width ?? n.width ?? 0) > 0 &&
-            (n.measured?.height ?? n.height ?? 0) > 0
-        )
+            (n.measured?.height ?? n.height ?? 0) > 0,
+        );
       if (allMeasured || attempts >= maxAttempts) {
-        const overlay = this.overlayStore.getState()
-        const insets = respectInsets ? overlay.insets : ZERO_INSETS
+        const overlay = this.overlayStore.getState();
+        const insets = respectInsets ? overlay.insets : ZERO_INSETS;
         insetAwareFitView(rf, insets, overlay.safeArea, {
           padding: explicit,
           duration,
-        })
-        return
+        });
+        return;
       }
-      requestAnimationFrame(attempt)
-    }
-    requestAnimationFrame(attempt)
+      requestAnimationFrame(attempt);
+    };
+    requestAnimationFrame(attempt);
   }
 
   public addControl(control: OverlayControlInput): () => void {
     if (!control.id)
-      throw new Error("[UmlStudioEditor] addControl: id must be non-empty")
+      throw new Error("[UmlStudioEditor] addControl: id must be non-empty");
     if (!OVERLAY_REGIONS.includes(control.region))
       throw new Error(
-        `[UmlStudioEditor] addControl: unknown region: ${control.region}`
-      )
-    const generation = (this.controlGenerations.get(control.id) ?? 0) + 1
-    this.controlGenerations.set(control.id, generation)
-    this.overlayStore.getState().register(control)
+        `[UmlStudioEditor] addControl: unknown region: ${control.region}`,
+      );
+    const generation = (this.controlGenerations.get(control.id) ?? 0) + 1;
+    this.controlGenerations.set(control.id, generation);
+    this.overlayStore.getState().register(control);
     return () => {
-      if (this.controlGenerations.get(control.id) !== generation) return
-      this.overlayStore.getState().unregister(control.id)
-      this.controlGenerations.delete(control.id)
-    }
+      if (this.controlGenerations.get(control.id) !== generation) return;
+      this.overlayStore.getState().unregister(control.id);
+      this.controlGenerations.delete(control.id);
+    };
   }
 
   public updateControl(id: string, patch: Partial<OverlayControlInput>): void {
-    const existing = this.overlayStore.getState().controls[id]
-    if (!existing) return
+    const existing = this.overlayStore.getState().controls[id];
+    if (!existing) return;
     if (patch.region !== undefined && !OVERLAY_REGIONS.includes(patch.region))
       throw new Error(
-        `[UmlStudioEditor] updateControl: unknown region: ${patch.region}`
-      )
-    const next = { ...existing, ...patch, id }
-    if (patch.render === undefined) preserveBuiltInControlKind(existing, next)
+        `[UmlStudioEditor] updateControl: unknown region: ${patch.region}`,
+      );
+    const next = { ...existing, ...patch, id };
+    if (patch.render === undefined) preserveBuiltInControlKind(existing, next);
     if (patch.region !== undefined)
-      assertBuiltInControlRegion(next, patch.region)
-    this.overlayStore.getState().register(next)
+      assertBuiltInControlRegion(next, patch.region);
+    this.overlayStore.getState().register(next);
   }
 
   public removeControl(id: string): void {
-    this.controlGenerations.delete(id)
-    this.overlayStore.getState().unregister(id)
+    this.controlGenerations.delete(id);
+    this.overlayStore.getState().unregister(id);
   }
 
   public hasControl(id: string): boolean {
-    return id in this.overlayStore.getState().controls
+    return id in this.overlayStore.getState().controls;
   }
 
   public getControl(id: string): OverlayControlSnapshot | undefined {
-    const control = this.overlayStore.getState().controls[id]
-    if (!control) return undefined
+    const control = this.overlayStore.getState().controls[id];
+    if (!control) return undefined;
     return Object.freeze({
       id: control.id,
       region: control.region,
@@ -421,129 +433,128 @@ export class UmlStudioEditor {
       visible: control.visible,
       className: control.className,
       style: cloneStyleSnapshot(control.style),
-    })
+    });
   }
 
   public getRegionElement(region: OverlayRegion): HTMLElement {
     if (!OVERLAY_REGIONS.includes(region))
       throw new Error(
-        `[UmlStudioEditor] getRegionElement: unknown region: ${region}`
-      )
-    let el = this.hostRegionEls.get(region)
-    if (el) return el
-    el = document.createElement("div")
-    this.hostRegionEls.set(region, el)
-    const node = el
+        `[UmlStudioEditor] getRegionElement: unknown region: ${region}`,
+      );
+    let el = this.hostRegionEls.get(region);
+    if (el) return el;
+    el = document.createElement("div");
+    this.hostRegionEls.set(region, el);
+    const node = el;
     this.overlayStore.getState().register({
       id: `umlstudio:host:${region}`,
       region,
       inset: "auto",
       interactive: false,
       render: () => <RegionMount el={node} />,
-    })
-    return el
+    });
+    return el;
   }
 
   public releaseRegionElement(region: OverlayRegion): void {
-    this.overlayStore.getState().unregister(`umlstudio:host:${region}`)
-    this.hostRegionEls.delete(region)
+    this.overlayStore.getState().unregister(`umlstudio:host:${region}`);
+    this.hostRegionEls.delete(region);
   }
 
   set diagramType(type: UMLDiagramType) {
-    this.metadataStore.getState().updateDiagramType(type)
-    this.diagramStore.getState().setNodesAndEdges([], [])
-    this.diagramStore.getState().setAssessments({})
+    this.metadataStore.getState().updateDiagramType(type);
+    this.diagramStore.getState().setNodesAndEdges([], []);
+    this.diagramStore.getState().setAssessments({});
   }
 
   public destroy() {
     try {
       Object.keys(this.subscribers).forEach((subscriberId) => {
-        this.subscribers[parseInt(subscriberId)]?.()
-      })
-      this.subscribers = {}
+        this.subscribers[parseInt(subscriberId)]?.();
+      });
+      this.subscribers = {};
 
-      this.syncManager.stopSync()
-      this.root.unmount()
-      this.ydoc.destroy()
-      this.hostRegionEls.clear()
-      this.controlGenerations.clear()
-      this.reactFlowInstance = null
+      this.syncManager.stopSync();
+      this.root.unmount();
+      this.ydoc.destroy();
+      this.hostRegionEls.clear();
+      this.controlGenerations.clear();
+      this.reactFlowInstance = null;
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn("[UmlStudioEditor] destroy() partial failure:", err)
+      console.warn("[UmlStudioEditor] destroy() partial failure:", err);
     }
   }
 
   static async exportModelAsSvg(
     model: UmlStudio.UMLModel,
-    options?: UmlStudio.ExportOptions
+    options?: UmlStudio.ExportOptions,
   ): Promise<UmlStudio.SVG> {
-    normalizeModel(model)
-    const container = document.createElement("div")
-    container.style.display = "flex"
-    container.style.width = "4000px"
-    container.style.height = "4000px"
-    container.style.zIndex = "-1000"
-    container.style.top = "0"
-    container.style.position = "fixed"
-    container.style.left = "0"
-    container.style.contain = "strict"
-    container.style.pointerEvents = "none"
-    container.style.visibility = "hidden"
-    container.setAttribute("aria-hidden", "true")
+    normalizeModel(model);
+    const container = document.createElement("div");
+    container.style.display = "flex";
+    container.style.width = "4000px";
+    container.style.height = "4000px";
+    container.style.zIndex = "-1000";
+    container.style.top = "0";
+    container.style.position = "fixed";
+    container.style.left = "0";
+    container.style.contain = "strict";
+    container.style.pointerEvents = "none";
+    container.style.visibility = "hidden";
+    container.setAttribute("aria-hidden", "true");
 
-    document.body.appendChild(container)
+    document.body.appendChild(container);
 
-    let exportStyleEl: HTMLStyleElement | undefined
+    let exportStyleEl: HTMLStyleElement | undefined;
     try {
       const [{ EXPORT_LAYOUT_CSS }, { INTER_FONT_FACE_CSS }] =
         await Promise.all([
           import("./utils/exportStyles"),
           import("./utils/exportFonts"),
-        ])
-      exportStyleEl = document.createElement("style")
-      exportStyleEl.setAttribute("data-umlstudio-export-styles", "")
-      exportStyleEl.textContent = `${EXPORT_LAYOUT_CSS}\n${INTER_FONT_FACE_CSS}`
-      document.head.appendChild(exportStyleEl)
-    } catch {
-    }
+        ]);
+      exportStyleEl = document.createElement("style");
+      exportStyleEl.setAttribute("data-umlstudio-export-styles", "");
+      exportStyleEl.textContent = `${EXPORT_LAYOUT_CSS}\n${INTER_FONT_FACE_CSS}`;
+      document.head.appendChild(exportStyleEl);
+    } catch {}
 
-    const ydoc = new Y.Doc()
-    const diagramStore = createDiagramStore(ydoc)
+    const ydoc = new Y.Doc();
+    const diagramStore = createDiagramStore(ydoc);
     const metadataStore = createMetadataStore(
       ydoc,
-      () => diagramStore.getState().previewMode
-    )
-    const popoverStore = createPopoverStore()
-    const assessmentSelectionStore = createAssessmentSelectionStore()
-    const alignmentGuidesStore = createAlignmentGuidesStore()
-    const edgeGeometryStore = createEdgeGeometryStore()
-    const overlayStore = createOverlayStore()
-    const diagramId = Math.random().toString(36).substring(2, 15)
+      () => diagramStore.getState().previewMode,
+    );
+    const popoverStore = createPopoverStore();
+    const assessmentSelectionStore = createAssessmentSelectionStore();
+    const alignmentGuidesStore = createAlignmentGuidesStore();
+    const edgeGeometryStore = createEdgeGeometryStore();
+    const overlayStore = createOverlayStore();
+    const diagramId = Math.random().toString(36).substring(2, 15);
 
-    let setReactFlowInstance: (instance: ReactFlowInstance) => void = () => {}
+    let setReactFlowInstance: (instance: ReactFlowInstance) => void = () => {};
 
     const reactFlowInstancePromise = new Promise<ReactFlowInstance>(
       (resolve) => {
-        setReactFlowInstance = resolve
-      }
-    )
+        setReactFlowInstance = resolve;
+      },
+    );
 
     const svgRoot = ReactDOM.createRoot(container, {
       identifierPrefix: `umlstudio-exportAsSVG-${diagramId}`,
-    })
+    });
 
     const teardown = () => {
-      exportStyleEl?.remove()
-      svgRoot.unmount()
-      container.remove()
-      ydoc.destroy()
-    }
+      exportStyleEl?.remove();
+      svgRoot.unmount();
+      container.remove();
+      ydoc.destroy();
+    };
 
     try {
-      const routingGeneration = edgeGeometryStore.getState().acceptedGeneration
-      diagramStore.getState().setNodesAndEdges(model.nodes, model.edges)
-      diagramStore.getState().setAssessments(model.assessments)
+      const routingGeneration = edgeGeometryStore.getState().acceptedGeneration;
+      diagramStore.getState().setNodesAndEdges(model.nodes, model.edges);
+      diagramStore.getState().setAssessments(model.assessments);
 
       svgRoot.render(
         <DiagramStoreContext.Provider value={diagramStore}>
@@ -569,40 +580,40 @@ export class UmlStudioEditor {
               </AssessmentSelectionStoreContext.Provider>
             </PopoverStoreContext.Provider>
           </MetadataStoreContext.Provider>
-        </DiagramStoreContext.Provider>
-      )
+        </DiagramStoreContext.Provider>,
+      );
 
       const timeoutPromise = new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), 3000)
-      })
+        setTimeout(() => resolve(null), 3000);
+      });
 
       const reactFlowInstance = await Promise.race([
         reactFlowInstancePromise,
         timeoutPromise,
-      ])
+      ]);
 
       if (!reactFlowInstance) {
-        throw new Error("React Flow instance not initialized")
+        throw new Error("React Flow instance not initialized");
       }
 
       if (typeof document !== "undefined" && document.fonts) {
         if (document.fonts.load) {
-          const size = DEFAULT_FONT_SIZE
+          const size = DEFAULT_FONT_SIZE;
           await Promise.all([
             document.fonts.load(`400 ${size}px ${FONT_FAMILY}`),
             document.fonts.load(`700 ${size}px ${FONT_FAMILY}`),
             document.fonts.load(`italic 400 ${size}px ${FONT_FAMILY}`),
             document.fonts.load(`italic 700 ${size}px ${FONT_FAMILY}`),
-          ]).catch(() => {})
+          ]).catch(() => {});
         }
         if (document.fonts.ready) {
-          await document.fonts.ready.catch(() => {})
+          await document.fonts.ready.catch(() => {});
         }
       }
 
       await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-      })
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
 
       if (model.edges.length > 0) {
         await Promise.race([
@@ -611,242 +622,244 @@ export class UmlStudioEditor {
             setTimeout(
               () =>
                 reject(new Error("Edge geometry did not settle before export")),
-              3000
-            )
+              3000,
+            );
           }),
-        ])
+        ]);
         await new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-        })
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
       }
 
-      filterRenderedElements(container, options)
+      filterRenderedElements(container, options);
 
-      const bounds = getRenderedDiagramBounds(reactFlowInstance, container)
+      const bounds = getRenderedDiagramBounds(reactFlowInstance, container);
 
-      const margin = 60
+      const margin = 60;
       const clip = {
         x: bounds.x - margin,
         y: bounds.y - margin,
         width: bounds.width + margin * 2,
         height: bounds.height + margin * 2,
-      }
+      };
 
-      let fontFaceCss: string | undefined
+      let fontFaceCss: string | undefined;
       if (options?.svgMode === "compat") {
         try {
           fontFaceCss = (await import("./utils/exportFonts"))
-            .INTER_FONT_FACE_CSS
+            .INTER_FONT_FACE_CSS;
         } catch {
-          fontFaceCss = undefined
+          fontFaceCss = undefined;
         }
       }
 
-      const svgString = getSVG(container, clip, options, fontFaceCss)
+      const svgString = getSVG(container, clip, options, fontFaceCss);
 
-      return { svg: svgString, clip }
+      return { svg: svgString, clip };
     } finally {
-      teardown()
+      teardown();
     }
   }
 
   exportAsSVG(options?: UmlStudio.ExportOptions): Promise<UmlStudio.SVG> {
-    return UmlStudioEditor.exportModelAsSvg(this.model, options)
+    return UmlStudioEditor.exportModelAsSvg(this.model, options);
   }
 
   private getNewSubscriptionId(): number {
-    const subscribers = this.subscribers
-    if (Object.keys(subscribers).length === 0) return 0
-    return Math.max(...Object.keys(subscribers).map((key) => parseInt(key))) + 1
+    const subscribers = this.subscribers;
+    if (Object.keys(subscribers).length === 0) return 0;
+    return (
+      Math.max(...Object.keys(subscribers).map((key) => parseInt(key))) + 1
+    );
   }
 
   public subscribeToModelChange(
-    callback: (state: UmlStudio.UMLModel) => void
+    callback: (state: UmlStudio.UMLModel) => void,
   ): number {
-    const subscriberId = this.getNewSubscriptionId()
+    const subscriberId = this.getNewSubscriptionId();
     const unsubscribeCallback = this.diagramStore.subscribe(() =>
-      callback(this.model)
-    )
-    this.subscribers[subscriberId] = unsubscribeCallback
-    return subscriberId
+      callback(this.model),
+    );
+    this.subscribers[subscriberId] = unsubscribeCallback;
+    return subscriberId;
   }
 
   public subscribeToDiagramNameChange(
-    callback: (diagramTitle: string) => void
+    callback: (diagramTitle: string) => void,
   ) {
-    const subscriberId = this.getNewSubscriptionId()
+    const subscriberId = this.getNewSubscriptionId();
     const unsubscribeCallback = this.metadataStore.subscribe((state) =>
-      callback(state.diagramTitle)
-    )
-    this.subscribers[subscriberId] = unsubscribeCallback
-    return subscriberId
+      callback(state.diagramTitle),
+    );
+    this.subscribers[subscriberId] = unsubscribeCallback;
+    return subscriberId;
   }
 
   public subscribeToAssessmentSelection(
-    callback: (selectedElementIds: string[]) => void
+    callback: (selectedElementIds: string[]) => void,
   ) {
-    const subscriberId = this.getNewSubscriptionId()
+    const subscriberId = this.getNewSubscriptionId();
     const unsubscribeCallback = this.assessmentSelectionStore.subscribe(
-      (state) => callback(state.selectedElementIds)
-    )
-    this.subscribers[subscriberId] = unsubscribeCallback
-    return subscriberId
+      (state) => callback(state.selectedElementIds),
+    );
+    this.subscribers[subscriberId] = unsubscribeCallback;
+    return subscriberId;
   }
 
   public subscribeToSelectionChange(
-    callback: (selectedElementIds: string[]) => void
+    callback: (selectedElementIds: string[]) => void,
   ) {
-    const subscriberId = this.getNewSubscriptionId()
-    let prev = this.diagramStore.getState().selectedElementIds
+    const subscriberId = this.getNewSubscriptionId();
+    let prev = this.diagramStore.getState().selectedElementIds;
     const unsubscribeCallback = this.diagramStore.subscribe((state) => {
-      const next = state.selectedElementIds
+      const next = state.selectedElementIds;
       if (next !== prev) {
-        prev = next
-        callback(next)
+        prev = next;
+        callback(next);
       }
-    })
-    this.subscribers[subscriberId] = unsubscribeCallback
-    return subscriberId
+    });
+    this.subscribers[subscriberId] = unsubscribeCallback;
+    return subscriberId;
   }
 
   public subscribeToAwarenessChanges(
-    callback: (states: Map<number, UmlStudio.CollaborationState>) => void
+    callback: (states: Map<number, UmlStudio.CollaborationState>) => void,
   ) {
-    const subscriberId = this.getNewSubscriptionId()
+    const subscriberId = this.getNewSubscriptionId();
     const unsubscribeCallback =
-      this.syncManager.subscribeToAwarenessChanges(callback)
-    this.subscribers[subscriberId] = unsubscribeCallback
-    return subscriberId
+      this.syncManager.subscribeToAwarenessChanges(callback);
+    this.subscribers[subscriberId] = unsubscribeCallback;
+    return subscriberId;
   }
 
   public subscribeToCollaboratorChanges(
-    callback: (collaborators: UmlStudio.CollaboratorInfo[]) => void
+    callback: (collaborators: UmlStudio.CollaboratorInfo[]) => void,
   ) {
-    const subscriberId = this.getNewSubscriptionId()
+    const subscriberId = this.getNewSubscriptionId();
     const unsubscribeCallback =
-      this.syncManager.subscribeToCollaboratorChanges(callback)
-    this.subscribers[subscriberId] = unsubscribeCallback
-    return subscriberId
+      this.syncManager.subscribeToCollaboratorChanges(callback);
+    this.subscribers[subscriberId] = unsubscribeCallback;
+    return subscriberId;
   }
 
   public unsubscribe(subscriberId: number) {
-    const unsubscribeCallback = this.subscribers[subscriberId]
+    const unsubscribeCallback = this.subscribers[subscriberId];
     if (unsubscribeCallback) {
-      unsubscribeCallback()
-      delete this.subscribers[subscriberId]
+      unsubscribeCallback();
+      delete this.subscribers[subscriberId];
     }
   }
 
   public sendBroadcastMessage(sendFn: SendBroadcastMessage) {
-    this.syncManager.setSendBroadcastMessage(sendFn)
+    this.syncManager.setSendBroadcastMessage(sendFn);
   }
 
   public receiveBroadcastedMessage(base64Data: string) {
-    this.syncManager.handleReceivedData(base64Data)
+    this.syncManager.handleReceivedData(base64Data);
   }
 
   public broadcastFullState() {
-    this.syncManager.broadcastFullState()
+    this.syncManager.broadcastFullState();
   }
 
   public setLocalAwarenessUser(user: UmlStudio.CollaborationUser) {
-    this.syncManager.setLocalAwarenessUser(user)
+    this.syncManager.setLocalAwarenessUser(user);
   }
 
   public setLocalAwarenessCursor(cursor: UmlStudio.CollaborationCursor | null) {
-    this.syncManager.setLocalAwarenessCursor(cursor)
+    this.syncManager.setLocalAwarenessCursor(cursor);
   }
 
   public setLocalAwarenessSelectedElement(selectedElementId: string | null) {
-    this.syncManager.setLocalAwarenessSelectedElement(selectedElementId)
+    this.syncManager.setLocalAwarenessSelectedElement(selectedElementId);
   }
 
   public setLocalAwarenessState(state: Partial<UmlStudio.CollaborationState>) {
-    this.syncManager.setLocalAwarenessState(state)
+    this.syncManager.setLocalAwarenessState(state);
   }
 
   public getLocalAwarenessClientId(): number {
-    return this.syncManager.getLocalAwarenessClientId()
+    return this.syncManager.getLocalAwarenessClientId();
   }
 
   public getCollaborators(): UmlStudio.CollaboratorInfo[] {
-    return this.syncManager.getCollaborators()
+    return this.syncManager.getCollaborators();
   }
 
   public updateDiagramTitle(name: string) {
-    this.metadataStore.getState().updateDiagramTitle(name)
+    this.metadataStore.getState().updateDiagramTitle(name);
   }
 
   public setReadonly(readonly: boolean): void {
-    this.metadataStore.getState().setReadonly(readonly)
+    this.metadataStore.getState().setReadonly(readonly);
     if (readonly) {
-      this.diagramStore.getState().setSelectedElementsId([])
-      this.popoverStore.getState().setPopOverElementId(null)
+      this.diagramStore.getState().setSelectedElementsId([]);
+      this.popoverStore.getState().setPopOverElementId(null);
     }
   }
 
+  public setLabels(labels: Partial<UmlStudio.UmlStudioLabels>): void {
+    this.metadataStore.getState().setLabels(mergeLabels(labels));
+  }
+
   public setMode(mode: UmlStudio.UmlStudioMode): void {
-    this.metadataStore.getState().setMode(mode)
+    this.metadataStore.getState().setMode(mode);
   }
 
   public setScrollLock(scrollLock: boolean): void {
-    this.metadataStore.getState().setScrollLock(scrollLock)
+    this.metadataStore.getState().setScrollLock(scrollLock);
   }
 
   public setKeyboardShortcuts(keyboardShortcuts: boolean): void {
-    this.metadataStore.getState().setKeyboardShortcuts(keyboardShortcuts)
-  }
-
-  public setLabels(labels: Partial<UmlStudio.UmlStudioLabels>): void {
-    this.metadataStore.getState().setLabels(mergeLabels(labels))
+    this.metadataStore.getState().setKeyboardShortcuts(keyboardShortcuts);
   }
 
   public setTags(options?: boolean | UmlStudio.TagOptions): void {
-    this.metadataStore.getState().setTagConfig(resolveTagConfig(options))
+    this.metadataStore.getState().setTagConfig(resolveTagConfig(options));
   }
 
   public setElementTags(elementId: string, tags: string[]): void {
-    const { nodes, setNodes } = this.diagramStore.getState()
-    const next = applyElementTags(nodes, elementId, tags)
-    if (next !== nodes) setNodes(next)
+    const { nodes, setNodes } = this.diagramStore.getState();
+    const next = applyElementTags(nodes, elementId, tags);
+    if (next !== nodes) setNodes(next);
   }
 
   public setPreviewMode(active: boolean): void {
-    this.diagramStore.getState().setPreviewMode(active)
+    this.diagramStore.getState().setPreviewMode(active);
     if (!active) {
-      this.metadataStore.getState().updateMetaDataFromYjs()
+      this.metadataStore.getState().updateMetaDataFromYjs();
     }
   }
 
   public toggleInteractiveElementsMode(forceEnabled?: boolean): void {
-    const currentView = this.metadataStore.getState().view
+    const currentView = this.metadataStore.getState().view;
     const shouldEnable =
-      forceEnabled ?? currentView !== UmlStudio.UmlStudioView.Highlight
+      forceEnabled ?? currentView !== UmlStudio.UmlStudioView.Highlight;
 
     this.metadataStore
       .getState()
       .setView(
         shouldEnable
           ? UmlStudio.UmlStudioView.Highlight
-          : UmlStudio.UmlStudioView.Modelling
-      )
+          : UmlStudio.UmlStudioView.Modelling,
+      );
   }
 
   public getInteractiveForSerialization():
     | UmlStudio.InteractiveElements
     | undefined {
-    return this.diagramStore.getState().getInteractiveForSerialization()
+    return this.diagramStore.getState().getInteractiveForSerialization();
   }
 
   public getDiagramMetadata() {
-    const { diagramTitle, diagramType } = this.metadataStore.getState()
-    return { diagramTitle, diagramType }
+    const { diagramTitle, diagramType } = this.metadataStore.getState();
+    return { diagramTitle, diagramType };
   }
 
   get model(): UmlStudio.UMLModel {
-    const { nodes, edges, diagramId } = this.diagramStore.getState()
-    const { diagramTitle, diagramType } = this.metadataStore.getState()
-    const interactive = this.getInteractiveForSerialization()
+    const { nodes, edges, diagramId } = this.diagramStore.getState();
+    const { diagramTitle, diagramType } = this.metadataStore.getState();
+    const interactive = this.getInteractiveForSerialization();
     return {
       id: diagramId,
       version: CURRENT_MODEL_VERSION,
@@ -856,169 +869,169 @@ export class UmlStudioEditor {
       edges: edges.map((edge) => mapFromReactFlowEdgeToUmlStudioEdge(edge)),
       assessments: this.diagramStore.getState().assessments,
       ...(interactive && { interactive }),
-    }
+    };
   }
 
   set model(incoming: UmlStudio.UMLModel) {
-    const model = normalizeModel(incoming)
-    const { nodes, edges, assessments, interactive } = model
-    this.edgeGeometryStore.getState().beginRoutingBootstrap()
-    this.diagramStore.getState().setNodesAndEdges(nodes, edges)
-    this.diagramStore.getState().setAssessments(assessments)
-    this.diagramStore.getState().setInteractive(interactive)
+    const model = normalizeModel(incoming);
+    const { nodes, edges, assessments, interactive } = model;
+    this.edgeGeometryStore.getState().beginRoutingBootstrap();
+    this.diagramStore.getState().setNodesAndEdges(nodes, edges);
+    this.diagramStore.getState().setAssessments(assessments);
+    this.diagramStore.getState().setInteractive(interactive);
     this.metadataStore
       .getState()
-      .updateMetaData(model.title, parseDiagramType(model.type))
+      .updateMetaData(model.title, parseDiagramType(model.type));
   }
 
   public setElementHighlights(
-    highlights: Map<string, string> | Record<string, string> | null | undefined
+    highlights: Map<string, string> | Record<string, string> | null | undefined,
   ): void {
-    if (highlights === undefined) return
+    if (highlights === undefined) return;
     const record =
       highlights === null
         ? {}
         : Object.fromEntries(
-            highlights instanceof Map ? highlights : Object.entries(highlights)
-          )
-    this.assessmentSelectionStore.getState().setElementHighlights(record)
+            highlights instanceof Map ? highlights : Object.entries(highlights),
+          );
+    this.assessmentSelectionStore.getState().setElementHighlights(record);
   }
 
   public revealAssessment(
     elementId: string | null,
-    options?: { reveal?: boolean }
+    options?: { reveal?: boolean },
   ): void {
     const { nodes, edges, getAssessment, setLocalSelection } =
-      this.diagramStore.getState()
+      this.diagramStore.getState();
 
     if (elementId === null) {
-      setLocalSelection([])
-      this.assessmentSelectionStore.getState().selectMultipleElements([])
-      this.popoverStore.getState().setPopOverElementId(null)
-      return
+      setLocalSelection([]);
+      this.assessmentSelectionStore.getState().selectMultipleElements([]);
+      this.popoverStore.getState().setPopOverElementId(null);
+      return;
     }
 
     const owner = nodes.find((node) =>
-      assessedIdsFor(node.id, nodes).includes(elementId)
-    )
-    const targetId = owner?.id ?? elementId
+      assessedIdsFor(node.id, nodes).includes(elementId),
+    );
+    const targetId = owner?.id ?? elementId;
     const element =
       nodes.find((node) => node.id === targetId) ??
-      edges.find((edge) => edge.id === targetId)
+      edges.find((edge) => edge.id === targetId);
 
-    setLocalSelection([targetId])
+    setLocalSelection([targetId]);
     this.assessmentSelectionStore
       .getState()
-      .selectMultipleElements(assessedIdsFor(elementId, nodes))
-    const { mode, readonly } = this.metadataStore.getState()
+      .selectMultipleElements(assessedIdsFor(elementId, nodes));
+    const { mode, readonly } = this.metadataStore.getState();
     const canOpenFeedback =
       mode === UmlStudio.UmlStudioMode.Assessment &&
-      (!readonly || hasAssessmentToShow(targetId, nodes, getAssessment))
+      (!readonly || hasAssessmentToShow(targetId, nodes, getAssessment));
     this.popoverStore
       .getState()
-      .setPopOverElementId(canOpenFeedback ? targetId : null)
+      .setPopOverElementId(canOpenFeedback ? targetId : null);
 
-    if (options?.reveal === false || !element) return
+    if (options?.reveal === false || !element) return;
 
-    const rf = this.reactFlowInstance
-    if (!rf) return
+    const rf = this.reactFlowInstance;
+    if (!rf) return;
     const centre = getAssessmentElementCenter(
       element,
       nodes,
-      this.edgeGeometryStore.getState()
-    )
-    if (!centre) return
+      this.edgeGeometryStore.getState(),
+    );
+    if (!centre) return;
     rf.setCenter(centre.x, centre.y, {
       duration: 220,
       zoom: rf.getZoom(),
-    })
+    });
   }
 
   public getElementHighlights(): Record<string, string> {
-    return { ...this.assessmentSelectionStore.getState().highlightedElements }
+    return { ...this.assessmentSelectionStore.getState().highlightedElements };
   }
 
   public getElementIdsByTag(tag: string): string[] {
-    return getElementIdsByTag(this.diagramStore.getState().nodes, tag)
+    return getElementIdsByTag(this.diagramStore.getState().nodes, tag);
   }
 
   public getSelectedElements(): string[] {
-    const { mode, readonly } = this.metadataStore.getState()
+    const { mode, readonly } = this.metadataStore.getState();
     if (mode === UmlStudio.UmlStudioMode.Assessment && readonly) {
-      return this.assessmentSelectionStore.getState().selectedElementIds
+      return this.assessmentSelectionStore.getState().selectedElementIds;
     }
-    return this.diagramStore.getState().selectedElementIds
+    return this.diagramStore.getState().selectedElementIds;
   }
 
   get view(): UmlStudio.UmlStudioView {
-    return this.metadataStore.getState().view
+    return this.metadataStore.getState().view;
   }
 
   set view(view: UmlStudio.UmlStudioView) {
-    this.metadataStore.getState().setView(view)
+    this.metadataStore.getState().setView(view);
   }
 
   public addOrUpdateAssessment(assessment: UmlStudio.Assessment): void {
-    this.diagramStore.getState().addOrUpdateAssessment(assessment)
+    this.diagramStore.getState().addOrUpdateAssessment(assessment);
   }
 
   public __perf(skipDocumentEncoding = false):
     | {
-        encodedDocBytes: number
-        nodesMapSize: number
-        storeNodeWrites: number
-        edgeSearches: number
-        edgeSearchExpansions: number
-        edgeSearchesMaxExpansions: number
-        edgeSearchesAbandoned: number
-        edgeSearchMs: number
-        edgeSearchMaxMs: number
-        edgeSearchSetupMs: number
-        edgeSearchLoopMs: number
-        edgeStepPricings: number
-        edgeHeuristicEvaluations: number
-        edgeHeapPushes: number
-        edgeIncumbentBounds: number
-        edgeBoundPrunes: number
-        edgeMaxCells: number
-        routeScorePairs: number
-        routeScoreMs: number
-        routeScoreRuns: number
-        solveMs: number
-        solveMaxMs: number
-        solveCount: number
-        workerSolveCount: number
-        workerResponseCount: number
-        workerAttemptCount: number
-        workerFallbackCount: number
-        workerInitialSyncCount: number
-        workerSmallSyncCount: number
-        workerSerializeMaxMs: number
-        workerPostMessageMaxMs: number
-        workerRoundTripMaxMs: number
-        workerDispatchDelayMaxMs: number
-        workerSnapshotAgeMaxMs: number
-        workerReleaseExactMaxMs: number
-        workerReleaseSettledMaxMs: number
-        workerHolisticPreviewCount: number
-        workerFirstPreviewMaxMs: number
-        workerPreviewGapMaxMs: number
-        workerLatestInputRevision: number
-        workerLastDispatchedRevision: number
-        workerLastAcceptedRevision: number
-        previewDecisionHoldCount: number
-        previewDecisionConfirmCount: number
-        previewDecisionInvalidationCount: number
-        edgeRenderCount: number
-        routingSolving: number
-        routingPreviewCount: number
-        diagramEdgeCount: number
+        encodedDocBytes: number;
+        nodesMapSize: number;
+        storeNodeWrites: number;
+        edgeSearches: number;
+        edgeSearchExpansions: number;
+        edgeSearchesMaxExpansions: number;
+        edgeSearchesAbandoned: number;
+        edgeSearchMs: number;
+        edgeSearchMaxMs: number;
+        edgeSearchSetupMs: number;
+        edgeSearchLoopMs: number;
+        edgeStepPricings: number;
+        edgeHeuristicEvaluations: number;
+        edgeHeapPushes: number;
+        edgeIncumbentBounds: number;
+        edgeBoundPrunes: number;
+        edgeMaxCells: number;
+        routeScorePairs: number;
+        routeScoreMs: number;
+        routeScoreRuns: number;
+        solveMs: number;
+        solveMaxMs: number;
+        solveCount: number;
+        workerSolveCount: number;
+        workerResponseCount: number;
+        workerAttemptCount: number;
+        workerFallbackCount: number;
+        workerInitialSyncCount: number;
+        workerSmallSyncCount: number;
+        workerSerializeMaxMs: number;
+        workerPostMessageMaxMs: number;
+        workerRoundTripMaxMs: number;
+        workerDispatchDelayMaxMs: number;
+        workerSnapshotAgeMaxMs: number;
+        workerReleaseExactMaxMs: number;
+        workerReleaseSettledMaxMs: number;
+        workerHolisticPreviewCount: number;
+        workerFirstPreviewMaxMs: number;
+        workerPreviewGapMaxMs: number;
+        workerLatestInputRevision: number;
+        workerLastDispatchedRevision: number;
+        workerLastAcceptedRevision: number;
+        previewDecisionHoldCount: number;
+        previewDecisionConfirmCount: number;
+        previewDecisionInvalidationCount: number;
+        edgeRenderCount: number;
+        routingSolving: number;
+        routingPreviewCount: number;
+        diagramEdgeCount: number;
       }
     | undefined {
     if (!import.meta.env.DEV && import.meta.env.VITE_E2E !== "true")
-      return undefined
+      return undefined;
 
-    const counters = getPerfCounters()
+    const counters = getPerfCounters();
 
     return {
       encodedDocBytes: skipDocumentEncoding
@@ -1072,17 +1085,17 @@ export class UmlStudioEditor {
       edgeRenderCount: counters?.edgeRenderCount ?? 0,
       routingSolving: this.edgeGeometryStore.getState().isSolving ? 1 : 0,
       routingPreviewCount: Object.keys(
-        this.edgeGeometryStore.getState().previewById
+        this.edgeGeometryStore.getState().previewById,
       ).length,
       diagramEdgeCount: this.diagramStore.getState().edges.length,
-    }
+    };
   }
 
   static generateInitialSyncMessage(): string {
-    return YjsSync.uint8ToBase64(new Uint8Array([MessageType.YjsSYNC]))
+    return YjsSync.uint8ToBase64(new Uint8Array([MessageType.YjsSYNC]));
   }
 
   static generateInitialAwarenessSyncMessage(): string {
-    return YjsSync.uint8ToBase64(new Uint8Array([MessageType.AwarenessSync]))
+    return YjsSync.uint8ToBase64(new Uint8Array([MessageType.AwarenessSync]));
   }
 }
