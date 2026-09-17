@@ -152,7 +152,6 @@ const libraryShortcuts = (
 });
 
 const EDITOR_SHORTCUT_LABELS: Record<EditorShortcutId, string> = {
-  "save-as-json": "Save as JSON",
   "save-version": "Save a version",
   "toggle-version-history": "Toggle version history",
 };

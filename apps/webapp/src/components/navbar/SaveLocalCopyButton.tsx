@@ -4,7 +4,6 @@ import {
   TooltipTrigger,
 } from "@umlstudio/ui/components/tooltip";
 import { DropdownMenuItem } from "@umlstudio/ui/components/dropdown-menu";
-import { SaveIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useEditorContext } from "@/contexts";
@@ -59,7 +58,6 @@ export const SaveLocalCopyButton = ({
         aria-label={t.saveLocalCopyButton}
         style={color ? { color } : undefined}
       >
-        <SaveIcon className="size-4" aria-hidden />
         {t.saveLocalCopyButton}
       </DropdownMenuItem>
     );
@@ -73,7 +71,6 @@ export const SaveLocalCopyButton = ({
         onClick={handleClick}
         aria-label={t.saveLocalCopyButton}
       >
-        <SaveIcon className="size-4" aria-hidden />
         <span className={iconOnly ? "hidden" : "hidden lg:inline"}>
           {t.saveLocalCopyButton}
         </span>

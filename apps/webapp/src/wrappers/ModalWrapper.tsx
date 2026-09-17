@@ -11,7 +11,7 @@ import {
   ConfirmRestoreModal,
   DeleteVersionModal,
 } from "@/components/versioning";
-import { versioningStrings as v } from "@/components/versioning/strings";
+import { useVersioningTranslation } from "@/components/versioning/strings";
 import { useModalContext } from "@/contexts";
 import {
   ModalProgressProvider,
@@ -21,6 +21,7 @@ import { ModalName, ModalProps } from "@/types";
 import { log } from "@/logger";
 import { isHomeDialogVariant } from "@/components/modals/HomeDialog";
 import { ModalFrame, type ModalVariant } from "./ModalFrame";
+import { useTranslation } from "@/i18n";
 
 interface ModalWrapperProps {
   name: ModalName;
@@ -39,17 +40,6 @@ const MODAL_COMPONENTS = {
   CONFIRM_RESTORE: ConfirmRestoreModal,
 } satisfies Record<ModalName, React.ComponentType<never>>;
 
-const MODAL_TITLES: Record<ModalName, string> = {
-  NEW_DIAGRAM: "New Diagram",
-  SHARE: "Share",
-  SHARE_DASHBOARD: "Share your diagram",
-  COLLABORATE_NAME: "Join Collaboration",
-  HowToUseModal: "How to use this editor?",
-  AboutModal: "Information about UmlStudio",
-  DELETE_VERSION: "Delete version",
-  CONFIRM_RESTORE: v.confirmRestoreTitle,
-};
-
 const ModalProgressBar = () => {
   const { isLoading } = useModalProgress();
   if (!isLoading) return null;
@@ -66,6 +56,8 @@ const ModalProgressBar = () => {
 };
 
 export const ModalWrapper: React.FC<ModalWrapperProps> = ({ name, props }) => {
+  const { t } = useTranslation();
+  const vt = useVersioningTranslation();
   const SpecificModal = MODAL_COMPONENTS[
     name
   ] as unknown as React.ComponentType<ModalProps & { onClose?: () => void }>;
@@ -89,6 +81,28 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ name, props }) => {
           ? "confirm"
           : "plain";
 
+  const getModalTitle = (): string => {
+    switch (name) {
+      case "NEW_DIAGRAM":
+        return t.menu.newDiagram.replace(/\.\.\.$/, "");
+      case "SHARE":
+      case "SHARE_DASHBOARD":
+        return t.share.modalTitle;
+      case "COLLABORATE_NAME":
+        return t.share.joinSession;
+      case "HowToUseModal":
+        return t.menu.help;
+      case "AboutModal":
+        return "UmlStudio";
+      case "DELETE_VERSION":
+        return vt.delete;
+      case "CONFIRM_RESTORE":
+        return vt.confirmRestoreTitle;
+      default:
+        return name;
+    }
+  };
+
   if (!SpecificModal) {
     log.error(`No modal found for name: ${name}`);
     return null;
@@ -110,7 +124,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ name, props }) => {
   return (
     <ModalProgressProvider>
       <ModalFrame
-        title={MODAL_TITLES[name]}
+        title={getModalTitle()}
         variant={variant}
         contentOverflow={isContentOverflow}
         onOpenChange={(open) => {

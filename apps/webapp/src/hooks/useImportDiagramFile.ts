@@ -18,7 +18,9 @@ export function useImportDiagramFile() {
           file.type.includes("xml");
 
         if (!isXmi) {
-          throw new Error("Only Enterprise Architect XMI (.xmi) diagrams are supported");
+          throw new Error(
+            "Only Enterprise Architect XMI (.xmi) diagrams are supported",
+          );
         }
 
         const text = await file.text();

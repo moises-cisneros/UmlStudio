@@ -8,7 +8,6 @@ import {
 } from "@umlstudio/core";
 import { Keyboard } from "@capacitor/keyboard";
 
-
 const rootElement = document.getElementById("root");
 
 useThemeStore.getState().initializeTheme();
