@@ -321,7 +321,9 @@ export async function bootLoadFunction(client: Redis): Promise<void> {
 
   try {
     await client.sendCommand(["FUNCTION", "DELETE", "apollon"]);
-  } catch {}
+  } catch {
+    // Ignore error if legacy function does not exist
+  }
 
   await client.sendCommand([
     "FUNCTION",

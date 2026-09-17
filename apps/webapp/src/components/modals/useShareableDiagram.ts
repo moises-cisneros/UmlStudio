@@ -22,7 +22,7 @@ export function useShareableDiagram(
   const [diagramId, setDiagramId] = useState<string | null>(
     initialDiagramId ?? null,
   );
-  const [mode, setMode] = useState<DiagramView>(DiagramView.COLLABORATE);
+  const [mode, setMode] = useState<DiagramView>(DiagramView.EDITOR);
   const [copied, setCopied] = useState(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,7 +54,7 @@ export function useShareableDiagram(
       const { id } = await createDiagramMutation.mutateAsync(model);
       addSharedDiagramEntry(id);
       setDiagramId(id);
-      setMode(DiagramView.COLLABORATE);
+      setMode(DiagramView.EDITOR);
       setPhase("form");
     } catch (err) {
       log.error("Error creating shared diagram:", err as Error);

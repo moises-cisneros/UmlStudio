@@ -13,8 +13,6 @@ export interface ModalProps {
 }
 
 export enum DiagramView {
-  EDIT = "EDIT",
-  COLLABORATE = "COLLABORATE",
-  GIVE_FEEDBACK = "GIVE_FEEDBACK",
-  SEE_FEEDBACK = "SEE_FEEDBACK",
+  EDITOR = "EDITOR",
+  LECTOR = "LECTOR",
 }
