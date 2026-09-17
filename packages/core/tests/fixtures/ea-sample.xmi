@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.1" xmlns:uml="http://schema.omg.org/spec/UML/2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">
+  <xmi:Documentation exporter="Enterprise Architect" exporterVersion="16.1" />
+  <uml:Model xmi:type="uml:Model" xmi:id="EA_MODEL_ROOT" name="CorporateSystem">
+    <packagedElement xmi:type="uml:Package" xmi:id="PKG_CORP" name="CorporateCore">
+      <!-- IPayable Interface -->
+      <packagedElement xmi:type="uml:Interface" xmi:id="CLS_PAYABLE" name="IPayable">
+        <ownedOperation xmi:type="uml:Operation" xmi:id="OP_CALC_PAY" name="calculatePay" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="PARAM_RET_PAY" direction="return">
+            <type xmi:type="uml:PrimitiveType" href="http://schema.omg.org/spec/UML/2.1/uml.xml#Real" />
+          </ownedParameter>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- Department Class -->
+      <packagedElement xmi:type="uml:Class" xmi:id="CLS_DEPT" name="Department">
+        <ownedAttribute xmi:type="uml:Property" xmi:id="ATTR_DEPT_NAME" name="name" visibility="public">
+          <type xmi:type="uml:PrimitiveType" href="http://schema.omg.org/spec/UML/2.1/uml.xml#String" />
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="ATTR_DEPT_CODE" name="code" visibility="private">
+          <type xmi:type="uml:PrimitiveType" href="http://schema.omg.org/spec/UML/2.1/uml.xml#String" />
+        </ownedAttribute>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="OP_GET_EMPS" name="getEmployees" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="PARAM_RET_EMPS" direction="return">
+            <type xmi:type="uml:PrimitiveType" href="http://schema.omg.org/spec/UML/2.1/uml.xml#String" />
+          </ownedParameter>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- Employee Class -->
+      <packagedElement xmi:type="uml:Class" xmi:id="CLS_EMP" name="Employee">
+        <ownedAttribute xmi:type="uml:Property" xmi:id="ATTR_EMP_ID" name="id" visibility="public">
+          <type xmi:type="uml:PrimitiveType" href="http://schema.omg.org/spec/UML/2.1/uml.xml#String" />
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="ATTR_EMP_SAL" name="salary" visibility="protected">
+          <type xmi:type="uml:PrimitiveType" href="http://schema.omg.org/spec/UML/2.1/uml.xml#Real" />
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="ATTR_EMP_NOTES" name="internalNotes" visibility="package">
+          <type xmi:type="uml:PrimitiveType" href="http://schema.omg.org/spec/UML/2.1/uml.xml#String" />
+        </ownedAttribute>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="OP_CALC_PAY_IMPL" name="calculatePay" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="PARAM_RET_EMP_PAY" direction="return">
+            <type xmi:type="uml:PrimitiveType" href="http://schema.omg.org/spec/UML/2.1/uml.xml#Real" />
+          </ownedParameter>
+        </ownedOperation>
+        <!-- Realization of IPayable -->
+        <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="REAL_EMP_PAYABLE" supplier="CLS_PAYABLE" client="CLS_EMP" contract="CLS_PAYABLE" />
+      </packagedElement>
+
+      <!-- Composition Association: Department (1) has Employee (1..*) -->
+      <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_DEPT_EMP" name="DepartmentEmployees">
+        <memberEnd xmi:idref="PROP_END_DEPT" />
+        <memberEnd xmi:idref="PROP_END_EMP" />
+        <ownedEnd xmi:type="uml:Property" xmi:id="PROP_END_DEPT" name="department" type="CLS_DEPT" association="ASSOC_DEPT_EMP">
+          <lowerValue xmi:type="uml:LiteralInteger" xmi:id="LV_DEPT" value="1" />
+          <upperValue xmi:type="uml:LiteralInteger" xmi:id="UV_DEPT" value="1" />
+        </ownedEnd>
+        <ownedEnd xmi:type="uml:Property" xmi:id="PROP_END_EMP" name="employees" type="CLS_EMP" aggregation="composite" association="ASSOC_DEPT_EMP">
+          <lowerValue xmi:type="uml:LiteralInteger" xmi:id="LV_EMP" value="1" />
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="UV_EMP" value="*" />
+        </ownedEnd>
+      </packagedElement>
+
+      <!-- Non-UML Class element to verify domain guard filtering -->
+      <packagedElement xmi:type="uml:Activity" xmi:id="ACT_PROCESS" name="PayrollProcess" />
+    </packagedElement>
+  </uml:Model>
+</xmi:XMI>
