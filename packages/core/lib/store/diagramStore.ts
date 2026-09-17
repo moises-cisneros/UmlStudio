@@ -642,21 +642,35 @@ export const createDiagramStore = (
                 );
               }
             });
-            const prunedInteractive = pruneInteractiveElements(
-              {
-                elements: get().interactiveElements,
-                relationships: get().interactiveRelationships,
-              },
-              nextNodes,
-              get().edges,
+            const hasRemovals = filteredChanges.some(
+              (c) => c.type === "remove",
             );
+            const currentInteractiveElements = get().interactiveElements;
+            const currentInteractiveRelationships =
+              get().interactiveRelationships;
+
+            let nextInteractiveElements = currentInteractiveElements;
+            let nextInteractiveRelationships = currentInteractiveRelationships;
+
+            if (hasRemovals) {
+              const prunedInteractive = pruneInteractiveElements(
+                {
+                  elements: currentInteractiveElements,
+                  relationships: currentInteractiveRelationships,
+                },
+                nextNodes,
+                get().edges,
+              );
+              nextInteractiveElements = prunedInteractive?.elements ?? {};
+              nextInteractiveRelationships =
+                prunedInteractive?.relationships ?? {};
+            }
 
             set(
               {
                 nodes: nextNodes,
-                interactiveElements: prunedInteractive?.elements ?? {},
-                interactiveRelationships:
-                  prunedInteractive?.relationships ?? {},
+                interactiveElements: nextInteractiveElements,
+                interactiveRelationships: nextInteractiveRelationships,
               },
               undefined,
               "onNodesChange",

@@ -1,26 +1,26 @@
-import { create, StoreApi, UseBoundStore } from "zustand"
-import { devtools, subscribeWithSelector } from "zustand/middleware"
+import { create, StoreApi, UseBoundStore } from "zustand";
+import { devtools, subscribeWithSelector } from "zustand/middleware";
 
 export type AlignmentGuide = {
-  id: string
-  type: "vertical" | "horizontal"
-  position: number
-  offset?: number
-}
+  id: string;
+  type: "vertical" | "horizontal";
+  position: number;
+  offset?: number;
+};
 
 type InitialAlignmentGuidesState = {
-  guides: AlignmentGuide[]
-}
+  guides: AlignmentGuide[];
+};
 
 const initialAlignmentGuidesState: InitialAlignmentGuidesState = {
   guides: [],
-}
+};
 
 export type AlignmentGuidesStore = {
-  guides: AlignmentGuide[]
-  setGuides: (guides: AlignmentGuide[]) => void
-  clearGuides: () => void
-}
+  guides: AlignmentGuide[];
+  setGuides: (guides: AlignmentGuide[]) => void;
+  clearGuides: () => void;
+};
 
 export const createAlignmentGuidesStore = (): UseBoundStore<
   StoreApi<AlignmentGuidesStore>
@@ -31,15 +31,21 @@ export const createAlignmentGuidesStore = (): UseBoundStore<
         ...initialAlignmentGuidesState,
 
         setGuides: (guides: AlignmentGuide[]) => {
-          set({ guides })
+          set((state) => {
+            if (state.guides.length === 0 && guides.length === 0) return state;
+            return { guides };
+          });
         },
 
         clearGuides: () => {
-          set({ guides: [] })
+          set((state) => {
+            if (state.guides.length === 0) return state;
+            return { guides: [] };
+          });
         },
       })),
       {
         name: "AlignmentGuidesStore",
-      }
-    )
-  )
+      },
+    ),
+  );
