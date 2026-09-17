@@ -11,7 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@umlstudio/ui/components/tooltip";
-import { CircleHelpIcon, FilesIcon, ShareIcon } from "lucide-react";
+import { HelpCircle, FolderKanban, Share2 } from "lucide-react";
 import { useModalContext } from "@/contexts";
 import { ALL_DIAGRAMS_LABEL } from "@/lib/navProvenance";
 import { BackNav } from "./BackNav";
@@ -95,7 +95,7 @@ export function MobileActionsPill() {
         id="mobile-file"
         label="File"
         icon={
-          <FilesIcon
+          <FolderKanban
             className="size-[var(--umlstudio-chrome-icon)]"
             aria-hidden
           />
@@ -116,7 +116,7 @@ export function MobileActionsPill() {
         className="umlstudio-chrome-iconbtn"
         onClick={() => openModal("SHARE", { dialogVariant: "home" })}
       >
-        <ShareIcon className="size-4" aria-hidden />
+        <Share2 className="size-4" aria-hidden />
       </IconButton>
       <VersionHistoryButton variant="icon" />
 
@@ -126,7 +126,7 @@ export function MobileActionsPill() {
         className="umlstudio-chrome-iconbtn"
         onClick={() => openModal("HowToUseModal", { variant: "editor" })}
       >
-        <CircleHelpIcon className="size-4" aria-hidden />
+        <HelpCircle className="size-4" aria-hidden />
       </IconButton>
 
       <ThemeSwitcherMenu />

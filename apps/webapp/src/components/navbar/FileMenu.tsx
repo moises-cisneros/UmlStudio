@@ -6,7 +6,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@umlstudio/ui/components/dropdown-menu";
 import { Button } from "@umlstudio/ui/components/button";
@@ -15,24 +14,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@umlstudio/ui/components/tooltip";
-import { ChevronDownIcon, FilesIcon } from "lucide-react";
+import { ChevronDownIcon, FolderKanban } from "lucide-react";
 import { toast, type ToastContentProps } from "react-toastify";
 import { useModalContext } from "@/contexts";
 import { useMediaQuery } from "@/hooks";
-import {
-  useExportAsJSON,
-  useExportAsPNG,
-  useExportAsSpringBoot,
-  useExportAsSVG,
-  useExportAsXMI,
-} from "@/hooks";
+import { useExportAsPNG, useExportAsSpringBoot, useExportAsXMI } from "@/hooks";
 import { log } from "@/logger";
-import { EDITOR_SHORTCUTS } from "@/hooks/useEditorShortcuts";
-import { formatComboText } from "@/utils/shortcutCaps";
-import {
-  JsonFileImportButton,
-  XmiFileImportButton,
-} from "./JsonFileImportButton";
+import { XmiFileImportButton } from "./XmiFileImportButton";
+import { SaveLocalCopyButton } from "./SaveLocalCopyButton";
 import { navbarButtonStyle } from "./styleConstants";
 import { MOBILE_MENU_CONTENT_CLASS } from "./islandPrimitives";
 import { useTranslation } from "@/i18n";
@@ -42,41 +31,31 @@ interface FileMenuProps {
   onClose?: () => void;
 }
 
-type ExportFormat = "SVG" | "PNG" | "JSON" | "Spring Boot" | "XMI";
+type ExportFormat = "PNG" | "Spring Boot" | "XMI";
 
 type ExportRunResult = { clamped?: boolean; appliedScale?: number };
 
 function exportSuccessMessage(
   format: ExportFormat,
-  result: ExportRunResult | void,
+  result?: ExportRunResult | void,
 ): string {
   if (result?.clamped) {
-    const scale =
-      typeof result.appliedScale === "number"
-        ? ` (rendered at ${Math.round(result.appliedScale * 100)}%)`
-        : "";
-    return `${format} downscaled to fit memory limits${scale}.`;
+    return `${format} exported (downscaled to ${result.appliedScale}x to fit memory limits).`;
   }
   return `${format} exported.`;
 }
 
 function exportErrorMessage(format: ExportFormat, err: unknown): string {
   if ((err as Error)?.name === "RasterTooLargeError") {
-    return "Diagram is too large to export as PNG. Try SVG or JSON instead.";
+    return "Diagram is too large to export as PNG.";
   }
   return `${format} export failed. Please try again.`;
 }
 
-const saveAsJsonShortcut = EDITOR_SHORTCUTS.find(
-  (shortcut) => shortcut.id === "save-as-json",
-)!.combo;
-
 export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
   const { openModal } = useModalContext();
   const { t } = useTranslation();
-  const exportAsSvg = useExportAsSVG("compat");
   const exportAsPng = useExportAsPNG();
-  const exportAsJSON = useExportAsJSON();
   const exportAsSpringBoot = useExportAsSpringBoot();
   const exportAsXMI = useExportAsXMI();
   const [busyFormat, setBusyFormat] = useState<ExportFormat | null>(null);
@@ -121,11 +100,12 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
         {t.menu.newDiagram}
       </DropdownMenuItem>
 
+      <SaveLocalCopyButton variant="menuItem" onAfter={onSelect} />
+
       <DropdownMenuSeparator />
 
       <DropdownMenuGroup>
         <DropdownMenuLabel>Import</DropdownMenuLabel>
-        <JsonFileImportButton close={onSelect} />
         <XmiFileImportButton close={onSelect} />
       </DropdownMenuGroup>
 
@@ -133,11 +113,6 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
 
       <DropdownMenuGroup>
         <DropdownMenuLabel>{t.menu.exportAs}</DropdownMenuLabel>
-        <DropdownMenuItem
-          onClick={() => runExport("SVG", async () => exportAsSvg())}
-        >
-          {t.menu.exportSvg}
-        </DropdownMenuItem>
         <DropdownMenuItem
           disabled={busyFormat === "PNG"}
           onClick={() =>
@@ -147,14 +122,6 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
           }
         >
           {t.menu.exportPng}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => runExport("JSON", async () => exportAsJSON())}
-        >
-          {t.menu.exportJson}
-          <DropdownMenuShortcut>
-            {formatComboText(saveAsJsonShortcut)}
-          </DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={busyFormat === "XMI"}
@@ -202,7 +169,7 @@ export const FileMenu: FC<FileMenuProps> = ({ color, onClose }) => {
                 />
               }
             >
-              <FilesIcon className="size-4" aria-hidden />
+              <FolderKanban className="size-4" aria-hidden />
               <span className="hidden lg:inline">{t.menu.file}</span>
               <ChevronDownIcon className="size-4" aria-hidden />
             </DropdownMenuTrigger>

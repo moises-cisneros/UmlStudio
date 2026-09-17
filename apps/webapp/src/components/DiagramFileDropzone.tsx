@@ -10,9 +10,7 @@ const dragHasFiles = (event: DragEvent) =>
 const isSupportedDiagram = (file: File) => {
   const name = file.name.toLowerCase();
   return (
-    name.endsWith(".xmi") ||
-    name.endsWith(".xml") ||
-    file.type.includes("xml")
+    name.endsWith(".xmi") || name.endsWith(".xml") || file.type.includes("xml")
   );
 };
 
@@ -88,7 +86,8 @@ export function DiagramFileDropzone() {
             Drop to import an XMI diagram
           </p>
           <p className="text-sm text-muted-foreground">
-            An Enterprise Architect <code className="font-mono">.xmi</code> file opens as a new diagram.
+            An Enterprise Architect <code className="font-mono">.xmi</code> file
+            opens as a new diagram.
           </p>
         </div>
       </div>

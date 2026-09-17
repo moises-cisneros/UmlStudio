@@ -1,7 +1,7 @@
 import { type FC, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@umlstudio/ui/components/button";
-import { ShareIcon, SparklesIcon } from "lucide-react";
+import { Share2, Sparkles } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -12,8 +12,8 @@ import { useModalContext, useEditorContext } from "@/contexts";
 import { useMediaQuery } from "@/hooks";
 import { BrandLockup } from "./BrandLockup";
 import { FileMenu } from "./FileMenu";
+import { CanvasHeaderActions } from "./CanvasHeaderActions";
 import { HelpMenu } from "./HelpMenu";
-import { SaveLocalCopyButton } from "./SaveLocalCopyButton";
 import { VersionHistoryButton } from "./VersionHistoryButton";
 import { ThemeSwitcherMenu } from "./ThemeSwitcher";
 import { CollaboratorPresence } from "./CollaboratorPresence";
@@ -91,7 +91,9 @@ export const WorkbenchHeader: FC<WorkbenchHeaderProps> = ({
             />
           </div>
 
-          <div className="workbench-menu-bar">
+          <div className="workbench-menu-bar flex items-center gap-1">
+            <CanvasHeaderActions />
+            <div className="hidden h-4 w-px bg-border-subtle sm:block mx-0.5" />
             <FileMenu />
           </div>
         </div>
@@ -112,7 +114,7 @@ export const WorkbenchHeader: FC<WorkbenchHeaderProps> = ({
                   onClick={toggleAgentDock}
                   aria-label={`${t.agent.triggerButton} (Ctrl+J)`}
                 >
-                  <SparklesIcon className="size-3.5 text-(--deep-sky-blue)" />
+                  <Sparkles className="size-3.5 text-(--deep-sky-blue)" />
                   <span className="hidden sm:inline">
                     {t.agent.triggerButton}
                   </span>
@@ -136,7 +138,7 @@ export const WorkbenchHeader: FC<WorkbenchHeaderProps> = ({
                   aria-label={t.menu.share}
                   onClick={() => openModal("SHARE", { dialogVariant: "home" })}
                 >
-                  <ShareIcon className="size-4" aria-hidden />
+                  <Share2 className="size-4" aria-hidden />
                   <span className="hidden lg:inline">{t.menu.share}</span>
                 </Button>
               }
@@ -144,7 +146,6 @@ export const WorkbenchHeader: FC<WorkbenchHeaderProps> = ({
             <TooltipContent>{t.menu.share}</TooltipContent>
           </Tooltip>
 
-          <SaveLocalCopyButton />
           <VersionHistoryButton />
 
           <div className="hidden h-5 w-px bg-border-subtle sm:block mx-0.5" />

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@umlstudio/ui/components/button";
-import { ShareIcon } from "lucide-react";
+import { Share2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -14,7 +14,6 @@ import { BrandLockup } from "./BrandLockup";
 import { BackNav } from "./BackNav";
 import { FileMenu } from "./FileMenu";
 import { HelpMenu } from "./HelpMenu";
-import { SaveLocalCopyButton } from "./SaveLocalCopyButton";
 import { VersionHistoryButton } from "./VersionHistoryButton";
 import { ThemeSwitcherMenu } from "./ThemeSwitcher";
 import { MobileBackPill, MobileActionsPill } from "./MobileIslands";
@@ -22,6 +21,7 @@ import { navbarButtonStyle } from "./styleConstants";
 import { Island, GroupDivider } from "./islandPrimitives";
 import { HeaderTitleField } from "./HeaderTitleField";
 import { useDiagramTitle } from "./useDiagramTitle";
+import { CanvasHeaderActions } from "./CanvasHeaderActions";
 
 interface EditorHeaderRowProps {
   layout: "full" | "narrow";
@@ -87,6 +87,8 @@ export function HeaderActionsIsland() {
   return (
     <Island ariaLabel="Editor actions">
       <div className="flex items-center gap-0.5">
+        <CanvasHeaderActions />
+        <GroupDivider />
         <FileMenu />
 
         <Tooltip disabled={isLg}>
@@ -99,14 +101,13 @@ export function HeaderActionsIsland() {
                 aria-label="Share"
                 onClick={() => openModal("SHARE", { dialogVariant: "home" })}
               >
-                <ShareIcon className="size-4" aria-hidden />
+                <Share2 className="size-4" aria-hidden />
                 <span className="hidden lg:inline">Share</span>
               </Button>
             }
           />
           <TooltipContent>Share</TooltipContent>
         </Tooltip>
-        <SaveLocalCopyButton />
         <VersionHistoryButton />
       </div>
       <GroupDivider />

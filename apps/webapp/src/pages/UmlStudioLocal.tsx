@@ -23,7 +23,6 @@ import type { PendingVersion } from "@/types";
 import {
   VersionDrawer,
   VersionPreviewBanner,
-  VersionRail,
 } from "@/components/versioning";
 import { structuralFingerprint } from "@/lib/version/predicates";
 import { useVersioningTranslation } from "@/components/versioning/strings";
@@ -371,21 +370,15 @@ export const UmlStudioLocal: FC = () => {
         <div ref={canvasColumnRef} className="relative h-full min-w-0 flex-1">
           <div ref={containerRef} className="h-full w-full" />
           {banner}
+          <VersionDrawer
+            diagramId={diagramId}
+            onConfirmedRestore={handleConfirmedRestore}
+            onVersionSaved={handleVersionSaved}
+            onPreview={openPreview}
+          />
         </div>
         <RightDockWorkspace />
-        <VersionRail
-          diagramId={diagramId}
-          onConfirmedRestore={handleConfirmedRestore}
-          onVersionSaved={handleVersionSaved}
-          onPreview={openPreview}
-        />
       </div>
-      <VersionDrawer
-        diagramId={diagramId}
-        onConfirmedRestore={handleConfirmedRestore}
-        onVersionSaved={handleVersionSaved}
-        onPreview={openPreview}
-      />
     </div>
   );
 };
