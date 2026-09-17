@@ -517,7 +517,9 @@ export class UmlStudioEditor {
       exportStyleEl.setAttribute("data-umlstudio-export-styles", "");
       exportStyleEl.textContent = `${EXPORT_LAYOUT_CSS}\n${INTER_FONT_FACE_CSS}`;
       document.head.appendChild(exportStyleEl);
-    } catch {}
+    } catch (_err) {
+      // Ignore stylesheet injection failure in headless or test environments
+    }
 
     const ydoc = new Y.Doc();
     const diagramStore = createDiagramStore(ydoc);
@@ -677,9 +679,13 @@ export class UmlStudioEditor {
     callback: (state: UmlStudio.UMLModel) => void,
   ): number {
     const subscriberId = this.getNewSubscriptionId();
-    const unsubscribeCallback = this.diagramStore.subscribe(() =>
-      callback(this.model),
-    );
+    const unsubscribeCallback = this.diagramStore.subscribe((state) => {
+      const isDragging = state.nodes.some((n) => n.dragging);
+      if (isDragging) {
+        return;
+      }
+      callback(this.model);
+    });
     this.subscribers[subscriberId] = unsubscribeCallback;
     return subscriberId;
   }
@@ -796,6 +802,63 @@ export class UmlStudioEditor {
       this.diagramStore.getState().setSelectedElementsId([]);
       this.popoverStore.getState().setPopOverElementId(null);
     }
+  }
+
+  public undo(): void {
+    this.diagramStore.getState().undo();
+  }
+
+  public redo(): void {
+    this.diagramStore.getState().redo();
+  }
+
+  public canUndo(): boolean {
+    return this.diagramStore.getState().canUndo;
+  }
+
+  public canRedo(): boolean {
+    return this.diagramStore.getState().canRedo;
+  }
+
+  public subscribeToUndoRedo(
+    callback: (state: { canUndo: boolean; canRedo: boolean }) => void,
+  ): () => void {
+    let prevUndo = this.diagramStore.getState().canUndo;
+    let prevRedo = this.diagramStore.getState().canRedo;
+    callback({ canUndo: prevUndo, canRedo: prevRedo });
+    return this.diagramStore.subscribe((state) => {
+      if (state.canUndo !== prevUndo || state.canRedo !== prevRedo) {
+        prevUndo = state.canUndo;
+        prevRedo = state.canRedo;
+        callback({ canUndo: state.canUndo, canRedo: state.canRedo });
+      }
+    });
+  }
+
+  public isMultiSelection(): boolean {
+    return this.metadataStore.getState().multiSelectionMode;
+  }
+
+  public setMultiSelectionMode(enabled: boolean): void {
+    this.metadataStore.getState().setMultiSelectionMode(enabled);
+  }
+
+  public toggleMultiSelection(): void {
+    const current = this.metadataStore.getState().multiSelectionMode;
+    this.metadataStore.getState().setMultiSelectionMode(!current);
+  }
+
+  public subscribeToMultiSelection(
+    callback: (enabled: boolean) => void,
+  ): () => void {
+    let prev = this.metadataStore.getState().multiSelectionMode;
+    callback(prev);
+    return this.metadataStore.subscribe((state) => {
+      if (state.multiSelectionMode !== prev) {
+        prev = state.multiSelectionMode;
+        callback(state.multiSelectionMode);
+      }
+    });
   }
 
   public setLabels(labels: Partial<UmlStudio.UmlStudioLabels>): void {

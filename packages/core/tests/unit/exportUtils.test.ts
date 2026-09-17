@@ -124,7 +124,7 @@ describe("resolveCSSVariable", () => {
   });
 
   it("resolves known CSS variable", () => {
-    expect(resolveCSSVariable("var(--umlstudio-primary)")).toBe("#3e8acc");
+    expect(resolveCSSVariable("var(--umlstudio-primary)")).toBe("#3590f3");
   });
 
   it("resolves --umlstudio-foreground", () => {
@@ -156,7 +156,7 @@ describe("resolveCSSVariable", () => {
 
   it("preserves string around var() call", () => {
     const result = resolveCSSVariable("1px solid var(--umlstudio-primary)");
-    expect(result).toBe("1px solid #3e8acc");
+    expect(result).toBe("1px solid #3590f3");
   });
 
   it("handles value with no var() calls", () => {
@@ -179,7 +179,7 @@ describe("replaceCSSVariables", () => {
     svg.appendChild(rect);
 
     replaceCSSVariables(svg);
-    expect(rect.getAttribute("fill")).toBe("#3e8acc");
+    expect(rect.getAttribute("fill")).toBe("#3590f3");
   });
 
   it("resolves var() in stroke attribute", () => {

@@ -1,4 +1,5 @@
 import React from "react";
+import { COOLORS_PALETTE } from "@umlstudio/ui/theme";
 import { FONT_FAMILY, DEFAULT_FONT_SIZE } from "@/fontStack";
 import { ClassSVG } from "@/components/svgs/nodes/classDiagram/ClassSVG";
 import { PackageSVG } from "@/components/svgs/nodes/classDiagram/PackageSVG";
@@ -10,12 +11,12 @@ export { CANVAS, EDGES, INTERFACE };
 
 export const CSS_VARIABLE_FALLBACKS: Readonly<Record<string, string>> =
   Object.freeze({
-    "--umlstudio-primary": "#3e8acc",
+    "--umlstudio-primary": COOLORS_PALETTE.dodgerBlue,
     "--umlstudio-primary-foreground": "#ffffff",
     "--umlstudio-foreground": "#000000",
-    "--umlstudio-secondary": "#6c757d",
-    "--umlstudio-interactive-selection": "#f39c12",
-    "--umlstudio-dropzone-accent": "#0064ff",
+    "--umlstudio-secondary": "#54606f",
+    "--umlstudio-interactive-selection": COOLORS_PALETTE.dodgerBlue,
+    "--umlstudio-dropzone-accent": COOLORS_PALETTE.dodgerBlue,
     "--umlstudio-on-collaboration-cursor": "#ffffff",
     "--umlstudio-assessment-positive-text": "#166534",
     "--umlstudio-assessment-positive-bg": "#dcfce7",
@@ -27,20 +28,20 @@ export const CSS_VARIABLE_FALLBACKS: Readonly<Record<string, string>> =
     "--umlstudio-collaboration-color-2": "#37b24d",
     "--umlstudio-collaboration-color-3": "#1c7ed6",
     "--umlstudio-collaboration-color-4": "#f03e3e",
-    "--umlstudio-collaboration-color-5": "#ae3ec9",
+    "--umlstudio-collaboration-color-5": COOLORS_PALETTE.periwinkle,
     "--umlstudio-collaboration-color-6": "#0ca678",
     "--umlstudio-collaboration-color-7": "#f76707",
     "--umlstudio-collaboration-color-8": "#1098ad",
     "--umlstudio-guide-vertical": "#d63031",
-    "--umlstudio-guide-horizontal": "#0984e3",
+    "--umlstudio-guide-horizontal": COOLORS_PALETTE.dodgerBlue,
     "--umlstudio-swatch-slate": "#64748b",
     "--umlstudio-swatch-red": "#dc2626",
     "--umlstudio-swatch-orange": "#ea580c",
     "--umlstudio-swatch-amber": "#d97706",
     "--umlstudio-swatch-green": "#16a34a",
     "--umlstudio-swatch-teal": "#0d9488",
-    "--umlstudio-swatch-blue": "#2563eb",
-    "--umlstudio-swatch-violet": "#7c3aed",
+    "--umlstudio-swatch-blue": COOLORS_PALETTE.dodgerBlue,
+    "--umlstudio-swatch-violet": COOLORS_PALETTE.periwinkle,
     "--umlstudio-swatch-pink": "#db2777",
     "--umlstudio-background": "#ffffff",
     "--umlstudio-background-variant": "#f8f9fa",
@@ -49,7 +50,7 @@ export const CSS_VARIABLE_FALLBACKS: Readonly<Record<string, string>> =
     "--umlstudio-gray": "#e9ecef",
     "--umlstudio-grid": "rgba(36, 39, 36, 0.1)",
     "--umlstudio-gray-variant": "#495057",
-    "--umlstudio-danger": "#721c24",
+    "--umlstudio-danger": "#ef4444",
   });
 
 export const STROKE_COLOR = CSS_VARIABLE_FALLBACKS["--umlstudio-foreground"];
