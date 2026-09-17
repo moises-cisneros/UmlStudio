@@ -8,7 +8,14 @@ import reactHooks from "eslint-plugin-react-hooks"
 export default [
   { ignores: ["node_modules", "dist"] },
   { files: ["**/*.{js,ts,tsx}"] },
-  { languageOptions: { globals: globals.browser } },
+  {
+    languageOptions: {
+      globals: globals.browser,
+      parserOptions: {
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   eslintReact.configs["recommended-typescript"],
