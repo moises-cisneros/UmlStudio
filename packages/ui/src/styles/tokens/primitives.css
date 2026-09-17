@@ -94,7 +94,7 @@
   --primitive-swatch-green: #16a34a;
   --primitive-swatch-teal: #0d9488;
   --primitive-swatch-blue: var(--color-palette-dodger-blue);
-  --primitive-swatch-violet: #7c3aed;
+  --primitive-swatch-violet: var(--color-palette-periwinkle);
   --primitive-swatch-pink: #db2777;
 
   /* Interactive Elements */
@@ -106,7 +106,7 @@
   --primitive-collab-2: #37b24d;
   --primitive-collab-3: #1c7ed6;
   --primitive-collab-4: #f03e3e;
-  --primitive-collab-5: #ae3ec9;
+  --primitive-collab-5: var(--color-palette-periwinkle);
   --primitive-collab-6: #0ca678;
   --primitive-collab-7: #f76707;
   --primitive-collab-8: #1098ad;

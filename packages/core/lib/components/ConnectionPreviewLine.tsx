@@ -271,7 +271,7 @@ export const ConnectionPreviewLine = ({
   ])
 
   const stroke =
-    connectionLineStyle?.stroke ?? "var(--umlstudio-primary, #3e8acc)"
+    connectionLineStyle?.stroke ?? "var(--umlstudio-primary, #3590f3)"
 
   return (
     <>
@@ -293,7 +293,7 @@ export const ConnectionPreviewLine = ({
           cx={path.snapPoint.x}
           cy={path.snapPoint.y}
           r={GHOST_SNAP_CIRCLE_RADIUS}
-          fill="var(--umlstudio-primary, #3e8acc)"
+          fill="var(--umlstudio-primary, #3590f3)"
         />
       )}
     </>

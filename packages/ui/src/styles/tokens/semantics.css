@@ -12,9 +12,9 @@
 
   /* Surfaces & Backgrounds */
   --umlstudio-background: #ffffff;
-  --umlstudio-background-variant: #fbf9fc;
+  --umlstudio-background-variant: #f8fafc;
   --umlstudio-surface: #ffffff;
-  --umlstudio-surface-sunken: #f5eff7;
+  --umlstudio-surface-sunken: #f1f5f9;
   --umlstudio-surface-hover: #f1f5fa;
   --umlstudio-surface-active: #e6eef8;
 
@@ -72,8 +72,8 @@
   --home-badge-fold: var(--primitive-badge-fold);
   --home-text-on-badge: var(--primitive-text-on-badge);
 
-  --primitive-tag-type-bg: #e0e7ff;
-  --primitive-tag-type-text: #3730a3;
+  --primitive-tag-type-bg: color-mix(in srgb, var(--color-palette-dodger-blue) 12%, transparent);
+  --primitive-tag-type-text: var(--color-palette-dodger-blue);
   --primitive-tag-local-bg: #fef3c7;
   --primitive-tag-local-text: #92400e;
   --primitive-tag-shared-bg: #ccfbf1;
