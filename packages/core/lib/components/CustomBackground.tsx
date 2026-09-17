@@ -1,30 +1,16 @@
-import { Background, BackgroundVariant } from "@xyflow/react"
-import { CANVAS } from "@/constants"
+import { Background, BackgroundVariant } from "@xyflow/react";
+import { CANVAS } from "@/constants";
 
 export const CustomBackground = () => {
-  const FINE_GRID_GAP = CANVAS.SNAP_TO_GRID_PX
-  const MAJOR_GRID_GAP = CANVAS.SNAP_TO_GRID_PX * 10
-
-  const HALF_PIXEL_NUDGE = 0.5
-  const crispOffset = (gap: number) => gap / 2 + HALF_PIXEL_NUDGE
+  const DOTS_GAP = CANVAS.SNAP_TO_GRID_PX * 2;
 
   return (
-    <>
-      <Background
-        id="1"
-        gap={FINE_GRID_GAP}
-        offset={crispOffset(FINE_GRID_GAP)}
-        color="var(--umlstudio-gray, #e9ecef)"
-        variant={BackgroundVariant.Lines}
-      />
-
-      <Background
-        id="2"
-        gap={MAJOR_GRID_GAP}
-        offset={crispOffset(MAJOR_GRID_GAP)}
-        color="var(--umlstudio-grid, rgba(36, 39, 36, 0.1))"
-        variant={BackgroundVariant.Lines}
-      />
-    </>
-  )
-}
+    <Background
+      id="umlstudio-dots-grid"
+      gap={DOTS_GAP}
+      size={1.5}
+      color="var(--umlstudio-grid-dots, rgba(148, 163, 184, 0.28))"
+      variant={BackgroundVariant.Dots}
+    />
+  );
+};

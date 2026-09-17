@@ -159,7 +159,10 @@ export const Sidebar = () => {
   };
 
   const paletteStyle: React.CSSProperties = {
-    ...(canvas.h ? { maxHeight: canvas.h } : null),
+    height: canvas.h
+      ? `${canvas.h}px`
+      : "calc(100% - 2 * var(--umlstudio-chrome-gap))",
+    minHeight: "480px",
     ...(isRightRail
       ? { marginLeft: 0, marginRight: "var(--umlstudio-chrome-edge)" }
       : null),

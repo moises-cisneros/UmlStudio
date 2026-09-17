@@ -76,7 +76,7 @@
 }
 
 .umlstudio-collaboration-presence-bar [role="button"]:focus-visible {
-  outline: 2px solid var(--umlstudio-primary, #3e8acc);
+  outline: 2px solid var(--umlstudio-primary, #3590f3);
   outline-offset: 2px;
 }
 
@@ -178,7 +178,7 @@
 }
 
 .umlstudio-collaboration-follow-banner-stop:focus-visible {
-  outline: 2px solid var(--umlstudio-primary, #3e8acc);
+  outline: 2px solid var(--umlstudio-primary, #3590f3);
   outline-offset: 2px;
 }
 
@@ -228,6 +228,8 @@
   gap: var(--umlstudio-chrome-gap);
   align-items: center;
   padding: var(--umlstudio-chrome-pad);
+  height: calc(100% - 2 * var(--umlstudio-chrome-gap));
+  min-height: 480px;
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--umlstudio-chrome-glass);
@@ -243,6 +245,8 @@
 .umlstudio-palette__entries {
   display: grid;
   justify-content: center;
+  align-content: start;
+  flex: 1;
 }
 
 .umlstudio-palette__cell {
@@ -259,7 +263,7 @@
 }
 
 .umlstudio-palette__cell:focus-visible {
-  outline: 2px solid var(--umlstudio-primary, #3e8acc);
+  outline: 2px solid var(--umlstudio-primary, #3590f3);
   outline-offset: 2px;
   border-radius: var(--umlstudio-chrome-radius-sm);
 }
@@ -418,11 +422,25 @@
   gap: var(--umlstudio-chrome-gap);
 }
 
+.umlstudio-chrome-toolbar--vertical {
+  flex-direction: column;
+  align-self: flex-end;
+  margin-bottom: var(--umlstudio-chrome-gap);
+  margin-left: 6px;
+  overflow: visible;
+}
+
 .umlstudio-chrome-cluster {
   display: flex;
   align-items: center;
   gap: 2px;
   padding: var(--umlstudio-chrome-pad);
+}
+
+.umlstudio-chrome-cluster--vertical {
+  flex-direction: column;
+  padding: 4px 2px;
+  gap: 4px;
 }
 
 .react-flow__controls-button {
@@ -641,13 +659,13 @@
 
 .react-flow__node:hover .react-flow__resize-control.handle,
 .react-flow__node.selected .react-flow__resize-control.handle {
-  background-color: var(--umlstudio-primary, #3e8acc);
+  background-color: var(--umlstudio-primary, #3590f3);
   border-color: var(--umlstudio-background, #fff);
 }
 
 .react-flow__node:hover .react-flow__resize-control.line,
 .react-flow__node.selected .react-flow__resize-control.line {
-  border-color: var(--umlstudio-primary, #3e8acc);
+  border-color: var(--umlstudio-primary, #3590f3);
 }
 
 .react-flow__handle.connectionindicator {
@@ -682,7 +700,7 @@
 .react-flow__node.selected .react-flow__handle.umlstudio-arc-handle::before {
   background-color: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 40%,
+    var(--umlstudio-primary, #3590f3) 40%,
     transparent
   );
 }
@@ -733,7 +751,7 @@
 
 .react-flow__node:hover,
 .react-flow__node.selected {
-  box-shadow: 0 0 0 2px var(--umlstudio-primary, #3e8acc);
+  box-shadow: 0 0 0 2px var(--umlstudio-primary, #3590f3);
 }
 
 .umlstudio-editor--connection-guidance
@@ -747,7 +765,7 @@
   width: 10px !important;
   height: 10px !important;
   border-radius: 999px;
-  border: 2px solid var(--umlstudio-primary, #3e8acc);
+  border: 2px solid var(--umlstudio-primary, #3590f3);
   background-color: var(--umlstudio-background, #fff);
   box-sizing: border-box;
 }
@@ -763,7 +781,7 @@
 
 .umlstudio-editor--connection-guidance
   .react-flow__handle.connectionindicator.valid {
-  background-color: var(--umlstudio-primary, #3e8acc) !important;
+  background-color: var(--umlstudio-primary, #3590f3) !important;
 }
 
 .umlstudio-editor--connection-guidance:has(.react-flow__connectionline)
@@ -777,7 +795,7 @@
   stroke: none;
   fill: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 34%,
+    var(--umlstudio-primary, #3590f3) 34%,
     var(--umlstudio-background, #fff)
   );
   transition: fill 120ms ease;
@@ -787,7 +805,7 @@
 .edge-endpoint-grip {
   opacity: 0;
   fill: var(--umlstudio-background, #fff);
-  stroke: var(--umlstudio-primary, #3e8acc);
+  stroke: var(--umlstudio-primary, #3590f3);
 
     paint-order: stroke;
   transition:
@@ -810,7 +828,7 @@
 .react-flow__edge:hover .edge-bend-handle,
 .react-flow__edge.selected .edge-bend-handle {
   opacity: 1;
-  fill: var(--umlstudio-primary, #3e8acc);
+  fill: var(--umlstudio-primary, #3590f3);
 }
 
 .react-flow__edge:hover .edge-endpoint-grip,
@@ -821,20 +839,20 @@
 .react-flow__edge.selected .edge-endpoint-grip {
   fill: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 18%,
+    var(--umlstudio-primary, #3590f3) 18%,
     var(--umlstudio-background, #fff)
   );
 }
 
 .react-flow__edge:hover .edge-bend-handle:hover,
 .react-flow__edge.selected .edge-bend-handle:hover {
-  fill: color-mix(in srgb, var(--umlstudio-primary, #3e8acc) 70%, #000);
+  fill: color-mix(in srgb, var(--umlstudio-primary, #3590f3) 70%, #000);
 }
 
 .edge-waypoint-handle {
   opacity: 0;
-  fill: var(--umlstudio-primary, #3e8acc);
-  stroke: var(--umlstudio-primary, #3e8acc);
+  fill: var(--umlstudio-primary, #3590f3);
+  stroke: var(--umlstudio-primary, #3590f3);
   paint-order: stroke;
   transition:
     fill 120ms ease,
@@ -855,7 +873,7 @@
   )
   .edge-waypoint-handle {
   opacity: 1;
-  fill: color-mix(in srgb, var(--umlstudio-primary, #3e8acc) 70%, #000);
+  fill: color-mix(in srgb, var(--umlstudio-primary, #3590f3) 70%, #000);
 }
 
 .edge-waypoint-hit-target,
@@ -895,7 +913,7 @@
 .react-flow__edge:hover [data-inline-marker] {
   stroke: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 70%,
+    var(--umlstudio-primary, #3590f3) 70%,
     #000
   ) !important;
 }
@@ -903,18 +921,18 @@
 .react-flow__edge:hover [data-inline-marker-filled="true"] {
   fill: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 70%,
+    var(--umlstudio-primary, #3590f3) 70%,
     #000
   ) !important;
 }
 
 .react-flow__edge.selected .react-flow__edge-path,
 .react-flow__edge.selected [data-inline-marker] {
-  stroke: var(--umlstudio-primary, #3e8acc) !important;
+  stroke: var(--umlstudio-primary, #3590f3) !important;
 }
 
 .react-flow__edge.selected [data-inline-marker-filled="true"] {
-  fill: var(--umlstudio-primary, #3e8acc) !important;
+  fill: var(--umlstudio-primary, #3590f3) !important;
 }
 
 .umlstudio-editor--assessment .react-flow__edge.selected .react-flow__edge-path,
@@ -1027,7 +1045,7 @@ svg.react-flow__connectionline {
 }
 
 .umlstudio-checkbox {
-  accent-color: var(--umlstudio-primary, #3e8acc);
+  accent-color: var(--umlstudio-primary, #3590f3);
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -1051,7 +1069,7 @@ svg.react-flow__connectionline {
   height: 16px;
   padding: 0;
   border: 1px solid
-    color-mix(in srgb, var(--umlstudio-primary, #3e8acc) 50%, transparent);
+    color-mix(in srgb, var(--umlstudio-primary, #3590f3) 50%, transparent);
   border-radius: var(--umlstudio-radius-sm, 4px);
   background: transparent;
     color: var(--umlstudio-foreground-on-accent, var(--umlstudio-background, #fff));
@@ -1062,12 +1080,12 @@ svg.react-flow__connectionline {
 }
 
 [data-slot="checkbox"][data-checked] {
-  background-color: var(--umlstudio-primary, #3e8acc);
-  border-color: var(--umlstudio-primary, #3e8acc);
+  background-color: var(--umlstudio-primary, #3590f3);
+  border-color: var(--umlstudio-primary, #3590f3);
 }
 
 [data-slot="checkbox"]:focus-visible {
-  outline: 2px solid var(--umlstudio-primary, #3e8acc);
+  outline: 2px solid var(--umlstudio-primary, #3590f3);
   outline-offset: 2px;
 }
 
@@ -1205,7 +1223,7 @@ svg.react-flow__connectionline {
   white-space: nowrap;
   background-color: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 18%,
+    var(--umlstudio-primary, #3590f3) 18%,
     transparent
   );
   color: var(--umlstudio-foreground, #000);
@@ -1289,7 +1307,7 @@ svg.react-flow__connectionline {
 }
 
 .umlstudio-tag-picker__input:focus-visible {
-  outline: 2px solid var(--umlstudio-primary, #3e8acc);
+  outline: 2px solid var(--umlstudio-primary, #3590f3);
   outline-offset: 1px;
 }
 
@@ -1326,7 +1344,7 @@ svg.react-flow__connectionline {
 }
 
 .umlstudio-tag-picker__option:focus-visible {
-  outline: 2px solid var(--umlstudio-primary, #3e8acc);
+  outline: 2px solid var(--umlstudio-primary, #3590f3);
   outline-offset: -2px;
 }
 
@@ -1343,7 +1361,7 @@ svg.react-flow__connectionline {
 
 .umlstudio-tag-picker__check[data-selected] {
   opacity: 1;
-  color: var(--umlstudio-primary, #3e8acc);
+  color: var(--umlstudio-primary, #3590f3);
 }
 
 .umlstudio-tag-picker__empty {
@@ -1468,8 +1486,8 @@ svg.react-flow__connectionline {
 }
 
 .umlstudio-select-trigger:focus-visible {
-  border-color: var(--umlstudio-primary, #3e8acc);
-  box-shadow: 0 0 0 1px var(--umlstudio-primary, #3e8acc);
+  border-color: var(--umlstudio-primary, #3590f3);
+  box-shadow: 0 0 0 1px var(--umlstudio-primary, #3590f3);
   outline: none;
 }
 
@@ -1528,7 +1546,7 @@ svg.react-flow__connectionline {
 .umlstudio-select-option:focus-visible {
   background-color: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 14%,
+    var(--umlstudio-primary, #3590f3) 14%,
     transparent
   );
   outline: none;
@@ -1538,7 +1556,7 @@ svg.react-flow__connectionline {
   font-weight: 600;
   background-color: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 22%,
+    var(--umlstudio-primary, #3590f3) 22%,
     transparent
   );
 }
@@ -1590,7 +1608,7 @@ svg.react-flow__connectionline {
   min-height: 28px;
   padding: 0 10px;
   border: 1px solid
-    color-mix(in srgb, var(--umlstudio-primary, #3e8acc) 38%, transparent);
+    color-mix(in srgb, var(--umlstudio-primary, #3590f3) 38%, transparent);
   background: transparent;
   color: var(--umlstudio-foreground, #000);
   font: inherit;
@@ -1611,20 +1629,20 @@ svg.react-flow__connectionline {
 }
 
 .umlstudio-stereotype-toggle:focus-visible {
-  outline: 2px solid var(--umlstudio-primary, #3e8acc);
+  outline: 2px solid var(--umlstudio-primary, #3590f3);
   outline-offset: 2px;
   z-index: 1; }
 
 .umlstudio-stereotype-toggle[data-state="on"] {
   background-color: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 20%,
+    var(--umlstudio-primary, #3590f3) 20%,
     transparent
   );
-  border-color: var(--umlstudio-primary, #3e8acc);
+  border-color: var(--umlstudio-primary, #3590f3);
     color: color-mix(
     in srgb,
-    var(--umlstudio-primary, #3e8acc) 70%,
+    var(--umlstudio-primary, #3590f3) 70%,
     var(--umlstudio-foreground, #000)
   );
   z-index: 1; }

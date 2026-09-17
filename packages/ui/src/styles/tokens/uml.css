@@ -7,7 +7,7 @@
 [data-theme="light"] {
   /* UML Node Cards (Light) */
   --uml-node-bg: #ffffff;
-  --uml-node-bg-hover: #faf9fd;
+  --uml-node-bg-hover: #f8fafc;
   --uml-node-border: #cbd5e1;
   --uml-node-border-active: var(--color-palette-dodger-blue);
   --uml-node-border-width: 1.5px;
@@ -16,17 +16,17 @@
   --uml-node-shadow-active: var(--shadow-node-active);
 
   /* UML Node Header (Light) */
-  --uml-node-header-bg: #f5f2f9;
+  --uml-node-header-bg: #f1f5f9;
   --uml-node-header-border: #e2e8f0;
   --uml-node-header-title: #0f172a;
-  --uml-node-stereotype-color: #5b21b6;
-  --uml-node-stereotype-bg: rgba(194, 187, 240, 0.3);
+  --uml-node-stereotype-color: var(--color-palette-dodger-blue);
+  --uml-node-stereotype-bg: rgba(194, 187, 240, 0.25);
 
   /* Visibility Markers (Light) */
   --uml-visibility-public: #059669;       /* + Green */
   --uml-visibility-private: #dc2626;      /* - Coral Red */
   --uml-visibility-protected: #d97706;    /* # Amber */
-  --uml-visibility-package: #4f46e5;      /* ~ Indigo/Periwinkle */
+  --uml-visibility-package: var(--color-palette-baby-blue); /* ~ Baby Blue Ice */
 
   /* Connectors / Edges (Light) */
   --uml-edge-stroke: #64748b;
