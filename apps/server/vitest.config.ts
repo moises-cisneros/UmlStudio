@@ -4,7 +4,11 @@ export default defineConfig({
   test: {
     globals: false,
     environment: "node",
-    include: ["src/**/*.test.ts", "src/__tests__/**/*.test.ts"],
+    include: [
+      "src/**/*.test.ts",
+      "src/__tests__/**/*.test.ts",
+      "test/**/*.test.ts",
+    ],
     exclude: ["node_modules", "dist"],
     pool: "forks",
     maxWorkers: 1,
