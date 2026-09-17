@@ -1,7 +1,7 @@
 import { DiagramView } from "@/types";
 import {
-  isDiagramView,
   DEFAULT_SHARED_DIAGRAM_VIEW,
+  normalizeSharedDiagramView,
 } from "@/utils/sharedDiagramLinks";
 
 const SHARED_DIAGRAM_STORE_KEY = "sharedDiagramStore";
@@ -69,9 +69,7 @@ const readStore = (): SharedDiagramStore => {
         id: entry.id,
         sharedAt: entry.sharedAt,
         favorite: Boolean((entry as Partial<SharedDiagramEntry>).favorite),
-        lastSharedView: isDiagramView(entry.lastSharedView)
-          ? entry.lastSharedView
-          : DiagramView.EDIT,
+        lastSharedView: normalizeSharedDiagramView(entry.lastSharedView),
         sourceModelId:
           typeof entry.sourceModelId === "string"
             ? entry.sourceModelId

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { Users, Radio, ArrowRight } from "lucide-react";
 import { useEditorContext, useModalContext } from "@/contexts";
 import { useModalProgress } from "@/contexts/ModalProgressContext";
 import { DiagramView } from "@/types";
@@ -7,16 +8,9 @@ import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
 import { randomCollabName } from "@umlstudio/core";
 import { sharedDiagramRoute } from "@/utils/sharedDiagramLinks";
 import { useSharedDiagramId } from "@/hooks/useSharedDiagramId";
-import {
-  HomeDialogActions,
-  HomeDialogContent,
-  HomeDialogField,
-  HomeDialogNotice,
-  HomeDialogTextInput,
-} from "./HomeDialog";
+import { Button } from "@umlstudio/ui/components/button";
 import { ShareLinkRow, MODE_OPTIONS } from "./ShareLinkRow";
 import { useShareableDiagram } from "./useShareableDiagram";
-import { EmbedSnippetPanel } from "./EmbedSnippetPanel";
 import { useTranslation } from "@/i18n";
 
 export const ShareModal = () => {
@@ -44,7 +38,7 @@ export const ShareModal = () => {
 
   const openShared = () => {
     if (!share.diagramId) return;
-    if (share.mode === DiagramView.COLLABORATE) {
+    if (share.mode === DiagramView.EDITOR) {
       const id = share.diagramId;
       openModal("COLLABORATE_NAME", {
         initialName: collaborateName.trim() || randomCollabName(),
@@ -62,28 +56,67 @@ export const ShareModal = () => {
   };
 
   return (
-    <HomeDialogContent testId="share-modal-content">
-      {!share.diagramId && (
-        <HomeDialogNotice>{t.share.noticeLocal}</HomeDialogNotice>
-      )}
+    <div
+      data-testid="share-modal-content"
+      className="flex flex-col gap-5 p-6 bg-(--umlstudio-surface,#151d2e) text-(--umlstudio-foreground,#f8fafc)"
+    >
+      {/* Precision Technical Header */}
+      <div className="flex flex-col gap-2 border-b border-(--umlstudio-border,#243046) pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-medium font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-(--periwinkle,#c2bbf0)/15 text-(--periwinkle,#c2bbf0) border border-(--periwinkle,#c2bbf0)/30">
+              {t.share.collabStereotype}
+            </span>
+            {share.diagramId && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-(--color-success,#10b981)">
+                <span className="size-2 rounded-full bg-(--color-success,#10b981) animate-pulse" />
+                {t.share.liveSessionBadge}
+              </span>
+            )}
+          </div>
+          <Users className="size-4 text-(--dodger-blue,#3590f3)" />
+        </div>
+        <p className="text-xs text-(--umlstudio-text-muted,#94a3b8) leading-relaxed">
+          {t.share.subtitle}
+        </p>
+      </div>
 
-      {!share.diagramId && (
-        <HomeDialogField label={t.share.nameLabel} htmlFor="share-diagram-name">
-          <HomeDialogTextInput
-            id="share-diagram-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={120}
-            disabled={share.isCreating}
-            placeholder={t.share.namePlaceholder}
-          />
-        </HomeDialogField>
-      )}
+      {/* Mode A: Not Yet Shared - Initial Creation Form */}
+      {!share.diagramId ? (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-lg border border-(--umlstudio-border,#243046) bg-(--umlstudio-surface-sunken,#0c101a) p-3 flex items-start gap-3">
+            <Radio className="size-4 text-(--dodger-blue,#3590f3) shrink-0 mt-0.5 animate-pulse" />
+            <div className="text-xs leading-relaxed text-(--umlstudio-text-muted,#94a3b8)">
+              {t.share.noticeLocal}
+            </div>
+          </div>
 
-      {share.diagramId && (
-        <>
-          <HomeDialogField label={t.share.anyoneWithLink}>
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="share-diagram-name"
+              className="text-xs font-semibold text-(--umlstudio-foreground,#f8fafc)"
+            >
+              {t.share.nameLabel}
+            </label>
+            <input
+              id="share-diagram-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={120}
+              disabled={share.isCreating}
+              placeholder={t.share.namePlaceholder}
+              className="h-10 rounded-lg border border-(--umlstudio-border,#243046) bg-(--umlstudio-surface-sunken,#0c101a) px-3 text-sm text-(--umlstudio-foreground,#f8fafc) placeholder:text-(--umlstudio-text-muted,#94a3b8) focus:border-(--dodger-blue,#3590f3) focus:ring-1 focus:ring-(--dodger-blue,#3590f3) outline-none transition-all disabled:opacity-50"
+            />
+          </div>
+        </div>
+      ) : (
+        /* Mode B: Shared - Real-Time Collaboration Link & Actions */
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-(--umlstudio-foreground,#f8fafc)">
+              {t.share.anyoneWithLink}
+            </span>
             <ShareLinkRow
               link={share.link}
               copied={share.copied}
@@ -92,31 +125,61 @@ export const ShareModal = () => {
               options={MODE_OPTIONS}
               onSelectMode={share.selectMode}
             />
-          </HomeDialogField>
+          </div>
 
           {hasLocalOriginal && (
-            <p className="text-xs text-[var(--home-text-secondary)]">
+            <p className="text-xs text-(--umlstudio-text-muted,#94a3b8) italic">
               {t.share.localCopyNotice}
             </p>
           )}
-
-          <EmbedSnippetPanel diagramId={share.diagramId} title={name} />
-        </>
+        </div>
       )}
 
-      <HomeDialogActions
-        cancelLabel={share.diagramId ? t.common.close : t.common.cancel}
-        confirmLabel={
-          share.diagramId ? t.share.openDiagram : t.share.createLink
-        }
-        loadingLabel={t.share.creating}
-        loading={share.isCreating}
-        confirmDisabled={!share.diagramId && !name.trim()}
-        onCancel={closeModal}
-        onConfirm={() =>
-          share.diagramId ? openShared() : void share.create(name)
-        }
-      />
-    </HomeDialogContent>
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-3 pt-2 border-t border-(--umlstudio-border,#243046)">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={closeModal}
+          disabled={share.isCreating}
+          className="border-(--umlstudio-border,#243046) text-(--umlstudio-foreground,#f8fafc) hover:bg-(--umlstudio-surface-hover,#1e293f) hover:text-white"
+        >
+          {share.diagramId ? t.common.close : t.common.cancel}
+        </Button>
+
+        {!share.diagramId ? (
+          <Button
+            type="button"
+            onClick={() => void share.create(name)}
+            disabled={share.isCreating || !name.trim()}
+            className="bg-(--dodger-blue,#3590f3) hover:bg-(--deep-sky-blue,#62bfed) text-white font-medium shadow-sm transition-all"
+          >
+            {share.isCreating ? (
+              <span className="flex items-center gap-2">
+                <span className="size-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                {t.share.creating}
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Users className="size-4" />
+                {t.share.createLink}
+              </span>
+            )}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={openShared}
+            className="bg-(--dodger-blue,#3590f3) hover:bg-(--deep-sky-blue,#62bfed) text-white font-medium shadow-sm transition-all"
+          >
+            <span className="flex items-center gap-2">
+              <Users className="size-4" />
+              {t.share.joinSession}
+              <ArrowRight className="size-4" />
+            </span>
+          </Button>
+        )}
+      </div>
+    </div>
   );
 };

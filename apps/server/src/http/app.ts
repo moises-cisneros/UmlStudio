@@ -48,7 +48,9 @@ export function buildApp(deps: AppDeps): ServerType {
               const { done } = await reader.read();
               if (done) break;
             }
-          } catch {}
+          } catch {
+            // Drain error ignored
+          }
         }
         throw Errors.bodyTooLarge();
       },

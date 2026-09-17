@@ -11,39 +11,43 @@ export type SharedDiagramViewOption = {
 
 export const SHARED_DIAGRAM_VIEW_OPTIONS: readonly SharedDiagramViewOption[] = [
   {
-    value: DiagramView.COLLABORATE,
-    label: "Collaborate",
-    badge: "Collaborate",
-    description: "Open the same shared copy as a live collaboration session.",
+    value: DiagramView.EDITOR,
+    label: "Editor",
+    badge: "Editor",
+    description: "Open as a live collaborative editing session.",
   },
   {
-    value: DiagramView.EDIT,
-    label: "Edit",
-    badge: "Edit",
-    description: "Anyone with this link can open and edit this shared copy.",
-  },
-  {
-    value: DiagramView.GIVE_FEEDBACK,
-    label: "Give feedback",
-    badge: "Feedback",
-    description: "Let reviewers add feedback without changing modelling mode.",
-  },
-  {
-    value: DiagramView.SEE_FEEDBACK,
-    label: "Review feedback",
-    badge: "Review",
-    description: "Open feedback in read-only review mode.",
+    value: DiagramView.LECTOR,
+    label: "Lector",
+    badge: "Lector",
+    description: "Open in read-only live viewing mode.",
   },
 ];
 
-export const DEFAULT_SHARED_DIAGRAM_VIEW = DiagramView.COLLABORATE;
+export const DEFAULT_SHARED_DIAGRAM_VIEW = DiagramView.EDITOR;
 
 export const isDiagramView = (value: unknown): value is DiagramView =>
   typeof value === "string" &&
   (Object.values(DiagramView) as string[]).includes(value);
 
-export const normalizeSharedDiagramView = (value: unknown): DiagramView =>
-  isDiagramView(value) ? value : DEFAULT_SHARED_DIAGRAM_VIEW;
+export const normalizeSharedDiagramView = (value: unknown): DiagramView => {
+  if (isDiagramView(value)) return value;
+  if (typeof value === "string") {
+    const upper = value.toUpperCase();
+    if (upper === "COLLABORATE" || upper === "EDIT") {
+      return DiagramView.EDITOR;
+    }
+    if (
+      upper === "SEE_FEEDBACK" ||
+      upper === "GIVE_FEEDBACK" ||
+      upper === "VIEWER" ||
+      upper === "READONLY"
+    ) {
+      return DiagramView.LECTOR;
+    }
+  }
+  return DEFAULT_SHARED_DIAGRAM_VIEW;
+};
 
 export const getSharedDiagramViewOption = (
   view: unknown,

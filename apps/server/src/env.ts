@@ -4,7 +4,9 @@ import { parseEnv } from "node:util";
 let contents = "";
 try {
   contents = readFileSync(".env", "utf8");
-} catch {}
+} catch {
+  // Optional .env file; ignore if missing
+}
 
 if (contents) {
   const parsed = parseEnv(contents);

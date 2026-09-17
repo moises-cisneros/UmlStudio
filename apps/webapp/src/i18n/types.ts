@@ -31,10 +31,10 @@ export interface TranslationDictionary {
     openDiagram: string;
     saveLocalCopy: string;
     versionHistory: string;
+    importXmi: string;
+    importImagen: string;
     exportAs: string;
-    exportSvg: string;
     exportPng: string;
-    exportJson: string;
     exportXmi: string;
     exportSpringBoot: string;
     share: string;
@@ -122,6 +122,15 @@ export interface TranslationDictionary {
     gofBadge: string;
   };
   share: {
+    modalTitle: string;
+    subtitle: string;
+    liveSessionBadge: string;
+    copyLink: string;
+    copied: string;
+    joinSession: string;
+    accessLevel: string;
+    accessDescription: string;
+    collabStereotype: string;
     noticeLocal: string;
     nameLabel: string;
     namePlaceholder: string;
@@ -138,6 +147,8 @@ export interface TranslationDictionary {
     embedDesc: string;
     noticeDashboardCreate: string;
     noticeDashboardShare: string;
+    editorMode: string;
+    lectorMode: string;
     collaborateMode: string;
     linkEditMode: string;
     addFeedbackMode: string;

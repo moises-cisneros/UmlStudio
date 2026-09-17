@@ -94,7 +94,9 @@ export function startRelayServer(opts: StartOptions): RelayServer {
           present.push(clientId);
         }
       }
-    } catch {}
+    } catch {
+      // Decode error ignored for malformed awareness frame
+    }
     return { present, removed };
   }
 
@@ -215,7 +217,9 @@ export function startRelayServer(opts: StartOptions): RelayServer {
             );
             return;
           }
-        } catch {}
+        } catch {
+          // Payload is not JSON or not a control envelope; ignore and treat as regular broadcast
+        }
 
         broadcast(rooms, diagramId, message, ws);
       });

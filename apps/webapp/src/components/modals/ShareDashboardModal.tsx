@@ -51,7 +51,7 @@ export const ShareDashboardModal = ({ modelId }: ShareDashboardModalProps) => {
 
   const openShared = () => {
     if (!share.diagramId) return;
-    if (share.mode === DiagramView.COLLABORATE) {
+    if (share.mode === DiagramView.EDITOR) {
       const id = share.diagramId;
       openModal("COLLABORATE_NAME", {
         initialName: collaborateName.trim() || randomCollabName(),
@@ -92,12 +92,8 @@ export const ShareDashboardModal = ({ modelId }: ShareDashboardModalProps) => {
             <TooltipContent>
               {share.diagramId ? (
                 <span style={{ display: "block", lineHeight: "1.6" }}>
-                  • <b>Edit</b> — view &amp; modify, no live sync
-                  <br />• <b>Collaborate</b> — real-time multi-user editing
-                  <br />• <b>Add feedback</b> — reviewers annotate a read-only
-                  view
-                  <br />• <b>View feedback</b> — read-only view of submitted
-                  annotations
+                  • <b>Editor</b> — real-time multi-user editing
+                  <br />• <b>Lector</b> — read-only live viewing
                 </span>
               ) : (
                 <span>

@@ -30,7 +30,6 @@ import {
   UndoRestoreToast,
   VersionDrawer,
   VersionPreviewBanner,
-  VersionRail,
 } from "@/components/versioning";
 import { useVersioningTranslation } from "@/components/versioning/strings";
 import { structuralFingerprint } from "@/lib/version/predicates";
@@ -140,7 +139,7 @@ export const UmlStudioShared: React.FC = () => {
     navigate({ to: "/" });
   }, [viewType, navigate]);
 
-  const isCollaborationView = viewType === DiagramView.COLLABORATE;
+  const isCollaborationView = viewType === DiagramView.EDITOR;
   const needsCollabName = isCollaborationView && !collaborationUser;
 
   useEffect(() => {
@@ -208,11 +207,8 @@ export const UmlStudioShared: React.FC = () => {
             : undefined,
       };
 
-      if (viewType === DiagramView.GIVE_FEEDBACK) {
-        editorOptions.mode = UmlStudioMode.Assessment;
-        editorOptions.readonly = false;
-      } else if (viewType === DiagramView.SEE_FEEDBACK) {
-        editorOptions.mode = UmlStudioMode.Assessment;
+      if (viewType === DiagramView.LECTOR) {
+        editorOptions.mode = UmlStudioMode.Modelling;
         editorOptions.readonly = true;
       } else {
         editorOptions.mode = UmlStudioMode.Modelling;
@@ -225,9 +221,8 @@ export const UmlStudioShared: React.FC = () => {
 
       if (
         [
-          DiagramView.COLLABORATE,
-          DiagramView.GIVE_FEEDBACK,
-          DiagramView.SEE_FEEDBACK,
+          DiagramView.EDITOR,
+          DiagramView.LECTOR,
         ].includes(viewType)
       ) {
         wsManagerRef.current = new WebSocketManager(diagramId, instance, () =>
@@ -344,7 +339,7 @@ export const UmlStudioShared: React.FC = () => {
     viewType,
   ]);
 
-  const baseReadonly = viewType === DiagramView.SEE_FEEDBACK;
+  const baseReadonly = viewType === DiagramView.LECTOR;
 
   // eslint-disable-next-line react-hooks/immutability
   useEffect(() => {
@@ -466,26 +461,17 @@ export const UmlStudioShared: React.FC = () => {
               />
             </div>
           )}
+          {diagramId && (
+            <VersionDrawer
+              diagramId={diagramId}
+              onVersionSaved={handleVersionSaved}
+              onConfirmedRestore={handleRestore}
+              onPreview={openPreview}
+            />
+          )}
         </div>
         <RightDockWorkspace />
-        {diagramId && (
-          <VersionRail
-            diagramId={diagramId}
-            onVersionSaved={handleVersionSaved}
-            onConfirmedRestore={handleRestore}
-            onPreview={openPreview}
-          />
-        )}
       </div>
-
-      {diagramId && (
-        <VersionDrawer
-          diagramId={diagramId}
-          onVersionSaved={handleVersionSaved}
-          onConfirmedRestore={handleRestore}
-          onPreview={openPreview}
-        />
-      )}
       <UndoRestoreToast />
     </div>
   );
