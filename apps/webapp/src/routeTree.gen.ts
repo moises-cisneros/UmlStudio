@@ -9,11 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root"
+import { Route as RegisterRouteImport } from "./routes/register"
+import { Route as LoginRouteImport } from "./routes/login"
 import { Route as IdRouteImport } from "./routes/$id"
 import { Route as IndexRouteImport } from "./routes/index"
 import { Route as SharedDiagramIdRouteImport } from "./routes/shared.$diagramId"
 import { Route as LocalIdRouteImport } from "./routes/local.$id"
 
+const RegisterRoute = RegisterRouteImport.update({
+  id: "/register",
+  path: "/register",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: "/login",
+  path: "/login",
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IdRoute = IdRouteImport.update({
   id: "/$id",
   path: "/$id",
@@ -38,12 +50,16 @@ const LocalIdRoute = LocalIdRouteImport.update({
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
   "/$id": typeof IdRoute
+  "/login": typeof LoginRoute
+  "/register": typeof RegisterRoute
   "/local/$id": typeof LocalIdRoute
   "/shared/$diagramId": typeof SharedDiagramIdRoute
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
   "/$id": typeof IdRoute
+  "/login": typeof LoginRoute
+  "/register": typeof RegisterRoute
   "/local/$id": typeof LocalIdRoute
   "/shared/$diagramId": typeof SharedDiagramIdRoute
 }
@@ -51,26 +67,63 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   "/": typeof IndexRoute
   "/$id": typeof IdRoute
+  "/login": typeof LoginRoute
+  "/register": typeof RegisterRoute
   "/local/$id": typeof LocalIdRoute
   "/shared/$diagramId": typeof SharedDiagramIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: "/" | "/$id" | "/local/$id" | "/shared/$diagramId"
+  fullPaths:
+    | "/"
+    | "/$id"
+    | "/login"
+    | "/register"
+    | "/local/$id"
+    | "/shared/$diagramId"
   fileRoutesByTo: FileRoutesByTo
-  to: "/" | "/$id" | "/local/$id" | "/shared/$diagramId"
-  id: "__root__" | "/" | "/$id" | "/local/$id" | "/shared/$diagramId"
+  to:
+    | "/"
+    | "/$id"
+    | "/login"
+    | "/register"
+    | "/local/$id"
+    | "/shared/$diagramId"
+  id:
+    | "__root__"
+    | "/"
+    | "/$id"
+    | "/login"
+    | "/register"
+    | "/local/$id"
+    | "/shared/$diagramId"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   IdRoute: typeof IdRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
   LocalIdRoute: typeof LocalIdRoute
   SharedDiagramIdRoute: typeof SharedDiagramIdRoute
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
+    "/register": {
+      id: "/register"
+      path: "/register"
+      fullPath: "/register"
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/login": {
+      id: "/login"
+      path: "/login"
+      fullPath: "/login"
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     "/$id": {
       id: "/$id"
       path: "/$id"
@@ -105,6 +158,8 @@ declare module "@tanstack/react-router" {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   IdRoute: IdRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
   LocalIdRoute: LocalIdRoute,
   SharedDiagramIdRoute: SharedDiagramIdRoute,
 }

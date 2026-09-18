@@ -8,6 +8,7 @@ import { useModalContext, useEditorContext } from "@/contexts";
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
 import { DiagramApiClient } from "@/services/DiagramApiClient";
 import { log } from "@/logger";
+import { useTranslation } from "@/i18n";
 import { HomeDialogContent } from "./HomeDialog";
 
 interface RenameDiagramModalProps {
@@ -25,6 +26,7 @@ export const RenameDiagramModal: React.FC<RenameDiagramModalProps> = ({
   onRenamed,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const { closeModal } = useModalContext();
   const { editor } = useEditorContext();
   const renameModel = usePersistenceModelStore((state) => state.renameModel);
@@ -55,12 +57,12 @@ export const RenameDiagramModal: React.FC<RenameDiagramModalProps> = ({
         editor.updateDiagramTitle(trimmed);
       }
 
-      toast.success("Diagram renamed successfully");
+      toast.success(t.dashboard.toastDiagramRenamedSuccess);
       onRenamed?.(trimmed);
       handleClose();
     } catch (err) {
       log.error("Failed to rename diagram", err as Error);
-      toast.error("Could not rename diagram. Please try again.");
+      toast.error(t.dashboard.toastDiagramRenameError);
     } finally {
       setIsSubmitting(false);
     }
@@ -71,13 +73,13 @@ export const RenameDiagramModal: React.FC<RenameDiagramModalProps> = ({
       <HomeDialogContent testId="rename-diagram-dialog">
         <Field className="gap-1.5">
           <FieldLabel htmlFor="diagram-new-title" className="text-xs font-semibold text-foreground">
-            Diagram Name
+            {t.newDiagram.nameLabel}
           </FieldLabel>
           <Input
             id="diagram-new-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Architecture Order Processing"
+            placeholder={t.newDiagram.namePlaceholder}
             maxLength={200}
             autoFocus
             disabled={isSubmitting}
@@ -93,14 +95,14 @@ export const RenameDiagramModal: React.FC<RenameDiagramModalProps> = ({
           onClick={handleClose}
           disabled={isSubmitting}
         >
-          Cancel
+          {t.common.cancel}
         </Button>
         <Button
           type="submit"
           variant="default"
           disabled={!isValid || isSubmitting}
         >
-          {isSubmitting ? "Renaming…" : "Rename"}
+          {isSubmitting ? t.common.savingChanges : t.common.save}
         </Button>
       </DialogFooter>
     </form>

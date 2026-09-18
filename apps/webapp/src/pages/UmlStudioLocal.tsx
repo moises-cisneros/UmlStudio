@@ -9,7 +9,13 @@ import {
 import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { UmlStudioEditor, importDiagram, type UMLModel } from "@umlstudio/core";
+import {
+  UmlStudioEditor,
+  importDiagram,
+  type UMLModel,
+  DEFAULT_LABELS,
+  SPANISH_LABELS,
+} from "@umlstudio/core";
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
 import { useEditorContext, useModalContext } from "@/contexts";
 import { useElementWidth } from "@/hooks/useElementWidth";
@@ -31,7 +37,6 @@ import { log } from "@/logger";
 import { normalizeThumbnailSvg } from "@/utils/thumbnailSvg";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { installPerfHooks } from "@/utils/perfHooks";
-import { RightDockWorkspace } from "@/components/agentic/RightDockWorkspace";
 import { ErrorPage } from "./ErrorPage";
 import { useTranslation } from "@/i18n";
 
@@ -52,7 +57,7 @@ export const UmlStudioLocal: FC = () => {
   const isThumbnailExportCanceledRef = useRef(false);
   const { setEditor, editor } = useEditorContext();
   const { openModal } = useModalContext();
-  const { t: tr } = useTranslation();
+  const { locale, t: tr } = useTranslation();
   const t = useVersioningTranslation();
   const { id: diagramId } = route.useParams();
   const { version: previewFromUrl } = route.useSearch();
@@ -117,20 +122,28 @@ export const UmlStudioLocal: FC = () => {
   useEffect(() => {
     const ed = editorForLabelsRef.current;
     if (ed && typeof ed.setLabels === "function") {
+      const baseLabels = locale === "es" ? SPANISH_LABELS : DEFAULT_LABELS;
       ed.setLabels({
-        attributes: tr.agent.attributes,
-        methods: tr.agent.methods,
+        ...baseLabels,
+        attributes: tr.agent.attributes || baseLabels.attributes,
+        methods: tr.agent.methods || baseLabels.methods,
       });
     }
-  }, [tr.agent.attributes, tr.agent.methods]);
+  }, [locale, tr.agent.attributes, tr.agent.methods]);
 
   useEffect(() => {
     if (!containerRef.current || !diagram) return;
     isThumbnailExportCanceledRef.current = false;
     setCurrentModelId(diagram.id);
 
+    const baseLabels = locale === "es" ? SPANISH_LABELS : DEFAULT_LABELS;
     const instance = new UmlStudioEditor(containerRef.current, {
       model: diagram.model,
+      labels: {
+        ...baseLabels,
+        attributes: tr.agent.attributes || baseLabels.attributes,
+        methods: tr.agent.methods || baseLabels.methods,
+      },
     });
 
     const subId = instance.subscribeToModelChange((model) => {
@@ -201,6 +214,7 @@ export const UmlStudioLocal: FC = () => {
         setEditor(undefined);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     diagram?.id,
     router,
@@ -215,24 +229,35 @@ export const UmlStudioLocal: FC = () => {
     if (!editor) return;
     if (preview) {
       if (prePreviewFingerprintRef.current === null) {
-        prePreviewFingerprintRef.current = structuralFingerprint(editor.model);
+        try {
+          prePreviewFingerprintRef.current = structuralFingerprint(
+            editor.model,
+          );
+        } catch {
+          prePreviewFingerprintRef.current = "";
+        }
       }
-      setCanRestoreFromPreview(
-        prePreviewFingerprintRef.current !==
-          structuralFingerprint(preview.body),
-      );
-      editor.setPreviewMode(true);
       try {
-        // eslint-disable-next-line react-hooks/immutability
-        editor.model = importDiagram(preview.body) as UMLModel;
+        setCanRestoreFromPreview(
+          prePreviewFingerprintRef.current !==
+            structuralFingerprint(preview.body as Diagram),
+        );
+      } catch {
+        setCanRestoreFromPreview(true);
+      }
+      try {
         editor.setReadonly(true);
+        editor.setPreviewMode(true);
+        // eslint-disable-next-line react-hooks/immutability
+        editor.model = importDiagram(preview.body as Diagram) as UMLModel;
         editor.fitView();
       } catch (err) {
         editor.setPreviewMode(false);
         prePreviewFingerprintRef.current = null;
-        log.error("Failed to apply previewed snapshot", err as Error);
+        log.error("Failed to render preview body", err as Error);
         const isSchemaError =
-          err instanceof Error && /schema|version|import/i.test(err.message);
+          err instanceof Error &&
+          err.message.includes("schema");
         toast.error(
           isSchemaError ? t.failureSchemaUnsupported : t.previewFailed,
         );
@@ -240,10 +265,11 @@ export const UmlStudioLocal: FC = () => {
     } else {
       editor.setReadonly(false);
       prePreviewFingerprintRef.current = null;
+      setCanRestoreFromPreview(false);
       editor.setPreviewMode(false);
       editor.fitView();
     }
-  }, [preview, editor]);
+  }, [preview, editor, t]);
 
   const resolveBody = useCallback(
     async (versionId: string): Promise<Diagram> => {
@@ -291,7 +317,8 @@ export const UmlStudioLocal: FC = () => {
       preview,
       resolveBody,
       closePreview,
-      restoreMutation.mutateAsync,
+      restoreMutation,
+      t,
     ],
   );
 
@@ -320,7 +347,7 @@ export const UmlStudioLocal: FC = () => {
         toast.error(t.restoreFailed);
       }
     },
-    [editor, diagramId, versions, resolveBody, performRestore, openModal],
+    [editor, diagramId, versions, resolveBody, performRestore, openModal, t],
   );
 
   const handleVersionSaved = useCallback(() => {}, []);
@@ -377,7 +404,6 @@ export const UmlStudioLocal: FC = () => {
             onPreview={openPreview}
           />
         </div>
-        <RightDockWorkspace />
       </div>
     </div>
   );

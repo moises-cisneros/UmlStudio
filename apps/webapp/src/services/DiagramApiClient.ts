@@ -1,5 +1,6 @@
 import type { UMLModel } from "@umlstudio/core";
 import { serverURL } from "@/constants";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { resolveShareOrigin } from "@/utils/sharedDiagramLinks";
 import type {
   ApiErrorBody,
@@ -39,6 +40,12 @@ async function request<T>(
     Accept: "application/json",
     ...opts.headers,
   };
+  // carry the session token on API calls when signed in so the
+  // server can resolve verified authorship. Anonymous calls stay tokenless.
+  const token = useAuthStore.getState().token;
+  if (token && !headers["Authorization"]) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   if (opts.body !== undefined && !(opts.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }

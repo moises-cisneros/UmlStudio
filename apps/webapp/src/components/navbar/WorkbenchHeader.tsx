@@ -18,6 +18,7 @@ import { VersionHistoryButton } from "./VersionHistoryButton";
 import { ThemeSwitcherMenu } from "./ThemeSwitcher";
 import { CollaboratorPresence } from "./CollaboratorPresence";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { UserAccountMenu } from "./UserAccountMenu";
 import { navbarButtonStyle } from "./styleConstants";
 import { useDiagramTitle } from "./useDiagramTitle";
 import { useWorkbenchStore } from "@/stores/useWorkbenchStore";
@@ -155,6 +156,9 @@ export const WorkbenchHeader: FC<WorkbenchHeaderProps> = ({
 
           <HelpMenu />
           <ThemeSwitcherMenu />
+
+          <div className="hidden h-5 w-px bg-border-subtle sm:block mx-0.5" />
+          <UserAccountMenu variant="navbar" />
         </div>
       </header>
     </TooltipProvider>
