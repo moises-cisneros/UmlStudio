@@ -6,6 +6,7 @@ import {
   CollaborateNameModal,
   AboutModal,
   HowToUseModal,
+  RenameDiagramModal,
 } from "@/components/modals";
 import {
   ConfirmRestoreModal,
@@ -38,6 +39,7 @@ const MODAL_COMPONENTS = {
   AboutModal,
   DELETE_VERSION: DeleteVersionModal,
   CONFIRM_RESTORE: ConfirmRestoreModal,
+  RENAME_DIAGRAM: RenameDiagramModal,
 } satisfies Record<ModalName, React.ComponentType<never>>;
 
 const ModalProgressBar = () => {
@@ -73,7 +75,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ name, props }) => {
   const variant: ModalVariant =
     name === "SHARE"
       ? "editor-share"
-      : isHomeDialog
+      : isHomeDialog || name === "RENAME_DIAGRAM"
         ? name === "NEW_DIAGRAM"
           ? "home-wide"
           : "home-compact"
@@ -98,6 +100,8 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ name, props }) => {
         return vt.delete;
       case "CONFIRM_RESTORE":
         return vt.confirmRestoreTitle;
+      case "RENAME_DIAGRAM":
+        return "Rename Diagram";
       default:
         return name;
     }

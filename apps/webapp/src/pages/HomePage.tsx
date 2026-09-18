@@ -15,6 +15,13 @@ import { readHighlightSharedDiagramId } from "@/lib/navProvenance";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useTranslation } from "@/i18n";
 
+import { Heart, LayoutGrid, List, SlidersHorizontal } from "lucide-react";
+import { Button } from "@umlstudio/ui/components/button";
+import { Badge } from "@umlstudio/ui/components/badge";
+import { cn } from "@umlstudio/ui/lib/utils";
+import { RefinePopover } from "@/components/home/RefinePopover";
+import { HomeRefinementChips } from "@/components/home/HomeRefinementChips";
+
 const DiagramGallery = lazy(() =>
   import("@/components/home/DiagramGallery").then((module) => ({
     default: module.DiagramGallery,
@@ -54,7 +61,6 @@ export const HomePage = () => {
     pruneExpiredSharedDiagrams();
   }, []);
 
-  const [count, setCount] = React.useState(0);
   const [presentTypes, setPresentTypes] = React.useState<
     readonly UMLDiagramType[]
   >([]);
@@ -74,8 +80,6 @@ export const HomePage = () => {
       header={
         <HomeWorkbenchHeader
           chrome={chrome}
-          count={count}
-          typeOptions={typeOptions}
           onNewDiagram={openNewDiagram}
           onImportJson={triggerJsonImport}
         />
@@ -98,17 +102,109 @@ export const HomePage = () => {
           <hr className="border-border-subtle" />
         </div>
 
-        <div className="mb-6">
-          <h2 className="text-2xl font-black tracking-tight text-(--home-text-primary)">
-            {t.dashboard.title}
-          </h2>
+        <div className="mb-6 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-2xl font-black tracking-tight text-(--home-text-primary)">
+              {t.dashboard.title}
+            </h2>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={chrome.toggleFavoritesOnly}
+                data-active={chrome.favoritesOnly}
+                aria-label={t.dashboard.filterFavorites}
+                title={t.dashboard.filterFavorites}
+                className={cn(
+                  "h-8 gap-1.5 border-border-subtle px-3 text-xs font-medium transition-colors",
+                  chrome.favoritesOnly
+                    ? "border-rose-500/50 bg-rose-500/15 text-rose-500 hover:bg-rose-500/20 hover:text-rose-500"
+                    : "bg-(--home-card-surface) text-secondary-foreground hover:bg-(--home-surface-hover) hover:text-(--home-text-primary)",
+                )}
+              >
+                <Heart
+                  className="size-3.5"
+                  fill={chrome.favoritesOnly ? "currentColor" : "none"}
+                  aria-hidden="true"
+                />
+                <span>{t.dashboard.filterFavoritesOnly}</span>
+              </Button>
+
+              <RefinePopover
+                variant="popover"
+                chrome={chrome}
+                typeOptions={typeOptions}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 border-border-subtle bg-(--home-card-surface) px-3 text-xs font-medium text-secondary-foreground hover:bg-(--home-surface-hover) hover:text-(--home-text-primary)"
+                    aria-label={t.dashboard.filterTitle}
+                  >
+                    <SlidersHorizontal className="size-3.5" aria-hidden />
+                    <span>{t.dashboard.filterTitle}</span>
+                    {chrome.refineCount > 0 && (
+                      <Badge className="size-4 min-w-0 px-0 text-[10px]">
+                        {chrome.refineCount}
+                      </Badge>
+                    )}
+                  </Button>
+                }
+              />
+
+              <div
+                role="group"
+                aria-label="View mode"
+                className="flex items-center rounded-lg border border-border/50 bg-(--home-card-surface) p-0.5 shadow-xs"
+              >
+                <Button
+                  type="button"
+                  variant={chrome.viewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "h-8 gap-1.5 px-3 text-xs font-medium transition-colors",
+                    chrome.viewMode === "list"
+                      ? "bg-(--home-surface-hover) text-(--home-text-primary) shadow-2xs"
+                      : "text-muted-foreground hover:text-(--home-text-primary)",
+                  )}
+                  onClick={() => chrome.setViewMode("list")}
+                  aria-label={t.dashboard.viewModeListAria}
+                  title={t.dashboard.viewModeList}
+                >
+                  <List className="size-4" aria-hidden="true" />
+                  <span>{t.dashboard.viewModeList}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={chrome.viewMode === "cards" ? "secondary" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "h-8 gap-1.5 px-3 text-xs font-medium transition-colors",
+                    chrome.viewMode === "cards"
+                      ? "bg-(--home-surface-hover) text-(--home-text-primary) shadow-2xs"
+                      : "text-muted-foreground hover:text-(--home-text-primary)",
+                  )}
+                  onClick={() => chrome.setViewMode("cards")}
+                  aria-label={t.dashboard.viewModeCardsAria}
+                  title={t.dashboard.viewModeCards}
+                >
+                  <LayoutGrid className="size-4" aria-hidden="true" />
+                  <span>{t.dashboard.viewModeCards}</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <HomeRefinementChips chrome={chrome} />
         </div>
 
         <Suspense fallback={<DiagramGallerySkeleton />}>
           <DiagramGallery
             chrome={chrome}
             highlightSharedDiagramId={highlightSharedDiagramId}
-            onCountChange={setCount}
             onTypeOptionsChange={setPresentTypes}
           />
         </Suspense>

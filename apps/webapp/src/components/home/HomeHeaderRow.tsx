@@ -5,7 +5,7 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
-  Star,
+  Heart,
 } from "lucide-react";
 import type { UMLDiagramType } from "@umlstudio/core";
 import { Badge } from "@umlstudio/ui/components/badge";
@@ -168,11 +168,11 @@ function HomeActionsIsland({
                 onClick={chrome.toggleFavoritesOnly}
                 style={
                   chrome.favoritesOnly
-                    ? { color: "var(--home-favorite-star)" }
+                    ? { color: "rgb(244 63 94)" }
                     : undefined
                 }
               >
-                <Star
+                <Heart
                   className="size-[var(--umlstudio-chrome-icon)]"
                   fill={chrome.favoritesOnly ? "currentColor" : "none"}
                   aria-hidden

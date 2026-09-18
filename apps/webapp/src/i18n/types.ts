@@ -18,7 +18,6 @@ export interface TranslationDictionary {
     language: string;
   };
   navigation: {
-    brandSubtitle: string;
     untitledDiagram: string;
     allDiagrams: string;
     realtimeSync: string;
@@ -105,6 +104,40 @@ export interface TranslationDictionary {
     filterOrderZA: string;
     filterTitle: string;
     filterDone: string;
+    filterFavoritesOnly: string;
+    filterClearAll: string;
+    filterApplied: string;
+    viewModeList: string;
+    viewModeCards: string;
+    viewModeListAria: string;
+    viewModeCardsAria: string;
+    actionOpen: string;
+    actionRename: string;
+    actionDuplicate: string;
+    actionShare: string;
+    actionDelete: string;
+    actionCopyLink: string;
+    actionSaveLocalCopy: string;
+    actionChangeSharingMode: string;
+    actionRemoveFromShared: string;
+    cannotDeleteCurrent: string;
+    confirmDeleteTitle: string;
+    confirmDeleteDesc: string;
+    confirmDeleteBtn: string;
+    confirmRemoveTitle: string;
+    confirmRemoveDesc: string;
+    confirmRemoveBtn: string;
+    cancel: string;
+    addFavorite: string;
+    removeFavorite: string;
+    toastLinkCopied: string;
+    toastCouldNotCopyLink: string;
+    toastSaveLocalCopySuccess: string;
+    toastSaveLocalCopyFailed: string;
+    toastSharingModeUpdated: string;
+    diagramActionsAria: string;
+    linkExpired: string;
+    linkExpiredDesc: string;
   };
   templates: {
     blank: string;
@@ -120,6 +153,24 @@ export interface TranslationDictionary {
     observer: string;
     observerDesc: string;
     gofBadge: string;
+    gofStructural: string;
+    gofBehavioral: string;
+    gofCreational: string;
+  };
+  newDiagram: {
+    tabBlank: string;
+    tabTemplate: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    scratchHint: string;
+    structuralCategory: string;
+    behavioralCategory: string;
+    creationalCategory: string;
+    cancel: string;
+    create: string;
+    createFromTemplate: string;
+    errorTemplateNotFound: string;
+    errorUnexpected: string;
   };
   share: {
     modalTitle: string;
