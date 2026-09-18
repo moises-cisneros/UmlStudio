@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useEditorContext, useModalContext } from "@/contexts";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEditorContext } from "@/contexts";
 import {
   UmlStudioEditor,
   UmlStudioMode,
   collabColorFromName,
   importDiagram,
-  randomCollabName,
+  DEFAULT_LABELS,
+  SPANISH_LABELS,
   type UmlStudioOptions,
   type UMLModel,
 } from "@umlstudio/core";
@@ -37,22 +38,15 @@ import { useVersionPreviewUrlSync } from "@/hooks/useVersionPreviewUrlSync";
 import { useElementWidth } from "@/hooks/useElementWidth";
 import { useFlushOnUnload } from "@/hooks/useFlushOnUnload";
 import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
-import { RightDockWorkspace } from "@/components/agentic/RightDockWorkspace";
 import { log } from "@/logger";
 import { addSharedDiagramEntry } from "@/utils/sharedDiagramStorage";
 import { useTranslation } from "@/i18n";
+import { currentAccessToken, useAuthStore } from "@/stores/useAuthStore";
 
 const route = getRouteApi("/shared/$diagramId");
 
 function isAbort(err: unknown): boolean {
   return err instanceof DOMException && err.name === "AbortError";
-}
-
-function readStoredCollabUser(): { name: string; color: string } | null {
-  const storedName = sessionStorage.getItem("umlstudio-collab-name");
-  return storedName
-    ? { name: storedName, color: collabColorFromName(storedName) }
-    : null;
 }
 
 export const UmlStudioShared: React.FC = () => {
@@ -62,8 +56,7 @@ export const UmlStudioShared: React.FC = () => {
   const queryClient = useQueryClient();
   const kind = useVersionRepositoryKind();
   const { setEditor, editor } = useEditorContext();
-  const { openModal } = useModalContext();
-  const { t: tr } = useTranslation();
+  const { locale, t: tr } = useTranslation();
   const t = useVersioningTranslation();
   const [diagramTitle, setDiagramTitle] = useState<string | null>(null);
   useDocumentTitle(diagramTitle);
@@ -85,12 +78,14 @@ export const UmlStudioShared: React.FC = () => {
   useEffect(() => {
     const ed = editorForLabelsRef.current;
     if (ed && typeof ed.setLabels === "function") {
+      const baseLabels = locale === "es" ? SPANISH_LABELS : DEFAULT_LABELS;
       ed.setLabels({
-        attributes: tr.agent.attributes,
-        methods: tr.agent.methods,
+        ...baseLabels,
+        attributes: tr.agent.attributes || baseLabels.attributes,
+        methods: tr.agent.methods || baseLabels.methods,
       });
     }
-  }, [tr.agent.attributes, tr.agent.methods]);
+  }, [locale, tr.agent.attributes, tr.agent.methods]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasColumnRef = useRef<HTMLDivElement | null>(null);
@@ -101,11 +96,18 @@ export const UmlStudioShared: React.FC = () => {
   const editorRef = useRef<UmlStudioEditor | null>(null);
   const restoredDuringPreviewRef = useRef(false);
   const prePreviewFingerprintRef = useRef<string | null>(null);
-  const hasPromptedRef = useRef(false);
   const lifecycleKeyRef = useRef<string | null>(null);
   const [canRestoreFromPreview, setCanRestoreFromPreview] = useState(false);
-  const [collaborationUser, setCollaborationUser] =
-    useState(readStoredCollabUser);
+  const authUser = useAuthStore((s) => s.user);
+  const collaborationUser = useMemo(() => {
+    if (!authUser) return null;
+    return {
+      id: authUser.id,
+      name: authUser.name,
+      color: authUser.color ?? collabColorFromName(authUser.name),
+      ...(authUser.avatar ? { imageUrl: authUser.avatar } : {}),
+    };
+  }, [authUser]);
 
   const preview = useVersionStore((s) => selectScopedPreview(s, diagramId));
   const restoreMutation = useRestoreVersionMutation(kind, diagramId);
@@ -130,32 +132,22 @@ export const UmlStudioShared: React.FC = () => {
     lifecycleKeyRef.current = nextLifecycleKey;
     diagramIsUpdated.current = false;
     restoredDuringPreviewRef.current = false;
-    hasPromptedRef.current = false;
   }, [diagramId, viewType]);
 
   useEffect(() => {
     if (viewType) return;
-    toast.error("Invalid view type");
+    toast.error(tr.auth.invalidViewType);
     navigate({ to: "/" });
-  }, [viewType, navigate]);
+  }, [viewType, tr, navigate]);
 
   const isCollaborationView = viewType === DiagramView.EDITOR;
-  const needsCollabName = isCollaborationView && !collaborationUser;
+  const isAuthenticated = authUser !== null;
 
   useEffect(() => {
-    if (!viewType || !needsCollabName || hasPromptedRef.current) return;
-    hasPromptedRef.current = true;
-    openModal("COLLABORATE_NAME", {
-      initialName: randomCollabName(),
-      onConfirm: (name: string) => {
-        sessionStorage.setItem("umlstudio-collab-name", name);
-        setCollaborationUser({ name, color: collabColorFromName(name) });
-      },
-      onClose: () => {
-        navigate({ to: "/", replace: true });
-      },
-    });
-  }, [viewType, needsCollabName, diagramId, openModal, navigate]);
+    if (!viewType || isAuthenticated) return;
+    toast.error(tr.auth.authRequiredShared);
+    navigate({ to: "/", replace: true });
+  }, [viewType, isAuthenticated, tr, navigate]);
 
   const {
     diagram,
@@ -163,7 +155,7 @@ export const UmlStudioShared: React.FC = () => {
     isPending: seedPending,
   } = useDiagramSeed(
     diagramId,
-    Boolean(diagramId) && Boolean(viewType) && !needsCollabName,
+    Boolean(diagramId) && Boolean(viewType) && isAuthenticated,
   );
 
   useEffect(() => {
@@ -191,19 +183,25 @@ export const UmlStudioShared: React.FC = () => {
         edgeCount: diagram.edges?.length ?? 0,
       });
 
+      const baseLabels = locale === "es" ? SPANISH_LABELS : DEFAULT_LABELS;
       const editorOptions: UmlStudioOptions = {
         model: diagram,
+        labels: {
+          ...baseLabels,
+          attributes: tr.agent.attributes || baseLabels.attributes,
+          methods: tr.agent.methods || baseLabels.methods,
+        },
         collaborationEnabled: true,
         collaboration:
           isCollaborationView && collaborationUser
             ? {
-                enabled: true,
-                user: collaborationUser,
-                showPresence: true,
-                showCursors: true,
-                showSelectionHighlights: true,
-                showFollow: true,
-              }
+              enabled: true,
+              user: collaborationUser,
+              showPresence: true,
+              showCursors: true,
+              showSelectionHighlights: true,
+              showFollow: true,
+            }
             : undefined,
       };
 
@@ -225,8 +223,11 @@ export const UmlStudioShared: React.FC = () => {
           DiagramView.LECTOR,
         ].includes(viewType)
       ) {
-        wsManagerRef.current = new WebSocketManager(diagramId, instance, () =>
-          toast.error("WebSocket error"),
+        wsManagerRef.current = new WebSocketManager(
+          diagramId,
+          instance,
+          () => toast.error("WebSocket error"),
+          { mode: "shared", getToken: currentAccessToken },
         );
         wsManagerRef.current.startConnection();
         wsManagerRef.current.onControl((event) => {
@@ -243,7 +244,7 @@ export const UmlStudioShared: React.FC = () => {
             const isLocalRestore =
               state.pendingRestoreFromId === event.restoredFromVersionId ||
               state.undoRestore?.restoredFromVersionId ===
-                event.restoredFromVersionId;
+              event.restoredFromVersionId;
             if (!isLocalRestore) {
               const actor = event.actor || "A collaborator";
               DiagramApiClient.fetchDiagram(diagramId, {
@@ -326,6 +327,7 @@ export const UmlStudioShared: React.FC = () => {
       instance?.destroy();
       editorRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     closePreview,
     collaborationUser,
@@ -351,7 +353,7 @@ export const UmlStudioShared: React.FC = () => {
       }
       setCanRestoreFromPreview(
         prePreviewFingerprintRef.current !==
-          structuralFingerprint(preview.body),
+        structuralFingerprint(preview.body),
       );
       editor.setPreviewMode(true);
       try {
@@ -470,7 +472,6 @@ export const UmlStudioShared: React.FC = () => {
             />
           )}
         </div>
-        <RightDockWorkspace />
       </div>
       <UndoRestoreToast />
     </div>

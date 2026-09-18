@@ -10,6 +10,15 @@ interface ReconnectionStep {
 
 type ControlListener = (event: ControlEvent) => void;
 
+export type CollaborationMode = "shared" | "local";
+
+export interface WebSocketManagerOptions {
+  /** Shared rooms require a token; local editing stays tokenless. */
+  mode?: CollaborationMode;
+  /** Reads the current access token (re-read on every reconnect). */
+  getToken?: () => string | null;
+}
+
 const ENVELOPE_PREFIX = '{"kind":';
 
 export class WebSocketManager {
@@ -27,6 +36,7 @@ export class WebSocketManager {
     private diagramId: string,
     private instance: UmlStudioEditor,
     private onError: (e: Event) => void,
+    private options: WebSocketManagerOptions = {},
   ) {
     this.instance.sendBroadcastMessage((diagramData) => {
       if (this.websocket?.readyState === WebSocket.OPEN) {
@@ -51,7 +61,16 @@ export class WebSocketManager {
   }
 
   private createWebSocket() {
-    const url = `${serverWSSUrl}?diagramId=${encodeURIComponent(this.diagramId)}`;
+    const mode = this.options.mode ?? "local";
+    const params = new URLSearchParams({
+      diagramId: this.diagramId,
+      mode,
+    });
+    // the access token is sent on connect and re-read on every
+    // reconnect so rotation stays transparent. Never logged.
+    const token = this.options.getToken?.();
+    if (token) params.set("token", token);
+    const url = `${serverWSSUrl}?${params.toString()}`;
     this.websocket = new WebSocket(url);
 
     this.websocket.onopen = () => {

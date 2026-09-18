@@ -8,6 +8,7 @@ import { Button } from "@umlstudio/ui/components/button";
 import { BrandLockup } from "@/components/navbar/BrandLockup";
 import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher";
 import { LanguageSwitcher } from "@/components/navbar/LanguageSwitcher";
+import { UserAccountMenu } from "@/components/navbar/UserAccountMenu";
 import { useTranslation } from "@/i18n";
 import { HomeHelpMenu } from "./HomeHelpMenu";
 import type { HomeChrome } from "./useHomeChrome";
@@ -78,6 +79,9 @@ export const HomeWorkbenchHeader: FC<HomeWorkbenchHeaderProps> = ({
           <LanguageSwitcher />
           <HomeHelpMenu variant="home" />
           <ThemeSwitcherMenu />
+
+          <div className="hidden h-5 w-px bg-border-subtle sm:block" />
+          <UserAccountMenu variant="home" />
         </div>
       </div>
     </div>

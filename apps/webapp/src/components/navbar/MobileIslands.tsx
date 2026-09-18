@@ -16,6 +16,7 @@ import { useModalContext } from "@/contexts";
 import { ALL_DIAGRAMS_LABEL } from "@/lib/navProvenance";
 import { BackNav } from "./BackNav";
 import { FileMenuItems } from "./FileMenu";
+import { VisionImportDialog } from "@/components/vision/VisionImportDialog";
 import { SaveLocalCopyButton } from "./SaveLocalCopyButton";
 import { ThemeSwitcherMenu } from "./ThemeSwitcher";
 import { VersionHistoryButton } from "./VersionHistoryButton";
@@ -84,6 +85,7 @@ export function MobileBackPill() {
 
 export function MobileActionsPill() {
   const { openModal } = useModalContext();
+  const [visionOpen, setVisionOpen] = useState(false);
 
   return (
     <div
@@ -103,7 +105,10 @@ export function MobileActionsPill() {
       >
         {(close) => (
           <>
-            <FileMenuItems onSelect={close} />
+            <FileMenuItems
+              onSelect={close}
+              onImportPhoto={() => setVisionOpen(true)}
+            />
             <DropdownMenuSeparator />
             <SaveLocalCopyButton variant="menuItem" onAfter={close} />
           </>
@@ -130,6 +135,10 @@ export function MobileActionsPill() {
       </IconButton>
 
       <ThemeSwitcherMenu />
+      <VisionImportDialog
+        open={visionOpen}
+        onClose={() => setVisionOpen(false)}
+      />
     </div>
   );
 }

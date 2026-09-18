@@ -6,7 +6,9 @@ import { useFileDownload } from "./useFileDownload";
 import { useEditorContext } from "@/contexts";
 
 type exportAsPNGOptions = {
-  setWhiteBackground: boolean;
+  setWhiteBackground?: boolean;
+  scale?: number;
+  transparent?: boolean;
   shareAfterExport?: boolean;
 };
 
@@ -15,8 +17,10 @@ export const useExportAsPNG = () => {
   const downloadFile = useFileDownload();
 
   const exportAsPNG = async ({
-    setWhiteBackground,
-  }: exportAsPNGOptions): Promise<SvgToPngResult> => {
+    setWhiteBackground = true,
+    scale = 1.5,
+    transparent = false,
+  }: exportAsPNGOptions = {}): Promise<SvgToPngResult> => {
     if (!editor) {
       throw new Error("Editor context is not available");
     }
@@ -27,8 +31,8 @@ export const useExportAsPNG = () => {
       import("@resvg/resvg-wasm/index_bg.wasm?url"),
     ]);
     const result = await svgToPng(umlstudioSVG.svg, umlstudioSVG.clip, {
-      scale: 1.5,
-      background: setWhiteBackground ? "#ffffff" : null,
+      scale,
+      background: transparent ? null : setWhiteBackground ? "#ffffff" : null,
       wasmInput: fetch(resvgWasmUrl),
     });
     const fileName = `${editor.model.title}.png`;

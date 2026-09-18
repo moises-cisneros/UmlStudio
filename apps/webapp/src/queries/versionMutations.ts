@@ -8,6 +8,7 @@ import {
   type RepositoryKind,
 } from "@/services/versionRepository";
 import { useVersionStore } from "@/stores/useVersionStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { MAX_VERSIONS_PER_DIAGRAM } from "@/constants";
 import type { VersionSummary } from "@/types";
 import { versionKeys } from "./keys";
@@ -19,7 +20,10 @@ import {
 } from "./versionListCache";
 
 function getActor(): string | undefined {
-  return sessionStorage.getItem("umlstudio-collab-name") || undefined;
+  // label mutations with the registered session name. The server
+  // resolves authorship from the verified identity and ignores this value,
+  // so it can never spoof another author.
+  return useAuthStore.getState().user?.name ?? undefined;
 }
 
 function notifyEvictions(result: CreateVersionResult): void {

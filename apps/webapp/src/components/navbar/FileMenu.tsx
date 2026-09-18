@@ -21,6 +21,7 @@ import { useMediaQuery } from "@/hooks";
 import { useExportAsPNG, useExportAsSpringBoot, useExportAsXMI } from "@/hooks";
 import { log } from "@/logger";
 import { XmiFileImportButton } from "./XmiFileImportButton";
+import { VisionPhotoImportItem } from "./VisionPhotoImportItem";
 import { SaveLocalCopyButton } from "./SaveLocalCopyButton";
 import { navbarButtonStyle } from "./styleConstants";
 import { MOBILE_MENU_CONTENT_CLASS } from "./islandPrimitives";
@@ -37,6 +38,7 @@ import {
 } from "@umlstudio/ui/components/alert-dialog";
 import { useNavigate } from "@tanstack/react-router";
 import { useEditorContext } from "@/contexts";
+import { VisionImportDialog } from "@/components/vision/VisionImportDialog";
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
 import { DiagramApiClient } from "@/services/DiagramApiClient";
 import { useDiagramIdFromPath } from "@/hooks/useDiagramIdFromPath";
@@ -50,6 +52,9 @@ interface FileMenuProps {
 type ExportFormat = "PNG" | "Spring Boot" | "XMI";
 
 type ExportRunResult = { clamped?: boolean; appliedScale?: number };
+
+const PNG_SCALES = [1, 2, 4] as const;
+const DEFAULT_PNG_SCALE = 1.5;
 
 function exportSuccessMessage(
   format: ExportFormat,
@@ -68,7 +73,13 @@ function exportErrorMessage(format: ExportFormat, err: unknown): string {
   return `${format} export failed. Please try again.`;
 }
 
-export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
+export function FileMenuItems({
+  onSelect,
+  onImportPhoto,
+}: {
+  onSelect: () => void;
+  onImportPhoto: () => void;
+}) {
   const { openModal } = useModalContext();
   const { editor } = useEditorContext();
   const { t } = useTranslation();
@@ -80,6 +91,8 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
   const exportAsSpringBoot = useExportAsSpringBoot();
   const exportAsXMI = useExportAsXMI();
   const [busyFormat, setBusyFormat] = useState<ExportFormat | null>(null);
+  const [pngScale, setPngScale] = useState<number>(DEFAULT_PNG_SCALE);
+  const [transparentPng, setTransparentPng] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -116,17 +129,17 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
       } else {
         deleteModel(diagramId);
       }
-      toast.success("Diagram deleted successfully");
+      toast.success(t.dashboard.toastDiagramDeletedSuccess);
       setShowDeleteConfirm(false);
       onSelect();
       navigate({ to: "/" });
     } catch (err) {
       log.error("Failed to delete diagram", err as Error);
-      toast.error("Could not delete diagram. Please try again.");
+      toast.error(t.dashboard.toastDiagramDeleteError);
     } finally {
       setIsDeleting(false);
     }
-  }, [diagramId, sharedDiagramId, isDeleting, deleteModel, navigate, onSelect]);
+  }, [diagramId, sharedDiagramId, isDeleting, deleteModel, t, navigate, onSelect]);
 
   const runExport = useCallback(
     async (
@@ -168,19 +181,63 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
       <DropdownMenuSeparator />
 
       <DropdownMenuGroup>
-        <DropdownMenuLabel>Import</DropdownMenuLabel>
+        <DropdownMenuLabel>{t.common.importLabel}</DropdownMenuLabel>
         <XmiFileImportButton close={onSelect} />
+        <VisionPhotoImportItem close={onSelect} onImportPhoto={onImportPhoto} />
       </DropdownMenuGroup>
 
       <DropdownMenuSeparator />
 
       <DropdownMenuGroup>
         <DropdownMenuLabel>{t.menu.exportAs}</DropdownMenuLabel>
+        <div
+          className="flex flex-col gap-1.5 px-2 py-1.5"
+          role="group"
+          aria-label="PNG export options"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <span className="text-xs font-medium text-muted-foreground">
+            PNG scale{pngScale !== DEFAULT_PNG_SCALE ? ` (${pngScale}x)` : " (default)"}
+          </span>
+          <div
+            className="flex items-center gap-1"
+            role="radiogroup"
+            aria-label="PNG scale"
+          >
+            {PNG_SCALES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={pngScale === option}
+                aria-label={`${option}x scale`}
+                onClick={() => setPngScale(option)}
+                className={
+                  pngScale === option
+                    ? "rounded-md border border-primary bg-primary/10 px-2 py-0.5 text-xs text-foreground"
+                    : "rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                }
+              >
+                {option}x
+              </button>
+            ))}
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={transparentPng}
+              onChange={(e) => setTransparentPng(e.target.checked)}
+              aria-label="Transparent background"
+            />
+            Transparent background
+          </label>
+        </div>
         <DropdownMenuItem
           disabled={busyFormat === "PNG"}
           onClick={() =>
             runExport("PNG", async () =>
-              exportAsPng({ setWhiteBackground: true }),
+              exportAsPng({ scale: pngScale, transparent: transparentPng }),
             )
           }
         >
@@ -206,17 +263,17 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
         <>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleRenameDiagram}>
-            Rename diagram…
+            {t.menu.renameDiagram}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleShareDiagram}>
-            Share diagram…
+            {t.menu.shareDiagram}
           </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
             closeOnClick={false}
             onClick={handleRequestDelete}
           >
-            Delete diagram…
+            {t.menu.deleteDiagram}
           </DropdownMenuItem>
         </>
       )}
@@ -224,19 +281,19 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Diagram?</AlertDialogTitle>
+            <AlertDialogTitle>{t.dashboard.confirmDeleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete this diagram? This action cannot be undone.
+              {t.dashboard.confirmDeleteDesc}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={isDeleting}
               onClick={handleConfirmDelete}
             >
-              {isDeleting ? "Deleting…" : "Delete"}
+              {isDeleting ? t.common.deleting : t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -247,6 +304,7 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
 
 export const FileMenu: FC<FileMenuProps> = ({ color, onClose }) => {
   const [open, setOpen] = useState(false);
+  const [visionOpen, setVisionOpen] = useState(false);
   const isLg = useMediaQuery("(min-width: 1024px)");
   const { t } = useTranslation();
 
@@ -256,36 +314,45 @@ export const FileMenu: FC<FileMenuProps> = ({ color, onClose }) => {
   }, [onClose]);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <Tooltip disabled={isLg}>
-        <TooltipTrigger
-          render={
-            <DropdownMenuTrigger
-              id="file-menu-button"
-              render={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={navbarButtonStyle()}
-                  style={color ? { color } : undefined}
-                  aria-label={t.menu.file}
-                />
-              }
-            >
-              <FolderKanban className="size-4" aria-hidden />
-              <span className="hidden lg:inline">{t.menu.file}</span>
-              <ChevronDownIcon className="size-4" aria-hidden />
-            </DropdownMenuTrigger>
-          }
-        />
-        <TooltipContent>{t.menu.file}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        aria-labelledby="file-menu-button"
-        className={MOBILE_MENU_CONTENT_CLASS}
-      >
-        <FileMenuItems onSelect={close} />
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <Tooltip disabled={isLg}>
+          <TooltipTrigger
+            render={
+              <DropdownMenuTrigger
+                id="file-menu-button"
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={navbarButtonStyle()}
+                    style={color ? { color } : undefined}
+                    aria-label={t.menu.file}
+                  />
+                }
+              >
+                <FolderKanban className="size-4" aria-hidden />
+                <span className="hidden lg:inline">{t.menu.file}</span>
+                <ChevronDownIcon className="size-4" aria-hidden />
+              </DropdownMenuTrigger>
+            }
+          />
+          <TooltipContent>{t.menu.file}</TooltipContent>
+        </Tooltip>
+        <DropdownMenuContent
+          aria-labelledby="file-menu-button"
+          className={MOBILE_MENU_CONTENT_CLASS}
+        >
+          <FileMenuItems
+            onSelect={close}
+            onImportPhoto={() => setVisionOpen(true)}
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <VisionImportDialog
+        open={visionOpen}
+        onClose={() => setVisionOpen(false)}
+      />
+    </>
   );
 };

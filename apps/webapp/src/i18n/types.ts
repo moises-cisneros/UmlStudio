@@ -16,6 +16,9 @@ export interface TranslationDictionary {
     zoom: string;
     search: string;
     language: string;
+    importLabel: string;
+    deleting: string;
+    savingChanges: string;
   };
   navigation: {
     untitledDiagram: string;
@@ -39,6 +42,9 @@ export interface TranslationDictionary {
     share: string;
     help: string;
     keyboardShortcuts: string;
+    renameDiagram: string;
+    shareDiagram: string;
+    deleteDiagram: string;
   };
   omnibox: {
     placeholder: string;
@@ -135,6 +141,10 @@ export interface TranslationDictionary {
     toastSaveLocalCopySuccess: string;
     toastSaveLocalCopyFailed: string;
     toastSharingModeUpdated: string;
+    toastDiagramDeletedSuccess: string;
+    toastDiagramDeleteError: string;
+    toastDiagramRenamedSuccess: string;
+    toastDiagramRenameError: string;
     diagramActionsAria: string;
     linkExpired: string;
     linkExpiredDesc: string;
@@ -204,5 +214,57 @@ export interface TranslationDictionary {
     linkEditMode: string;
     addFeedbackMode: string;
     viewFeedbackMode: string;
+  };
+  auth: {
+    loginTitle: string;
+    loginTitleHighlight: string;
+    loginDescription: string;
+    precisionStudio: string;
+    liveBlueprint: string;
+    welcomeBack: string;
+    signInSubtitle: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    passwordLabel: string;
+    passwordPlaceholder: string;
+    showPassword: string;
+    hidePassword: string;
+    loginButton: string;
+    authenticating: string;
+    noAccount: string;
+    createAccountLink: string;
+    quickDemoTitle: string;
+    quickDemoSubtitle: string;
+    invalidCredentials: string;
+    registerTitle: string;
+    registerTitleHighlight: string;
+    registerDescription: string;
+    getStarted: string;
+    registerSubtitle: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    passwordRequirements: string;
+    reqMinLength: string;
+    reqLettersAndDigits: string;
+    reqSymbol: string;
+    duplicateEmail: string;
+    duplicateTitle: string;
+    signInNow: string;
+    registerButton: string;
+    creatingAccount: string;
+    hasAccount: string;
+    loginLink: string;
+    registrationFailed: string;
+    accountMenuLogin: string;
+    accountMenuSignUp: string;
+    signedInAs: string;
+    role: string;
+    leadModeler: string;
+    collabModeler: string;
+    reviewer: string;
+    signOut: string;
+    userMenuAria: string;
+    authRequiredShared: string;
+    invalidViewType: string;
   };
 }
