@@ -42,6 +42,7 @@ type InitialDiagramState = {
   collaborationEnabled: boolean;
   previewMode: boolean;
   lastPlacedElementId: string | null;
+  associationClassPrompt: { fromNodeId: string | null; error?: boolean } | null;
 };
 
 const initialDiagramState: InitialDiagramState = {
@@ -59,6 +60,7 @@ const initialDiagramState: InitialDiagramState = {
   collaborationEnabled: false,
   previewMode: false,
   lastPlacedElementId: null,
+  associationClassPrompt: null,
 };
 
 function stripComputedSegmentsFromEdge(edge: Edge): Edge {
@@ -103,6 +105,10 @@ export type DiagramStore = {
   collaborationEnabled: boolean;
   previewMode: boolean;
   lastPlacedElementId: string | null;
+  associationClassPrompt: { fromNodeId: string | null; error?: boolean } | null;
+  setAssociationClassPrompt: (
+    prompt: { fromNodeId: string | null; error?: boolean } | null,
+  ) => void;
   setLastPlacedElementId: (id: string | null) => void;
   setDiagramId: (diagramId: string) => void;
   setCollaborationEnabled: (enabled: boolean) => void;
@@ -231,6 +237,14 @@ export const createDiagramStore = (
             if (!undoManager || !undoManager.canRedo()) return;
 
             undoManager.redo();
+          },
+
+          setAssociationClassPrompt: (prompt) => {
+            set(
+              { associationClassPrompt: prompt },
+              undefined,
+              "setAssociationClassPrompt",
+            );
           },
 
           setDiagramId: (diagramId) => {

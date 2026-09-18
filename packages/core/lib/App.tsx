@@ -10,6 +10,7 @@ import {
   AssessmentSelectionDebug,
   ScrollOverlay,
   AlignmentGuides,
+  AssociationClassGuideBanner,
 } from "@/components"
 import { ConnectionPreviewLine } from "@/components/ConnectionPreviewLine"
 import { ArcScalePublisher } from "@/components/ArcScalePublisher"
@@ -137,6 +138,9 @@ function App({
     onEdgeClick,
     onNodeDoubleClick,
     onEdgeDoubleClick,
+    onNodeContextMenu,
+    onEdgeContextMenu,
+    onPaneContextMenu,
   } = useElementInteractions()
   const { onPaneClicked } = usePaneClicked()
   const multiSelectionMode = useMultiSelectionMode()
@@ -220,6 +224,9 @@ function App({
             onEdgeClick={onEdgeClick}
             onNodeDoubleClick={onNodeDoubleClick}
             onEdgeDoubleClick={onEdgeDoubleClick}
+            onNodeContextMenu={onNodeContextMenu}
+            onEdgeContextMenu={onEdgeContextMenu}
+            onPaneContextMenu={onPaneContextMenu}
             onBeforeDelete={onBeforeDelete}
             onPaneClick={onPaneClicked}
             proOptions={proOptions}
@@ -250,6 +257,7 @@ function App({
             <EdgeGeometrySolver />
                         <OverlayLayer />
           </ReactFlow>
+          <AssociationClassGuideBanner />
           <ScrollOverlay />
           <CollaborationLayer options={collaboration} awareness={awareness} />
         </div>

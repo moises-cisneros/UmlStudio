@@ -2997,7 +2997,7 @@ export function getMarkerSegmentPath(
 export const getDefaultEdgeType = (
   _diagramType?: UMLDiagramType
 ): DiagramEdgeType => {
-  return "ClassUnidirectional"
+  return "ClassBidirectional"
 }
 
 export function getConnectionLineType(

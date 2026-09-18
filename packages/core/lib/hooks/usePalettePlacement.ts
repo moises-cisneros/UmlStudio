@@ -27,6 +27,7 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
     setSelectedElementsId,
     lastPlacedElementId,
     setLastPlacedElementId,
+    setAssociationClassPrompt,
   } = useDiagramStore(
     useShallow((state) => ({
       diagramId: state.diagramId,
@@ -38,6 +39,7 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
       setSelectedElementsId: state.setSelectedElementsId,
       lastPlacedElementId: state.lastPlacedElementId,
       setLastPlacedElementId: state.setLastPlacedElementId,
+      setAssociationClassPrompt: state.setAssociationClassPrompt,
     })),
   );
 
@@ -123,6 +125,19 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
         event.clientY > bounds.bottom;
       if (outside) return false;
 
+      if (dropElementConfig.isAssociationClass) {
+        const availableClasses = nodes.filter((n) => n.type === "class");
+        if (availableClasses.length < 2) {
+          setAssociationClassPrompt({
+            fromNodeId: null,
+            error: true,
+          });
+        } else {
+          setAssociationClassPrompt({ fromNodeId: null });
+        }
+        return false;
+      }
+
       const parent = findDropParent(
         screenToFlowPosition(
           { x: event.clientX, y: event.clientY },
@@ -163,10 +178,24 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
       snapPx,
       nodes,
       commitNode,
+      setAssociationClassPrompt,
     ],
   );
 
   const placeAtViewportCenter = useCallback(() => {
+    if (dropElementConfig.isAssociationClass) {
+      const availableClasses = nodes.filter((n) => n.type === "class");
+      if (availableClasses.length < 2) {
+        setAssociationClassPrompt({
+          fromNodeId: null,
+          error: true,
+        });
+      } else {
+        setAssociationClassPrompt({ fromNodeId: null });
+      }
+      return;
+    }
+
     const canvas = getCanvas();
     if (!canvas) {
       log.warn("Canvas element not found");
@@ -237,6 +266,7 @@ export function usePalettePlacement(dropElementConfig: DropElementConfig) {
     setSelectedElementsId,
     lastPlacedElementId,
     setLastPlacedElementId,
+    setAssociationClassPrompt,
   ]);
 
   return { dropAtPointer, placeAtViewportCenter };

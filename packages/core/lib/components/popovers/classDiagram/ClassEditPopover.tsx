@@ -20,14 +20,16 @@ const KIND_TO_DATA: Record<
   abstract: { stereotype: undefined, isAbstract: true },
   interface: { stereotype: ClassStereotype.Interface, isAbstract: false },
   enumeration: { stereotype: ClassStereotype.Enumeration, isAbstract: false },
+  association: { stereotype: ClassStereotype.Association, isAbstract: false },
 };
 
 const hasKeyword = (kind: ClassKind) =>
-  kind === "interface" || kind === "enumeration";
+  kind === "interface" || kind === "enumeration" || kind === "association";
 
 const kindOf = (data: ClassNodeProps): ClassKind => {
   if (data.stereotype === ClassStereotype.Enumeration) return "enumeration";
   if (data.stereotype === ClassStereotype.Interface) return "interface";
+  if (data.stereotype === ClassStereotype.Association) return "association";
   if (data.isAbstract) return "abstract";
   return "class";
 };

@@ -12,8 +12,7 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
   const t = useLabels()
 
   const CLASS_EDGE_TYPE_OPTIONS: ReadonlyArray<EdgeTypeOption> = [
-    { value: "ClassBidirectional", label: t.biAssociation },
-    { value: "ClassUnidirectional", label: t.uniAssociation },
+    { value: "ClassBidirectional", label: t.association ?? t.biAssociation },
     { value: "ClassAggregation", label: t.aggregation },
     { value: "ClassComposition", label: t.composition },
     { value: "ClassInheritance", label: t.inheritance },
