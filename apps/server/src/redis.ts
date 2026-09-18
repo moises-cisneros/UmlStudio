@@ -22,7 +22,62 @@ export const k = {
   versionMeta: (id: string, vid: string) =>
     `diagram:{${id}}:version:${vid}:meta`,
   autoVersionMarker: (id: string) => `diagram:{${id}}:auto-version-marker`,
+  authUser: (id: string) => `auth:user:{${id}}`,
+  authUserByEmail: (email: string) => `auth:user:email:${email.toLowerCase()}`,
+  authRefresh: (jti: string) => `auth:refresh:${jti}`,
 };
+
+/** Default refresh-session lifetime: 7 days (open question in design). */
+export const REFRESH_TTL_SECONDS = 7 * 24 * 3600;
+
+/**
+ * Fail-closed signing-secret loader The JWT secret MUST come from
+ * the environment — there is intentionally no default. Throws when missing
+ * or blank so the service refuses to boot instead of signing with a weak key.
+ */
+export function getJwtSecret(env: NodeJS.ProcessEnv = process.env): string {
+  const secret = env.JWT_SECRET;
+  if (!secret || secret.trim().length === 0) {
+    throw new Error(
+      "JWT_SECRET is not set. Set JWT_SECRET to a high-entropy value before booting.",
+    );
+  }
+  return secret;
+}
+
+/** Persists a refresh session: jti -> userId with TTL. */
+export async function saveRefreshSession(
+  client: Redis,
+  jti: string,
+  userId: string,
+  ttlSec: number = REFRESH_TTL_SECONDS,
+): Promise<void> {
+  await client.set(k.authRefresh(jti), userId, { EX: ttlSec });
+}
+
+/**
+ * Atomically consumes a refresh session (GET + DEL) for rotation. Returns
+ * the bound userId, or null when expired, revoked, or never issued.
+ */
+export async function consumeRefreshSession(
+  client: Redis,
+  jti: string,
+): Promise<string | null> {
+  const multi = client.multi();
+  multi.get(k.authRefresh(jti));
+  multi.del(k.authRefresh(jti));
+  const replies = (await multi.exec()) as unknown[];
+  const userId = replies[0];
+  return typeof userId === "string" ? userId : null;
+}
+
+/** Revokes a refresh session immediately (logout). Idempotent. */
+export async function revokeRefreshSession(
+  client: Redis,
+  jti: string,
+): Promise<void> {
+  await client.del(k.authRefresh(jti));
+}
 
 /** Returns gzip-then-base64-encoded JSON as a string. */
 export function gzipJson(value: unknown): string {
@@ -112,6 +167,7 @@ local function commit_snapshot(keys, args)
   -- args[7] = kind ('user' | 'auto')
   -- args[8] = librarySchemaVersion
   -- args[9] = gzipBody (base64 string)
+  -- args[10] = author (server-resolved verified user id; '' when anonymous)
 
   if redis.call('EXISTS', keys[1]) == 0 then
     return redis.error_reply('NO_HEAD')
@@ -135,6 +191,7 @@ local function commit_snapshot(keys, args)
     'createdAt', args[2],
     'kind', args[7],
     'librarySchemaVersion', args[8],
+    'author', args[10],
     'seq', tostring(seq))
   redis.call('EXPIRE', vMetaKey, ttl)
 
@@ -170,6 +227,7 @@ local function restore_version(keys, args)
   -- args[8]  = preRestoreGzipBody (base64-gzipped JSON)
   -- args[9]  = restoreFromVid (verified for safety)
   -- args[10] = headJson (raw JSON body to JSON.SET into HEAD)
+  -- args[11] = author (server-resolved verified user id; '' when anonymous)
 
   if redis.call('EXISTS', keys[1]) == 0 then
     return redis.error_reply('NO_HEAD')
@@ -210,6 +268,7 @@ local function restore_version(keys, args)
     'createdAt', args[2],
     'kind', 'auto',
     'librarySchemaVersion', args[7],
+    'author', args[11],
     'seq', tostring(autoSeq))
   redis.call('EXPIRE', autoMeta, ttl)
   redis.call('ZADD', keys[2], args[2], autoVid)

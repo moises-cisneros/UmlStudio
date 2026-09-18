@@ -22,6 +22,7 @@ type RoomAwarenessState = {
 
 interface ExtendedWebSocket extends WebSocket {
   diagramId?: string;
+  userId?: string;
 }
 
 interface RelayServer {
@@ -34,7 +35,11 @@ interface StartOptions {
   port: number;
   host?: string;
   maxSocketsPerRoom?: number;
+  verifyToken?: (token: string) => Promise<string>;
 }
+
+/** Close code for rejected shared-room joins (app-level unauthorized). */
+export const WS_UNAUTHORIZED_CLOSE_CODE = 4401;
 
 const MAX_PAYLOAD_BYTES = 1_048_576;
 
@@ -149,109 +154,136 @@ export function startRelayServer(opts: StartOptions): RelayServer {
   wss.on(
     "connection",
     (ws: ExtendedWebSocketWithAlive, request: IncomingMessage) => {
-      const url = new URL(request.url ?? "", `http://${request.headers.host}`);
-      const diagramId = url.searchParams.get("diagramId");
-      if (!diagramId || !DIAGRAM_ID_RE.test(diagramId)) {
-        ws.close(1008, "Invalid diagramId");
+      void handleConnection(ws, request);
+    },
+  );
+
+  async function handleConnection(
+    ws: ExtendedWebSocketWithAlive,
+    request: IncomingMessage,
+  ): Promise<void> {
+    const url = new URL(request.url ?? "", `http://${request.headers.host}`);
+    const diagramId = url.searchParams.get("diagramId");
+    if (!diagramId || !DIAGRAM_ID_RE.test(diagramId)) {
+      ws.close(1008, "Invalid diagramId");
+      return;
+    }
+
+    const mode = url.searchParams.get("mode") ?? "local";
+    if (mode === "shared") {
+      const token = url.searchParams.get("token");
+      if (!token || !opts.verifyToken) {
+        ws.close(WS_UNAUTHORIZED_CLOSE_CODE, "Authentication required");
         return;
       }
+      try {
+        ws.userId = await opts.verifyToken(token);
+      } catch {
+        ws.close(WS_UNAUTHORIZED_CLOSE_CODE, "Authentication required");
+        return;
+      }
+      // Token is verified then discarded — never logged.
+      logger.info(
+        { event: "ws.shared.join", diagramId, userId: ws.userId },
+        "ws shared join admitted",
+      );
+    }
+    ws.isAlive = true;
+    ws.on("pong", () => {
       ws.isAlive = true;
-      ws.on("pong", () => {
-        ws.isAlive = true;
-      });
-      let room = rooms.get(diagramId);
-      if (!room) {
-        room = new Set();
-        rooms.set(diagramId, room);
-      }
-      if (room.size >= maxSocketsPerRoom) {
-        logger.warn(
-          { diagramId, size: room.size },
-          "ws room over capacity, rejecting connection",
-        );
-        ws.close(1013, "Try again later");
-        return;
-      }
-      room.add(ws);
-      ws.diagramId = diagramId;
-      awarenessClientIdsBySocket.set(ws, new Set());
-      getOrCreateAwarenessState(diagramId);
+    });
+    let room = rooms.get(diagramId);
+    if (!room) {
+      room = new Set();
+      rooms.set(diagramId, room);
+    }
+    if (room.size >= maxSocketsPerRoom) {
+      logger.warn(
+        { diagramId, size: room.size },
+        "ws room over capacity, rejecting connection",
+      );
+      ws.close(1013, "Try again later");
+      return;
+    }
+    room.add(ws);
+    ws.diagramId = diagramId;
+    awarenessClientIdsBySocket.set(ws, new Set());
+    getOrCreateAwarenessState(diagramId);
 
-      ws.on("message", (raw: WebSocket.RawData) => {
-        const message =
-          typeof raw === "string"
-            ? raw
-            : raw instanceof Buffer
-              ? raw.toString("utf-8")
-              : "";
+    ws.on("message", (raw: WebSocket.RawData) => {
+      const message =
+        typeof raw === "string"
+          ? raw
+          : raw instanceof Buffer
+            ? raw.toString("utf-8")
+            : "";
 
-        try {
-          const parsed = JSON.parse(message) as Record<string, unknown>;
+      try {
+        const parsed = JSON.parse(message) as Record<string, unknown>;
 
-          if (typeof parsed.diagramData === "string") {
-            const roomState = roomAwarenessStates.get(diagramId);
-            if (roomState) {
-              const decoded = Buffer.from(parsed.diagramData, "base64");
-              if (decoded.length > 0 && decoded[0] === AWARENESS_MSG_TYPE) {
-                const awarenessUpdate = new Uint8Array(decoded.subarray(1));
-                applyAwarenessUpdate(roomState.awareness, awarenessUpdate, ws);
+        if (typeof parsed.diagramData === "string") {
+          const roomState = roomAwarenessStates.get(diagramId);
+          if (roomState) {
+            const decoded = Buffer.from(parsed.diagramData, "base64");
+            if (decoded.length > 0 && decoded[0] === AWARENESS_MSG_TYPE) {
+              const awarenessUpdate = new Uint8Array(decoded.subarray(1));
+              applyAwarenessUpdate(roomState.awareness, awarenessUpdate, ws);
 
-                const { present, removed } =
-                  decodeAwarenessUpdateClients(awarenessUpdate);
-                const socketIds = awarenessClientIdsBySocket.get(ws);
-                if (socketIds) {
-                  for (const id of present) socketIds.add(id);
-                  for (const id of removed) socketIds.delete(id);
-                }
+              const { present, removed } =
+                decodeAwarenessUpdateClients(awarenessUpdate);
+              const socketIds = awarenessClientIdsBySocket.get(ws);
+              if (socketIds) {
+                for (const id of present) socketIds.add(id);
+                for (const id of removed) socketIds.delete(id);
               }
             }
           }
-
-          if (parsed.kind === "control") {
-            logger.warn(
-              {
-                diagramId,
-                type: (parsed as { control?: { type?: string } }).control?.type,
-              },
-              "ws control envelope from client dropped",
-            );
-            return;
-          }
-        } catch {
-          // Payload is not JSON or not a control envelope; ignore and treat as regular broadcast
         }
 
-        broadcast(rooms, diagramId, message, ws);
-      });
+        if (parsed.kind === "control") {
+          logger.warn(
+            {
+              diagramId,
+              type: (parsed as { control?: { type?: string } }).control?.type,
+            },
+            "ws control envelope from client dropped",
+          );
+          return;
+        }
+      } catch {
+        // Payload is not JSON or not a control envelope; ignore and treat as regular broadcast
+      }
 
-      ws.on("close", () => {
-        const r = rooms.get(diagramId);
-        if (r) {
-          r.delete(ws);
+      broadcast(rooms, diagramId, message, ws);
+    });
 
-          // Broadcast awareness removal for this socket's tracked clients
-          const socketIds = awarenessClientIdsBySocket.get(ws);
-          if (socketIds && socketIds.size > 0) {
-            broadcastAwarenessRemoval(diagramId, ws, Array.from(socketIds));
-          }
+    ws.on("close", () => {
+      const r = rooms.get(diagramId);
+      if (r) {
+        r.delete(ws);
 
-          if (r.size === 0) {
-            rooms.delete(diagramId);
-            const roomState = roomAwarenessStates.get(diagramId);
-            if (roomState) {
-              roomState.awareness.destroy();
-              roomState.doc.destroy();
-              roomAwarenessStates.delete(diagramId);
-            }
+        // Broadcast awareness removal for this socket's tracked clients
+        const socketIds = awarenessClientIdsBySocket.get(ws);
+        if (socketIds && socketIds.size > 0) {
+          broadcastAwarenessRemoval(diagramId, ws, Array.from(socketIds));
+        }
+
+        if (r.size === 0) {
+          rooms.delete(diagramId);
+          const roomState = roomAwarenessStates.get(diagramId);
+          if (roomState) {
+            roomState.awareness.destroy();
+            roomState.doc.destroy();
+            roomAwarenessStates.delete(diagramId);
           }
         }
-      });
+      }
+    });
 
-      ws.on("error", (err: Error) => {
-        logger.error({ err, diagramId }, "ws client error");
-      });
-    },
-  );
+    ws.on("error", (err: Error) => {
+      logger.error({ err, diagramId }, "ws client error");
+    });
+  }
 
   const heartbeatInterval = setInterval(() => {
     for (const room of rooms.values()) {
