@@ -1,10 +1,23 @@
 import { loadConfig } from "./config.js";
 import { logger } from "./logger.js";
 import { buildApp } from "./http/app.js";
-import { bootLoadFunction, createRedisClient } from "./redis.js";
+import {
+  bootLoadFunction,
+  createRedisClient,
+  getJwtSecret,
+} from "./redis.js";
 import { startRelayServer } from "./ws.js";
+import {
+  createAuthService,
+  createRedisUserRepository,
+} from "./services/auth-service.js";
+import { seedDefaultUsers } from "./auth/seed.js";
 
 async function main() {
+  if (process.env.NODE_ENV !== "production") {
+    process.env.JWT_SECRET ||=
+      "umlstudio-development-jwt-secret-min-32-chars-2026!";
+  }
   const config = loadConfig();
 
   const redis = createRedisClient(config.REDIS_URL);
@@ -18,12 +31,22 @@ async function main() {
     );
   });
 
+  const userRepo = createRedisUserRepository(redis);
+  const auth = createAuthService({
+    repo: userRepo,
+    jwtSecret: getJwtSecret(),
+  });
+
+  // Idempotently seed default user accounts (credentials)
+  await seedDefaultUsers(auth, userRepo);
+
   const relay = startRelayServer({
     port: config.WS_PORT,
     host: config.HOST,
+    verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
   });
 
-  const app = buildApp({ config, redis, relay });
+  const app = buildApp({ config, redis, relay, auth });
   const httpServer = app.listen(config.PORT, config.HOST, () => {
     logger.info(
       { event: "http.listen", host: config.HOST, port: config.PORT },

@@ -500,6 +500,9 @@ async function main() {
         PORT: String(serverPort),
         WS_PORT: String(websocketPort),
         REDIS_URL: redis.url,
+        JWT_SECRET:
+          process.env.JWT_SECRET ||
+          "umlstudio-development-jwt-secret-min-32-chars-2026!",
       },
     }),
     spawnManagedProcess({

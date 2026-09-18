@@ -10,6 +10,13 @@ import { configureCors } from "./middleware/cors.js";
 import { ownerReader } from "./middleware/owner.js";
 import { errorHandler } from "./middleware/errors.js";
 import { Errors } from "./errors.js";
+import { mountAuthRoutes } from "../routes/auth.js";
+import {
+  createAuthService,
+  createRedisUserRepository,
+  type AuthService,
+} from "../services/auth-service.js";
+import { getJwtSecret } from "../redis.js";
 import { mountDiagramRoutes } from "../routes/diagrams.js";
 import { mountVersionRoutes } from "../routes/versions.js";
 import { mountConversionRoutes } from "../routes/conversion.js";
@@ -29,10 +36,18 @@ export interface AppDeps {
   relay?: RelayHook;
   autoLogging?: boolean;
   conversionResource?: ConversionResource;
+  auth?: AuthService;
 }
 
 export function buildApp(deps: AppDeps): ServerType {
-  const { config, redis, relay, autoLogging = true, conversionResource } = deps;
+  const {
+    config,
+    redis,
+    relay,
+    autoLogging = true,
+    conversionResource,
+    auth: providedAuth,
+  } = deps;
 
   const app = new Hono<AppEnv>();
 
@@ -44,7 +59,7 @@ export function buildApp(deps: AppDeps): ServerType {
         if (body) {
           const reader = body.getReader();
           try {
-            for (;;) {
+            for (; ;) {
               const { done } = await reader.read();
               if (done) break;
             }
@@ -69,9 +84,18 @@ export function buildApp(deps: AppDeps): ServerType {
 
   const previewCache = new SvgPreviewCache();
 
+  // Session identity. Fail-closed: missing JWT_SECRET refuses boot.
+  const auth =
+    providedAuth ??
+    createAuthService({
+      repo: createRedisUserRepository(redis),
+      jwtSecret: getJwtSecret(),
+    });
+
   app.route("/health", mountHealthRoutes({ redis }));
+  app.route("/api/auth", mountAuthRoutes({ redis, auth }));
   app.route("/api", mountDiagramRoutes({ config, redis }, relay));
-  app.route("/api", mountVersionRoutes({ config, redis }, relay));
+  app.route("/api", mountVersionRoutes({ config, redis, auth }, relay));
   app.route("/api", mountConversionRoutes({ getResource }));
   app.route(
     "/api",

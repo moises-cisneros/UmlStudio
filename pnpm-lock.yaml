@@ -55,6 +55,9 @@ catalogs:
     babel-plugin-react-compiler:
       specifier: 1.0.0
       version: 1.0.0
+    bcryptjs:
+      specifier: 3.0.3
+      version: 3.0.3
     class-variance-authority:
       specifier: 0.7.1
       version: 0.7.1
@@ -73,6 +76,9 @@ catalogs:
     globals:
       specifier: 17.7.0
       version: 17.7.0
+    jose:
+      specifier: 6.2.12
+      version: 6.2.12
     jsdom:
       specifier: 29.1.1
       version: 29.1.1
@@ -164,6 +170,9 @@ importers:
       '@xyflow/react':
         specifier: 'catalog:'
         version: 12.11.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      bcryptjs:
+        specifier: 'catalog:'
+        version: 3.0.3
       canvas:
         specifier: npm:@napi-rs/canvas@1.0.1
         version: '@napi-rs/canvas@1.0.1'
@@ -173,6 +182,9 @@ importers:
       hono:
         specifier: 4.12.27
         version: 4.12.27
+      jose:
+        specifier: 'catalog:'
+        version: 6.2.12
       jsdom:
         specifier: 'catalog:'
         version: 29.1.1(@napi-rs/canvas@1.0.1)(@noble/hashes@1.8.0)
@@ -3197,6 +3209,10 @@ packages:
   bcrypt-pbkdf@1.0.2:
     resolution: {integrity: sha512-qeFIXtP4MSoi6NLqO12WfqARWWuCKi2Rn/9hJLEmtB5yTNr9DqFWkJRCf2qShWzPeAMRnOgCrq0sg/KLv5ES9w==}
 
+  bcryptjs@3.0.3:
+    resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
+    hasBin: true
+
   bidi-js@1.0.3:
     resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
 
@@ -4571,6 +4587,9 @@ packages:
 
   jju@1.4.0:
     resolution: {integrity: sha512-8wb9Yw966OSxApiCt0K3yNJL8pnNeIv+OEq2YMidz4FKP6nonSRoOXc80iXY4JaN2FC11B9qsNmDsm+ZOfMROA==}
+
+  jose@6.2.12:
+    resolution: {integrity: sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==}
 
   js-md5@0.8.3:
     resolution: {integrity: sha512-qR0HB5uP6wCuRMrWPTrkMaev7MJZwJuuw4fnwAzRgP4J4/F8RwtodOKpGp4XpqsLBFzzgqIO42efFAyz2Et6KQ==}
@@ -9406,6 +9425,8 @@ snapshots:
     dependencies:
       tweetnacl: 0.14.5
 
+  bcryptjs@3.0.3: {}
+
   bidi-js@1.0.3:
     dependencies:
       require-from-string: 2.0.2
@@ -10847,6 +10868,8 @@ snapshots:
   jiti@2.7.0: {}
 
   jju@1.4.0: {}
+
+  jose@6.2.12: {}
 
   js-md5@0.8.3: {}
 

@@ -15,9 +15,15 @@ export class ApiError extends Error {
 export const Errors = {
   invalidParams: (msg = "Invalid request parameters") =>
     new ApiError(422, "INVALID_PARAMS", msg),
+  badRequest: (msg = "Invalid request", fields?: Record<string, string>) =>
+    new ApiError(400, "INVALID_PARAMS", msg, fields ? { fields } : undefined),
+  conflict: (msg = "Registration unavailable") =>
+    new ApiError(409, "CONFLICT", msg),
   bodyTooLarge: (msg = "Request body exceeds the configured size limit") =>
     new ApiError(413, "BODY_TOO_LARGE", msg),
   notFound: (msg = "Not found") => new ApiError(404, "NOT_FOUND", msg),
+  unauthorized: (msg = "Invalid credentials") =>
+    new ApiError(401, "UNAUTHORIZED", msg),
   noHead: (msg = "Diagram does not exist") => new ApiError(404, "NO_HEAD", msg),
   revisionMismatch: (currentHeadRev: number) =>
     new ApiError(

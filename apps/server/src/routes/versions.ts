@@ -15,9 +15,11 @@ import type { Diagram, VersionKind, VersionSummary } from "../types.js";
 import type { RelayHook } from "../http/app.js";
 import { Errors } from "../http/errors.js";
 import { validate } from "../http/middleware/validate.js";
+import { authOptional } from "../http/middleware/auth.js";
 import { setOwnerCookie } from "../http/middleware/owner.js";
 import { logger } from "../logger.js";
 import { readDiagram, saveHead } from "./diagrams.js";
+import type { AuthService } from "../services/auth-service.js";
 import {
   DiagramBody,
   DiagramIdAndVersionIdParams,
@@ -28,6 +30,7 @@ import {
 interface Deps {
   config: Config;
   redis: Redis;
+  auth?: AuthService;
 }
 
 // ---------------------------------------------------------------------------
@@ -51,6 +54,7 @@ async function readVersionMeta(
     kind: ((meta.kind as VersionKind | undefined) ?? "user") as VersionKind,
     librarySchemaVersion: meta.librarySchemaVersion ?? "",
     ...(Number.isFinite(parsedSeq) ? { seq: parsedSeq } : {}),
+    ...(meta.author ? { author: meta.author } : {}),
   };
 }
 
@@ -75,6 +79,7 @@ interface CommitSnapshotInput {
   kind: VersionKind;
   librarySchemaVersion: string;
   body: Diagram;
+  author: string;
 }
 
 async function commitSnapshot(
@@ -105,6 +110,7 @@ async function commitSnapshot(
       input.kind,
       input.librarySchemaVersion,
       gz,
+      input.author,
     ],
   )) as [string, string[], ("unnamed" | "named")[], string];
   return {
@@ -123,6 +129,7 @@ interface RestoreVersionInput {
   headTtlSec: number;
   maxVersions: number;
   autoSnapshotName: string;
+  author: string;
 }
 
 async function restoreVersion(
@@ -166,6 +173,7 @@ async function restoreVersion(
       autoGz,
       input.fromVersionId,
       headJson,
+      input.author,
     ],
   )) as [string, string, string[]];
 
@@ -182,10 +190,15 @@ async function restoreVersion(
 // ---------------------------------------------------------------------------
 
 export function mountVersionRoutes(
-  { config, redis }: Deps,
+  { config, redis, auth }: Deps,
   relay?: RelayHook,
 ): Hono<AppEnv> {
   const router = new Hono<AppEnv>();
+
+  // Resolve verified identity when a Bearer token is present so
+  // snapshot authorship derives from the server-verified user. Anonymous
+  // requests keep working (author recorded as '').
+  if (auth) router.use(authOptional({ auth }));
 
   // GET /diagrams/:diagramId/versions
   router.get(
@@ -257,6 +270,10 @@ export function mountVersionRoutes(
 
           const vid = ulid();
           const nowMs = Date.now();
+          // Authorship is server-resolved from the verified identity.
+          // The client-supplied `actor` field is accepted for backward
+          // compatibility but always ignored — it can never spoof authorship.
+          const verifiedUser = c.get("user");
           const result = await commitSnapshot(redis, {
             diagramId: params.diagramId,
             vid,
@@ -268,6 +285,7 @@ export function mountVersionRoutes(
             kind: "user",
             librarySchemaVersion: flushed.version,
             body: flushed,
+            author: verifiedUser?.id ?? "",
           });
 
           if (!c.get("isOwner"))
@@ -285,7 +303,7 @@ export function mountVersionRoutes(
             createdAt: summary.createdAt,
             name: summary.name,
             kind: summary.kind,
-            ...(body.actor ? { actor: body.actor } : {}),
+            ...(verifiedUser ? { actor: verifiedUser.name } : {}),
           });
 
           logger.info(
@@ -389,6 +407,7 @@ export function mountVersionRoutes(
             headTtlSec: config.DIAGRAM_TTL_SECONDS,
             maxVersions: config.MAX_VERSIONS_PER_DIAGRAM,
             autoSnapshotName: autoName,
+            author: c.get("user")?.id ?? "",
           });
 
           relay?.publishControl(params.diagramId, {
@@ -397,7 +416,7 @@ export function mountVersionRoutes(
             updatedAt: result.updatedAt,
             autoSnapshotVersionId: result.autoSnapshotVersionId,
             restoredFromVersionId: params.versionId,
-            ...(body.actor ? { actor: body.actor } : {}),
+            ...(c.get("user") ? { actor: c.get("user")?.name ?? "" } : {}),
           });
 
           logger.info(

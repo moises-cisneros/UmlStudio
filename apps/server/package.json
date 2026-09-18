@@ -16,15 +16,18 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "migrate:string-to-json": "tsx src/scripts/migrate-string-to-json.ts"
+    "migrate:string-to-json": "tsx src/scripts/migrate-string-to-json.ts",
+    "seed:users": "tsx src/scripts/seed-users.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.0.6",
     "@umlstudio/core": "workspace:*",
     "@xyflow/react": "catalog:",
+    "bcryptjs": "catalog:",
     "canvas": "npm:@napi-rs/canvas@1.0.1",
     "global-jsdom": "29.0.0",
     "hono": "4.12.27",
+    "jose": "catalog:",
     "jsdom": "catalog:",
     "lib0": "0.2.117",
     "pdfmake": "0.3.11",
