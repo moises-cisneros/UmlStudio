@@ -1,11 +1,12 @@
 import { useDiagramModifiable } from "@/hooks/useDiagramModifiable"
 import { useHandleDelete } from "@/hooks/useHandleDelete"
 import { useIsOnlyThisElementSelected } from "@/hooks/useIsOnlyThisElementSelected"
+import { useSelectionForCopyPaste } from "@/hooks/useSelectionForCopyPaste"
 import { usePopoverStore } from "@/store"
 import { ButtonGroup, IconButton } from "@/components/ui"
 import { useLabels } from "@/i18n/useLabels"
 import { Position, NodeToolbar as ReactFlowNodeToolbar } from "@xyflow/react"
-import { Pencil, Trash2 } from "lucide-react"
+import { Copy, Pencil, Trash2 } from "lucide-react"
 import { FC } from "react"
 import { useShallow } from "zustand/shallow"
 
@@ -18,6 +19,7 @@ export const NodeToolbar: FC<Props> = ({ elementId, showEdit = true }) => {
     useShallow((state) => state.setPopOverElementId)
   )
   const handleDelete = useHandleDelete(elementId)
+  const { duplicateSelectedElements } = useSelectionForCopyPaste()
 
   const isDiagramModifiable = useDiagramModifiable()
   const selected = useIsOnlyThisElementSelected(elementId)
@@ -56,6 +58,17 @@ export const NodeToolbar: FC<Props> = ({ elementId, showEdit = true }) => {
             <Pencil width={16} height={16} aria-hidden="true" />
           </IconButton>
         )}
+
+        <IconButton
+          ariaLabel={t.copyElement ?? "Copy node"}
+          tooltip={t.copyElement ?? "Copy node"}
+          onClick={(event) => {
+            event.stopPropagation()
+            duplicateSelectedElements()
+          }}
+        >
+          <Copy width={16} height={16} aria-hidden="true" />
+        </IconButton>
       </ButtonGroup>
     </ReactFlowNodeToolbar>
   )

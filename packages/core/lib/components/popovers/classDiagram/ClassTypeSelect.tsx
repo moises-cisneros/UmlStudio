@@ -4,7 +4,12 @@ import { ClassStereotype } from "@/types"
 import { useLabels } from "@/i18n/useLabels"
 import { stereotypeLabel } from "@/utils"
 
-export type ClassKind = "class" | "abstract" | "interface" | "enumeration"
+export type ClassKind =
+  | "class"
+  | "abstract"
+  | "interface"
+  | "enumeration"
+  | "association"
 
 type KindDescriptor = {
   value: ClassKind
@@ -25,6 +30,11 @@ const KINDS: readonly KindDescriptor[] = [
     value: "enumeration",
     label: (t) => t.enumeration,
     keyword: ClassStereotype.Enumeration,
+  },
+  {
+    value: "association",
+    label: (t) => t.associationClass ?? "Association Class",
+    keyword: ClassStereotype.Association,
   },
 ]
 

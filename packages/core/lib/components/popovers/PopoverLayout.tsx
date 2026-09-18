@@ -23,15 +23,28 @@ export const PopoverLayout: React.FC<PopoverLayoutProps> = ({
     }}
   >
     {title && (
-      <Typography
-        variant="subtitle2"
+      <div
         style={{
-          textTransform: "uppercase",
-          fontWeight: 600,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingBottom: 4,
+          borderBottom: "1px solid var(--umlstudio-border, var(--border-subtle, #243046))",
         }}
       >
-        {title}
-      </Typography>
+        <Typography
+          variant="subtitle2"
+          style={{
+            fontWeight: 700,
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+            fontSize: "0.75rem",
+            color: "var(--dodger-blue, #3590f3)",
+          }}
+        >
+          {title}
+        </Typography>
+      </div>
     )}
     {children}
   </div>
@@ -57,7 +70,7 @@ export const PopoverSection: React.FC<PopoverSectionProps> = ({
       gap: FIELD_GAP,
       ...(divider
         ? {
-            borderTop: "1px solid var(--popover-divider, #d1d5dc)",
+            borderTop: "1px solid var(--umlstudio-border, var(--border-subtle, #243046))",
             paddingTop: SECTION_GAP,
           }
         : {}),

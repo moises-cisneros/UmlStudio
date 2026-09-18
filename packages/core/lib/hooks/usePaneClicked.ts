@@ -14,17 +14,26 @@ export const usePaneClicked = () => {
       readonly: state.readonly,
     }))
   )
-  const { nodes, edges, setSelectedElementsId, setNodes, setEdges } =
-    useDiagramStore(
-      useShallow((state) => ({
-        nodes: state.nodes,
-        edges: state.edges,
-        selectedElementIds: state.selectedElementIds,
-        setSelectedElementsId: state.setSelectedElementsId,
-        setNodes: state.setNodes,
-        setEdges: state.setEdges,
-      }))
-    )
+  const {
+    nodes,
+    edges,
+    setSelectedElementsId,
+    setNodes,
+    setEdges,
+    associationClassPrompt,
+    setAssociationClassPrompt,
+  } = useDiagramStore(
+    useShallow((state) => ({
+      nodes: state.nodes,
+      edges: state.edges,
+      selectedElementIds: state.selectedElementIds,
+      setSelectedElementsId: state.setSelectedElementsId,
+      setNodes: state.setNodes,
+      setEdges: state.setEdges,
+      associationClassPrompt: state.associationClassPrompt,
+      setAssociationClassPrompt: state.setAssociationClassPrompt,
+    }))
+  )
 
   const {
     isAssessmentSelectionMode,
@@ -47,6 +56,9 @@ export const usePaneClicked = () => {
   }, [mode, readonly, isAssessmentSelectionMode, setAssessmentSelectionMode])
 
   const onPaneClicked = useCallback(() => {
+    if (associationClassPrompt) {
+      setAssociationClassPrompt(null)
+    }
     if (isAssessmentSelectionMode) {
       clearSelection()
     }
@@ -65,6 +77,8 @@ export const usePaneClicked = () => {
     setNodes(updatedExistingNodes)
     setEdges(updatedExistingEdges)
   }, [
+    associationClassPrompt,
+    setAssociationClassPrompt,
     isAssessmentSelectionMode,
     clearSelection,
     setSelectedElementsId,

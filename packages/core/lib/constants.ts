@@ -201,6 +201,7 @@ export type DropElementConfig = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly svg: React.FC<any>;
   readonly marginTop?: number;
+  readonly isAssociationClass?: boolean;
 };
 
 export const dropElementConfigs: Readonly<
@@ -262,6 +263,20 @@ export const dropElementConfigs: Readonly<
         stereotype: ClassStereotype.Interface,
         methods: [{ id: generateUUID(), name: "+ method()" }],
         attributes: [{ id: generateUUID(), name: "+ attribute: Type" }],
+      },
+      svg: ClassSVG,
+    },
+    {
+      type: "class",
+      width: DROPS.DEFAULT_ELEMENT_WIDTH,
+      height: 110,
+      isAssociationClass: true,
+      defaultData: {
+        name: "AssociationClass",
+        stereotype: ClassStereotype.Association,
+        methods: [{ id: generateUUID(), name: "+ method()" }],
+        attributes: [{ id: generateUUID(), name: "+ attribute: Type" }],
+        isAssociationClass: true,
       },
       svg: ClassSVG,
     },

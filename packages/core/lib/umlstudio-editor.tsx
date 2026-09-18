@@ -517,7 +517,7 @@ export class UmlStudioEditor {
       exportStyleEl.setAttribute("data-umlstudio-export-styles", "");
       exportStyleEl.textContent = `${EXPORT_LAYOUT_CSS}\n${INTER_FONT_FACE_CSS}`;
       document.head.appendChild(exportStyleEl);
-    } catch (_err) {
+    } catch {
       // Ignore stylesheet injection failure in headless or test environments
     }
 
@@ -917,6 +917,10 @@ export class UmlStudioEditor {
   public getDiagramMetadata() {
     const { diagramTitle, diagramType } = this.metadataStore.getState();
     return { diagramTitle, diagramType };
+  }
+
+  public isReadonly(): boolean {
+    return Boolean(this.metadataStore.getState().readonly);
   }
 
   get model(): UmlStudio.UMLModel {

@@ -59,6 +59,11 @@ export interface UmlStudioLabels {
   abstractClass: string;
   interface: string;
   enumeration: string;
+  associationClass?: string;
+  selectFromClass?: string;
+  selectToClass?: string;
+  requiresTwoClassesForAssociationClass?: string;
+  cancelSelection?: string;
   reorderAttribute: string;
   newAttribute: string;
   addAttribute: string;
@@ -82,10 +87,12 @@ export interface UmlStudioLabels {
   roleLabel: (name: string) => string;
   deleteElement: string;
   editElement: string;
+  copyElement?: string;
   deleteEdge: string;
   editEdge: string;
   resetEdgeRouting: string;
 
+  association?: string;
   biAssociation: string;
   uniAssociation: string;
   aggregation: string;
@@ -174,6 +181,12 @@ const RESOLVED_DEFAULT_LABELS: ResolvedUmlStudioLabels = Object.freeze({
   abstractClass: "Abstract Class",
   interface: "Interface",
   enumeration: "Enumeration",
+  associationClass: "Association Class",
+  selectFromClass: "Step 1: Click the source class (From)",
+  selectToClass: "Step 2: Click the target class (To)",
+  requiresTwoClassesForAssociationClass:
+    "You must have at least 2 classes on the canvas to create an association class",
+  cancelSelection: "Cancel",
   reorderAttribute: "Reorder attribute",
   newAttribute: "New attribute",
   addAttribute: "Add attribute",
@@ -195,10 +208,12 @@ const RESOLVED_DEFAULT_LABELS: ResolvedUmlStudioLabels = Object.freeze({
   roleLabel: (name) => `${name} Role`,
   deleteElement: "Delete element",
   editElement: "Edit element",
+  copyElement: "Copy node",
   deleteEdge: "Delete edge",
   editEdge: "Edit edge",
   resetEdgeRouting: "Reset routing",
-  biAssociation: "Bi-Association",
+  association: "Association",
+  biAssociation: "Association",
   uniAssociation: "Uni-Association",
   aggregation: "Aggregation",
   composition: "Composition",
@@ -213,6 +228,123 @@ const RESOLVED_DEFAULT_LABELS: ResolvedUmlStudioLabels = Object.freeze({
   methodWord: "method",
   classWord: "class",
   nodeWord: "node",
+});
+
+export const SPANISH_LABELS: ResolvedUmlStudioLabels = Object.freeze({
+  zoomToolbar: "Barra de zoom",
+  zoomIn: "Acercar",
+  zoomOut: "Alejar",
+  fitView: "Ajustar a la vista",
+  resetZoom: "Restablecer zoom al 100%",
+  zoomReadout: (percent) => `${percent}%`,
+  undo: "Deshacer",
+  undoHint: "Deshacer la última acción",
+  redo: "Rehacer",
+  redoHint: "Rehacer la última acción deshecha",
+  multiSelection: "Selección múltiple",
+  multiSelectionHint: "Selecciona múltiples elementos para moverlos juntos",
+  scrollLockHint: (modifier) =>
+    `El desplazamiento del lienzo está bloqueado. Mantén presionado ${modifier} o arrastra con dos dedos para desplazarte.`,
+  scrollLockHintTouch:
+    "El desplazamiento del lienzo está bloqueado. Arrastra con dos dedos para desplazarte.",
+  moveEdgeWaypoint:
+    "Punto de ruta: arrastra para mover, doble clic o presiona Supr para eliminar",
+  miniMap: "Minimapa",
+  showMinimap: "Mostrar minimapa",
+  showMinimapHint: "Muestra el minimapa para navegar por el diagrama",
+  hideMinimap: "Ocultar minimapa",
+  selectionActions: "Acciones de selección",
+  elementPalette: "Paleta de elementos",
+  addElement: "Agregar elemento",
+  paletteModelView: "Elementos del modelo",
+  paletteSelectElementsView: "Selecciona elemento a agregar",
+  paletteHighlightHint: "Haz clic en un elemento para agregarlo al diagrama",
+  edge: "Relación",
+  label: "Etiqueta",
+  type: "Tipo",
+  connection: "Conexión",
+  stereotype: "Estereotipo",
+  object: "Objeto",
+  source: "Origen",
+  target: "Destino",
+  style: "Estilo",
+  selectPlaceholder: "Seleccionar…",
+  addComment: "Agregar un comentario…",
+  points: "Puntos",
+  negativePointsAllowed: "Se permiten puntos negativos.",
+  feedback: "Comentarios",
+  deleteAssessment: "Eliminar evaluación",
+  deleteAssessmentFor: (name) => `Eliminar evaluación para ${name}`,
+  assessmentFor: (type) => `Evaluación para ${type}`,
+  previousAssessment: "Evaluación anterior",
+  nextAssessment: "Siguiente evaluación",
+  noComment: "Sin comentarios",
+  notGraded: "No calificado",
+  node: "Nodo",
+  attribute: "Atributo",
+  method: "Método",
+  nodeTypeLabel: (nodeType?: string) => {
+    if (!nodeType) return "Elemento";
+    const map: Record<string, string> = {
+      class: "Clase",
+      interface: "Interfaz",
+      enumeration: "Enumeración",
+      package: "Paquete",
+    };
+    return map[nodeType] ?? defaultNodeTypeLabel(nodeType);
+  },
+  class: "Clase",
+  classType: "Tipo de clase",
+  abstractClass: "Clase Abstracta",
+  interface: "Interfaz",
+  enumeration: "Enumeración",
+  associationClass: "Clase Intermedia",
+  selectFromClass: "Paso 1: Selecciona la clase de origen (From)",
+  selectToClass: "Paso 2: Selecciona la clase de destino (To)",
+  requiresTwoClassesForAssociationClass:
+    "Debes tener al menos 2 clases en el lienzo para crear una clase intermedia",
+  cancelSelection: "Cancelar",
+  reorderAttribute: "Reordenar atributo",
+  newAttribute: "Nuevo atributo",
+  addAttribute: "Agregar atributo",
+  deleteAttribute: "Eliminar atributo",
+  attributes: "Atributos",
+  reorderMethod: "Reordenar método",
+  newMethod: "Nuevo método",
+  addMethod: "Agregar método",
+  deleteMethod: "Eliminar método",
+  methods: "Métodos",
+  editTagsFor: (subject) => `Etiquetas para ${subject}`,
+  newTag: "Nueva etiqueta",
+  addTag: "Agregar etiqueta",
+  noTags: "Sin etiquetas",
+  removeTag: (tag) => `Eliminar etiqueta ${tag}`,
+  edgeType: "Tipo de relación",
+  swapSourceTarget: "Intercambiar origen y destino",
+  multiplicityLabel: (name) => `Multiplicidad de ${name}`,
+  roleLabel: (name) => `Rol de ${name}`,
+  deleteElement: "Eliminar elemento",
+  editElement: "Editar elemento",
+  copyElement: "Copiar nodo",
+  deleteEdge: "Eliminar relación",
+  editEdge: "Editar relación",
+  resetEdgeRouting: "Restablecer enrutamiento",
+  association: "Asociación",
+  biAssociation: "Asociación",
+  uniAssociation: "Asociación Unidireccional",
+  aggregation: "Agregación",
+  composition: "Composición",
+  inheritance: "Herencia",
+  dependency: "Dependencia",
+  realization: "Realización",
+  namePlaceholder: "Nombre",
+  stereotypeToggleLabel: (name) => `Estereotipo de ${name}`,
+  stereotypeToggleTooltip: (shown, name) =>
+    `${shown ? "Ocultar" : "Mostrar"} estereotipo de ${name}`,
+  attributeWord: "atributo",
+  methodWord: "método",
+  classWord: "clase",
+  nodeWord: "nodo",
 });
 
 export const DEFAULT_LABELS: UmlStudioLabels = RESOLVED_DEFAULT_LABELS;

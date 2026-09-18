@@ -36,7 +36,12 @@ export { collabColorFromName, randomCollabName } from "./utils/collaboration";
 export { FONT_FAMILY } from "./fontStack";
 export { log, setLogLevel, setLogger } from "./logger";
 export type { LogLevel } from "./logger";
-export { DEFAULT_LABELS, type UmlStudioLabels } from "./i18n/labels";
+export {
+  DEFAULT_LABELS,
+  SPANISH_LABELS,
+  type UmlStudioLabels,
+  type ResolvedUmlStudioLabels,
+} from "./i18n/labels";
 export { useLabels } from "./i18n/useLabels";
 export {
   UMLSTUDIO_SHORTCUTS,
@@ -75,3 +80,19 @@ export {
   UmlStudioSelectionToolbar,
   type UmlStudioSelectionToolbarProps,
 } from "./components/react/UmlStudioSelectionToolbar";
+
+export {
+  validateDiff,
+  applyDiff,
+} from "./ai/diffEngine";
+export { MockAIAdapter } from "./ai/adapters/mockAdapter";
+export type {
+  AIAdapter,
+  ModelDiff,
+  ModelDiffValidationResult,
+  DiffElementAdd,
+  DiffElementModify,
+  DiffRelationshipAdd,
+  DiffAttribute,
+  DiffMethod,
+} from "./ai/types";
