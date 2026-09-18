@@ -10,7 +10,7 @@ import { validate } from "../http/middleware/validate.js";
 import { setOwnerCookie } from "../http/middleware/owner.js";
 import { logger } from "../logger.js";
 import { tryAutoVersion } from "../services/autoVersion.js";
-import { DiagramBody, DiagramIdParams, PutDiagramBody } from "./_schemas.js";
+import { DiagramBody, DiagramIdParams, PutDiagramBody, PatchDiagramBody } from "./_schemas.js";
 
 interface Deps {
   config: Config;
@@ -211,6 +211,55 @@ export function mountDiagramRoutes(
 
         c.header("etag", `"${headRev}"`);
         return c.json({ headRev, updatedAt }, 200);
+      },
+    ),
+  );
+
+  router.patch(
+    "/diagrams/:diagramId",
+    validate(
+      { params: DiagramIdParams, body: PatchDiagramBody },
+      async (c, { params, body }) => {
+        const existing = await readDiagram(redis, params.diagramId);
+        if (!existing) throw Errors.notFound("diagram not found");
+
+        const updatedAt = new Date().toISOString();
+        const merged: Diagram = {
+          ...existing,
+          title: body.title,
+          updatedAt,
+        };
+
+        const { headRev } = await saveHead(redis, config, merged);
+
+        if (!c.get("isOwner")) {
+          setOwnerCookie(c, params.diagramId, config.OWNER_SECRET);
+        }
+
+        relay?.publishControl(params.diagramId, {
+          type: "DIAGRAM_RENAMED",
+          title: body.title,
+        });
+
+        logger.info(
+          {
+            event: "diagram.renamed",
+            diagramId: params.diagramId,
+            title: body.title,
+            headRev,
+          },
+          "diagram renamed",
+        );
+
+        return c.json(
+          {
+            id: params.diagramId,
+            title: body.title,
+            headRev,
+            updatedAt,
+          },
+          200,
+        );
       },
     ),
   );

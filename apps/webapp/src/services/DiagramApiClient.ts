@@ -114,6 +114,22 @@ export const DiagramApiClient = {
     await request<void>(`/api/diagrams/${diagramId}`, { method: "DELETE" });
   },
 
+  async patchDiagramTitle(
+    diagramId: string,
+    title: string,
+  ): Promise<{ id: string; title: string; headRev: number; updatedAt: string }> {
+    const { data } = await request<{
+      id: string;
+      title: string;
+      headRev: number;
+      updatedAt: string;
+    }>(`/api/diagrams/${diagramId}`, {
+      method: "PATCH",
+      body: { title },
+    });
+    return data;
+  },
+
   async fetchStoredDiagram(
     diagramId: string,
     opts: { signal?: AbortSignal } = {},

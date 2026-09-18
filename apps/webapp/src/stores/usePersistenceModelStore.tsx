@@ -27,6 +27,7 @@ type PersistenceModelStore = {
   updateModel: (model: UMLModel) => void;
   duplicateModel: (id: string) => string;
   deleteModel: (id: string) => void;
+  renameModel: (id: string, title: string) => void;
   toggleFavorite: (id: string) => void;
   setThumbnail: (
     id: string,
@@ -292,6 +293,33 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
             }),
             false,
             "deleteModel",
+          );
+        },
+
+        renameModel: (id, title) => {
+          set(
+            (state) => {
+              const targetEntity = state.models[id];
+              if (!targetEntity) {
+                return state;
+              }
+              const lastModifiedAt = new Date().toISOString();
+              return {
+                models: {
+                  ...state.models,
+                  [id]: {
+                    ...targetEntity,
+                    lastModifiedAt,
+                    model: {
+                      ...targetEntity.model,
+                      title,
+                    },
+                  },
+                },
+              };
+            },
+            false,
+            "renameModel",
           );
         },
 
