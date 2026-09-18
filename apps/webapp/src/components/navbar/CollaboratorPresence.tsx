@@ -45,7 +45,14 @@ function sameCollaborators(a: Collaborator[], b: Collaborator[]): boolean {
 function readCollaborators(editor?: UmlStudioEditor): Collaborator[] {
   if (!editor?.getCollaborators) return EMPTY_COLLABORATORS;
   try {
-    return (editor.getCollaborators() as Collaborator[]) ?? EMPTY_COLLABORATORS;
+    const incoming =
+      (editor.getCollaborators() as Collaborator[]) ?? EMPTY_COLLABORATORS;
+    // Presence renders registered session identity only. Entries with
+    // neither a registered name/avatar nor an id are pre-auth noise and are
+    // hidden instead of being rendered with a placeholder identity.
+    return incoming.filter(
+      (c) => c.isLocal || c.name || c.imageUrl || c.id,
+    );
   } catch {
     return EMPTY_COLLABORATORS;
   }
@@ -58,7 +65,7 @@ export function CollaboratorPresence({ editor }: CollaboratorPresenceProps) {
     (onStoreChange: () => void) => {
       if (!editor?.subscribeToCollaboratorChanges) {
         snapshotRef.current = EMPTY_COLLABORATORS;
-        return () => {};
+        return () => { };
       }
       snapshotRef.current = readCollaborators(editor);
       const subId = editor.subscribeToCollaboratorChanges((incoming) => {
@@ -96,11 +103,11 @@ export function CollaboratorPresence({ editor }: CollaboratorPresenceProps) {
       {visibleCollaborators.map((collab) => {
         const initials = collab.name
           ? collab.name
-              .split(" ")
-              .map((part: string) => part[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2)
+            .split(" ")
+            .map((part: string) => part[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2)
           : collab.isLocal
             ? t.collaborators.you.slice(0, 2).toUpperCase()
             : "U";
