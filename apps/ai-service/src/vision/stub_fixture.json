@@ -1,0 +1,61 @@
+{
+  "model": {
+    "version": "4.0.0",
+    "id": "diagram-vision-stub",
+    "title": "Vision Import Preview",
+    "type": "ClassDiagram",
+    "nodes": [
+      {
+        "id": "node-customer",
+        "type": "class",
+        "width": 180,
+        "height": 120,
+        "position": { "x": 80, "y": 120 },
+        "measured": { "width": 180, "height": 120 },
+        "data": {
+          "name": "Customer",
+          "stereotype": "<<class>>",
+          "attributes": ["- id: string", "- name: string"],
+          "methods": ["+ placeOrder(order: Order): void"]
+        }
+      },
+      {
+        "id": "node-order",
+        "type": "class",
+        "width": 180,
+        "height": 120,
+        "position": { "x": 400, "y": 120 },
+        "measured": { "width": 180, "height": 120 },
+        "data": {
+          "name": "Order",
+          "stereotype": "<<class>>",
+          "attributes": ["- id: string", "- total: number"],
+          "methods": ["+ addItem(item: string): void"]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-customer-order",
+        "type": "ClassUnidirectional",
+        "source": "node-customer",
+        "target": "node-order",
+        "sourceHandle": "right",
+        "targetHandle": "left",
+        "data": {
+          "points": [
+            { "x": 260, "y": 180 },
+            { "x": 400, "y": 180 }
+          ]
+        }
+      }
+    ],
+    "assessments": {},
+    "interactive": { "elements": {}, "relationships": {} }
+  },
+  "confidence": {
+    "node-customer": 0.93,
+    "node-order": 0.89,
+    "edge-customer-order": 0.81
+  }
+}
