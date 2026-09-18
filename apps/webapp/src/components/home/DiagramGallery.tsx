@@ -27,6 +27,7 @@ import {
   type DiagramSource,
   type RecentDiagram,
 } from "./DiagramCard";
+import { DiagramListItem } from "./DiagramListItem";
 import type { HomeChrome } from "./useHomeChrome";
 
 const normalize = (value: string) => value.trim().toLowerCase();
@@ -592,40 +593,76 @@ export const DiagramGallery = ({
         ) : (
           <>
             {filteredDiagrams.length > 0 ? (
-              <div
-                role="list"
-                className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,240px),1fr))] justify-start gap-4 md:grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] md:gap-6 xl:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]"
-              >
-                {visibleDiagrams.map((diagram, index) => (
-                  <div
-                    key={diagram.id}
-                    className={
-                      index >= prevVisibleCount
-                        ? "gallery-card-enter"
-                        : undefined
-                    }
-                  >
-                    <DiagramCard
-                      diagram={diagram}
-                      previewState={
-                        diagram.isExpired
-                          ? "expired"
-                          : isDiagramEmpty(diagram)
-                            ? "placeholder"
-                            : loadingThumbnailIds[diagram.id]
-                              ? "loading"
-                              : "thumbnail"
+              chrome.viewMode === "list" ? (
+                <div
+                  role="list"
+                  className="flex flex-col divide-y divide-border/40 overflow-hidden rounded-xl border border-border/50 bg-card/25 shadow-xs"
+                >
+                  {visibleDiagrams.map((diagram, index) => (
+                    <div
+                      key={diagram.id}
+                      className={
+                        index >= prevVisibleCount
+                          ? "gallery-card-enter"
+                          : undefined
                       }
-                      showSourceBadge={isAllDiagramSource}
-                      isHighlighted={diagram.id === highlightedDiagramId}
-                      onToggleFavorite={handleToggleDiagramFavorite}
-                      onSharedDiagramRemoved={handleRemoveSharedDiagram}
-                      onSharedDiagramViewChange={handleSharedDiagramViewChange}
-                      observeViewport={thumbnailViewportPriority.observe}
-                    />
-                  </div>
-                ))}
-              </div>
+                    >
+                      <DiagramListItem
+                        diagram={diagram}
+                        previewState={
+                          diagram.isExpired
+                            ? "expired"
+                            : isDiagramEmpty(diagram)
+                              ? "placeholder"
+                              : loadingThumbnailIds[diagram.id]
+                                ? "loading"
+                                : "thumbnail"
+                        }
+                        showSourceBadge={isAllDiagramSource}
+                        isHighlighted={diagram.id === highlightedDiagramId}
+                        onToggleFavorite={handleToggleDiagramFavorite}
+                        onSharedDiagramRemoved={handleRemoveSharedDiagram}
+                        onSharedDiagramViewChange={handleSharedDiagramViewChange}
+                        observeViewport={thumbnailViewportPriority.observe}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  role="list"
+                  className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,240px),1fr))] justify-start gap-4 md:grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] md:gap-6 xl:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]"
+                >
+                  {visibleDiagrams.map((diagram, index) => (
+                    <div
+                      key={diagram.id}
+                      className={
+                        index >= prevVisibleCount
+                          ? "gallery-card-enter"
+                          : undefined
+                      }
+                    >
+                      <DiagramCard
+                        diagram={diagram}
+                        previewState={
+                          diagram.isExpired
+                            ? "expired"
+                            : isDiagramEmpty(diagram)
+                              ? "placeholder"
+                              : loadingThumbnailIds[diagram.id]
+                                ? "loading"
+                                : "thumbnail"
+                        }
+                        isHighlighted={diagram.id === highlightedDiagramId}
+                        onToggleFavorite={handleToggleDiagramFavorite}
+                        onSharedDiagramRemoved={handleRemoveSharedDiagram}
+                        onSharedDiagramViewChange={handleSharedDiagramViewChange}
+                        observeViewport={thumbnailViewportPriority.observe}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )
             ) : (
               <div className="flex min-h-[480px] flex-col items-center justify-center gap-6 text-center transition-colors duration-200">
                 <EmptyStateIllustration />

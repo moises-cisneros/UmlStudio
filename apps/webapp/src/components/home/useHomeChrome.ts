@@ -72,6 +72,10 @@ export type ActiveRefinement = {
   clear: () => void;
 };
 
+export type HomeViewMode = "list" | "cards";
+
+export const HOME_VIEW_MODE_STORAGE_KEY = "umlstudio-home-view-mode";
+
 export type HomeChrome = {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -91,6 +95,9 @@ export type HomeChrome = {
   setSortField: (field: HomeSortField) => void;
   setSortOrder: (order: HomeSortOrder) => void;
 
+  viewMode: HomeViewMode;
+  setViewMode: (mode: HomeViewMode) => void;
+
   resetAll: () => void;
 
   activeRefinements: ActiveRefinement[];
@@ -109,6 +116,28 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
   const [source, setSource] = useState<HomeSource>("all");
   const [type, setType] = useState<HomeTypeFilter>("all");
   const [sort, setSort] = useState<HomeSort>(DEFAULT_HOME_SORT);
+  const [viewMode, setViewMode] = useState<HomeViewMode>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = window.localStorage.getItem(HOME_VIEW_MODE_STORAGE_KEY);
+        if (saved === "cards" || saved === "list") return saved;
+      } catch {
+        // ignore localStorage access issues
+      }
+    }
+    return "list";
+  });
+
+  const handleSetViewMode = useCallback((mode: HomeViewMode) => {
+    setViewMode(mode);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(HOME_VIEW_MODE_STORAGE_KEY, mode);
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   const toggleFavoritesOnly = useCallback(
     () => setFavoritesOnly((current) => !current),
@@ -139,7 +168,7 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
     if (favoritesOnly) {
       chips.push({
         key: "favorites",
-        label: "Favorites",
+        label: t.dashboard.filterFavoritesOnly,
         clear: () => setFavoritesOnly(false),
       });
     }
@@ -147,7 +176,7 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
     if (source !== "all") {
       chips.push({
         key: "source",
-        label: sourceLabel(source, t),
+        label: `${t.dashboard.filterSource}: ${sourceLabel(source, t)}`,
         clear: () => setSource("all"),
       });
     }
@@ -155,7 +184,7 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
     if (type !== "all") {
       chips.push({
         key: "type",
-        label: getDiagramTypeLabel(type),
+        label: `${t.dashboard.filterType}: ${getDiagramTypeLabel(type)}`,
         clear: () => setType("all"),
       });
     }
@@ -163,7 +192,7 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
     if (!isDefaultSort(sort)) {
       chips.push({
         key: "sort",
-        label: `${sortFieldLabel(sort.field, t)} · ${sortOrderLabel(sort, t)}`,
+        label: `${t.dashboard.filterSortBy}: ${sortFieldLabel(sort.field, t)} (${sortOrderLabel(sort, t)})`,
         clear: () => setSort(DEFAULT_HOME_SORT),
       });
     }
@@ -193,6 +222,8 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
     setSort,
     setSortField,
     setSortOrder,
+    viewMode,
+    setViewMode: handleSetViewMode,
     resetAll,
     activeRefinements,
     refineCount,

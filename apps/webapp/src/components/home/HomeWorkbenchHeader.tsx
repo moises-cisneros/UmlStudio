@@ -1,41 +1,29 @@
-import { type FC } from "react";
+import type { FC } from "react";
 import {
   Search,
   FolderInput,
   Plus,
-  Star,
-  SlidersHorizontal,
 } from "lucide-react";
-import type { UMLDiagramType } from "@umlstudio/core";
 import { Button } from "@umlstudio/ui/components/button";
-import { Badge } from "@umlstudio/ui/components/badge";
 import { BrandLockup } from "@/components/navbar/BrandLockup";
 import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher";
 import { LanguageSwitcher } from "@/components/navbar/LanguageSwitcher";
-import { navbarButtonStyle } from "@/components/navbar/styleConstants";
 import { useTranslation } from "@/i18n";
 import { HomeHelpMenu } from "./HomeHelpMenu";
-import { RefinePopover } from "./RefinePopover";
-import { HomeRefinementChips } from "./HomeRefinementChips";
 import type { HomeChrome } from "./useHomeChrome";
 
 export type HomeWorkbenchHeaderProps = {
   chrome: HomeChrome;
-  count: number;
-  typeOptions: readonly UMLDiagramType[];
   onNewDiagram?: () => void;
   onImportJson?: () => void;
 };
 
 export const HomeWorkbenchHeader: FC<HomeWorkbenchHeaderProps> = ({
   chrome,
-  count,
-  typeOptions,
   onNewDiagram,
   onImportJson,
 }) => {
-  const { searchTerm, setSearchTerm, favoritesOnly, toggleFavoritesOnly } =
-    chrome;
+  const { searchTerm, setSearchTerm } = chrome;
   const { t } = useTranslation();
 
   return (
@@ -45,10 +33,6 @@ export const HomeWorkbenchHeader: FC<HomeWorkbenchHeaderProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <BrandLockup />
-          <div className="hidden h-5 w-px bg-border-subtle md:block" />
-          <span className="hidden text-xs font-semibold text-secondary-foreground md:inline">
-            {t.navigation.brandSubtitle}
-          </span>
         </div>
 
         <div className="flex min-w-60 flex-1 max-w-md items-center gap-2">
@@ -58,48 +42,10 @@ export const HomeWorkbenchHeader: FC<HomeWorkbenchHeaderProps> = ({
               type="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={`${t.dashboard.searchPlaceholder} (${count} ${t.dashboard.diagramsCount})`}
+              placeholder={t.dashboard.searchPlaceholder}
               className="w-full border-none bg-transparent text-xs text-(--home-text-primary) outline-none"
             />
           </div>
-
-          <button
-            type="button"
-            onClick={toggleFavoritesOnly}
-            data-active={favoritesOnly}
-            aria-label={t.dashboard.filterFavorites}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
-              favoritesOnly
-                ? "border-(--dodger-blue) bg-[rgba(53,144,243,0.15)] text-(--dodger-blue)"
-                : "border-border-subtle bg-(--home-surface-raised) text-secondary-foreground hover:text-(--home-text-primary)"
-            }`}
-          >
-            <Star
-              className="size-4"
-              fill={favoritesOnly ? "currentColor" : "none"}
-            />
-          </button>
-
-          <RefinePopover
-            variant="popover"
-            chrome={chrome}
-            typeOptions={typeOptions}
-            trigger={
-              <button
-                type="button"
-                className={navbarButtonStyle("relative")}
-                aria-label="Filter"
-              >
-                <SlidersHorizontal className="size-4" aria-hidden />
-                <span className="hidden min-[940px]:inline">Filter</span>
-                {chrome.refineCount > 0 && (
-                  <Badge className="size-4 min-w-0 px-0 text-[10px]">
-                    {chrome.refineCount}
-                  </Badge>
-                )}
-              </button>
-            }
-          />
         </div>
 
         <div className="flex items-center gap-2">
@@ -134,8 +80,6 @@ export const HomeWorkbenchHeader: FC<HomeWorkbenchHeaderProps> = ({
           <ThemeSwitcherMenu />
         </div>
       </div>
-
-      <HomeRefinementChips chrome={chrome} />
     </div>
   );
 };

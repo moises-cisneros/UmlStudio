@@ -2,7 +2,7 @@ import {
   CircleHelpIcon,
   FolderInput,
   SlidersHorizontal,
-  Star,
+  Heart,
 } from "lucide-react";
 import { Badge } from "@umlstudio/ui/components/badge";
 import {
@@ -53,11 +53,11 @@ export function HomeActionsPill({
                 onClick={chrome.toggleFavoritesOnly}
                 style={
                   chrome.favoritesOnly
-                    ? { color: "var(--home-favorite-star)" }
+                    ? { color: "rgb(244 63 94)" }
                     : undefined
                 }
               >
-                <Star
+                <Heart
                   className="size-[var(--umlstudio-chrome-icon)]"
                   fill={chrome.favoritesOnly ? "currentColor" : "none"}
                   aria-hidden
@@ -65,7 +65,7 @@ export function HomeActionsPill({
               </button>
             }
           />
-          <TooltipContent>Favoritos</TooltipContent>
+          <TooltipContent>{t.dashboard.filterFavorites}</TooltipContent>
         </Tooltip>
 
         <Tooltip>

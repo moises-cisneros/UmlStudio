@@ -30,7 +30,7 @@ interface TemplateItem {
     | "commandDesc"
     | "factoryDesc"
     | "observerDesc";
-  badge?: string;
+  badgeKey?: "gofStructural" | "gofBehavioral" | "gofCreational";
 }
 
 const TEMPLATE_ITEMS: TemplateItem[] = [
@@ -46,7 +46,7 @@ const TEMPLATE_ITEMS: TemplateItem[] = [
     name: "Adapter",
     titleKey: "adapter",
     descKey: "adapterDesc",
-    badge: "GoF Structural",
+    badgeKey: "gofStructural",
   },
   {
     id: "bridge",
@@ -54,7 +54,7 @@ const TEMPLATE_ITEMS: TemplateItem[] = [
     name: "Bridge",
     titleKey: "bridge",
     descKey: "bridgeDesc",
-    badge: "GoF Structural",
+    badgeKey: "gofStructural",
   },
   {
     id: "command",
@@ -62,7 +62,7 @@ const TEMPLATE_ITEMS: TemplateItem[] = [
     name: "Command",
     titleKey: "command",
     descKey: "commandDesc",
-    badge: "GoF Behavioral",
+    badgeKey: "gofBehavioral",
   },
   {
     id: "factory",
@@ -70,7 +70,7 @@ const TEMPLATE_ITEMS: TemplateItem[] = [
     name: "Factory",
     titleKey: "factory",
     descKey: "factoryDesc",
-    badge: "GoF Creational",
+    badgeKey: "gofCreational",
   },
   {
     id: "observer",
@@ -78,7 +78,7 @@ const TEMPLATE_ITEMS: TemplateItem[] = [
     name: "Observer",
     titleKey: "observer",
     descKey: "observerDesc",
-    badge: "GoF Behavioral",
+    badgeKey: "gofBehavioral",
   },
 ];
 
@@ -104,7 +104,7 @@ export const QuickStartTemplates: FC<QuickStartTemplatesProps> = ({
 
       const templateModel = prepareTemplateModel(jsonData, {
         id: crypto.randomUUID(),
-        title: `${item.name} Pattern`,
+        title: t.templates[item.titleKey],
       });
 
       createModel(templateModel);
@@ -144,9 +144,9 @@ export const QuickStartTemplates: FC<QuickStartTemplatesProps> = ({
                 </div>
               )}
 
-              {item.badge && (
-                <span className="absolute right-1.5 top-1.5 rounded bg-[rgba(0,0,0,0.4)] px-1.5 py-0.5 text-[9px] font-semibold text-(--periwinkle) backdrop-blur-xs">
-                  {item.badge}
+              {item.badgeKey && (
+                <span className="absolute right-1.5 top-1.5 rounded bg-[rgba(0,0,0,0.5)] px-1.5 py-0.5 text-[9px] font-semibold text-(--periwinkle) backdrop-blur-xs border border-white/5">
+                  {t.templates[item.badgeKey]}
                 </span>
               )}
             </div>

@@ -6,7 +6,8 @@ export type ModalName =
   | "HowToUseModal"
   | "AboutModal"
   | "DELETE_VERSION"
-  | "CONFIRM_RESTORE";
+  | "CONFIRM_RESTORE"
+  | "RENAME_DIAGRAM";
 
 export interface ModalProps {
   [key: string]: unknown;

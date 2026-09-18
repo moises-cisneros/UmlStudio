@@ -1,8 +1,25 @@
-import { XIcon } from "lucide-react";
-import type { HomeChrome } from "./useHomeChrome";
+import type { FC } from "react";
+import { X, Heart, ArrowUpDown, Layers, RotateCcw } from "lucide-react";
+import { Button } from "@umlstudio/ui/components/button";
+import { useTranslation } from "@/i18n";
+import type { HomeChrome, RefinementKind } from "./useHomeChrome";
 
-export function HomeRefinementChips({ chrome }: { chrome: HomeChrome }) {
-  const { activeRefinements } = chrome;
+const getRefinementIcon = (kind: RefinementKind) => {
+  switch (kind) {
+    case "favorites":
+      return <Heart className="size-3.5 fill-rose-500 text-rose-500 shrink-0" aria-hidden="true" />;
+    case "source":
+      return <Layers className="size-3.5 text-(--dodger-blue) shrink-0" aria-hidden="true" />;
+    case "sort":
+      return <ArrowUpDown className="size-3.5 text-muted-foreground shrink-0" aria-hidden="true" />;
+    default:
+      return null;
+  }
+};
+
+export const HomeRefinementChips: FC<{ chrome: HomeChrome }> = ({ chrome }) => {
+  const { activeRefinements, resetAll } = chrome;
+  const { t } = useTranslation();
 
   if (activeRefinements.length === 0) {
     return null;
@@ -11,32 +28,41 @@ export function HomeRefinementChips({ chrome }: { chrome: HomeChrome }) {
   return (
     <div
       role="group"
-      aria-label="Active filters"
-      className="umlstudio-glass flex w-full flex-wrap items-center gap-[var(--umlstudio-chrome-gap)] p-[var(--umlstudio-chrome-pad)] md:inline-flex md:w-fit md:flex-nowrap"
-      style={{
-        maxWidth: "100%",
-        borderRadius: "var(--umlstudio-chrome-radius-lg)",
-      }}
+      aria-label={t.dashboard.filterApplied}
+      className="flex flex-wrap items-center gap-2 pt-1"
     >
+      <span className="text-xs font-semibold text-muted-foreground mr-0.5">
+        {t.dashboard.filterApplied}:
+      </span>
+
       {activeRefinements.map((refinement) => (
-        <button
+        <span
           key={refinement.key}
-          type="button"
-          onClick={refinement.clear}
-          aria-label={`Remove ${refinement.label} filter`}
-          className="inline-flex min-h-9 max-w-[min(100%,14rem)] min-w-0 cursor-pointer items-center gap-1 rounded-[var(--umlstudio-chrome-radius-sm)] border border-[color:var(--umlstudio-chrome-border)] bg-[var(--umlstudio-chrome-surface-hover)] px-2.5 text-xs font-medium text-[color:var(--umlstudio-chrome-text)] transition-colors hover:bg-[var(--umlstudio-chrome-surface-active)] focus-visible:shadow-[0_0_0_2px_color-mix(in_srgb,var(--umlstudio-chrome-accent)_45%,transparent)] focus-visible:outline-none"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-medium text-foreground transition-all duration-150 hover:border-border hover:bg-muted/70 shadow-2xs"
         >
-          <span className="min-w-0 truncate">{refinement.label}</span>
-          <XIcon className="size-3 shrink-0 opacity-70" aria-hidden />
-        </button>
+          {getRefinementIcon(refinement.key)}
+          <span className="max-w-48 truncate">{refinement.label}</span>
+          <button
+            type="button"
+            onClick={refinement.clear}
+            aria-label={`${t.dashboard.cancel}: ${refinement.label}`}
+            className="ml-0.5 -mr-1 inline-flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none"
+          >
+            <X className="size-3" aria-hidden="true" />
+          </button>
+        </span>
       ))}
-      <button
+
+      <Button
         type="button"
-        onClick={chrome.resetAll}
-        className="inline-flex min-h-9 cursor-pointer items-center rounded-[var(--umlstudio-chrome-radius-sm)] px-2 text-xs font-medium whitespace-nowrap text-[color:var(--umlstudio-chrome-text)] transition-colors hover:bg-[var(--umlstudio-chrome-surface-hover)] focus-visible:shadow-[0_0_0_2px_color-mix(in_srgb,var(--umlstudio-chrome-accent)_45%,transparent)] focus-visible:outline-none"
+        variant="ghost"
+        size="sm"
+        onClick={resetAll}
+        className="h-7 gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
       >
-        Clear all
-      </button>
+        <RotateCcw className="size-3" aria-hidden="true" />
+        <span>{t.dashboard.filterClearAll}</span>
+      </Button>
     </div>
   );
-}
+};

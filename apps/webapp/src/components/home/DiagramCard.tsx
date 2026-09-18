@@ -9,7 +9,20 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { MoreVertical, Star, Unlink } from "lucide-react";
+import {
+  MoreVertical,
+  Heart,
+  Unlink,
+  ExternalLink,
+  Pencil,
+  Copy,
+  Share2,
+  Link2,
+  Download,
+  Shield,
+  Trash2,
+  UserX,
+} from "lucide-react";
 import type { UMLDiagramType } from "@umlstudio/core";
 import {
   DropdownMenu,
@@ -49,11 +62,9 @@ import { toast } from "react-toastify";
 import { useModalContext } from "@/contexts";
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
 import { useMinuteTick } from "@/hooks/useMinuteTick";
+import { useTranslation } from "@/i18n";
 import { DiagramView } from "@/types";
-import {
-  getDiagramTypeIcon,
-  getDiagramTypeShortLabel,
-} from "./diagramTypeMeta";
+import { getDiagramTypeIcon } from "./diagramTypeMeta";
 import {
   MOBILE_MENU_CONTENT_CLASS,
   MOBILE_MENU_SUBCONTENT_CLASS,
@@ -73,7 +84,6 @@ import {
 import { getCachedThumbnailSources } from "@/utils/thumbnailTheme";
 import { cloneModelAsLocalCopy } from "@/utils/saveLocalDiagramCopy";
 import { DiagramApiClient } from "@/services/DiagramApiClient";
-import { versioningStrings } from "@/components/versioning/strings";
 import { log } from "@/logger";
 import { runWhenIdle } from "@/utils/idle";
 
@@ -90,7 +100,7 @@ export type RecentDiagram = {
   lastSharedView?: DiagramView;
 };
 
-const formatRelativeLastModified = (lastModifiedAt: string, nowMs: number) => {
+export const formatRelativeLastModified = (lastModifiedAt: string, nowMs: number) => {
   const parsedDate = new Date(lastModifiedAt);
   if (Number.isNaN(parsedDate.getTime())) {
     return "Unknown date";
@@ -126,7 +136,7 @@ const formatRelativeLastModified = (lastModifiedAt: string, nowMs: number) => {
   });
 };
 
-const getDiagramNav = (diagram: RecentDiagram) => {
+export const getDiagramNav = (diagram: RecentDiagram) => {
   const source = diagram.source ?? "local";
   if (source === "local") {
     return { to: "/local/$id", params: { id: diagram.id } } as const;
@@ -143,6 +153,7 @@ export type DiagramActionsMenuViewProps = {
   isExpired?: boolean;
   canDelete?: boolean;
   onOpen: () => void;
+  onRename: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onShare: () => void;
@@ -158,29 +169,12 @@ const DEFAULT_MENU_CONTAINER_CLASS = "relative";
 
 type PendingConfirm = "delete" | "remove";
 
-const CONFIRM_COPY: Record<
-  PendingConfirm,
-  { title: string; description: string; confirmLabel: string }
-> = {
-  delete: {
-    title: "Delete this diagram?",
-    description:
-      "This permanently deletes the diagram from this device. This action cannot be undone.",
-    confirmLabel: "Delete",
-  },
-  remove: {
-    title: "Remove from shared list?",
-    description:
-      "This removes the diagram from your shared list on this device. The shared diagram itself stays available to anyone with the link.",
-    confirmLabel: "Remove",
-  },
-};
-
 export function DiagramActionsMenuView({
   diagram,
   isExpired = false,
   canDelete = true,
   onOpen,
+  onRename,
   onDuplicate,
   onDelete,
   onShare,
@@ -191,6 +185,7 @@ export function DiagramActionsMenuView({
   containerClassName = DEFAULT_MENU_CONTAINER_CLASS,
   stopPropagation = false,
 }: DiagramActionsMenuViewProps) {
+  const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(
     null,
@@ -209,7 +204,19 @@ export function DiagramActionsMenuView({
     setPendingConfirm(kind);
   };
 
-  const confirmCopy = pendingConfirm ? CONFIRM_COPY[pendingConfirm] : null;
+  const confirmCopy = pendingConfirm
+    ? pendingConfirm === "delete"
+      ? {
+        title: t.dashboard.confirmDeleteTitle,
+        description: t.dashboard.confirmDeleteDesc,
+        confirmLabel: t.dashboard.confirmDeleteBtn,
+      }
+      : {
+        title: t.dashboard.confirmRemoveTitle,
+        description: t.dashboard.confirmRemoveDesc,
+        confirmLabel: t.dashboard.confirmRemoveBtn,
+      }
+    : null;
 
   const stopIfNeeded = (
     event: ReactMouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>,
@@ -236,74 +243,123 @@ export function DiagramActionsMenuView({
               type="button"
               variant="ghost"
               size="icon-lg"
-              aria-label="Open diagram actions"
-              className="pointer-events-auto text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 home-card-control"
+              aria-label={t.dashboard.diagramActionsAria}
+              className="pointer-events-auto rounded-lg text-muted-foreground transition-all duration-150 hover:bg-accent hover:text-foreground group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 aria-expanded:bg-accent aria-expanded:text-foreground aria-expanded:opacity-100 home-card-control"
               onClick={stopIfNeeded}
             />
           }
         >
-          <MoreVertical className="size-5" aria-hidden="true" />
+          <MoreVertical className="size-4.5" aria-hidden="true" />
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
           id={`diagram-actions-menu-${diagram.id}`}
-          aria-label="Diagram actions"
+          aria-label={t.dashboard.diagramActionsAria}
           align="end"
           sideOffset={8}
-          className={MOBILE_MENU_CONTENT_CLASS}
+          className={cn(
+            MOBILE_MENU_CONTENT_CLASS,
+            "w-56 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl backdrop-blur-md",
+          )}
         >
           {isExpired ? (
             <DropdownMenuItem
               variant="destructive"
               closeOnClick={false}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
               onClick={() => requestConfirm("remove")}
             >
-              Remove from shared list
+              <UserX className="size-4 shrink-0 text-destructive" />
+              <span>{t.dashboard.actionRemoveFromShared}</span>
             </DropdownMenuItem>
           ) : isLocalDiagram ? (
             <>
-              <DropdownMenuItem onClick={() => runAndClose(onOpen)}>
-                Open
+              <DropdownMenuItem
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
+                onClick={() => runAndClose(onOpen)}
+              >
+                <ExternalLink className="size-4 shrink-0 text-(--dodger-blue)" />
+                <span>{t.dashboard.actionOpen}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => runAndClose(onDuplicate)}>
-                Duplicate
+              <DropdownMenuItem
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
+                onClick={() => runAndClose(onRename)}
+              >
+                <Pencil className="size-4 shrink-0 text-muted-foreground" />
+                <span>{t.dashboard.actionRename}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => runAndClose(onShare)}>
-                Share
+              <DropdownMenuItem
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
+                onClick={() => runAndClose(onDuplicate)}
+              >
+                <Copy className="size-4 shrink-0 text-muted-foreground" />
+                <span>{t.dashboard.actionDuplicate}</span>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
+                onClick={() => runAndClose(onShare)}
+              >
+                <Share2 className="size-4 shrink-0 text-muted-foreground" />
+                <span>{t.dashboard.actionShare}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="my-1 border-border/50" />
               <DropdownMenuItem
                 variant="destructive"
                 disabled={!canDelete}
                 closeOnClick={false}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
                 title={
                   canDelete
                     ? undefined
-                    : "Cannot delete diagram currently being edited"
+                    : t.dashboard.cannotDeleteCurrent
                 }
                 onClick={() => requestConfirm("delete")}
               >
-                Delete
+                <Trash2 className="size-4 shrink-0 text-destructive" />
+                <span>{t.dashboard.actionDelete}</span>
               </DropdownMenuItem>
             </>
           ) : (
             <>
-              <DropdownMenuItem onClick={() => runAndClose(onOpen)}>
-                Open
+              <DropdownMenuItem
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
+                onClick={() => runAndClose(onOpen)}
+              >
+                <ExternalLink className="size-4 shrink-0 text-(--dodger-blue)" />
+                <span>{t.dashboard.actionOpen}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => runAndClose(onCopySharedLink)}>
-                Copy link
+              <DropdownMenuItem
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
+                onClick={() => runAndClose(onRename)}
+              >
+                <Pencil className="size-4 shrink-0 text-muted-foreground" />
+                <span>{t.dashboard.actionRename}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => runAndClose(onSaveLocalCopy)}>
-                Save as local copy
+              <DropdownMenuItem
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
+                onClick={() => runAndClose(onCopySharedLink)}
+              >
+                <Link2 className="size-4 shrink-0 text-muted-foreground" />
+                <span>{t.dashboard.actionCopyLink}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
+                onClick={() => runAndClose(onSaveLocalCopy)}
+              >
+                <Download className="size-4 shrink-0 text-muted-foreground" />
+                <span>{t.dashboard.actionSaveLocalCopy}</span>
               </DropdownMenuItem>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  Change sharing mode
+                <DropdownMenuSubTrigger className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer">
+                  <Shield className="size-4 shrink-0 text-muted-foreground" />
+                  <span>{t.dashboard.actionChangeSharingMode}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent
-                  aria-label="Change sharing mode"
-                  className={MOBILE_MENU_SUBCONTENT_CLASS}
+                  aria-label={t.dashboard.actionChangeSharingMode}
+                  className={cn(
+                    MOBILE_MENU_SUBCONTENT_CLASS,
+                    "w-48 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl backdrop-blur-md",
+                  )}
                 >
                   <DropdownMenuRadioGroup
                     value={sharedView}
@@ -317,6 +373,7 @@ export function DiagramActionsMenuView({
                       <DropdownMenuRadioItem
                         key={option.value}
                         value={option.value}
+                        className="rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
                       >
                         {option.badge}
                       </DropdownMenuRadioItem>
@@ -324,13 +381,15 @@ export function DiagramActionsMenuView({
                   </DropdownMenuRadioGroup>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="my-1 border-border/50" />
               <DropdownMenuItem
                 variant="destructive"
                 closeOnClick={false}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
                 onClick={() => requestConfirm("remove")}
               >
-                Remove from shared list
+                <UserX className="size-4 shrink-0 text-destructive" />
+                <span>{t.dashboard.actionRemoveFromShared}</span>
               </DropdownMenuItem>
             </>
           )}
@@ -351,7 +410,7 @@ export function DiagramActionsMenuView({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t.dashboard.cancel}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -388,6 +447,7 @@ export const DiagramActionsMenu = ({
   onSharedDiagramRemoved,
   onSharedDiagramViewChange,
 }: DiagramActionsMenuProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { openModal } = useModalContext();
   const deleteModel = usePersistenceModelStore((state) => state.deleteModel);
@@ -411,7 +471,7 @@ export const DiagramActionsMenu = ({
       markSharedDiagramCopied(diagram.id, view);
       toast.success(message);
     } catch {
-      toast.error("Could not copy the shared link.");
+      toast.error(t.dashboard.toastCouldNotCopyLink);
     }
   };
 
@@ -421,13 +481,13 @@ export const DiagramActionsMenu = ({
       const copy = cloneModelAsLocalCopy(model);
       createModel(copy);
       markSharedDiagramCopied(diagram.id, sharedView);
-      toast.success(versioningStrings.saveLocalCopySuccess, {
+      toast.success(t.dashboard.toastSaveLocalCopySuccess, {
         autoClose: 6000,
       });
       navigate({ to: "/local/$id", params: { id: copy.id }, replace: true });
     } catch (err) {
       log.error("Save a local copy from the gallery failed", err as Error);
-      toast.error(versioningStrings.saveLocalCopyFailed);
+      toast.error(t.dashboard.toastSaveLocalCopyFailed);
     }
   };
 
@@ -439,6 +499,13 @@ export const DiagramActionsMenu = ({
       stopPropagation={stopPropagation}
       containerClassName={containerClassName}
       onOpen={() => navigate(getDiagramNav(diagram))}
+      onRename={() => {
+        openModal("RENAME_DIAGRAM", {
+          diagramId: diagram.id,
+          initialTitle: diagram.title,
+          source: isLocalDiagram ? "local" : "shared",
+        });
+      }}
       onDuplicate={() => {
         if (isLocalDiagram) duplicateModel(diagram.id);
       }}
@@ -455,13 +522,15 @@ export const DiagramActionsMenu = ({
           });
         }
       }}
-      onCopySharedLink={() => void copySharedLink(sharedView, "Link copied.")}
+      onCopySharedLink={() =>
+        void copySharedLink(sharedView, t.dashboard.toastLinkCopied)
+      }
       onSaveLocalCopy={() => void saveLocalCopy()}
       onChangeSharedView={(view) => {
         updateSharedDiagramView(diagram.id, view);
         onSharedDiagramViewChange?.(diagram.id, view);
         toast.success(
-          `${getSharedDiagramViewBadge(view)} is now the default link.`,
+          `${getSharedDiagramViewBadge(view)} ${t.dashboard.toastSharingModeUpdated}`,
         );
       }}
       onRemoveSharedEntry={() => {
@@ -501,17 +570,18 @@ function DiagramPreview({
   darkDataUrl,
   state,
 }: DiagramPreviewProps) {
+  const { t } = useTranslation();
   return (
-    <div className="flex aspect-[16/10] w-full items-center justify-center">
+    <div className="flex aspect-16/10 w-full items-center justify-center">
       {state === "expired" ? (
         <div className="flex flex-col items-center gap-2.5 text-center text-muted-foreground">
           <Unlink className="size-10" aria-hidden="true" />
           <div className="space-y-0.5">
-            <p className="text-xs font-semibold text-[var(--home-text-secondary)]">
-              Link expired
+            <p className="text-xs font-semibold text-secondary-foreground">
+              {t.dashboard.linkExpired}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              This shared diagram is no longer available
+              {t.dashboard.linkExpiredDesc}
             </p>
           </div>
         </div>
@@ -558,8 +628,7 @@ function CardTag({ label, tone }: { label: string; tone: CardTagTone }) {
   return (
     <Badge
       className={cn(
-        "h-auto max-w-[12ch] truncate rounded border-0 px-2 py-0.5 text-xs leading-tight",
-        tone !== "type" && "font-semibold",
+        "h-auto max-w-[14ch] truncate rounded border-0 px-2 py-0.5 text-xs leading-tight font-semibold",
       )}
       title={label}
       style={{ background: bg, color: text }}
@@ -578,7 +647,6 @@ export type DiagramCardViewProps = {
   diagram: RecentDiagram;
   thumbnail?: DiagramCardThumbnail | null;
   previewState: DiagramPreviewState;
-  showSourceBadge?: boolean;
   isHighlighted?: boolean;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
@@ -592,7 +660,6 @@ export function DiagramCardView({
   diagram,
   thumbnail = null,
   previewState,
-  showSourceBadge = false,
   isHighlighted = false,
   isFavorite = false,
   onToggleFavorite,
@@ -601,9 +668,10 @@ export function DiagramCardView({
   className,
   ref,
 }: DiagramCardViewProps) {
+  const { t } = useTranslation();
   const isExpired = previewState === "expired";
   const isUntitled = !diagram.title.trim();
-  const title = diagram.title.trim() || "Untitled diagram";
+  const title = diagram.title.trim() || t.dashboard.emptyStateTitle;
   const isLocalDiagram = (diagram.source ?? "local") === "local";
   const lightDataUrl = thumbnail?.lightDataUrl ?? null;
   const darkDataUrl = thumbnail?.darkDataUrl ?? null;
@@ -614,16 +682,10 @@ export function DiagramCardView({
     // eslint-disable-next-line react-hooks/purity
     Date.now(),
   );
-  const shortTypeLabel = getDiagramTypeShortLabel(diagram.type);
-  const sourceTypeLabel = isLocalDiagram ? "Local" : "Shared";
+  const sourceTypeLabel = isLocalDiagram
+    ? t.dashboard.filterSourceLocal
+    : t.dashboard.filterSourceShared;
   const sharedViewLabel = getSharedDiagramViewBadge(diagram.lastSharedView);
-
-  const secondaryTag: { label: string; tone: CardTagTone } | null =
-    showSourceBadge
-      ? { label: sourceTypeLabel, tone: isLocalDiagram ? "local" : "shared" }
-      : !isLocalDiagram
-        ? { label: sharedViewLabel, tone: "shared" }
-        : null;
 
   const nav = getDiagramNav(diagram);
 
@@ -632,7 +694,7 @@ export function DiagramCardView({
       ref={ref}
       role="listitem"
       className={cn(
-        "home-diagram-card group relative flex min-h-[var(--card-min-h)] flex-col gap-0 overflow-hidden rounded-[var(--umlstudio-chrome-radius-lg)] border border-[var(--umlstudio-chrome-border)] bg-[var(--home-card-surface)] py-0 shadow-[var(--umlstudio-chrome-shadow-floating)] transition-all duration-[280ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "home-diagram-card group relative flex min-h-(--card-min-h) flex-col gap-0 overflow-hidden rounded-(--umlstudio-chrome-radius-lg) border border-(--umlstudio-chrome-border) bg-(--home-card-surface) py-0 shadow-(--umlstudio-chrome-shadow-floating) transition-all duration-280 ease-[cubic-bezier(0.16,1,0.3,1)]",
         isHighlighted
           ? "animate-[diagram-highlight-pulse_2.4s_ease-out_forwards] bg-accent-hover shadow-[0_0_0_3px_color-mix(in_srgb,var(--home-accent-base)_35%,transparent)]"
           : "hover:bg-accent-hover hover:shadow-[0_6px_16px_var(--home-shadow-card-hover)]",
@@ -671,7 +733,7 @@ export function DiagramCardView({
                 "line-clamp-2 text-sm leading-snug font-medium",
                 isUntitled
                   ? "text-muted-foreground italic"
-                  : "text-[var(--home-text-strong)]",
+                  : "text-(--home-text-strong)",
                 isExpired && "opacity-50",
               )}
               title={title}
@@ -698,10 +760,13 @@ export function DiagramCardView({
           </time>
 
           <div className="flex shrink-0 items-center gap-1">
-            <CardTag label={shortTypeLabel} tone="type" />
-            {secondaryTag ? (
-              <CardTag label={secondaryTag.label} tone={secondaryTag.tone} />
-            ) : null}
+            <CardTag
+              label={sourceTypeLabel}
+              tone={isLocalDiagram ? "local" : "shared"}
+            />
+            {!isLocalDiagram && (
+              <CardTag label={sharedViewLabel} tone="shared" />
+            )}
           </div>
         </CardFooter>
       </Link>
@@ -713,21 +778,21 @@ export function DiagramCardView({
             variant="ghost"
             size="icon-lg"
             aria-label={
-              isFavorite ? "Remove from favorites" : "Add to favorites"
+              isFavorite ? t.dashboard.removeFavorite : t.dashboard.addFavorite
             }
             aria-pressed={isFavorite}
             className={cn(
               "pointer-events-auto transition-opacity",
               isFavorite
-                ? "text-[var(--home-favorite-star)] opacity-100"
-                : "text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 home-card-control",
+                ? "text-rose-500 opacity-100"
+                : "text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-rose-500 home-card-control",
             )}
             onClick={(event) => {
               event.stopPropagation();
               onToggleFavorite();
             }}
           >
-            <Star
+            <Heart
               className="size-5"
               aria-hidden="true"
               fill={isFavorite ? "currentColor" : "none"}
@@ -746,7 +811,6 @@ export function DiagramCardView({
 type DiagramCardProps = {
   diagram: RecentDiagram;
   previewState: DiagramPreviewState;
-  showSourceBadge?: boolean;
   isHighlighted?: boolean;
   onToggleFavorite?: (diagram: RecentDiagram) => void;
   onSharedDiagramRemoved?: (diagramId: string) => void;
@@ -754,21 +818,20 @@ type DiagramCardProps = {
   observeViewport?: (id: string, node: Element | null) => () => void;
 };
 
-const DiagramCardComponent = ({
+export function DiagramCardComponent({
   diagram,
   previewState,
-  showSourceBadge = false,
   isHighlighted = false,
   onToggleFavorite,
   onSharedDiagramRemoved,
   onSharedDiagramViewChange,
   observeViewport,
-}: DiagramCardProps) => {
+}: DiagramCardProps) {
   const toggleFavorite = usePersistenceModelStore(
     (state) => state.toggleFavorite,
   );
   const thumbnailSvg = usePersistenceModelStore(
-    (state) => state.thumbnails[diagram.id] ?? null,
+    (state) => state.thumbnails[diagram.id],
   );
   const thumbnailRevision = usePersistenceModelStore(
     (state) => state.thumbnailRevisions[diagram.id] ?? 0,
@@ -779,7 +842,7 @@ const DiagramCardComponent = ({
   const canToggleFavorite =
     !isExpired && (isLocalDiagram || Boolean(onToggleFavorite));
 
-  const cardObserveId = diagram.id;
+  const cardObserveId = `diagram-thumb-${diagram.id}`;
   const observeCleanupRef = useRef<(() => void) | null>(null);
   const cardRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -799,11 +862,10 @@ const DiagramCardComponent = ({
         ?.lightDataUrl ?? null,
     [thumbnailCacheKey, thumbnailSvg],
   );
-  const [darkDataUrl, setDarkDataUrl] = useState<string | null>(null);
+  const [rawDarkDataUrl, setRawDarkDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!thumbnailSvg) {
-      setDarkDataUrl(null);
       return;
     }
     return runWhenIdle(() => {
@@ -815,17 +877,19 @@ const DiagramCardComponent = ({
         },
       );
       if (sources) {
-        setDarkDataUrl(sources.darkDataUrl);
+        setRawDarkDataUrl(sources.darkDataUrl);
       }
     });
   }, [thumbnailCacheKey, thumbnailSvg]);
 
+  const darkDataUrl = thumbnailSvg ? rawDarkDataUrl : null;
+
   const resolvedPreviewState: DiagramPreviewState =
     previewState === "expired" || previewState === "placeholder"
       ? previewState
-      : lightDataUrl
-        ? "thumbnail"
-        : "loading";
+      : !lightDataUrl
+        ? "loading"
+        : "thumbnail";
 
   return (
     <DiagramCardView
@@ -833,18 +897,17 @@ const DiagramCardComponent = ({
       diagram={diagram}
       thumbnail={lightDataUrl ? { lightDataUrl, darkDataUrl } : null}
       previewState={resolvedPreviewState}
-      showSourceBadge={showSourceBadge}
       isHighlighted={isHighlighted}
       isFavorite={diagram.favorite}
       onToggleFavorite={
         canToggleFavorite
           ? () => {
-              if (onToggleFavorite) {
-                onToggleFavorite(diagram);
-              } else if (isLocalDiagram) {
-                toggleFavorite(diagram.id);
-              }
+            if (onToggleFavorite) {
+              onToggleFavorite(diagram);
+            } else if (isLocalDiagram) {
+              toggleFavorite(diagram.id);
             }
+          }
           : undefined
       }
       actionsMenu={

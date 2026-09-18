@@ -5,3 +5,4 @@ export * from "./HomeDialog";
 export * from "./CollaborateNameModal";
 export * from "./HowToUseModal";
 export * from "./AboutModal";
+export * from "./RenameDiagramModal";
