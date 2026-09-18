@@ -27,6 +27,14 @@ export const DiagramBody = z.object({
 
 export const PutDiagramBody = DiagramBody.omit({ id: true });
 
+export const PatchDiagramBody = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, "title must not be empty")
+    .max(200, "title must be at most 200 characters"),
+});
+
 export const PaginationQuery = z.object({
   limit: z.coerce.number().int().positive().max(100).default(25),
   before: z.string().optional(),

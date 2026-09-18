@@ -72,6 +72,7 @@ export type ControlEvent =
       name: string;
       description: string;
     }
-  | { type: "DIAGRAM_DELETED" };
+  | { type: "DIAGRAM_DELETED" }
+  | { type: "DIAGRAM_RENAMED"; title: string };
 
 export type Envelope = { kind: "control"; control: ControlEvent };

@@ -25,6 +25,22 @@ import { SaveLocalCopyButton } from "./SaveLocalCopyButton";
 import { navbarButtonStyle } from "./styleConstants";
 import { MOBILE_MENU_CONTENT_CLASS } from "./islandPrimitives";
 import { useTranslation } from "@/i18n";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@umlstudio/ui/components/alert-dialog";
+import { useNavigate } from "@tanstack/react-router";
+import { useEditorContext } from "@/contexts";
+import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
+import { DiagramApiClient } from "@/services/DiagramApiClient";
+import { useDiagramIdFromPath } from "@/hooks/useDiagramIdFromPath";
+import { useSharedDiagramId } from "@/hooks/useSharedDiagramId";
 
 interface FileMenuProps {
   color?: string;
@@ -54,16 +70,63 @@ function exportErrorMessage(format: ExportFormat, err: unknown): string {
 
 export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
   const { openModal } = useModalContext();
+  const { editor } = useEditorContext();
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const diagramId = useDiagramIdFromPath();
+  const sharedDiagramId = useSharedDiagramId();
+  const deleteModel = usePersistenceModelStore((s) => s.deleteModel);
   const exportAsPng = useExportAsPNG();
   const exportAsSpringBoot = useExportAsSpringBoot();
   const exportAsXMI = useExportAsXMI();
   const [busyFormat, setBusyFormat] = useState<ExportFormat | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleNewDiagram = useCallback(() => {
     openModal("NEW_DIAGRAM", { dialogVariant: "home" });
     onSelect();
   }, [openModal, onSelect]);
+
+  const handleRenameDiagram = useCallback(() => {
+    if (!diagramId) return;
+    openModal("RENAME_DIAGRAM", {
+      diagramId,
+      initialTitle: editor?.getDiagramMetadata()?.diagramTitle || "",
+      source: sharedDiagramId ? "shared" : "local",
+    });
+    onSelect();
+  }, [diagramId, editor, openModal, sharedDiagramId, onSelect]);
+
+  const handleShareDiagram = useCallback(() => {
+    openModal("SHARE", { dialogVariant: "home" });
+    onSelect();
+  }, [openModal, onSelect]);
+
+  const handleRequestDelete = useCallback(() => {
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!diagramId || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      if (sharedDiagramId) {
+        await DiagramApiClient.deleteDiagram(sharedDiagramId);
+      } else {
+        deleteModel(diagramId);
+      }
+      toast.success("Diagram deleted successfully");
+      setShowDeleteConfirm(false);
+      onSelect();
+      navigate({ to: "/" });
+    } catch (err) {
+      log.error("Failed to delete diagram", err as Error);
+      toast.error("Could not delete diagram. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [diagramId, sharedDiagramId, isDeleting, deleteModel, navigate, onSelect]);
 
   const runExport = useCallback(
     async (
@@ -138,6 +201,46 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
           {t.menu.exportSpringBoot}
         </DropdownMenuItem>
       </DropdownMenuGroup>
+
+      {diagramId && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleRenameDiagram}>
+            Rename diagram…
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleShareDiagram}>
+            Share diagram…
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            closeOnClick={false}
+            onClick={handleRequestDelete}
+          >
+            Delete diagram…
+          </DropdownMenuItem>
+        </>
+      )}
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Diagram?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this diagram? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={handleConfirmDelete}
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
