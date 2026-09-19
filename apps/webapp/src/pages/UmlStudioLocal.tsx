@@ -26,10 +26,7 @@ import { fetchVersionBody, useVersionsQuery } from "@/queries/versionQueries";
 import { useVersionRepositoryKind } from "@/contexts/VersionRepositoryContext";
 import { useRestoreVersionMutation } from "@/queries/versionMutations";
 import type { PendingVersion } from "@/types";
-import {
-  VersionDrawer,
-  VersionPreviewBanner,
-} from "@/components/versioning";
+import { VersionDrawer, VersionPreviewBanner } from "@/components/versioning";
 import { structuralFingerprint } from "@/lib/version/predicates";
 import { useVersioningTranslation } from "@/components/versioning/strings";
 import type { Diagram } from "@/types";
@@ -256,8 +253,7 @@ export const UmlStudioLocal: FC = () => {
         prePreviewFingerprintRef.current = null;
         log.error("Failed to render preview body", err as Error);
         const isSchemaError =
-          err instanceof Error &&
-          err.message.includes("schema");
+          err instanceof Error && err.message.includes("schema");
         toast.error(
           isSchemaError ? t.failureSchemaUnsupported : t.previewFailed,
         );

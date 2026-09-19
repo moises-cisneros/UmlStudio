@@ -83,7 +83,7 @@ const normalizeCollaborationOptions = (
   return {
     enabled,
     user: collaboration?.user,
-    showPresence: collaboration?.showPresence ?? showVisualsByDefault,
+    showPresence: collaboration?.showPresence ?? false,
     showCursors: collaboration?.showCursors ?? showVisualsByDefault,
     showSelectionHighlights:
       collaboration?.showSelectionHighlights ?? showVisualsByDefault,
@@ -790,6 +790,38 @@ export class UmlStudioEditor {
 
   public getCollaborators(): UmlStudio.CollaboratorInfo[] {
     return this.syncManager.getCollaborators();
+  }
+
+  public setLocalAwarenessFollowing(followingClientId: number | null): void {
+    this.syncManager.setLocalAwarenessFollowing(followingClientId);
+  }
+
+  public followCollaborator(followingClientId: number | null): void {
+    this.syncManager.setLocalAwarenessFollowing(followingClientId);
+  }
+
+  public getFollowingClientId(): number | null {
+    const localId = this.syncManager.getLocalAwarenessClientId();
+    const state = this.syncManager.getAwarenessStates().get(localId);
+    return state?.followingClientId ?? null;
+  }
+
+  public getAwarenessStates(): Map<number, UmlStudio.CollaborationState> {
+    return this.syncManager.getAwarenessStates();
+  }
+
+  public focusOnCollaborator(clientId: number): boolean {
+    const states = this.syncManager.getAwarenessStates();
+    const state = states.get(clientId);
+    if (state?.viewport && this.reactFlowInstance) {
+      this.reactFlowInstance.setViewport(state.viewport, { duration: 300 });
+      return true;
+    }
+    if (state?.cursor && this.reactFlowInstance) {
+      this.reactFlowInstance.setCenter(state.cursor.x, state.cursor.y, { duration: 300 });
+      return true;
+    }
+    return false;
   }
 
   public updateDiagramTitle(name: string) {
