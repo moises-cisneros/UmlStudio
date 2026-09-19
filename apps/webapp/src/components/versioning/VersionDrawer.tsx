@@ -139,7 +139,7 @@ export const VersionSidebarBody: FC<Props> = ({
     const compute = () =>
       setIsEmptyDiagram(
         (editor.model.nodes?.length ?? 0) === 0 &&
-        (editor.model.edges?.length ?? 0) === 0,
+          (editor.model.edges?.length ?? 0) === 0,
       );
     compute();
     const subId = editor.subscribeToModelChange(compute);
@@ -266,7 +266,7 @@ export const VersionSidebarBody: FC<Props> = ({
   );
   const clearSaveRequest = useVersionStore((s) => s.clearSaveRequest);
   const handledSaveRequestRef = useRef(0);
-  const runSaveRequestRef = useRef<() => void>(() => { });
+  const runSaveRequestRef = useRef<() => void>(() => {});
   useEffect(() => {
     runSaveRequestRef.current = () => {
       const dirty =
@@ -298,7 +298,13 @@ export const VersionSidebarBody: FC<Props> = ({
     handledSaveRequestRef.current = saveRequest;
     clearSaveRequest(diagramId);
     runSaveRequestRef.current();
-  }, [saveRequest, initialListLoaded, baselineResolved, clearSaveRequest, diagramId]);
+  }, [
+    saveRequest,
+    initialListLoaded,
+    baselineResolved,
+    clearSaveRequest,
+    diagramId,
+  ]);
 
   const handlePreview = useCallback(
     async (versionId: string) => {
@@ -319,7 +325,15 @@ export const VersionSidebarBody: FC<Props> = ({
         toast.error(t.previewFailed);
       }
     },
-    [editor, onPreview, enterPreview, diagramId, queryClient, kind, t.previewFailed],
+    [
+      editor,
+      onPreview,
+      enterPreview,
+      diagramId,
+      queryClient,
+      kind,
+      t.previewFailed,
+    ],
   );
 
   const handleRestore = useCallback(
@@ -343,7 +357,13 @@ export const VersionSidebarBody: FC<Props> = ({
         toast.error(t.restoreFailed);
       }
     },
-    [editor, restoreMutation, onVersionSaved, onConfirmedRestore, t.restoreFailed],
+    [
+      editor,
+      restoreMutation,
+      onVersionSaved,
+      onConfirmedRestore,
+      t.restoreFailed,
+    ],
   );
 
   const handleDelete = useCallback(
@@ -354,8 +374,7 @@ export const VersionSidebarBody: FC<Props> = ({
     [openModal, diagramId, versions, kind],
   );
 
-  const totalDisplay =
-    typeof total === "number" ? total : versions.length;
+  const totalDisplay = typeof total === "number" ? total : versions.length;
 
   const versionNumberById = useMemo(() => {
     const map = new Map<string, number>();
@@ -368,7 +387,9 @@ export const VersionSidebarBody: FC<Props> = ({
     return map;
   }, [versions, total]);
 
-  const handleComposerKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+  const handleComposerKeyDown = (
+    e: ReactKeyboardEvent<HTMLTextAreaElement>,
+  ) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       void handleCreate();
@@ -672,7 +693,7 @@ export const VersionDrawer: FC<Props> = ({
       ref={panelRef}
       role="complementary"
       aria-label={t.drawerTitle}
-      className="umlstudio-glass flex flex-col absolute top-3 right-3 bottom-3 z-30 w-[420px] max-w-[calc(100%-24px)] rounded-[var(--umlstudio-chrome-radius-lg)] border border-[var(--umlstudio-chrome-border)] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200"
+      className="umlstudio-glass flex flex-col absolute top-[calc(48px+var(--umlstudio-chrome-gap,8px))] right-3 bottom-3 z-30 w-[420px] max-w-[calc(100%-24px)] rounded-[var(--umlstudio-chrome-radius-lg)] border border-[var(--umlstudio-chrome-border)] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200"
       style={{
         backgroundColor:
           "var(--umlstudio-chrome-glass-solid, var(--uml-node-bg, #ffffff))",

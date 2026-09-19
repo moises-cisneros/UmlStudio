@@ -152,8 +152,7 @@ const versioningStringsEs: typeof versioningStringsEn = {
   saveLocalCopyButton: "Guardar una copia",
   saveLocalCopySuccess:
     "Guardado como copia local en este dispositivo. Puedes seguir editando aquí.",
-  saveLocalCopyFailed:
-    "No se pudo guardar una copia. Inténtalo de nuevo.",
+  saveLocalCopyFailed: "No se pudo guardar una copia. Inténtalo de nuevo.",
   justNow: "justo ahora",
   minutesAgo: (n: number) => `hace ${n}m`,
   hoursAgo: (n: number) => `hace ${n}h`,

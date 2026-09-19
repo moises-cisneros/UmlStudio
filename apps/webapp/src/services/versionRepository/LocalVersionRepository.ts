@@ -1,6 +1,7 @@
 import type { UMLModel } from "@umlstudio/core";
 import { ApiError } from "@/services/DiagramApiClient";
 import { MAX_LOCAL_VERSIONS_PER_DIAGRAM } from "@/constants";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { log } from "@/logger";
 import type { Diagram, VersionSummary } from "@/types";
 import {
@@ -70,6 +71,10 @@ function metaToSummary(m: VersionMetaRow): VersionSummary {
     kind: m.kind,
     librarySchemaVersion: m.librarySchemaVersion,
     seq: m.seq,
+    ...(m.author ? { author: m.author } : {}),
+    ...(m.authorName ? { authorName: m.authorName } : {}),
+    ...(m.authorAvatar ? { authorAvatar: m.authorAvatar } : {}),
+    ...(m.authorColor ? { authorColor: m.authorColor } : {}),
   };
 }
 
@@ -151,6 +156,7 @@ export const LocalVersionRepository = {
 
   async create(diagramId, body, opts): Promise<CreateVersionResult> {
     const db = await getDb();
+    const currentUser = useAuthStore.getState().user;
     const { row, evictedVersionIds, evictedKinds, totalAfter } =
       await commitVersion(db, {
         diagramId,
@@ -163,6 +169,14 @@ export const LocalVersionRepository = {
           createdAt: nowIso(),
           kind: "user",
           librarySchemaVersion: body.version,
+          ...(currentUser
+            ? {
+                author: currentUser.id,
+                authorName: currentUser.name,
+                authorAvatar: currentUser.avatar,
+                authorColor: currentUser.color,
+              }
+            : {}),
         },
       });
     broadcastInvalidate(diagramId);
@@ -199,6 +213,7 @@ export const LocalVersionRepository = {
       }
       const label =
         target.description.trim() || target.name.trim() || `v${target.seq}`;
+      const currentUser = useAuthStore.getState().user;
       const { row } = await writeVersionInTx(tx, {
         diagramId,
         body: opts.currentBody,
@@ -210,6 +225,14 @@ export const LocalVersionRepository = {
           createdAt: nowIso(),
           kind: "auto",
           librarySchemaVersion: opts.currentBody.version,
+          ...(currentUser
+            ? {
+                author: currentUser.id,
+                authorName: currentUser.name,
+                authorAvatar: currentUser.avatar,
+                authorColor: currentUser.color,
+              }
+            : {}),
         },
       });
       await tx.done;
