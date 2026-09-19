@@ -54,9 +54,7 @@ export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
       onSuccess();
     } catch (err: unknown) {
       const message =
-        err instanceof Error
-          ? err.message
-          : t.auth.invalidCredentials;
+        err instanceof Error ? err.message : t.auth.invalidCredentials;
       setError(message);
       toast.error(message);
     } finally {
@@ -149,7 +147,9 @@ export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground focus:outline-none"
-            aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+            aria-label={
+              showPassword ? t.auth.hidePassword : t.auth.showPassword
+            }
           >
             {showPassword ? (
               <EyeOff className="size-4" />

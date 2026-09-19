@@ -160,7 +160,10 @@ export function LoginPage({ redirect }: LoginPageProps) {
 
       {/* Footer */}
       <footer className="border-t border-border-subtle/60 py-3 text-center text-xs text-muted-foreground">
-        <p>UmlStudio &copy; 2026 — Formal Object-Oriented Software Architecture Studio</p>
+        <p>
+          UmlStudio &copy; 2026 — Formal Object-Oriented Software Architecture
+          Studio
+        </p>
       </footer>
     </div>
   );

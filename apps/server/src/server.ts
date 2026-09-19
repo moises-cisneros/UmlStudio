@@ -1,11 +1,7 @@
 import { loadConfig } from "./config.js";
 import { logger } from "./logger.js";
 import { buildApp } from "./http/app.js";
-import {
-  bootLoadFunction,
-  createRedisClient,
-  getJwtSecret,
-} from "./redis.js";
+import { bootLoadFunction, createRedisClient, getJwtSecret } from "./redis.js";
 import { startRelayServer } from "./ws.js";
 import {
   createAuthService,

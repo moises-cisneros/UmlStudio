@@ -90,19 +90,26 @@ export function RegisterPage({ redirect }: RegisterPageProps) {
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="size-4 shrink-0 text-emerald-500 mt-0.5" />
                   <span>
-                    <strong className="text-foreground">OMG UML 2.5</strong>: Classes, Interfaces, Enums, Packages, Association Classes.
+                    <strong className="text-foreground">OMG UML 2.5</strong>:
+                    Classes, Interfaces, Enums, Packages, Association Classes.
                   </span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <GitBranch className="size-4 shrink-0 text-(--dodger-blue) mt-0.5" />
                   <span>
-                    <strong className="text-foreground">CRDT Yjs & Snapshots</strong>: Real-time collaboration and immutable version history.
+                    <strong className="text-foreground">
+                      CRDT Yjs & Snapshots
+                    </strong>
+                    : Real-time collaboration and immutable version history.
                   </span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Cpu className="size-4 shrink-0 text-(--deep-sky-blue) mt-0.5" />
                   <span>
-                    <strong className="text-foreground">XMI & Code Generation</strong>: Enterprise Architect interoperability and Spring Boot.
+                    <strong className="text-foreground">
+                      XMI & Code Generation
+                    </strong>
+                    : Enterprise Architect interoperability and Spring Boot.
                   </span>
                 </li>
               </ul>
@@ -130,7 +137,10 @@ export function RegisterPage({ redirect }: RegisterPageProps) {
 
       {/* Footer */}
       <footer className="border-t border-border-subtle/60 py-3 text-center text-xs text-muted-foreground">
-        <p>UmlStudio &copy; 2026 — Formal Object-Oriented Software Architecture Studio</p>
+        <p>
+          UmlStudio &copy; 2026 — Formal Object-Oriented Software Architecture
+          Studio
+        </p>
       </footer>
     </div>
   );
