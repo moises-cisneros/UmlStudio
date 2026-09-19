@@ -1,22 +1,22 @@
-import { EdgeToolbar } from "@xyflow/react"
-import { Pencil, RotateCcw, Trash2 } from "lucide-react"
-import { ZINDEX } from "@/constants"
-import { IPoint } from "@/edges"
-import { useDiagramModifiable } from "@/hooks/useDiagramModifiable"
-import { useIsOnlyThisElementSelected } from "@/hooks/useIsOnlyThisElementSelected"
-import { useLabels } from "@/i18n/useLabels"
-import { ButtonGroup, IconButton } from "@/components/ui"
+import { EdgeToolbar } from "@xyflow/react";
+import { PencilIcon, Route, Trash2 } from "lucide-react";
+import { ZINDEX } from "@/constants";
+import { IPoint } from "@/edges";
+import { useDiagramModifiable } from "@/hooks/useDiagramModifiable";
+import { useIsOnlyThisElementSelected } from "@/hooks/useIsOnlyThisElementSelected";
+import { useLabels } from "@/i18n/useLabels";
+import { ButtonGroup, IconButton } from "@/components/ui";
 
-const EDGE_TOOLBAR_OFFSET_PX = 20
+const EDGE_TOOLBAR_OFFSET_PX = 20;
 
 interface CustomEdgeToolbarProps {
-  edgeId: string
-  position: IPoint
-  onEditClick: (event: React.MouseEvent<HTMLElement>) => void
-  onDeleteClick: (event: React.MouseEvent<HTMLElement>) => void
-  onResetRoutingClick?: (event: React.MouseEvent<HTMLElement>) => void
-  canResetRouting?: boolean
-  anchorRef: React.Ref<HTMLDivElement>
+  edgeId: string;
+  position: IPoint;
+  onEditClick: (event: React.MouseEvent<HTMLElement>) => void;
+  onDeleteClick: (event: React.MouseEvent<HTMLElement>) => void;
+  onResetRoutingClick?: (event: React.MouseEvent<HTMLElement>) => void;
+  canResetRouting?: boolean;
+  anchorRef: React.Ref<HTMLDivElement>;
 }
 
 export const CustomEdgeToolbar: React.FC<CustomEdgeToolbarProps> = ({
@@ -28,11 +28,11 @@ export const CustomEdgeToolbar: React.FC<CustomEdgeToolbarProps> = ({
   canResetRouting = false,
   anchorRef,
 }) => {
-  const t = useLabels()
-  const isSelected = useIsOnlyThisElementSelected(edgeId)
-  const isDiagramModifiable = useDiagramModifiable()
-  const isVisible = isSelected && isDiagramModifiable
-  const showResetRouting = Boolean(canResetRouting && onResetRoutingClick)
+  const t = useLabels();
+  const isSelected = useIsOnlyThisElementSelected(edgeId);
+  const isDiagramModifiable = useDiagramModifiable();
+  const isVisible = isSelected && isDiagramModifiable;
+  const showResetRouting = Boolean(canResetRouting && onResetRoutingClick);
 
   return (
     <EdgeToolbar
@@ -50,44 +50,46 @@ export const CustomEdgeToolbar: React.FC<CustomEdgeToolbarProps> = ({
         {isVisible && (
           <ButtonGroup
             aria-label={t.selectionActions}
-            orientation="vertical"
-            className="umlstudio-element-toolbar nodrag nopan"
+            orientation="horizontal"
+            className="umlstudio-element-toolbar nodrag nopan flex flex-row items-center gap-1"
           >
-            <IconButton
-              ariaLabel={t.deleteEdge}
-              tooltip={t.deleteEdge}
-              onClick={(event) => {
-                event.stopPropagation()
-                onDeleteClick(event)
-              }}
-            >
-              <Trash2 width={16} height={16} aria-hidden="true" />
-            </IconButton>
             <IconButton
               ariaLabel={t.editEdge}
               tooltip={t.editEdge}
               onClick={(event) => {
-                event.stopPropagation()
-                onEditClick(event)
+                event.stopPropagation();
+                onEditClick(event);
               }}
             >
-              <Pencil width={16} height={16} aria-hidden="true" />
+              <PencilIcon width={15} height={15} aria-hidden="true" />
             </IconButton>
+
             {showResetRouting && (
               <IconButton
                 ariaLabel={t.resetEdgeRouting}
                 tooltip={t.resetEdgeRouting}
                 onClick={(event) => {
-                  event.stopPropagation()
-                  onResetRoutingClick?.(event)
+                  event.stopPropagation();
+                  onResetRoutingClick?.(event);
                 }}
               >
-                <RotateCcw width={16} height={16} aria-hidden="true" />
+                <Route width={15} height={15} aria-hidden="true" />
               </IconButton>
             )}
+
+            <IconButton
+              ariaLabel={t.deleteEdge}
+              tooltip={t.deleteEdge}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteClick(event);
+              }}
+            >
+              <Trash2 width={15} height={15} aria-hidden="true" />
+            </IconButton>
           </ButtonGroup>
         )}
       </div>
     </EdgeToolbar>
-  )
-}
+  );
+};

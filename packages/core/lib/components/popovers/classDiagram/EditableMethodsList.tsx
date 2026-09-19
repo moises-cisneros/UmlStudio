@@ -1,5 +1,5 @@
 import React, { useState, KeyboardEvent, ChangeEvent } from "react";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { Code2, GripVertical, Plus, Trash2 } from "lucide-react";
 import { IconButton, TextField, Typography } from "@/components/ui";
 import { NodeStyleEditor } from "@/components/styleEditor";
 import { useLabels } from "@/i18n/useLabels";
@@ -65,7 +65,18 @@ const SortableMethodRow: React.FC<SortableMethodRowProps> = ({
   return (
     <div
       ref={setNodeRef}
-      style={{ ...style, display: "flex", flexDirection: "column", gap: 4 }}
+      style={{
+        ...style,
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+        padding: "4px 6px",
+        borderRadius: 6,
+        border:
+          "1px solid var(--umlstudio-border, var(--border-subtle, #243046))",
+        backgroundColor:
+          "color-mix(in srgb, var(--umlstudio-surface, #1e293b) 70%, transparent)",
+      }}
     >
       <div
         style={{
@@ -84,9 +95,11 @@ const SortableMethodRow: React.FC<SortableMethodRowProps> = ({
             display: "flex",
             alignItems: "center",
             flexShrink: 0,
+            opacity: 0.6,
+            cursor: "grab",
           }}
         >
-          <GripVertical width={16} height={16} aria-hidden="true" />
+          <GripVertical width={15} height={15} aria-hidden="true" />
         </div>
 
         <NodeStyleEditor
@@ -107,7 +120,7 @@ const SortableMethodRow: React.FC<SortableMethodRowProps> = ({
               tooltip={t.deleteMethod}
               onClick={() => onDelete(item.id)}
             >
-              <Trash2 width={16} height={16} aria-hidden="true" />
+              <Trash2 width={15} height={15} aria-hidden="true" />
             </IconButton>,
           ]}
         />
@@ -182,7 +195,10 @@ export const EditableMethodsList: React.FC<Props> = ({ nodeId }) => {
         if (node.id !== nodeId) return node;
         return {
           ...node,
-          data: { ...node.data, methods: [...methods, newMethod] },
+          data: {
+            ...node.data,
+            methods: [...methods, newMethod],
+          },
           height: node.height! + 30,
           measured: { ...node.measured, height: node.height! + 30 },
         };
@@ -212,10 +228,42 @@ export const EditableMethodsList: React.FC<Props> = ({ nodeId }) => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <Typography variant="subtitle2" style={{ fontWeight: 600 }}>
-        {t.methods}
-      </Typography>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 2,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <Code2
+            width={14}
+            height={14}
+            style={{ color: "var(--brand-cyan, #00d8ff)" }}
+          />
+          <Typography
+            variant="subtitle2"
+            style={{ fontWeight: 600, fontSize: "0.8125rem" }}
+          >
+            {t.methods}
+          </Typography>
+        </div>
+        <span
+          style={{
+            fontSize: "0.6875rem",
+            fontWeight: 700,
+            padding: "1px 6px",
+            borderRadius: 9999,
+            backgroundColor:
+              "color-mix(in srgb, var(--brand-cyan, #00d8ff) 14%, transparent)",
+            color: "var(--brand-cyan, #00d8ff)",
+          }}
+        >
+          {methods.length}
+        </span>
+      </div>
 
       <DndContext
         sensors={sensors}
@@ -226,16 +274,18 @@ export const EditableMethodsList: React.FC<Props> = ({ nodeId }) => {
           items={methods.map((m) => m.id)}
           strategy={verticalListSortingStrategy}
         >
-          {methods.map((item) => (
-            <SortableMethodRow
-              key={item.id}
-              id={item.id}
-              item={item}
-              onMethodChange={handleMethodChange}
-              onTagsChange={handleTagsChange}
-              onDelete={handleItemDelete}
-            />
-          ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {methods.map((item) => (
+              <SortableMethodRow
+                key={item.id}
+                id={item.id}
+                item={item}
+                onMethodChange={handleMethodChange}
+                onTagsChange={handleTagsChange}
+                onDelete={handleItemDelete}
+              />
+            ))}
+          </div>
         </SortableContext>
       </DndContext>
 

@@ -20,7 +20,7 @@ import { useModalContext } from "@/contexts";
 import { useMediaQuery } from "@/hooks";
 import { useExportAsPNG, useExportAsSpringBoot, useExportAsXMI } from "@/hooks";
 import { log } from "@/logger";
-import { XmiFileImportButton } from "./XmiFileImportButton";
+import { JsonFileImportButton, XmiFileImportButton } from "./XmiFileImportButton";
 import { VisionPhotoImportItem } from "./VisionPhotoImportItem";
 import { SaveLocalCopyButton } from "./SaveLocalCopyButton";
 import { navbarButtonStyle } from "./styleConstants";
@@ -49,7 +49,7 @@ interface FileMenuProps {
   onClose?: () => void;
 }
 
-type ExportFormat = "PNG" | "Spring Boot" | "XMI";
+type ExportFormat = "PNG" | "Spring Boot" | "XMI" | "JSON";
 
 type ExportRunResult = { clamped?: boolean; appliedScale?: number };
 
@@ -90,6 +90,26 @@ export function FileMenuItems({
   const exportAsPng = useExportAsPNG();
   const exportAsSpringBoot = useExportAsSpringBoot();
   const exportAsXMI = useExportAsXMI();
+
+  const exportAsJson = useCallback(async () => {
+    if (!editor) {
+      throw new Error("Editor not initialized");
+    }
+    const model = editor.model;
+    const title = editor.getDiagramMetadata()?.diagramTitle || model.title || "diagram";
+    const filename = `${title.toLowerCase().replace(/[^a-z0-9_-]/gi, "_") || "diagram"}.json`;
+    const jsonStr = JSON.stringify(model, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [editor]);
+
   const [busyFormat, setBusyFormat] = useState<ExportFormat | null>(null);
   const [pngScale, setPngScale] = useState<number>(DEFAULT_PNG_SCALE);
   const [transparentPng, setTransparentPng] = useState(false);
@@ -139,7 +159,15 @@ export function FileMenuItems({
     } finally {
       setIsDeleting(false);
     }
-  }, [diagramId, sharedDiagramId, isDeleting, deleteModel, t, navigate, onSelect]);
+  }, [
+    diagramId,
+    sharedDiagramId,
+    isDeleting,
+    deleteModel,
+    t,
+    navigate,
+    onSelect,
+  ]);
 
   const runExport = useCallback(
     async (
@@ -182,6 +210,7 @@ export function FileMenuItems({
 
       <DropdownMenuGroup>
         <DropdownMenuLabel>{t.common.importLabel}</DropdownMenuLabel>
+        <JsonFileImportButton close={onSelect} />
         <XmiFileImportButton close={onSelect} />
         <VisionPhotoImportItem close={onSelect} onImportPhoto={onImportPhoto} />
       </DropdownMenuGroup>
@@ -198,7 +227,8 @@ export function FileMenuItems({
           onKeyDown={(e) => e.stopPropagation()}
         >
           <span className="text-xs font-medium text-muted-foreground">
-            PNG scale{pngScale !== DEFAULT_PNG_SCALE ? ` (${pngScale}x)` : " (default)"}
+            PNG scale
+            {pngScale !== DEFAULT_PNG_SCALE ? ` (${pngScale}x)` : " (default)"}
           </span>
           <div
             className="flex items-center gap-1"
@@ -244,6 +274,12 @@ export function FileMenuItems({
           {t.menu.exportPng}
         </DropdownMenuItem>
         <DropdownMenuItem
+          disabled={busyFormat === "JSON"}
+          onClick={() => runExport("JSON", async () => exportAsJson())}
+        >
+          {t.menu.exportJson}
+        </DropdownMenuItem>
+        <DropdownMenuItem
           disabled={busyFormat === "XMI"}
           onClick={() => runExport("XMI", async () => exportAsXMI())}
         >
@@ -281,13 +317,17 @@ export function FileMenuItems({
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.dashboard.confirmDeleteTitle}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t.dashboard.confirmDeleteTitle}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t.dashboard.confirmDeleteDesc}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>
+              {t.common.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={isDeleting}

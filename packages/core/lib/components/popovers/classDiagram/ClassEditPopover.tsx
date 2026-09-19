@@ -105,7 +105,36 @@ export const ClassEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
   };
 
   return (
-    <PopoverLayout title={t.class}>
+    <PopoverLayout
+      title={
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            gap: 8,
+          }}
+        >
+          <span>{t.class}</span>
+          <span
+            style={{
+              fontSize: "0.6875rem",
+              fontWeight: 700,
+              padding: "1px 7px",
+              borderRadius: 4,
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              backgroundColor:
+                "color-mix(in srgb, var(--dodger-blue, #3590f3) 14%, transparent)",
+              color: "var(--dodger-blue, #3590f3)",
+            }}
+          >
+            {currentKind}
+          </span>
+        </div>
+      }
+    >
       <NodeStyleEditor
         nodeData={nodeData}
         handleDataFieldUpdate={handleDataFieldUpdate}
