@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import {
 import { Button } from "@umlstudio/ui/components/button";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useTranslation } from "@/i18n";
+import { useModalContext } from "@/contexts";
 
 interface UserAccountMenuProps {
   variant?: "navbar" | "home";
@@ -19,6 +20,7 @@ interface UserAccountMenuProps {
 export function UserAccountMenu({ variant = "navbar" }: UserAccountMenuProps) {
   const { user, status, logout } = useAuthStore();
   const { t } = useTranslation();
+  const { openModal } = useModalContext();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -112,6 +114,17 @@ export function UserAccountMenu({ variant = "navbar" }: UserAccountMenuProps) {
         </div>
 
         <DropdownMenuSeparator className="my-1 bg-border" />
+
+        <DropdownMenuItem
+          onClick={() => {
+            setIsOpen(false);
+            openModal("USER_PROFILE");
+          }}
+          className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-popover-foreground hover:bg-muted/70 focus:bg-muted/70"
+        >
+          <User className="size-3.5 text-(--dodger-blue)" />
+          <span>{t.profile.openProfile}</span>
+        </DropdownMenuItem>
 
         <DropdownMenuItem
           onClick={() => void handleLogout()}

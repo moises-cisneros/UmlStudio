@@ -7,6 +7,7 @@ import {
   AboutModal,
   HowToUseModal,
   RenameDiagramModal,
+  UserProfileModal,
 } from "@/components/modals";
 import {
   ConfirmRestoreModal,
@@ -40,6 +41,7 @@ const MODAL_COMPONENTS = {
   DELETE_VERSION: DeleteVersionModal,
   CONFIRM_RESTORE: ConfirmRestoreModal,
   RENAME_DIAGRAM: RenameDiagramModal,
+  USER_PROFILE: UserProfileModal,
 } satisfies Record<ModalName, React.ComponentType<never>>;
 
 const ModalProgressBar = () => {
@@ -102,6 +104,8 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ name, props }) => {
         return vt.confirmRestoreTitle;
       case "RENAME_DIAGRAM":
         return "Rename Diagram";
+      case "USER_PROFILE":
+        return t.profile.title;
       default:
         return name;
     }

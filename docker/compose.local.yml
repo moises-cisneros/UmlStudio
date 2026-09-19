@@ -23,10 +23,25 @@ services:
       - WS_PORT=4444
       - REDIS_URL=redis://db:6379
       - OWNER_SECRET=${OWNER_SECRET:-development-only-replace-in-prod}
+      - JWT_SECRET=${JWT_SECRET:-umlstudio-development-jwt-secret-min-32-chars-2026!}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:8080,capacitor://localhost,ionic://localhost}
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - umlstudio-local
+
+  ai-service:
+    build:
+      context: ..
+      dockerfile: ./apps/ai-service/Dockerfile
+    ports:
+      - "8001:8001"
+    env_file:
+      - ../apps/ai-service/.env
+    environment:
+      - AI_SERVICE_HOST=0.0.0.0
+      - AI_SERVICE_PORT=8001
     networks:
       - umlstudio-local
 

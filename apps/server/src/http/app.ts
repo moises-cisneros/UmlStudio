@@ -11,6 +11,7 @@ import { ownerReader } from "./middleware/owner.js";
 import { errorHandler } from "./middleware/errors.js";
 import { Errors } from "./errors.js";
 import { mountAuthRoutes } from "../routes/auth.js";
+import { mountUserRoutes } from "../routes/users.js";
 import {
   createAuthService,
   createRedisUserRepository,
@@ -59,7 +60,7 @@ export function buildApp(deps: AppDeps): ServerType {
         if (body) {
           const reader = body.getReader();
           try {
-            for (; ;) {
+            for (;;) {
               const { done } = await reader.read();
               if (done) break;
             }
@@ -94,7 +95,8 @@ export function buildApp(deps: AppDeps): ServerType {
 
   app.route("/health", mountHealthRoutes({ redis }));
   app.route("/api/auth", mountAuthRoutes({ redis, auth }));
-  app.route("/api", mountDiagramRoutes({ config, redis }, relay));
+  app.route("/api/users", mountUserRoutes({ auth }));
+  app.route("/api", mountDiagramRoutes({ config, redis, auth }, relay));
   app.route("/api", mountVersionRoutes({ config, redis, auth }, relay));
   app.route("/api", mountConversionRoutes({ getResource }));
   app.route(
