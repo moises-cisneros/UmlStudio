@@ -12,6 +12,9 @@ const COMPACT_WIDTH_PX = 768;
 interface ViewProps {
   label: string;
   ago: string;
+  authorName?: string;
+  authorAvatar?: string;
+  authorColor?: string;
   versionId: string;
   canRestore: boolean;
   containerWidth?: number;
@@ -32,6 +35,9 @@ const buttonStyle: CSSProperties = {
 export function VersionPreviewBannerView({
   label,
   ago,
+  authorName,
+  authorAvatar,
+  authorColor,
   versionId,
   canRestore,
   containerWidth,
@@ -71,10 +77,32 @@ export function VersionPreviewBannerView({
       />
 
       <div
-        className="min-w-0 flex-1 text-caption font-semibold whitespace-nowrap"
+        className="min-w-0 flex-1 flex items-center gap-1.5 text-caption font-semibold whitespace-nowrap"
         title={label || undefined}
       >
-        Read-only preview{ago && ` · ${ago}`}
+        <span>Read-only preview</span>
+        {label && <span className="opacity-80">· {label}</span>}
+        {authorName && (
+          <span className="inline-flex items-center gap-1 font-normal opacity-90">
+            · by
+            {authorAvatar ? (
+              <img
+                src={authorAvatar}
+                alt=""
+                className="size-3.5 rounded-full object-cover"
+              />
+            ) : (
+              <span
+                className="size-2 rounded-full inline-block shrink-0"
+                style={{
+                  backgroundColor: authorColor || "var(--umlstudio-primary)",
+                }}
+              />
+            )}
+            <span className="font-medium">{authorName}</span>
+          </span>
+        )}
+        {ago && <span className="opacity-70 font-normal">· {ago}</span>}
       </div>
 
       <div
@@ -153,6 +181,9 @@ export const VersionPreviewBanner: FC<ContainerProps> = ({
     <VersionPreviewBannerView
       label={label}
       ago={ago}
+      authorName={summary?.authorName || summary?.author}
+      authorAvatar={summary?.authorAvatar}
+      authorColor={summary?.authorColor}
       versionId={preview.versionId}
       canRestore={canRestore}
       containerWidth={containerWidth}

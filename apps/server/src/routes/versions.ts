@@ -41,10 +41,27 @@ async function readVersionMeta(
   redis: Redis,
   diagramId: string,
   versionId: string,
+  auth?: AuthService,
 ): Promise<VersionSummary | null> {
   const meta = await redis.hGetAll(k.versionMeta(diagramId, versionId));
   if (!meta || Object.keys(meta).length === 0) return null;
   const parsedSeq = meta.seq ? Number(meta.seq) : NaN;
+
+  let authorName: string | undefined;
+  let authorAvatar: string | undefined;
+  let authorColor: string | undefined;
+
+  if (meta.author && auth) {
+    try {
+      const profile = await auth.getProfile(meta.author);
+      authorName = profile.name;
+      authorAvatar = profile.avatar;
+      authorColor = profile.color;
+    } catch {
+      // Author could be deleted or unknown; fallback gracefully
+    }
+  }
+
   return {
     id: versionId,
     diagramId,
@@ -55,6 +72,9 @@ async function readVersionMeta(
     librarySchemaVersion: meta.librarySchemaVersion ?? "",
     ...(Number.isFinite(parsedSeq) ? { seq: parsedSeq } : {}),
     ...(meta.author ? { author: meta.author } : {}),
+    ...(authorName ? { authorName } : {}),
+    ...(authorAvatar ? { authorAvatar } : {}),
+    ...(authorColor ? { authorColor } : {}),
   };
 }
 
@@ -232,7 +252,7 @@ export function mountVersionRoutes(
           ids.length > query.limit ? slice[slice.length - 1] : undefined;
 
         const summaries = await Promise.all(
-          slice.map((id) => readVersionMeta(redis, params.diagramId, id)),
+          slice.map((id) => readVersionMeta(redis, params.diagramId, id, auth)),
         );
         const versions = summaries.filter((s): s is VersionSummary => !!s);
         const total = await redis.zCard(k.versionsIndex(params.diagramId));
@@ -291,7 +311,12 @@ export function mountVersionRoutes(
           if (!c.get("isOwner"))
             setOwnerCookie(c, params.diagramId, config.OWNER_SECRET);
 
-          const summary = await readVersionMeta(redis, params.diagramId, vid);
+          const summary = await readVersionMeta(
+            redis,
+            params.diagramId,
+            vid,
+            auth,
+          );
           if (!summary)
             throw Errors.internal("version meta missing after commit");
 
@@ -303,7 +328,13 @@ export function mountVersionRoutes(
             createdAt: summary.createdAt,
             name: summary.name,
             kind: summary.kind,
-            ...(verifiedUser ? { actor: verifiedUser.name } : {}),
+            ...(verifiedUser
+              ? {
+                  actor: verifiedUser.name,
+                  authorId: verifiedUser.id,
+                  authorAvatar: verifiedUser.avatar,
+                }
+              : {}),
           });
 
           logger.info(
@@ -390,6 +421,7 @@ export function mountVersionRoutes(
             redis,
             params.diagramId,
             params.versionId,
+            auth,
           );
           if (!fromMeta) throw Errors.notFound("version not found");
 
@@ -399,6 +431,7 @@ export function mountVersionRoutes(
               ? `Before restoring #${fromMeta.seq}`
               : `Before restoring snapshot ${params.versionId.slice(0, 8)}`;
 
+          const verifiedUser = c.get("user");
           const result = await restoreVersion(redis, {
             diagramId: params.diagramId,
             preRestoreBody,
@@ -407,7 +440,7 @@ export function mountVersionRoutes(
             headTtlSec: config.DIAGRAM_TTL_SECONDS,
             maxVersions: config.MAX_VERSIONS_PER_DIAGRAM,
             autoSnapshotName: autoName,
-            author: c.get("user")?.id ?? "",
+            author: verifiedUser?.id ?? "",
           });
 
           relay?.publishControl(params.diagramId, {
@@ -416,7 +449,13 @@ export function mountVersionRoutes(
             updatedAt: result.updatedAt,
             autoSnapshotVersionId: result.autoSnapshotVersionId,
             restoredFromVersionId: params.versionId,
-            ...(c.get("user") ? { actor: c.get("user")?.name ?? "" } : {}),
+            ...(verifiedUser
+              ? {
+                  actor: verifiedUser.name,
+                  authorId: verifiedUser.id,
+                  authorAvatar: verifiedUser.avatar,
+                }
+              : {}),
           });
 
           logger.info(

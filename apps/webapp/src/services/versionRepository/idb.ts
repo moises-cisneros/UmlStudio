@@ -20,6 +20,10 @@ export interface VersionMetaRow {
   kind: VersionKind;
   librarySchemaVersion: string;
   seq: number;
+  author?: string;
+  authorName?: string;
+  authorAvatar?: string;
+  authorColor?: string;
 }
 
 export interface VersionBodyRow {

@@ -10,8 +10,17 @@ import { k, type Redis } from "../../src/redis.js";
 import type { ControlEvent, Diagram } from "../../src/types.js";
 import type { RelayHook } from "../../src/http/app.js";
 
+import {
+  createAuthService,
+  createRedisUserRepository,
+  type AuthService,
+} from "../../src/services/auth-service.js";
+
+const TEST_JWT_SECRET = "cu08-test-jwt-secret-min-32-chars!!";
+
 describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Integration", () => {
   let redis: Redis;
+  let authService: AuthService;
   const config = loadConfig({
     ...process.env,
     OWNER_SECRET: "test-secret-test-secret-test-secret",
@@ -33,13 +42,29 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
 
   beforeEach(async () => {
     redis = await getRedis();
+    authService = createAuthService({
+      repo: createRedisUserRepository(redis),
+      jwtSecret: TEST_JWT_SECRET,
+    });
     publishedEvents.length = 0;
   });
 
-  function createTestApp(r: Redis) {
+  function createTestApp(r: Redis, auth?: AuthService) {
     const testApp = new Hono<AppEnv>();
-    testApp.route("/api", mountDiagramRoutes({ config, redis: r }, relayMock));
-    testApp.route("/api", mountVersionRoutes({ config, redis: r }, relayMock));
+    testApp.route(
+      "/api",
+      mountDiagramRoutes(
+        { config, redis: r, auth: auth ?? authService },
+        relayMock,
+      ),
+    );
+    testApp.route(
+      "/api",
+      mountVersionRoutes(
+        { config, redis: r, auth: auth ?? authService },
+        relayMock,
+      ),
+    );
     return testApp;
   }
 
@@ -83,6 +108,12 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
               },
             ],
           },
+          width: 0,
+          height: 0,
+          measured: {
+            width: 0,
+            height: 0,
+          },
         },
         {
           id: "class-order",
@@ -110,6 +141,12 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
               },
             ],
           },
+          width: 0,
+          height: 0,
+          measured: {
+            width: 0,
+            height: 0,
+          },
         },
       ],
       edges: [
@@ -124,6 +161,7 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
             targetMultiplicity: "*",
             sourceRole: "customer",
             targetRole: "orders",
+            points: [],
           },
         },
       ],
@@ -212,6 +250,12 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
             ],
             methods: [],
           },
+          width: 0,
+          height: 0,
+          measured: {
+            width: 0,
+            height: 0,
+          },
         },
       ],
       edges: [
@@ -221,12 +265,15 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
           type: "relationship",
           source: "class-order",
           target: "class-payment",
+          sourceHandle: "right",
+          targetHandle: "left",
           data: {
             type: "composition",
             sourceMultiplicity: "1",
             targetMultiplicity: "1",
             sourceRole: "order",
             targetRole: "payment",
+            points: [],
           },
         },
       ],
@@ -351,5 +398,127 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
     )) as unknown as Diagram;
     expect(undoneHead.nodes).toHaveLength(3);
     expect(undoneHead.nodes.some((n) => n.id === "class-payment")).toBe(true);
+  });
+
+  it("binds immutable snapshot authorship to verified authenticated user identity (CU-08 / CU-11)", async () => {
+    const testApp = createTestApp(redis);
+    const diagramId = "cu08-auth-diagram";
+
+    // 1. Arrange: Register an authenticated user
+    const userSession = await authService.register({
+      name: "Ada Lovelace",
+      email: "ada@umlstudio.com",
+      password: "secure-password-123",
+    });
+    const token = userSession.token;
+    const userId = userSession.user.id;
+
+    // Save initial diagram HEAD
+    const model: Diagram = {
+      version: "4.0.0",
+      id: diagramId,
+      title: "Auth Versioning Diagram",
+      type: "ClassDiagram",
+      assessments: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      nodes: [
+        {
+          id: "class-auth",
+          type: "class",
+          position: { x: 50, y: 50 },
+          width: 200,
+          height: 120,
+          measured: { width: 200, height: 120 },
+          data: {
+            name: "SessionAuth",
+            isAbstract: false,
+            attributes: [],
+            methods: [],
+          },
+        },
+      ],
+      edges: [],
+    };
+    await saveHead(redis, config, model);
+
+    // 2. Act: Commit snapshot with Authorization Bearer token
+    const commitRes = await testApp.request(
+      `http://localhost/api/diagrams/${diagramId}/versions`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: "Milestone 1 - Auth Core",
+          description: "Initial authenticated snapshot",
+          body: model,
+        }),
+      },
+    );
+
+    expect(commitRes.status).toBe(201);
+    const commitData = (await commitRes.json()) as {
+      id: string;
+      name: string;
+      author?: string;
+      authorName?: string;
+    };
+    expect(commitData.author).toBe(userId);
+    expect(commitData.authorName).toBe("Ada Lovelace");
+
+    // 3. Act: Query versions list - verify author resolution
+    const listRes = await testApp.request(
+      `http://localhost/api/diagrams/${diagramId}/versions?limit=5`,
+    );
+    expect(listRes.status).toBe(200);
+    const listData = (await listRes.json()) as {
+      versions: {
+        id: string;
+        name: string;
+        author?: string;
+        authorName?: string;
+        authorColor?: string;
+      }[];
+    };
+    expect(listData.versions).toHaveLength(1);
+    const firstVersion = listData.versions[0];
+    expect(firstVersion.author).toBe(userId);
+    expect(firstVersion.authorName).toBe("Ada Lovelace");
+    expect(firstVersion.authorColor).toBeDefined();
+
+    // 4. Act: Restore version with Authorization Bearer token
+    const restoreRes = await testApp.request(
+      `http://localhost/api/diagrams/${diagramId}/versions/${firstVersion.id}/restore`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(restoreRes.status).toBe(200);
+    const restoreData = (await restoreRes.json()) as {
+      autoSnapshotVersionId: string;
+    };
+
+    // Verify the pre-restore auto-snapshot records the authenticated author
+    const autoSnapshotMeta = await redis.hGetAll(
+      k.versionMeta(diagramId, restoreData.autoSnapshotVersionId),
+    );
+    expect(autoSnapshotMeta.author).toBe(userId);
+
+    // Verify WebSocket broadcast published actor as Ada Lovelace
+    const restoreEvent = publishedEvents.find(
+      (e) => e.diagramId === diagramId && e.control.type === "VERSION_RESTORED",
+    );
+    expect(restoreEvent).toBeDefined();
+    if (restoreEvent && restoreEvent.control.type === "VERSION_RESTORED") {
+      expect(restoreEvent.control.actor).toBe("Ada Lovelace");
+    }
   });
 });

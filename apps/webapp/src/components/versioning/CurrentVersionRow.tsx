@@ -90,7 +90,9 @@ export function CurrentVersionRowView({
     icon = CircleDot;
     iconColor = "var(--color-warning, #f59e0b)";
     statusBadge = t.unsavedChangesTitle;
-    subtitle = t.unsavedChangesSubtitle(relativeTime(latestSavedVersion.createdAt));
+    subtitle = t.unsavedChangesSubtitle(
+      relativeTime(latestSavedVersion.createdAt),
+    );
   }
 
   const Icon = icon;
@@ -100,7 +102,9 @@ export function CurrentVersionRowView({
       ref={ref}
       className={cn(
         "mb-3 flex flex-col rounded-(--umlstudio-chrome-radius-md) border border-uml-border bg-(--uml-node-bg) overflow-hidden shadow-sm",
-        !upToDate && Boolean(latestSavedVersion) && "border-l-4 border-l-(--color-warning,#f59e0b)",
+        !upToDate &&
+          Boolean(latestSavedVersion) &&
+          "border-l-4 border-l-(--color-warning,#f59e0b)",
         upToDate,
         className,
       )}

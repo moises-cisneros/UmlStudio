@@ -141,7 +141,7 @@ export function VersionListItemView({
       className={cn(
         "group relative mb-3 flex list-none flex-col rounded-(--umlstudio-chrome-radius-md) border border-uml-border bg-(--uml-node-bg) transition-all duration-150 shadow-sm overflow-hidden",
         isPreviewing &&
-        "ring-2 ring-(--umlstudio-primary) bg-(--umlstudio-surface-active) border-(--umlstudio-primary)",
+          "ring-2 ring-(--umlstudio-primary) bg-(--umlstudio-surface-active) border-(--umlstudio-primary)",
         version.failed && "border-l-4 border-l-destructive",
         className,
       )}
@@ -275,13 +275,41 @@ export function VersionListItemView({
             </p>
           )}
 
-          <div className="mt-2 flex items-center gap-1.5 text-[11px] text-(--umlstudio-text-muted) font-mono">
-            <Clock className="size-3 shrink-0" />
-            <span>{ago}</span>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-(--umlstudio-text-muted) font-mono">
+            <div className="flex items-center gap-1">
+              <Clock className="size-3 shrink-0" />
+              <span>{ago}</span>
+            </div>
+
+            {(version.authorName || version.author) && (
+              <div
+                className="flex items-center gap-1.5 rounded-full border border-uml-border px-2 py-0.5 text-[10px] text-foreground bg-(--umlstudio-surface-active) shadow-xs"
+                title={`Author: ${version.authorName || version.author}`}
+              >
+                {version.authorAvatar ? (
+                  <img
+                    src={version.authorAvatar}
+                    alt=""
+                    className="size-3 rounded-full object-cover"
+                  />
+                ) : (
+                  <span
+                    className="size-2 rounded-full shrink-0 flex items-center justify-center text-[8px]"
+                    style={{
+                      backgroundColor:
+                        version.authorColor || "var(--umlstudio-primary)",
+                    }}
+                    aria-hidden
+                  />
+                )}
+                <span className="truncate max-w-30 font-sans font-medium">
+                  {version.authorName || version.author}
+                </span>
+              </div>
+            )}
+
             {version.pending && (
-              <span className="text-(--umlstudio-accent)">
-                · {t.saving}
-              </span>
+              <span className="text-(--umlstudio-accent)">· {t.saving}</span>
             )}
             {version.failed && (
               <span className="text-destructive">· error</span>

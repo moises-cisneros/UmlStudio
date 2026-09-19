@@ -110,6 +110,7 @@ async function runAutoVersion(
         "auto",
         head.version,
         gzipJson(head),
+        head.userId ?? "",
       ],
     );
     didCommit = true;
