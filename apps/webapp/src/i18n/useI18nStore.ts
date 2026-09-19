@@ -15,7 +15,10 @@ const getInitialLocale = (): Locale => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === "es" || saved === "en") return saved;
-    if (typeof process !== "undefined" && (process.env.VITEST || process.env.NODE_ENV === "test")) {
+    if (
+      typeof process !== "undefined" &&
+      (process.env.VITEST || process.env.NODE_ENV === "test")
+    ) {
       return "en";
     }
     const browserLang = navigator.language.slice(0, 2).toLowerCase();

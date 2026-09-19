@@ -7,7 +7,9 @@ export type ModalName =
   | "AboutModal"
   | "DELETE_VERSION"
   | "CONFIRM_RESTORE"
-  | "RENAME_DIAGRAM";
+  | "RENAME_DIAGRAM"
+  | "USER_PROFILE";
+
 
 export interface ModalProps {
   [key: string]: unknown;
