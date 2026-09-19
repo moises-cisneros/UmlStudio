@@ -3,6 +3,7 @@ import { useModalContext } from "@/contexts/ModalContext";
 import { UMLDiagramType } from "@umlstudio/core";
 import { useNavigate } from "@tanstack/react-router";
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import {
   Tabs,
   TabsContent,
@@ -105,6 +106,11 @@ export const NewDiagramModal = () => {
   };
 
   const handleCreateDiagram = () => {
+    if (useAuthStore.getState().status !== "authenticated") {
+      closeModal();
+      navigate({ to: "/login", search: { redirect: "/" } });
+      return;
+    }
     const newId = createModelByTitleAndType(
       newDiagramTitle,
       UMLDiagramType.ClassDiagram,
@@ -121,7 +127,9 @@ export const NewDiagramModal = () => {
   const handleTabChange = (tab: "scratch" | "template") => {
     setActiveTab(tab);
     if (isDiagramNameDefault) {
-      setNewDiagramTitle(tab === "template" ? getTemplateTitle(selectedTemplate) : "");
+      setNewDiagramTitle(
+        tab === "template" ? getTemplateTitle(selectedTemplate) : "",
+      );
     }
   };
 
@@ -133,6 +141,11 @@ export const NewDiagramModal = () => {
   };
 
   const handleCreateFromTemplate = async () => {
+    if (useAuthStore.getState().status !== "authenticated") {
+      closeModal();
+      navigate({ to: "/login", search: { redirect: "/" } });
+      return;
+    }
     setError(null);
 
     try {

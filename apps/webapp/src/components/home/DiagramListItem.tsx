@@ -134,7 +134,7 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
       className={cn(
         "group relative flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-(--home-card-surface) px-3.5 py-2.5 shadow-xs transition-all duration-200 hover:border-(--dodger-blue)/40 hover:bg-(--home-surface-hover) hover:shadow-sm",
         isHighlighted &&
-        "animate-[diagram-highlight-pulse_2.4s_ease-out_forwards] border-(--dodger-blue) bg-accent-hover",
+          "animate-[diagram-highlight-pulse_2.4s_ease-out_forwards] border-(--dodger-blue) bg-accent-hover",
         isExpired && "opacity-60",
         className,
       )}
@@ -146,9 +146,7 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
             variant="ghost"
             size="icon-sm"
             aria-label={
-              isFavorite
-                ? t.dashboard.removeFavorite
-                : t.dashboard.addFavorite
+              isFavorite ? t.dashboard.removeFavorite : t.dashboard.addFavorite
             }
             aria-pressed={isFavorite}
             className={cn(
@@ -174,7 +172,10 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
 
         <div className="flex h-9 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border-subtle bg-muted/40">
           {isExpired ? (
-            <Unlink className="size-4 text-muted-foreground" aria-hidden="true" />
+            <Unlink
+              className="size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
           ) : previewState === "loading" ? (
             <Skeleton className="size-full rounded-none" />
           ) : lightDataUrl ? (
@@ -196,7 +197,10 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
               )}
             </div>
           ) : (
-            <FileCode2 className="size-4 text-muted-foreground" aria-hidden="true" />
+            <FileCode2
+              className="size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
           )}
         </div>
 

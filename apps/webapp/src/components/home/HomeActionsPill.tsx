@@ -52,9 +52,7 @@ export function HomeActionsPill({
                 }
                 onClick={chrome.toggleFavoritesOnly}
                 style={
-                  chrome.favoritesOnly
-                    ? { color: "rgb(244 63 94)" }
-                    : undefined
+                  chrome.favoritesOnly ? { color: "rgb(244 63 94)" } : undefined
                 }
               >
                 <Heart

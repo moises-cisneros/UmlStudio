@@ -22,6 +22,7 @@ import {
   Shield,
   Trash2,
   UserX,
+  Clock,
 } from "lucide-react";
 import type { UMLDiagramType } from "@umlstudio/core";
 import {
@@ -52,7 +53,6 @@ import { Badge } from "@umlstudio/ui/components/badge";
 import { Button } from "@umlstudio/ui/components/button";
 import {
   Card,
-  CardContent,
   CardFooter,
   CardHeader,
 } from "@umlstudio/ui/components/card";
@@ -100,7 +100,10 @@ export type RecentDiagram = {
   lastSharedView?: DiagramView;
 };
 
-export const formatRelativeLastModified = (lastModifiedAt: string, nowMs: number) => {
+export const formatRelativeLastModified = (
+  lastModifiedAt: string,
+  nowMs: number,
+) => {
   const parsedDate = new Date(lastModifiedAt);
   if (Number.isNaN(parsedDate.getTime())) {
     return "Unknown date";
@@ -207,15 +210,15 @@ export function DiagramActionsMenuView({
   const confirmCopy = pendingConfirm
     ? pendingConfirm === "delete"
       ? {
-        title: t.dashboard.confirmDeleteTitle,
-        description: t.dashboard.confirmDeleteDesc,
-        confirmLabel: t.dashboard.confirmDeleteBtn,
-      }
+          title: t.dashboard.confirmDeleteTitle,
+          description: t.dashboard.confirmDeleteDesc,
+          confirmLabel: t.dashboard.confirmDeleteBtn,
+        }
       : {
-        title: t.dashboard.confirmRemoveTitle,
-        description: t.dashboard.confirmRemoveDesc,
-        confirmLabel: t.dashboard.confirmRemoveBtn,
-      }
+          title: t.dashboard.confirmRemoveTitle,
+          description: t.dashboard.confirmRemoveDesc,
+          confirmLabel: t.dashboard.confirmRemoveBtn,
+        }
     : null;
 
   const stopIfNeeded = (
@@ -308,11 +311,7 @@ export function DiagramActionsMenuView({
                 disabled={!canDelete}
                 closeOnClick={false}
                 className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer"
-                title={
-                  canDelete
-                    ? undefined
-                    : t.dashboard.cannotDeleteCurrent
-                }
+                title={canDelete ? undefined : t.dashboard.cannotDeleteCurrent}
                 onClick={() => requestConfirm("delete")}
               >
                 <Trash2 className="size-4 shrink-0 text-destructive" />
@@ -402,17 +401,30 @@ export function DiagramActionsMenuView({
           if (!open) setPendingConfirm(null);
         }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{confirmCopy?.title}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmCopy?.description}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t.dashboard.cancel}</AlertDialogCancel>
+        <AlertDialogContent className="max-w-110 p-6 border border-destructive/20 bg-card shadow-2xl rounded-2xl">
+          <div className="flex flex-col items-center text-center gap-3">
+            <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center ring-8 ring-destructive/5">
+              <Trash2 className="size-6" aria-hidden="true" />
+            </div>
+            <AlertDialogHeader className="items-center text-center space-y-2">
+              <AlertDialogTitle className="text-lg font-bold text-foreground">
+                {confirmCopy?.title}
+              </AlertDialogTitle>
+              <div className="inline-flex items-center px-3 py-1 rounded-md bg-muted border border-border text-xs font-mono font-semibold text-foreground max-w-70 truncate">
+                {diagram.title || t.dashboard.emptyStateTitle}
+              </div>
+              <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed pt-1">
+                {confirmCopy?.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </div>
+          <AlertDialogFooter className="mt-6 flex flex-row items-center justify-end gap-3 sm:justify-end">
+            <AlertDialogCancel className="rounded-xl px-4 py-2 text-sm font-medium hover:bg-accent transition-colors">
+              {t.dashboard.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              className="rounded-xl px-4 py-2 text-sm font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
               onClick={() => {
                 if (pendingConfirm === "delete") {
                   onDelete();
@@ -421,6 +433,7 @@ export function DiagramActionsMenuView({
                 }
               }}
             >
+              <Trash2 className="size-4 mr-1.5" aria-hidden="true" />
               {confirmCopy?.confirmLabel}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -572,7 +585,7 @@ function DiagramPreview({
 }: DiagramPreviewProps) {
   const { t } = useTranslation();
   return (
-    <div className="flex aspect-16/10 w-full items-center justify-center">
+    <div className="flex aspect-16/10 w-full items-center justify-center rounded-xl border border-border/40 bg-muted/20 p-1.5 transition-all duration-300 group-hover:border-(--dodger-blue)/30 group-hover:bg-muted/30">
       {state === "expired" ? (
         <div className="flex flex-col items-center gap-2.5 text-center text-muted-foreground">
           <Unlink className="size-10" aria-hidden="true" />
@@ -586,11 +599,11 @@ function DiagramPreview({
           </div>
         </div>
       ) : state === "thumbnail" ? (
-        <div className="relative h-full w-full">
+        <div className="relative h-full w-full overflow-hidden rounded-lg">
           <img
             src={lightDataUrl!}
             alt={`${title} diagram preview`}
-            className="theme-thumbnail-image theme-thumbnail-light"
+            className="theme-thumbnail-image theme-thumbnail-light transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
           />
           {darkDataUrl && (
@@ -598,13 +611,13 @@ function DiagramPreview({
               src={darkDataUrl}
               alt=""
               aria-hidden="true"
-              className="theme-thumbnail-image theme-thumbnail-dark"
+              className="theme-thumbnail-image theme-thumbnail-dark transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
           )}
         </div>
       ) : state === "loading" ? (
-        <Skeleton className="size-full rounded-md" />
+        <Skeleton className="size-full rounded-lg" />
       ) : (
         <PreviewTile>{getDiagramTypeIcon(diagram.type, "size-9")}</PreviewTile>
       )}
@@ -694,10 +707,10 @@ export function DiagramCardView({
       ref={ref}
       role="listitem"
       className={cn(
-        "home-diagram-card group relative flex min-h-(--card-min-h) flex-col gap-0 overflow-hidden rounded-(--umlstudio-chrome-radius-lg) border border-(--umlstudio-chrome-border) bg-(--home-card-surface) py-0 shadow-(--umlstudio-chrome-shadow-floating) transition-all duration-280 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "home-diagram-card group relative flex min-h-(--card-min-h) flex-col gap-0 overflow-hidden rounded-(--umlstudio-chrome-radius-lg) border border-(--umlstudio-chrome-border) bg-(--home-card-surface) py-0 shadow-(--umlstudio-chrome-shadow-floating) transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-(--dodger-blue)/50 hover:shadow-[0_12px_28px_rgba(53,144,243,0.12)]",
         isHighlighted
           ? "animate-[diagram-highlight-pulse_2.4s_ease-out_forwards] bg-accent-hover shadow-[0_0_0_3px_color-mix(in_srgb,var(--home-accent-base)_35%,transparent)]"
-          : "hover:bg-accent-hover hover:shadow-[0_6px_16px_var(--home-shadow-card-hover)]",
+          : "hover:bg-accent-hover",
         className,
       )}
     >
@@ -718,19 +731,11 @@ export function DiagramCardView({
           isExpired ? "cursor-default" : "cursor-pointer",
         )}
       >
-        <CardHeader className="flex w-full flex-col gap-2 rounded-none px-4 pt-12 pb-2">
-          <DiagramPreview
-            diagram={diagram}
-            title={title}
-            lightDataUrl={lightDataUrl}
-            darkDataUrl={darkDataUrl}
-            state={previewState}
-          />
-
-          <CardContent className="mt-auto w-full px-0 text-left">
-            <p
+        <CardHeader className="flex w-full flex-col gap-2.5 rounded-none px-4 pt-3.5 pb-2">
+          <div className="flex w-full items-center justify-between gap-2">
+            <h3
               className={cn(
-                "line-clamp-2 text-sm leading-snug font-medium",
+                "min-w-0 flex-1 truncate text-sm font-semibold leading-none tracking-tight",
                 isUntitled
                   ? "text-muted-foreground italic"
                   : "text-(--home-text-strong)",
@@ -739,8 +744,51 @@ export function DiagramCardView({
               title={title}
             >
               {title}
-            </p>
-          </CardContent>
+            </h3>
+
+            <div className="relative z-20 flex shrink-0 items-center gap-0.5">
+              {onToggleFavorite && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-lg"
+                  aria-label={
+                    isFavorite
+                      ? t.dashboard.removeFavorite
+                      : t.dashboard.addFavorite
+                  }
+                  aria-pressed={isFavorite}
+                  className={cn(
+                    "pointer-events-auto transition-opacity home-card-control",
+                    isFavorite
+                      ? "text-rose-500 opacity-100"
+                      : "text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-rose-500",
+                  )}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onToggleFavorite();
+                  }}
+                >
+                  <Heart
+                    className="size-4.5"
+                    aria-hidden="true"
+                    fill={isFavorite ? "currentColor" : "none"}
+                  />
+                </Button>
+              )}
+
+              {actionsMenu}
+            </div>
+          </div>
+
+          <DiagramPreview
+            diagram={diagram}
+            title={title}
+            lightDataUrl={lightDataUrl}
+            darkDataUrl={darkDataUrl}
+            state={previewState}
+          />
         </CardHeader>
 
         <Separator className="mx-4 w-auto bg-border-subtle" />
@@ -751,13 +799,19 @@ export function DiagramCardView({
             isExpired && "opacity-50",
           )}
         >
-          <time
-            dateTime={diagram.lastModifiedAt}
-            title={new Date(diagram.lastModifiedAt).toLocaleString()}
-            className="truncate text-xs leading-tight font-medium text-muted-foreground"
-          >
-            {relativeDate}
-          </time>
+          <div className="flex items-center gap-1.5 min-w-0 truncate text-xs leading-tight font-medium text-muted-foreground">
+            <Clock
+              className="size-3.5 shrink-0 opacity-70"
+              aria-hidden="true"
+            />
+            <time
+              dateTime={diagram.lastModifiedAt}
+              title={new Date(diagram.lastModifiedAt).toLocaleString()}
+              className="truncate"
+            >
+              {relativeDate}
+            </time>
+          </div>
 
           <div className="flex shrink-0 items-center gap-1">
             <CardTag
@@ -770,40 +824,6 @@ export function DiagramCardView({
           </div>
         </CardFooter>
       </Link>
-
-      <div className="pointer-events-none absolute inset-x-3 top-3 z-20 flex items-start justify-between">
-        {onToggleFavorite ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-lg"
-            aria-label={
-              isFavorite ? t.dashboard.removeFavorite : t.dashboard.addFavorite
-            }
-            aria-pressed={isFavorite}
-            className={cn(
-              "pointer-events-auto transition-opacity",
-              isFavorite
-                ? "text-rose-500 opacity-100"
-                : "text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-rose-500 home-card-control",
-            )}
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleFavorite();
-            }}
-          >
-            <Heart
-              className="size-5"
-              aria-hidden="true"
-              fill={isFavorite ? "currentColor" : "none"}
-            />
-          </Button>
-        ) : (
-          <span />
-        )}
-
-        {actionsMenu}
-      </div>
     </Card>
   );
 }
@@ -902,12 +922,12 @@ export function DiagramCardComponent({
       onToggleFavorite={
         canToggleFavorite
           ? () => {
-            if (onToggleFavorite) {
-              onToggleFavorite(diagram);
-            } else if (isLocalDiagram) {
-              toggleFavorite(diagram.id);
+              if (onToggleFavorite) {
+                onToggleFavorite(diagram);
+              } else if (isLocalDiagram) {
+                toggleFavorite(diagram.id);
+              }
             }
-          }
           : undefined
       }
       actionsMenu={
@@ -922,6 +942,6 @@ export function DiagramCardComponent({
       }
     />
   );
-};
+}
 
 export const DiagramCard = DiagramCardComponent;

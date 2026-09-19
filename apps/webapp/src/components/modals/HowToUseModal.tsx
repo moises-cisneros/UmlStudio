@@ -8,13 +8,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@umlstudio/ui/components/tabs";
-import { Separator } from "@umlstudio/ui/components/separator";
 import type { HelpMenuVariant } from "@/components/home/HomeHelpMenu";
 import {
   EDITOR_SHORTCUTS,
   type EditorShortcutId,
 } from "@/hooks/useEditorShortcuts";
 import { formatCombo, keycaps, type Keycaps } from "@/utils/shortcutCaps";
+import { useTranslation } from "@/i18n";
+import type { TranslationDictionary } from "@/i18n/types";
 import NodeCreation from "assets/images/how-to-use-node-creation.png";
 import EdgeCreation from "assets/images/how-to-use-edge-creation.png";
 import NodeEdit from "assets/images/how-to-use-node-edit.png";
@@ -27,7 +28,7 @@ type HowToUseModalProps = {
 };
 
 const Kbd = ({ children }: { children: ReactNode }) => (
-  <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-border bg-muted px-1.5 font-mono text-xs font-medium text-foreground">
+  <kbd className="inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-md border border-border/80 bg-muted/80 px-1.5 font-mono text-[11px] font-semibold text-foreground shadow-[0_1px_0_1px_rgba(0,0,0,0.08)]">
     {children}
   </kbd>
 );
@@ -52,48 +53,44 @@ type Step = {
   alt?: string;
 };
 
-const steps = (caps: Keycaps): Step[] => [
+const steps = (caps: Keycaps, t: TranslationDictionary): Step[] => [
   {
-    title: "Add Node",
-    description:
-      "Drag and drop one of the elements on the left side into the editor area.",
+    title: t.help.stepAddNodeTitle,
+    description: t.help.stepAddNodeDesc,
     image: NodeCreation,
     alt: "Dragging a palette element onto the canvas to create a node",
   },
   {
-    title: "Add Edge",
-    description:
-      "Select the source class with a single click — blue circles appear around it marking the connection points. Click and hold one, then drag it to another node to create an edge.",
+    title: t.help.stepAddEdgeTitle,
+    description: t.help.stepAddEdgeDesc,
     image: EdgeCreation,
     alt: "Two class nodes connected by an association edge",
   },
   {
-    title: "Edit Class",
-    description:
-      "Double-click a class to open its editor, where you can change its name, stereotype, attributes and methods.",
+    title: t.help.stepEditClassTitle,
+    description: t.help.stepEditClassDesc,
     image: NodeEdit,
     alt: "The class edit popover open beside a selected node",
   },
   {
-    title: "Delete Class",
+    title: t.help.stepDeleteClassTitle,
     description: (
       <>
-        Select it with a single click and press <Kbd>{caps.delete}</Kbd>.
+        {t.help.stepDeleteClassDesc} <Kbd>{caps.delete}</Kbd>.
       </>
     ),
   },
   {
-    title: "Move Class",
-    description:
-      "Select it with a single click, then use the arrow keys or drag and drop it.",
+    title: t.help.stepMoveClassTitle,
+    description: t.help.stepMoveClassDesc,
     image: NodeMove,
     alt: "A selected class node showing its move and delete affordances",
   },
   {
-    title: "Undo & Redo",
+    title: t.help.stepUndoRedoTitle,
     description: (
       <>
-        Press <Keys keys={[caps.mod, "Z"]} caps={caps} /> to undo and{" "}
+        <Keys keys={[caps.mod, "Z"]} caps={caps} /> {t.help.stepUndoRedoDesc}{" "}
         <Keys
           keys={
             caps.isMac
@@ -101,8 +98,7 @@ const steps = (caps: Keycaps): Step[] => [
               : [caps.mod, caps.shift, "Z"]
           }
           caps={caps}
-        />{" "}
-        to redo your changes.
+        />
       </>
     ),
   },
@@ -122,62 +118,88 @@ type GroupTitle = "Selection" | "Editing" | "History" | "View" | "File";
 
 const libraryShortcuts = (
   caps: Keycaps,
+  t: TranslationDictionary,
 ): Record<
   UmlStudioShortcutId,
   { label: string; group: GroupTitle; displayCombos?: string[][] }
 > => ({
-  "select-all": { label: "Select all", group: "Selection" },
-  "clear-selection": { label: "Clear selection", group: "Selection" },
+  "select-all": { label: t.help.selectAll, group: "Selection" },
+  "clear-selection": { label: t.help.clearSelection, group: "Selection" },
   delete: {
-    label: "Delete selection",
+    label: t.help.deleteSelection,
     group: "Editing",
     displayCombos: [[caps.delete]],
   },
-  copy: { label: "Copy", group: "Editing" },
-  cut: { label: "Cut", group: "Editing" },
-  paste: { label: "Paste", group: "Editing" },
-  duplicate: { label: "Duplicate", group: "Editing" },
+  copy: { label: t.help.copy, group: "Editing" },
+  cut: { label: t.help.cut, group: "Editing" },
+  paste: { label: t.help.paste, group: "Editing" },
+  duplicate: { label: t.help.duplicate, group: "Editing" },
   "move-selection": {
-    label: "Nudge selection",
+    label: t.help.nudgeSelection,
     group: "Editing",
     displayCombos: [["←"], ["↑"], ["→"], ["↓"]],
   },
-  undo: { label: "Undo", group: "History" },
-  redo: { label: "Redo", group: "History" },
-  "zoom-in": { label: "Zoom in", group: "View" },
-  "zoom-out": { label: "Zoom out", group: "View" },
-  "reset-zoom": { label: "Zoom to 100%", group: "View" },
-  "fit-view": { label: "Zoom to fit", group: "View" },
-  "zoom-to-selection": { label: "Zoom to selection", group: "View" },
+  undo: { label: t.help.undo, group: "History" },
+  redo: { label: t.help.redo, group: "History" },
+  "zoom-in": { label: t.help.zoomIn, group: "View" },
+  "zoom-out": { label: t.help.zoomOut, group: "View" },
+  "reset-zoom": { label: t.help.resetZoom, group: "View" },
+  "fit-view": { label: t.help.fitView, group: "View" },
+  "zoom-to-selection": { label: t.help.zoomToSelection, group: "View" },
 });
 
-const EDITOR_SHORTCUT_LABELS: Record<EditorShortcutId, string> = {
-  "save-version": "Save a version",
-  "toggle-version-history": "Toggle version history",
-};
+const getEditorShortcutLabels = (
+  t: TranslationDictionary,
+): Record<EditorShortcutId, string> => ({
+  "save-version": t.help.saveVersion,
+  "toggle-version-history": t.help.toggleVersionHistory,
+});
 
-const gestures = (caps: Keycaps): Partial<Record<GroupTitle, Shortcut[]>> => ({
+const gestures = (
+  caps: Keycaps,
+  t: TranslationDictionary,
+): Partial<Record<GroupTitle, Shortcut[]>> => ({
   Selection: [
-    { combos: [[caps.shift, "Click"]], label: "Add / remove from selection" },
-    { combos: [[caps.shift, "Drag"]], label: "Box-select an area" },
+    { combos: [[caps.shift, "Click"]], label: t.help.gestureAddRemove },
+    { combos: [[caps.shift, "Drag"]], label: t.help.gestureBoxSelect },
   ],
   View: [
-    { combos: [["Scroll"], ["Drag"]], label: "Pan the canvas" },
-    { combos: [[caps.mod, "Scroll"]], label: "Zoom in / out" },
+    { combos: [["Scroll"], ["Drag"]], label: t.help.gesturePan },
+    { combos: [[caps.mod, "Scroll"]], label: t.help.gestureZoom },
   ],
 });
 
 const CANVAS_GROUPS: GroupTitle[] = ["Selection", "Editing", "History", "View"];
 
+const getGroupTitleLabel = (
+  group: GroupTitle,
+  t: TranslationDictionary,
+): string => {
+  switch (group) {
+    case "Selection":
+      return t.help.groupSelection;
+    case "Editing":
+      return t.help.groupEditing;
+    case "History":
+      return t.help.groupHistory;
+    case "View":
+      return t.help.groupView;
+    case "File":
+      return t.help.groupFile;
+  }
+};
+
 const shortcutGroups = (
   caps: Keycaps,
   variant: HelpMenuVariant,
+  t: TranslationDictionary,
 ): ShortcutGroup[] => {
-  const library = libraryShortcuts(caps);
-  const canvasGestures = gestures(caps);
+  const library = libraryShortcuts(caps, t);
+  const canvasGestures = gestures(caps, t);
+  const editorLabels = getEditorShortcutLabels(t);
 
   const canvas = CANVAS_GROUPS.map((title) => ({
-    title,
+    title: getGroupTitleLabel(title, t),
     shortcuts: [
       ...UMLSTUDIO_SHORTCUTS.filter(
         (shortcut) => library[shortcut.id].group === title,
@@ -194,28 +216,48 @@ const shortcutGroups = (
   return [
     ...canvas,
     {
-      title: "File",
+      title: getGroupTitleLabel("File", t),
       shortcuts: EDITOR_SHORTCUTS.map(({ id, combo }) => ({
-        label: EDITOR_SHORTCUT_LABELS[id],
+        label: editorLabels[id],
         combos: [formatCombo(combo, caps)],
       })),
     },
   ];
 };
 
-const Walkthrough = ({ caps }: { caps: Keycaps }) => (
-  <ol className="flex flex-col gap-8">
-    {steps(caps).map((step) => (
-      <li key={step.title} className="flex flex-col gap-2">
-        <h3 className="text-base font-semibold">{step.title}</h3>
-        <p className="text-sm text-muted-foreground">{step.description}</p>
+const Walkthrough = ({
+  caps,
+  t,
+}: {
+  caps: Keycaps;
+  t: TranslationDictionary;
+}) => (
+  <ol className="flex flex-col gap-4">
+    {steps(caps, t).map((step, idx) => (
+      <li
+        key={step.title}
+        className="flex flex-col gap-2.5 rounded-xl border border-border/60 bg-card/40 p-4 shadow-xs transition-colors hover:border-border"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-(--dodger-blue)/15 text-xs font-bold text-(--dodger-blue)">
+            {idx + 1}
+          </span>
+          <h3 className="text-sm font-semibold text-foreground">
+            {step.title}
+          </h3>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed pl-8">
+          {step.description}
+        </p>
         {step.image && (
-          <img
-            src={step.image}
-            alt={step.alt}
-            loading="lazy"
-            className="mt-1 block w-full rounded-lg border border-border"
-          />
+          <div className="mt-1 ml-8 overflow-hidden rounded-lg border border-border/70 bg-muted/20">
+            <img
+              src={step.image}
+              alt={step.alt}
+              loading="lazy"
+              className="block w-full object-contain"
+            />
+          </div>
         )}
       </li>
     ))}
@@ -225,22 +267,28 @@ const Walkthrough = ({ caps }: { caps: Keycaps }) => (
 const Shortcuts = ({
   groups,
   caps,
+  t,
 }: {
   groups: ShortcutGroup[];
   caps: Keycaps;
+  t: TranslationDictionary;
 }) => (
-  <div className="flex flex-col gap-5">
-    {groups.map((group, groupIndex) => (
-      <div key={group.title} className="flex flex-col gap-3">
-        {groupIndex > 0 && <Separator />}
-
-        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          {group.title}
-        </p>
-        <dl className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-2.5">
+  <div className="flex flex-col gap-3.5">
+    {groups.map((group) => (
+      <div
+        key={group.title}
+        className="flex flex-col gap-2.5 rounded-xl border border-border/60 bg-card/40 p-3.5 shadow-xs"
+      >
+        <div className="flex items-center gap-2">
+          <span className="size-2 rounded-full bg-(--dodger-blue)" />
+          <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            {group.title}
+          </p>
+        </div>
+        <dl className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-2 text-xs">
           {group.shortcuts.map((shortcut) => (
             <div key={shortcut.label} className="contents">
-              <dt className="text-sm text-foreground">{shortcut.label}</dt>
+              <dt className="text-foreground font-medium">{shortcut.label}</dt>
               <dd className="flex items-center justify-end gap-1.5 text-right">
                 {shortcut.combos.map((combo, comboIndex) => (
                   <span
@@ -248,7 +296,9 @@ const Shortcuts = ({
                     className="inline-flex items-center gap-1.5"
                   >
                     {comboIndex > 0 && (
-                      <span className="text-xs text-muted-foreground">or</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {t.help.or}
+                      </span>
                     )}
                     <Keys keys={combo} caps={caps} />
                   </span>
@@ -259,9 +309,8 @@ const Shortcuts = ({
         </dl>
       </div>
     ))}
-    <p className="text-xs text-muted-foreground">
-      Shortcuts are ignored while editing text in a field — except saving as
-      JSON, which always works.
+    <p className="text-xs text-muted-foreground italic px-1 pt-1">
+      {t.help.shortcutsDisclaimer}
     </p>
   </div>
 );
@@ -271,25 +320,42 @@ export const HowToUseModal = ({
   isMac,
   onClose,
 }: HowToUseModalProps) => {
+  const { t } = useTranslation();
   const caps = keycaps(isMac);
 
   return (
-    <div className="flex flex-col gap-6 text-foreground">
-      <Tabs defaultValue="walkthrough" className="gap-6">
-        <TabsList className="w-full">
-          <TabsTrigger value="walkthrough">Walkthrough</TabsTrigger>
-          <TabsTrigger value="shortcuts">Shortcuts</TabsTrigger>
+    <div className="flex flex-col gap-5 text-foreground">
+      <Tabs defaultValue="walkthrough" className="gap-5">
+        <TabsList className="w-full grid grid-cols-2 rounded-xl p-1 bg-muted/60 border border-border/50">
+          <TabsTrigger
+            value="walkthrough"
+            className="rounded-lg text-xs font-semibold"
+          >
+            {t.help.tabWalkthrough}
+          </TabsTrigger>
+          <TabsTrigger
+            value="shortcuts"
+            className="rounded-lg text-xs font-semibold"
+          >
+            {t.help.tabShortcuts}
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="walkthrough">
-          <Walkthrough caps={caps} />
+        <TabsContent
+          value="walkthrough"
+          className="max-h-[60vh] overflow-y-auto pr-1"
+        >
+          <Walkthrough caps={caps} t={t} />
         </TabsContent>
-        <TabsContent value="shortcuts">
-          <Shortcuts groups={shortcutGroups(caps, variant)} caps={caps} />
+        <TabsContent
+          value="shortcuts"
+          className="max-h-[60vh] overflow-y-auto pr-1"
+        >
+          <Shortcuts groups={shortcutGroups(caps, variant, t)} caps={caps} t={t} />
         </TabsContent>
       </Tabs>
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
-          Close
+      <DialogFooter className="pt-2">
+        <Button variant="outline" onClick={onClose} className="rounded-xl">
+          {t.help.close}
         </Button>
       </DialogFooter>
     </div>

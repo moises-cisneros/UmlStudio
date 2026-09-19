@@ -72,7 +72,10 @@ export const RenameDiagramModal: React.FC<RenameDiagramModalProps> = ({
     <form onSubmit={handleSave} className="flex min-w-0 flex-col gap-4">
       <HomeDialogContent testId="rename-diagram-dialog">
         <Field className="gap-1.5">
-          <FieldLabel htmlFor="diagram-new-title" className="text-xs font-semibold text-foreground">
+          <FieldLabel
+            htmlFor="diagram-new-title"
+            className="text-xs font-semibold text-foreground"
+          >
             {t.newDiagram.nameLabel}
           </FieldLabel>
           <Input

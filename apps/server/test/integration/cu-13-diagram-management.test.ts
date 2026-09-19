@@ -9,6 +9,13 @@ import type { ControlEvent, Diagram } from "../../src/types.js";
 import type { RelayHook } from "../../src/http/app.js";
 
 import { errorHandler } from "../../src/http/middleware/errors.js";
+import {
+  createAuthService,
+  createRedisUserRepository,
+  type AuthService,
+} from "../../src/services/auth-service.js";
+
+const TEST_JWT_SECRET = "cu13-test-jwt-secret-min-32-chars!!";
 
 describe("INT-CU13: Case of Use CU-13 Diagram Management Integration (Rename, Delete, Share)", () => {
   let redis: Redis;
@@ -29,10 +36,13 @@ describe("INT-CU13: Case of Use CU-13 Diagram Management Integration (Rename, De
     publishedEvents.length = 0;
   });
 
-  function createTestApp(r: Redis) {
+  function createTestApp(r: Redis, auth?: AuthService) {
     const testApp = new Hono<AppEnv>();
     testApp.onError(errorHandler);
-    testApp.route("/api", mountDiagramRoutes({ config, redis: r }, relayMock));
+    testApp.route(
+      "/api",
+      mountDiagramRoutes({ config, redis: r, auth }, relayMock),
+    );
     return testApp;
   }
 
@@ -58,11 +68,27 @@ describe("INT-CU13: Case of Use CU-13 Diagram Management Integration (Rename, De
             name: "Order",
             isAbstract: false,
             attributes: [
-              { id: "a1", name: "orderId", type: "UUID", visibility: "private" },
-              { id: "a2", name: "total", type: "BigDecimal", visibility: "private" },
+              {
+                id: "a1",
+                name: "orderId",
+                type: "UUID",
+                visibility: "private",
+              },
+              {
+                id: "a2",
+                name: "total",
+                type: "BigDecimal",
+                visibility: "private",
+              },
             ],
             methods: [
-              { id: "m1", name: "calculateTotal", returnType: "BigDecimal", visibility: "public", parameters: [] },
+              {
+                id: "m1",
+                name: "calculateTotal",
+                returnType: "BigDecimal",
+                visibility: "public",
+                parameters: [],
+              },
             ],
           },
         },
@@ -101,7 +127,9 @@ describe("INT-CU13: Case of Use CU-13 Diagram Management Integration (Rename, De
     expect(patchBody.headRev).toBeGreaterThan(1);
 
     // Verify Redis JSON head updated
-    const redisJson = (await redis.json.get(k.diagram(diagramId), { path: "$" })) as Diagram[];
+    const redisJson = (await redis.json.get(k.diagram(diagramId), {
+      path: "$",
+    })) as Diagram[];
     expect(redisJson[0]?.title).toBe(newTitle);
 
     // Verify Redis metadata hash updated
@@ -109,7 +137,9 @@ describe("INT-CU13: Case of Use CU-13 Diagram Management Integration (Rename, De
     expect(metaTitle).toBe(newTitle);
 
     // Verify Relay emitted DIAGRAM_RENAMED event
-    const renameEvent = publishedEvents.find((e) => e.diagramId === diagramId && e.control.type === "DIAGRAM_RENAMED");
+    const renameEvent = publishedEvents.find(
+      (e) => e.diagramId === diagramId && e.control.type === "DIAGRAM_RENAMED",
+    );
     expect(renameEvent).toBeDefined();
     if (renameEvent && renameEvent.control.type === "DIAGRAM_RENAMED") {
       expect(renameEvent.control.title).toBe(newTitle);
@@ -125,11 +155,14 @@ describe("INT-CU13: Case of Use CU-13 Diagram Management Integration (Rename, De
     expect(emptyTitleRes.status).toBe(422);
 
     // Non-existent diagram
-    const notFoundRes = await testApp.request(`/api/diagrams/non-existent-diagram-id`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Valid Title" }),
-    });
+    const notFoundRes = await testApp.request(
+      `/api/diagrams/non-existent-diagram-id`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Valid Title" }),
+      },
+    );
     expect(notFoundRes.status).toBe(404);
 
     // 5. Act & Assert: Cascade Delete via DELETE /api/diagrams/:id
@@ -139,19 +172,87 @@ describe("INT-CU13: Case of Use CU-13 Diagram Management Integration (Rename, De
     expect(deleteRes.status).toBe(204);
 
     // Verify relay emitted DIAGRAM_DELETED
-    const deleteEvent = publishedEvents.find((e) => e.diagramId === diagramId && e.control.type === "DIAGRAM_DELETED");
+    const deleteEvent = publishedEvents.find(
+      (e) => e.diagramId === diagramId && e.control.type === "DIAGRAM_DELETED",
+    );
     expect(deleteEvent).toBeDefined();
 
     // Verify GET returns 404 Not Found after deletion
-    const postDeleteGetRes = await testApp.request(`/api/diagrams/${diagramId}`);
+    const postDeleteGetRes = await testApp.request(
+      `/api/diagrams/${diagramId}`,
+    );
     expect(postDeleteGetRes.status).toBe(404);
 
     // Verify subsequent PATCH returns 404 Not Found
-    const postDeletePatchRes = await testApp.request(`/api/diagrams/${diagramId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Another Title" }),
-    });
+    const postDeletePatchRes = await testApp.request(
+      `/api/diagrams/${diagramId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Another Title" }),
+      },
+    );
     expect(postDeletePatchRes.status).toBe(404);
+  });
+
+  it("enforces authentication on diagram creation: rejects anonymous creation and binds authenticated userId to diagram and index", async () => {
+    const auth = createAuthService({
+      repo: createRedisUserRepository(redis),
+      jwtSecret: TEST_JWT_SECRET,
+    });
+    const testApp = createTestApp(redis, auth);
+
+    // 1. Anonymous creation rejected with 401
+    const unauthRes = await testApp.request("/api/diagrams", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Unauthorized Diagram" }),
+    });
+    expect(unauthRes.status).toBe(401);
+
+    // 2. Authenticated creation succeeds and binds userId
+    const { token, user } = await auth.register({
+      name: "Architect User",
+      email: "architect@example.com",
+      password: "Password123!",
+    });
+    const authRes = await testApp.request("/api/diagrams", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: "Architecture Model CU-05",
+        type: "ClassDiagram",
+      }),
+    });
+    expect(authRes.status).toBe(201);
+    const created = (await authRes.json()) as Diagram;
+    expect(created.id).toBeDefined();
+    expect(created.userId).toBe(user.id);
+    expect(created.title).toBe("Architecture Model CU-05");
+
+    // 3. Verify indexed in user diagrams set
+    const userDiagrams = await redis.sMembers(k.userDiagrams(user.id));
+    expect(userDiagrams).toContain(created.id);
+
+    // 4. Verify GET /api/user/diagrams returns the diagram for this user
+    const listRes = await testApp.request("/api/user/diagrams", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    expect(listRes.status).toBe(200);
+    const list = (await listRes.json()) as Array<{ id: string; title: string }>;
+    expect(list.some((d) => d.id === created.id)).toBe(true);
+
+    // 5. Cascade delete also cleans up userDiagrams set
+    const delRes = await testApp.request(`/api/diagrams/${created.id}`, {
+      method: "DELETE",
+    });
+    expect(delRes.status).toBe(204);
+    const remaining = await redis.sMembers(k.userDiagrams(user.id));
+    expect(remaining).not.toContain(created.id);
   });
 });

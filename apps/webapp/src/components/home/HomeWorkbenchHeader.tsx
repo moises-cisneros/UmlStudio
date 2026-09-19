@@ -1,9 +1,5 @@
 import type { FC } from "react";
-import {
-  Search,
-  FolderInput,
-  Plus,
-} from "lucide-react";
+import { Search, FolderInput, Plus } from "lucide-react";
 import { Button } from "@umlstudio/ui/components/button";
 import { BrandLockup } from "@/components/navbar/BrandLockup";
 import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher";

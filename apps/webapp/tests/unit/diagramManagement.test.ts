@@ -63,10 +63,15 @@ describe("CU-13: Diagram Management (Rename, Delete, Share)", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [calledUrl, calledOpts] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [calledUrl, calledOpts] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
     expect(calledUrl).toContain("/api/diagrams/shared-diag-99");
     expect(calledOpts.method).toBe("PATCH");
-    expect(calledOpts.body).toBe(JSON.stringify({ title: "Inventory Service Domain" }));
+    expect(calledOpts.body).toBe(
+      JSON.stringify({ title: "Inventory Service Domain" }),
+    );
     expect(result.title).toBe("Inventory Service Domain");
     expect(result.headRev).toBe(4);
   });
