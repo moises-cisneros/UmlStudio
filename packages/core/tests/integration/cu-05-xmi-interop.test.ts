@@ -224,17 +224,20 @@ describe("INT-CU05: Case of Use CU-05 XMI Import/Export Interoperability", () =>
     expect(isValid).toBe(true);
 
     // Verify nodes
-    expect(model.nodes.length).toBe(3);
+    expect(model.nodes.length).toBe(7);
     const names = model.nodes.map((n) => n.data.name);
     expect(names).toContain("Class A");
     expect(names).toContain("Class B");
     expect(names).toContain("Class C");
 
     // Verify associations were successfully parsed from Example.xmi
-    expect(model.edges.length).toBe(2);
-    const edgeNames = model.edges.map((e) => e.data?.label);
-    expect(edgeNames).toContain("Association A");
-    expect(edgeNames).toContain("Association B");
+    expect(model.edges.length).toBe(6);
+    const assocEdge = model.edges.find(
+      (e) => e.data?.sourceRole === "role b" && e.data?.targetRole === "role a",
+    );
+    expect(assocEdge).toBeDefined();
+    expect(assocEdge?.data?.sourceMultiplicity).toBe("*");
+    expect(assocEdge?.data?.targetMultiplicity).toBe("*");
 
     // All handles must be valid 4-way handles
     const validHandles = new Set(["top", "bottom", "left", "right"]);

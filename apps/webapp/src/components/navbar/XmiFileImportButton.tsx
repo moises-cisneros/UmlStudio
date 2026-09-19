@@ -45,6 +45,16 @@ export function DiagramFileImportItem({
   );
 }
 
+export const JsonFileImportButton: React.FC<{ close: () => void }> = ({
+  close,
+}) => (
+  <DiagramFileImportItem
+    label="Importar JSON"
+    accept=".json,application/json"
+    onClose={close}
+  />
+);
+
 export const XmiFileImportButton: React.FC<{ close: () => void }> = ({
   close,
 }) => (
