@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useEditorContext } from "@/contexts";
 import {
   UmlStudioEditor,
@@ -167,8 +173,8 @@ export const UmlStudioShared: React.FC = () => {
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !diagramId || !viewType || !diagram) return;
-    if (isCollaborationView && !collaborationUser) return;
+    if (!container || !diagramId || !viewType || !diagram || !collaborationUser)
+      return;
 
     let instance: UmlStudioEditor | null = null;
     let modelChangeSubscriptionId: number | null = null;
@@ -192,17 +198,20 @@ export const UmlStudioShared: React.FC = () => {
           methods: tr.agent.methods || baseLabels.methods,
         },
         collaborationEnabled: true,
-        collaboration:
-          isCollaborationView && collaborationUser
-            ? {
-              enabled: true,
-              user: collaborationUser,
-              showPresence: true,
-              showCursors: true,
-              showSelectionHighlights: true,
-              showFollow: true,
-            }
-            : undefined,
+        collaboration: {
+          enabled: true,
+          user: collaborationUser,
+          showPresence: false,
+          showCursors: true,
+          showSelectionHighlights: true,
+          showFollow: true,
+          onLockedElementAccess: (_elementId, lockUserName) => {
+            const message =
+              baseLabels.elementLockedBy?.(lockUserName) ??
+              `Este elemento está siendo editado por ${lockUserName}`;
+            toast.warn(message);
+          },
+        },
       };
 
       if (viewType === DiagramView.LECTOR) {
@@ -217,12 +226,7 @@ export const UmlStudioShared: React.FC = () => {
       editorRef.current = instance;
       setEditor(instance);
 
-      if (
-        [
-          DiagramView.EDITOR,
-          DiagramView.LECTOR,
-        ].includes(viewType)
-      ) {
+      if ([DiagramView.EDITOR, DiagramView.LECTOR].includes(viewType)) {
         wsManagerRef.current = new WebSocketManager(
           diagramId,
           instance,
@@ -244,7 +248,7 @@ export const UmlStudioShared: React.FC = () => {
             const isLocalRestore =
               state.pendingRestoreFromId === event.restoredFromVersionId ||
               state.undoRestore?.restoredFromVersionId ===
-              event.restoredFromVersionId;
+                event.restoredFromVersionId;
             if (!isLocalRestore) {
               const actor = event.actor || "A collaborator";
               DiagramApiClient.fetchDiagram(diagramId, {
@@ -353,7 +357,7 @@ export const UmlStudioShared: React.FC = () => {
       }
       setCanRestoreFromPreview(
         prePreviewFingerprintRef.current !==
-        structuralFingerprint(preview.body),
+          structuralFingerprint(preview.body),
       );
       editor.setPreviewMode(true);
       try {

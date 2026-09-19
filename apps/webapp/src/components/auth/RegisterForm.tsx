@@ -72,9 +72,7 @@ export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
         return;
       }
       const message =
-        err instanceof Error
-          ? err.message
-          : t.auth.registrationFailed;
+        err instanceof Error ? err.message : t.auth.registrationFailed;
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -130,7 +128,10 @@ export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
       </Field>
 
       <Field>
-        <FieldLabel htmlFor="register-password" className="text-xs font-semibold">
+        <FieldLabel
+          htmlFor="register-password"
+          className="text-xs font-semibold"
+        >
           {t.auth.passwordLabel}
         </FieldLabel>
         <div className="relative">
@@ -152,7 +153,9 @@ export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground focus:outline-none"
-            aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+            aria-label={
+              showPassword ? t.auth.hidePassword : t.auth.showPassword
+            }
           >
             {showPassword ? (
               <EyeOff className="size-4" />
@@ -221,7 +224,9 @@ export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
         disabled={submitting}
         className="group relative mt-1 flex w-full items-center justify-center gap-2 overflow-hidden bg-(--dodger-blue) font-semibold text-white shadow-md transition-all hover:bg-(--dodger-blue)/90 hover:shadow-lg"
       >
-        <span>{submitting ? t.auth.creatingAccount : t.auth.registerButton}</span>
+        <span>
+          {submitting ? t.auth.creatingAccount : t.auth.registerButton}
+        </span>
         <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
       </Button>
 

@@ -8,7 +8,7 @@ import {
   MessageType,
   type YjsSync,
 } from "@umlstudio/core/internals";
-import { startRelayServer } from "../../src/ws.js";
+import { startRelayServer, WS_UNAUTHORIZED_CLOSE_CODE } from "../../src/ws.js";
 import { COMMIT_VERSION_SOURCE, k } from "../../src/redis.js";
 
 // Helper: allocate an ephemeral free port for the relay server
@@ -41,6 +41,12 @@ interface VirtualPeer {
   close: () => Promise<void>;
 }
 
+interface ConnectOptions {
+  user?: { id?: string; name: string; color: string; imageUrl?: string };
+  mode?: "local" | "shared";
+  token?: string;
+}
+
 function encodeFrame(
   type: MessageType,
   payload: Uint8Array = new Uint8Array(0),
@@ -54,12 +60,19 @@ function encodeFrame(
 function connectPeer(
   port: number,
   diagramId: string,
-  user?: { name: string; color: string },
+  optionsOrUser?: ConnectOptions | { name: string; color: string },
 ): VirtualPeer {
   const { ydoc, sync } = createHeadlessSync();
-  const ws = new WebSocket(
-    `ws://127.0.0.1:${port}?diagramId=${encodeURIComponent(diagramId)}`,
-  );
+  const options: ConnectOptions =
+    optionsOrUser && "name" in optionsOrUser && !("user" in optionsOrUser)
+      ? { user: optionsOrUser }
+      : ((optionsOrUser as ConnectOptions) ?? {});
+
+  const queryParams = new URLSearchParams({ diagramId });
+  if (options.mode) queryParams.set("mode", options.mode);
+  if (options.token) queryParams.set("token", options.token);
+
+  const ws = new WebSocket(`ws://127.0.0.1:${port}?${queryParams.toString()}`);
 
   sync.setSendBroadcastMessage((data) => {
     if (ws.readyState === WebSocket.OPEN) {
@@ -84,7 +97,7 @@ function connectPeer(
     }
   });
 
-  const ready = new Promise<void>((resolve) => {
+  const ready = new Promise<void>((resolve, reject) => {
     ws.once("open", () => {
       ws.send(
         JSON.stringify({ diagramData: encodeFrame(MessageType.YjsSYNC) }),
@@ -93,11 +106,12 @@ function connectPeer(
         JSON.stringify({ diagramData: encodeFrame(MessageType.AwarenessSync) }),
       );
       sync.broadcastFullState();
-      if (user) {
-        sync.setLocalAwarenessState({ user });
+      if (options.user) {
+        sync.setLocalAwarenessState({ user: options.user });
       }
       resolve();
     });
+    ws.once("error", reject);
   });
 
   return {
@@ -250,6 +264,135 @@ describe("INT-CU02: Case of Use CU-02 Real-Time Collaboration Integration", () =
       },
       4000,
       "lock was not released on peer2",
+    );
+  });
+
+  it("rejects unauthenticated or invalid token connection attempts in shared mode with 4401", async () => {
+    const port = await getFreePort();
+    relay = startRelayServer({
+      port,
+      host: "127.0.0.1",
+      verifyToken: async (token) => {
+        if (token === "valid-token") return "usr-123";
+        throw new Error("unauthorized");
+      },
+    });
+    const roomId = "auth-rejection-room";
+
+    // 1. Connection without token in shared mode
+    const closeWithoutTokenPromise = new Promise<{
+      code: number;
+      reason: string;
+    }>((resolve) => {
+      const ws = new WebSocket(
+        `ws://127.0.0.1:${port}?diagramId=${encodeURIComponent(roomId)}&mode=shared`,
+      );
+      ws.once("close", (code, reason) => {
+        resolve({ code, reason: reason.toString() });
+      });
+    });
+
+    const resultWithoutToken = await closeWithoutTokenPromise;
+    expect(resultWithoutToken.code).toBe(WS_UNAUTHORIZED_CLOSE_CODE);
+    expect(resultWithoutToken.reason).toBe("Authentication required");
+
+    // 2. Connection with invalid token in shared mode
+    const closeWithInvalidTokenPromise = new Promise<{
+      code: number;
+      reason: string;
+    }>((resolve) => {
+      const ws = new WebSocket(
+        `ws://127.0.0.1:${port}?diagramId=${encodeURIComponent(roomId)}&mode=shared&token=invalid-secret`,
+      );
+      ws.once("close", (code, reason) => {
+        resolve({ code, reason: reason.toString() });
+      });
+    });
+
+    const resultWithInvalidToken = await closeWithInvalidTokenPromise;
+    expect(resultWithInvalidToken.code).toBe(WS_UNAUTHORIZED_CLOSE_CODE);
+    expect(resultWithInvalidToken.reason).toBe("Authentication required");
+  });
+
+  it("admits authenticated peers in shared mode, synchronizes identity and releases locks on disconnect", async () => {
+    const port = await getFreePort();
+    relay = startRelayServer({
+      port,
+      host: "127.0.0.1",
+      verifyToken: async (token) => {
+        if (token === "token-alice") return "usr-alice";
+        if (token === "token-bob") return "usr-bob";
+        throw new Error("Unauthorized token");
+      },
+    });
+    const roomId = "shared-auth-room";
+
+    const peer1 = connectPeer(port, roomId, {
+      mode: "shared",
+      token: "token-alice",
+      user: {
+        id: "usr-alice",
+        name: "Alice Architect",
+        color: "#1c7ed6",
+        imageUrl: "https://avatar.example.com/alice.png",
+      },
+    });
+
+    const peer2 = connectPeer(port, roomId, {
+      mode: "shared",
+      token: "token-bob",
+      user: {
+        id: "usr-bob",
+        name: "Bob Modeler",
+        color: "#37b24d",
+      },
+    });
+    peers.push(peer1, peer2);
+
+    await Promise.all([peer1.ready, peer2.ready]);
+    await flushNetwork();
+
+    // Peer 1 locks a class element
+    const targetElementId = "class-order-entity";
+    peer1.sync.setLocalAwarenessSelectedElement(targetElementId);
+    await flushNetwork();
+
+    // Peer 2 observes Alice's lock with full registered identity
+    await waitFor(
+      () => {
+        const states = Array.from(peer2.sync.getAwarenessStates().values());
+        return states.some(
+          (s) =>
+            s.selectedElementId === targetElementId &&
+            s.user?.id === "usr-alice" &&
+            s.user?.name === "Alice Architect",
+        );
+      },
+      4000,
+      "peer2 did not observe Alice's lock with authenticated profile",
+    );
+
+    const lockHolder = Array.from(
+      peer2.sync.getAwarenessStates().values(),
+    ).find((s) => s.selectedElementId === targetElementId);
+    expect(lockHolder?.user?.id).toBe("usr-alice");
+    expect(lockHolder?.user?.name).toBe("Alice Architect");
+    expect(lockHolder?.user?.imageUrl).toBe(
+      "https://avatar.example.com/alice.png",
+    );
+
+    // Peer 1 closes connection abruptly
+    await peer1.close();
+    await flushNetwork();
+
+    // Peer 2 observes automatic cleanup of awareness and lock
+    await waitFor(
+      () => {
+        const states = Array.from(peer2.sync.getAwarenessStates().values());
+        return !states.some((s) => s.selectedElementId === targetElementId);
+      },
+      4000,
+      "lock was not cleaned up on peer2 after peer1 disconnected",
     );
   });
 

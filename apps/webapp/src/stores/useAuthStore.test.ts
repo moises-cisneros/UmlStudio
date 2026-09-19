@@ -41,7 +41,10 @@ describe("useAuthStore register (CU-12)", () => {
     expect(state.token).toBe("fresh-token");
     expect(state.user).toEqual(USER);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
     expect(url).toContain("/api/auth/register");
     expect(JSON.parse(init.body as string)).toEqual({
       name: "Ada Modeler",
@@ -130,3 +133,58 @@ describe("useAuthStore loadSession (single boot)", () => {
     expect(useAuthStore.getState().token).toBeNull();
   });
 });
+
+describe("useAuthStore updateProfile & changePassword (CU-14)", () => {
+  it("updates user profile in local store when server returns 200", async () => {
+    useAuthStore.setState({
+      token: "jwt-test-token",
+      user: USER,
+      status: "authenticated",
+    });
+
+    const updatedUser = {
+      ...USER,
+      name: "Ada Augusta",
+      color: "#EC4899",
+    };
+
+    const fetchMock = vi.fn(async () => jsonResponse(200, updatedUser));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await useAuthStore.getState().updateProfile({
+      name: "Ada Augusta",
+      color: "#EC4899",
+    });
+
+    expect(result).toEqual(updatedUser);
+    expect(useAuthStore.getState().user).toEqual(updatedUser);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toContain("/api/users/profile");
+    expect(init.method).toBe("PATCH");
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe(
+      "Bearer jwt-test-token",
+    );
+  });
+
+  it("sends password change request and handles errors", async () => {
+    useAuthStore.setState({
+      token: "jwt-test-token",
+      user: USER,
+      status: "authenticated",
+    });
+
+    const fetchMock = vi.fn(async () =>
+      jsonResponse(400, { message: "Invalid current password" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      useAuthStore.getState().changePassword("WrongPwd1!", "NewSecret2#"),
+    ).rejects.toThrow("Invalid current password");
+  });
+});
+

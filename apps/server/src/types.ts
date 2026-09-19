@@ -15,6 +15,7 @@ export interface Diagram {
   edges: UmlStudioEdge[];
   assessments: Record<string, Assessment>;
   interactive?: InteractiveElements;
+  userId?: string | undefined;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +30,9 @@ export interface VersionSummary {
   librarySchemaVersion: string;
   seq?: number;
   author?: string;
+  authorName?: string;
+  authorAvatar?: string;
+  authorColor?: string;
 }
 
 export type VersionKind = "user" | "auto";
@@ -53,28 +57,28 @@ export interface ApiErrorBody {
 
 export type ControlEvent =
   | {
-    type: "VERSION_CREATED";
-    versionId: string;
-    createdAt: string;
-    name: string;
-    kind: VersionKind;
-    actor?: string;
-  }
+      type: "VERSION_CREATED";
+      versionId: string;
+      createdAt: string;
+      name: string;
+      kind: VersionKind;
+      actor?: string;
+    }
   | {
-    type: "VERSION_RESTORED";
-    headRev: number;
-    updatedAt: string;
-    autoSnapshotVersionId: string;
-    restoredFromVersionId: string;
-    actor?: string;
-  }
+      type: "VERSION_RESTORED";
+      headRev: number;
+      updatedAt: string;
+      autoSnapshotVersionId: string;
+      restoredFromVersionId: string;
+      actor?: string;
+    }
   | { type: "VERSION_DELETED"; versionId: string }
   | {
-    type: "VERSION_RENAMED";
-    versionId: string;
-    name: string;
-    description: string;
-  }
+      type: "VERSION_RENAMED";
+      versionId: string;
+      name: string;
+      description: string;
+    }
   | { type: "DIAGRAM_DELETED" }
   | { type: "DIAGRAM_RENAMED"; title: string };
 

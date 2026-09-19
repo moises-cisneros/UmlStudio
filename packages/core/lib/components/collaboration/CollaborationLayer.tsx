@@ -1,18 +1,13 @@
-import { Tooltip } from "@/components/ui";
 import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
-import { createPortal } from "react-dom";
 import { useOnViewportChange, useReactFlow, useViewport } from "@xyflow/react";
 import { useShallow } from "zustand/shallow";
 import { useDiagramStore } from "@/store";
-import { useOverlayStore } from "@/store/context";
-import { RegionMount } from "@/overlay/RegionMount";
 import {
   CollaborationCursor,
   CollaborationState,
@@ -65,23 +60,6 @@ type FollowTarget = {
   color: string;
 };
 
-const AVATAR_SIZE = 26;
-const OVERLAP = -6;
-
-const avatarBase: CSSProperties = {
-  width: AVATAR_SIZE,
-  height: AVATAR_SIZE,
-  borderRadius: "50%",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "var(--umlstudio-on-collaboration-cursor, #fff)",
-  fontSize: 11,
-  fontWeight: 600,
-  cursor: "default",
-  flexShrink: 0,
-};
-
 const cssEscape = (value: string) => {
   if (typeof CSS !== "undefined" && CSS.escape) {
     return CSS.escape(value);
@@ -109,155 +87,6 @@ const clearHighlights = (container: HTMLElement, elementIds: Set<string>) => {
     }
   }
 };
-
-function CollaboratorPresenceBar({
-  active,
-  awareness,
-  showFollow,
-  followedClientId,
-  onToggleFollow,
-}: {
-  active: boolean;
-  awareness: CollaborationAwarenessApi;
-  showFollow: boolean;
-  followedClientId: number | null;
-  onToggleFollow: (target: FollowTarget) => void;
-}) {
-  const [collaborators, setCollaborators] = useState<CollaboratorInfo[]>([]);
-  const [followerCount, setFollowerCount] = useState(0);
-  const register = useOverlayStore((s) => s.register);
-  const unregister = useOverlayStore((s) => s.unregister);
-  const [host] = useState<HTMLDivElement | null>(() =>
-    typeof document !== "undefined" ? document.createElement("div") : null,
-  );
-
-  useEffect(() => {
-    if (!active) {
-      setCollaborators([]);
-      return;
-    }
-
-    const unsubscribe =
-      awareness.subscribeToCollaboratorChanges(setCollaborators);
-
-    return unsubscribe;
-  }, [active, awareness]);
-
-  useEffect(() => {
-    if (!active || !showFollow) {
-      setFollowerCount(0);
-      return;
-    }
-
-    const localClientId = awareness.getLocalAwarenessClientId();
-    return awareness.subscribeToAwarenessChanges((states) => {
-      let count = 0;
-      for (const [clientId, state] of states) {
-        if (
-          clientId !== localClientId &&
-          state.followingClientId === localClientId
-        ) {
-          count += 1;
-        }
-      }
-      setFollowerCount((prev) => (prev === count ? prev : count));
-    });
-  }, [active, showFollow, awareness]);
-
-  const remoteCount = collaborators.filter((c) => !c.isLocal).length;
-  const shouldShow = active && remoteCount > 0;
-
-  useEffect(() => {
-    if (!host || !shouldShow) return;
-    register({
-      id: "umlstudio:presence",
-      region: "top-right",
-      order: -100,
-      render: () => <RegionMount el={host} />,
-    });
-    return () => unregister("umlstudio:presence");
-  }, [host, shouldShow, register, unregister]);
-
-  if (!shouldShow || !host) return null;
-
-  const localClientId = awareness.getLocalAwarenessClientId();
-
-  return createPortal(
-    <div className="umlstudio-collaboration-presence-bar">
-      {collaborators.map((c, i) => {
-        const followTargetId =
-          c.isLocal || !showFollow
-            ? null
-            : (c.clientIds.find((id) => id !== localClientId) ?? null);
-        const followTarget: FollowTarget | null =
-          followTargetId === null
-            ? null
-            : { clientId: followTargetId, name: c.name, color: c.color };
-        const isFollowable = followTarget !== null;
-        const isFollowing =
-          followedClientId !== null && c.clientIds.includes(followedClientId);
-        const isFollowedByOthers = c.isLocal && followerCount > 0;
-        const label = c.isLocal
-          ? isFollowedByOthers
-            ? `${c.name} (You · followed by ${followerCount})`
-            : `${c.name} (You)`
-          : isFollowing
-            ? `${c.name} (Following · click to stop)`
-            : isFollowable
-              ? `${c.name} (click to follow)`
-              : c.name;
-
-        return (
-          <Tooltip key={c.id} title={label}>
-            <div
-              aria-label={label}
-              role={isFollowable ? "button" : undefined}
-              aria-pressed={isFollowable ? isFollowing : undefined}
-              tabIndex={isFollowable ? 0 : undefined}
-              onClick={
-                followTarget ? () => onToggleFollow(followTarget) : undefined
-              }
-              onKeyDown={
-                followTarget
-                  ? (event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onToggleFollow(followTarget);
-                      }
-                    }
-                  : undefined
-              }
-              style={{
-                ...avatarBase,
-                backgroundColor: c.color,
-                border: "2px solid var(--umlstudio-background)",
-                marginLeft: i === 0 ? 0 : OVERLAP,
-                zIndex: collaborators.length - i,
-                cursor: isFollowable ? "pointer" : "default",
-                position: "relative",
-                boxShadow: isFollowing
-                  ? `0 0 0 2px var(--umlstudio-background), 0 0 0 4px ${c.color}`
-                  : undefined,
-              }}
-            >
-              {c.name.charAt(0).toUpperCase()}
-              {isFollowedByOthers && (
-                <span
-                  aria-hidden="true"
-                  className="umlstudio-collaboration-follower-badge"
-                  style={{ borderColor: c.color }}
-                >
-                  {followerCount > 9 ? "9+" : followerCount}
-                </span>
-              )}
-            </div>
-          </Tooltip>
-        );
-      })}
-    </div>,
-    host,
-  );
-}
 
 const CURSOR_HOTSPOT = { x: 2, y: 1 };
 
@@ -430,11 +259,35 @@ function LocalCollaborationAwareness({
       return;
     }
 
-    awareness.setLocalAwarenessSelectedElement(
-      selectedElementIds.at(-1) ?? null,
-    );
+    const currentSelected = selectedElementIds.at(-1) ?? null;
+    awareness.setLocalAwarenessSelectedElement(currentSelected);
+
+    if (!currentSelected) {
+      return;
+    }
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const resetInactivityTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        awareness.setLocalAwarenessSelectedElement(null);
+      }, 60_000);
+    };
+
+    resetInactivityTimer();
+
+    const handleActivity = () => {
+      resetInactivityTimer();
+    };
+
+    window.addEventListener("pointermove", handleActivity);
+    window.addEventListener("keydown", handleActivity);
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener("pointermove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
       awareness.setLocalAwarenessSelectedElement(null);
     };
   }, [active, awareness, options.showSelectionHighlights, selectedElementIds]);
@@ -692,18 +545,47 @@ export function CollaborationLayer({
 
   const [followTarget, setFollowTarget] = useState<FollowTarget | null>(null);
 
-  const stopFollowing = useCallback(() => setFollowTarget(null), []);
-  const toggleFollow = useCallback(
-    (target: FollowTarget) =>
-      setFollowTarget((prev) =>
-        prev?.clientId === target.clientId ? null : target,
-      ),
-    [],
-  );
+  const stopFollowing = useCallback(() => {
+    setFollowTarget(null);
+    awareness.setLocalAwarenessFollowing(null);
+  }, [awareness]);
 
   useEffect(() => {
-    if (!followActive) setFollowTarget(null);
-  }, [followActive]);
+    if (!followActive) {
+      return;
+    }
+
+    const syncFromAwareness = (states: Map<number, CollaborationState>) => {
+      const localId = awareness.getLocalAwarenessClientId();
+      const localState = states.get(localId);
+      const followingId = localState?.followingClientId ?? null;
+      if (followingId === null) {
+        setFollowTarget((prev) => (prev ? null : prev));
+      } else {
+        const targetState = states.get(followingId);
+        const targetUser = targetState?.user;
+        if (targetUser) {
+          setFollowTarget((prev) =>
+            prev?.clientId === followingId &&
+            prev?.name === targetUser.name &&
+            prev?.color === targetUser.color
+              ? prev
+              : {
+                  clientId: followingId,
+                  name: targetUser.name,
+                  color: targetUser.color,
+                },
+          );
+        }
+      }
+    };
+
+    const unsubscribe = awareness.subscribeToAwarenessChanges(syncFromAwareness);
+    return () => {
+      unsubscribe();
+      setFollowTarget((prev) => (prev ? null : prev));
+    };
+  }, [followActive, awareness]);
 
   return (
     <>
@@ -711,13 +593,6 @@ export function CollaborationLayer({
         active={active && !previewMode}
         options={options}
         awareness={awareness}
-      />
-      <CollaboratorPresenceBar
-        active={active && options.showPresence}
-        awareness={awareness}
-        showFollow={followActive}
-        followedClientId={followTarget?.clientId ?? null}
-        onToggleFollow={toggleFollow}
       />
       <CollaboratorCursors
         active={remoteVisualsActive && options.showCursors}

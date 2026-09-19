@@ -23,3 +23,27 @@ export const registerSchema = z.object({
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: passwordSchema,
+});
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+export const updateProfileSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name cannot be empty")
+    .max(100, "Name must be at most 100 characters")
+    .optional(),
+  avatar: z.string().max(256).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a 6-digit hex code")
+    .optional(),
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+

@@ -131,6 +131,18 @@ export class DuplicateEmailError extends Error {
   }
 }
 
+/**
+ * Thrown when current password validation fails on password reset.
+ * Routes map it to 400 Bad Request.
+ */
+export class InvalidPasswordError extends Error {
+  constructor(message = "Invalid current password") {
+    super(message);
+    this.name = "InvalidPasswordError";
+  }
+}
+
+
 /** Canonical email form for uniqueness checks and persistence. */
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -176,6 +188,15 @@ export interface AuthService {
   logout(refreshJti: string | undefined): Promise<void>;
   verifyAccess(token: string): Promise<VerifiedAccess>;
   getProfile(userId: string): Promise<AuthProfile>;
+  updateProfile(
+    userId: string,
+    input: { name?: string | undefined; avatar?: string | undefined; color?: string | undefined },
+  ): Promise<AuthProfile>;
+  changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void>;
   hashPassword(password: string): Promise<string>;
 }
 
@@ -273,6 +294,30 @@ export function createAuthService(deps: AuthServiceDeps): AuthService {
       const user = await repo.findById(userId);
       if (!user) throw new AuthError();
       return toProfile(user);
+    },
+    async updateProfile(
+      userId: string,
+      input: { name?: string; avatar?: string; color?: string },
+    ): Promise<AuthProfile> {
+      const user = await repo.findById(userId);
+      if (!user) throw new AuthError();
+      if (input.name !== undefined) user.name = input.name.trim();
+      if (input.avatar !== undefined) user.avatar = input.avatar.trim();
+      if (input.color !== undefined) user.color = input.color.trim();
+      await repo.saveUser(user);
+      return toProfile(user);
+    },
+    async changePassword(
+      userId: string,
+      currentPassword: string,
+      newPassword: string,
+    ): Promise<void> {
+      const user = await repo.findById(userId);
+      if (!user) throw new AuthError();
+      const match = await compare(currentPassword, user.passwordHash);
+      if (!match) throw new InvalidPasswordError();
+      user.passwordHash = await hash(newPassword, BCRYPT_COST);
+      await repo.saveUser(user);
     },
     async hashPassword(password: string): Promise<string> {
       return hash(password, BCRYPT_COST);

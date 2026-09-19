@@ -25,6 +25,7 @@ export const k = {
   authUser: (id: string) => `auth:user:{${id}}`,
   authUserByEmail: (email: string) => `auth:user:email:${email.toLowerCase()}`,
   authRefresh: (jti: string) => `auth:refresh:${jti}`,
+  userDiagrams: (userId: string) => `auth:user:{${userId}}:diagrams`,
 };
 
 /** Default refresh-session lifetime: 7 days (open question in design). */

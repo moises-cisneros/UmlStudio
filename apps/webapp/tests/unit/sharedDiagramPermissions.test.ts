@@ -42,19 +42,29 @@ describe("CU-02: Shared Diagram Collaboration Permissions (EDITOR & LECTOR)", ()
   describe("normalizeSharedDiagramView", () => {
     it("normalizes canonical views correctly", () => {
       expect(normalizeSharedDiagramView("EDITOR")).toBe(DiagramView.EDITOR);
-      expect(normalizeSharedDiagramView(DiagramView.EDITOR)).toBe(DiagramView.EDITOR);
+      expect(normalizeSharedDiagramView(DiagramView.EDITOR)).toBe(
+        DiagramView.EDITOR,
+      );
       expect(normalizeSharedDiagramView("LECTOR")).toBe(DiagramView.LECTOR);
-      expect(normalizeSharedDiagramView(DiagramView.LECTOR)).toBe(DiagramView.LECTOR);
+      expect(normalizeSharedDiagramView(DiagramView.LECTOR)).toBe(
+        DiagramView.LECTOR,
+      );
     });
 
     it("maps legacy collaborative and edit tokens to EDITOR", () => {
-      expect(normalizeSharedDiagramView("COLLABORATE")).toBe(DiagramView.EDITOR);
+      expect(normalizeSharedDiagramView("COLLABORATE")).toBe(
+        DiagramView.EDITOR,
+      );
       expect(normalizeSharedDiagramView("EDIT")).toBe(DiagramView.EDITOR);
     });
 
     it("maps legacy feedback and viewer tokens to LECTOR", () => {
-      expect(normalizeSharedDiagramView("GIVE_FEEDBACK")).toBe(DiagramView.LECTOR);
-      expect(normalizeSharedDiagramView("SEE_FEEDBACK")).toBe(DiagramView.LECTOR);
+      expect(normalizeSharedDiagramView("GIVE_FEEDBACK")).toBe(
+        DiagramView.LECTOR,
+      );
+      expect(normalizeSharedDiagramView("SEE_FEEDBACK")).toBe(
+        DiagramView.LECTOR,
+      );
       expect(normalizeSharedDiagramView("VIEWER")).toBe(DiagramView.LECTOR);
       expect(normalizeSharedDiagramView("READONLY")).toBe(DiagramView.LECTOR);
     });
@@ -62,7 +72,9 @@ describe("CU-02: Shared Diagram Collaboration Permissions (EDITOR & LECTOR)", ()
     it("falls back to DEFAULT_SHARED_DIAGRAM_VIEW on unknown or missing values", () => {
       expect(normalizeSharedDiagramView(null)).toBe(DiagramView.EDITOR);
       expect(normalizeSharedDiagramView(undefined)).toBe(DiagramView.EDITOR);
-      expect(normalizeSharedDiagramView("unknown_random_mode")).toBe(DiagramView.EDITOR);
+      expect(normalizeSharedDiagramView("unknown_random_mode")).toBe(
+        DiagramView.EDITOR,
+      );
     });
   });
 
@@ -75,7 +87,11 @@ describe("CU-02: Shared Diagram Collaboration Permissions (EDITOR & LECTOR)", ()
     });
 
     it("builds shared URL with view query param", () => {
-      const url = buildSharedDiagramUrl("diag-123", DiagramView.EDITOR, "https://app.umlstudio.com");
+      const url = buildSharedDiagramUrl(
+        "diag-123",
+        DiagramView.EDITOR,
+        "https://app.umlstudio.com",
+      );
       expect(url).toBe("https://app.umlstudio.com/shared/diag-123?view=EDITOR");
     });
   });

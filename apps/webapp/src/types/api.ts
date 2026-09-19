@@ -16,6 +16,10 @@ export interface VersionSummary {
   kind: VersionKind;
   librarySchemaVersion: string;
   seq?: number;
+  author?: string;
+  authorName?: string;
+  authorAvatar?: string;
+  authorColor?: string;
 }
 
 export interface PendingVersion extends VersionSummary {

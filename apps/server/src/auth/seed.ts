@@ -51,7 +51,11 @@ export async function seedDefaultUsers(
         });
         seeded++;
         logger.info(
-          { event: "auth.seed.user_created", email: item.email, name: item.name },
+          {
+            event: "auth.seed.user_created",
+            email: item.email,
+            name: item.name,
+          },
           `seeded default user ${item.email}`,
         );
       } else {

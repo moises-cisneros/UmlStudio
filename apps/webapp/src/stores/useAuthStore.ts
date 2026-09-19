@@ -21,6 +21,15 @@ interface AuthState {
   logout: () => Promise<void>;
   refresh: () => Promise<boolean>;
   loadSession: () => Promise<void>;
+  updateProfile: (data: {
+    name?: string;
+    avatar?: string;
+    color?: string;
+  }) => Promise<AuthUserProfile>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<void>;
 }
 
 interface SessionResponse {
@@ -100,19 +109,29 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       if (!res.ok) {
         set({ token: null, user: null, status: "anonymous" });
         if (res.status === 401) {
-          throw new Error("Invalid credentials. Check your email and password.");
+          throw new Error(
+            "Invalid credentials. Check your email and password.",
+          );
         }
-        throw new Error(`Server returned status ${res.status}. Please try again.`);
+        throw new Error(
+          `Server returned status ${res.status}. Please try again.`,
+        );
       }
       const data = (await res.json()) as SessionResponse;
       resetBoot();
       set({ token: data.token, user: data.user, status: "authenticated" });
     } catch (err: unknown) {
       set({ token: null, user: null, status: "anonymous" });
-      if (err instanceof Error && (err.name === "TypeError" || err.message.includes("fetch"))) {
-        throw new Error("Unable to connect to backend server (port 8000). Ensure the backend is running.", {
-          cause: err,
-        });
+      if (
+        err instanceof Error &&
+        (err.name === "TypeError" || err.message.includes("fetch"))
+      ) {
+        throw new Error(
+          "Unable to connect to backend server (port 8000). Ensure the backend is running.",
+          {
+            cause: err,
+          },
+        );
       }
       throw err;
     }
@@ -177,6 +196,51 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         });
     }
     await bootPromise;
+  },
+
+  updateProfile: async (data: {
+    name?: string;
+    avatar?: string;
+    color?: string;
+  }) => {
+    const token = get().token;
+    const res = await fetch(`${serverURL}/api/users/profile`, {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const errBody = await readErrorBody(res);
+      throw new Error(errBody.message ?? "Failed to update profile");
+    }
+    const updated = (await res.json()) as AuthUserProfile;
+    set((state) => ({
+      user: state.user ? { ...state.user, ...updated } : updated,
+    }));
+    return updated;
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const token = get().token;
+    const res = await fetch(`${serverURL}/api/users/change-password`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const errBody = await readErrorBody(res);
+      throw new Error(errBody.message ?? "Failed to change password");
+    }
   },
 }));
 
