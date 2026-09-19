@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
 import type { UMLDiagramType } from "@umlstudio/core";
-import { getDiagramTypeLabel } from "./diagramTypeMeta";
 
 export type HomeSource = "all" | "local" | "shared";
 
@@ -181,14 +180,6 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
       });
     }
 
-    if (type !== "all") {
-      chips.push({
-        key: "type",
-        label: `${t.dashboard.filterType}: ${getDiagramTypeLabel(type)}`,
-        clear: () => setType("all"),
-      });
-    }
-
     if (!isDefaultSort(sort)) {
       chips.push({
         key: "sort",
@@ -198,14 +189,13 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
     }
 
     return chips;
-  }, [favoritesOnly, source, type, sort, t]);
+  }, [favoritesOnly, source, sort, t]);
 
   const refineCount = useMemo(
     () =>
       (source !== "all" ? 1 : 0) +
-      (type !== "all" ? 1 : 0) +
       (isDefaultSort(sort) ? 0 : 1),
-    [source, type, sort],
+    [source, sort],
   );
 
   return {

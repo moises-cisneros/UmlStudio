@@ -124,7 +124,12 @@ export const DiagramApiClient = {
   async patchDiagramTitle(
     diagramId: string,
     title: string,
-  ): Promise<{ id: string; title: string; headRev: number; updatedAt: string }> {
+  ): Promise<{
+    id: string;
+    title: string;
+    headRev: number;
+    updatedAt: string;
+  }> {
     const { data } = await request<{
       id: string;
       title: string;

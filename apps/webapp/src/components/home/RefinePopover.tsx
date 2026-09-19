@@ -16,7 +16,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@umlstudio/ui/components/sheet";
-import { getDiagramTypeLabel } from "./diagramTypeMeta";
 import {
   getHomeSortFieldOptions,
   getHomeSourceOptions,
@@ -49,7 +48,11 @@ function RefineGroup<T extends string>({
       <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
         {label}
       </span>
-      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={label}>
+      <div
+        className="flex flex-wrap gap-1.5"
+        role="radiogroup"
+        aria-label={label}
+      >
         {options.map((option) => {
           const isSelected = option.value === value;
           return (
@@ -84,17 +87,9 @@ export type RefineBodyProps = {
 
 export const RefineBody: FC<RefineBodyProps> = ({
   chrome,
-  typeOptions,
   segmentClassName,
 }) => {
   const { t } = useTranslation();
-  const typeSegments: RefineSegmentOption<HomeChrome["type"]>[] = [
-    { value: "all", label: t.dashboard.filterTypeAll },
-    ...typeOptions.map((type) => ({
-      value: type,
-      label: getDiagramTypeLabel(type),
-    })),
-  ];
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -105,19 +100,6 @@ export const RefineBody: FC<RefineBodyProps> = ({
         onSelect={chrome.setSource}
         segmentClassName={segmentClassName}
       />
-
-      {typeOptions.length > 1 && (
-        <>
-          <hr className="border-border/40" />
-          <RefineGroup
-            label={t.dashboard.filterType}
-            options={typeSegments}
-            value={chrome.type}
-            onSelect={chrome.setType}
-            segmentClassName={segmentClassName}
-          />
-        </>
-      )}
 
       <hr className="border-border/40" />
 

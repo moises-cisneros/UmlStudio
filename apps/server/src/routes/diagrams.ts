@@ -10,11 +10,19 @@ import { validate } from "../http/middleware/validate.js";
 import { setOwnerCookie } from "../http/middleware/owner.js";
 import { logger } from "../logger.js";
 import { tryAutoVersion } from "../services/autoVersion.js";
-import { DiagramBody, DiagramIdParams, PutDiagramBody, PatchDiagramBody } from "./_schemas.js";
+import { authGuard } from "../http/middleware/auth.js";
+import type { AuthService } from "../services/auth-service.js";
+import {
+  DiagramBody,
+  DiagramIdParams,
+  PutDiagramBody,
+  PatchDiagramBody,
+} from "./_schemas.js";
 
 interface Deps {
   config: Config;
   redis: Redis;
+  auth?: AuthService;
 }
 
 /** Returns the current HEAD diagram or null if missing. */
@@ -69,7 +77,11 @@ export async function saveHead(
     type: diagram.type,
     updatedAt,
     librarySchemaVersion: diagram.version,
+    ...(diagram.userId ? { userId: diagram.userId } : {}),
   });
+  if (diagram.userId) {
+    multi.sAdd(k.userDiagrams(diagram.userId), diagram.id);
+  }
   multi.hIncrBy(meta, "headRev", 1);
   multi.expire(meta, ttl);
   const replies = (await multi.exec()) as unknown[];
@@ -91,6 +103,10 @@ export async function cascadeDeleteDiagram(
   redis: Redis,
   id: string,
 ): Promise<number> {
+  const meta = await redis.hGetAll(k.diagramMeta(id));
+  if (meta?.userId) {
+    await redis.sRem(k.userDiagrams(meta.userId), id);
+  }
   let deleted = 0;
   const pattern = `diagram:{${id}}*`;
   for await (const keys of redis.scanIterator({
@@ -117,16 +133,43 @@ function generateDiagramId(): string {
 // ---------------------------------------------------------------------------
 
 export function mountDiagramRoutes(
-  { config, redis }: Deps,
+  { config, redis, auth }: Deps,
   relay?: RelayHook,
 ): Hono<AppEnv> {
   const router = new Hono<AppEnv>();
+
+  if (auth) {
+    router.use("/diagrams", authGuard({ auth }));
+    router.use("/user/diagrams", authGuard({ auth }));
+
+    router.get("/user/diagrams", async (c) => {
+      const user = c.get("user");
+      if (!user) throw Errors.unauthorized();
+      const diagramIds = await redis.sMembers(k.userDiagrams(user.id));
+      const list = [];
+      for (const id of diagramIds) {
+        const meta = await redis.hGetAll(k.diagramMeta(id));
+        if (meta && Object.keys(meta).length > 0) {
+          list.push({
+            id,
+            title: meta.title ?? "",
+            type: meta.type ?? "ClassDiagram",
+            updatedAt: meta.updatedAt ?? "",
+            version: meta.librarySchemaVersion ?? "4.0.0",
+          });
+        }
+      }
+      return c.json(list, 200);
+    });
+  }
 
   router.post(
     "/diagrams",
     validate(
       { body: DiagramBody.omit({ id: true }).partial() },
       async (c, { body }) => {
+        const user = c.get("user");
+        if (!user && auth) throw Errors.unauthorized();
         const id = generateDiagramId();
         const now = new Date().toISOString();
         const diagram: Diagram = {
@@ -137,6 +180,7 @@ export function mountDiagramRoutes(
           nodes: (body.nodes ?? []) as Diagram["nodes"],
           edges: (body.edges ?? []) as Diagram["edges"],
           assessments: (body.assessments ?? {}) as Diagram["assessments"],
+          ...(user?.id ? { userId: user.id } : {}),
           createdAt: now,
           updatedAt: now,
         };

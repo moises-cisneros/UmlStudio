@@ -622,7 +622,9 @@ export const DiagramGallery = ({
                         isHighlighted={diagram.id === highlightedDiagramId}
                         onToggleFavorite={handleToggleDiagramFavorite}
                         onSharedDiagramRemoved={handleRemoveSharedDiagram}
-                        onSharedDiagramViewChange={handleSharedDiagramViewChange}
+                        onSharedDiagramViewChange={
+                          handleSharedDiagramViewChange
+                        }
                         observeViewport={thumbnailViewportPriority.observe}
                       />
                     </div>
@@ -656,7 +658,9 @@ export const DiagramGallery = ({
                         isHighlighted={diagram.id === highlightedDiagramId}
                         onToggleFavorite={handleToggleDiagramFavorite}
                         onSharedDiagramRemoved={handleRemoveSharedDiagram}
-                        onSharedDiagramViewChange={handleSharedDiagramViewChange}
+                        onSharedDiagramViewChange={
+                          handleSharedDiagramViewChange
+                        }
                         observeViewport={thumbnailViewportPriority.observe}
                       />
                     </div>
