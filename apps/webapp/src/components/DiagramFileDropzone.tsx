@@ -10,7 +10,11 @@ const dragHasFiles = (event: DragEvent) =>
 const isSupportedDiagram = (file: File) => {
   const name = file.name.toLowerCase();
   return (
-    name.endsWith(".xmi") || name.endsWith(".xml") || file.type.includes("xml")
+    name.endsWith(".json") ||
+    name.endsWith(".xmi") ||
+    name.endsWith(".xml") ||
+    file.type.includes("json") ||
+    file.type.includes("xml")
   );
 };
 
@@ -52,7 +56,7 @@ export function DiagramFileDropzone() {
       const files = Array.from(event.dataTransfer?.files ?? []);
       const diagram = files.find(isSupportedDiagram);
       if (!diagram) {
-        toast.error("Drop an Enterprise Architect .xmi file.");
+        toast.error("Drop an UmlStudio .json or Enterprise Architect .xmi file.");
         return;
       }
       void importFile(diagram);
