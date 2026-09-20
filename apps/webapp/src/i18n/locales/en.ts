@@ -1,4 +1,4 @@
-import type { TranslationDictionary } from "../types";
+import type { TranslationDictionary } from "../types"
 
 export const en: TranslationDictionary = {
   common: {
@@ -29,6 +29,8 @@ export const en: TranslationDictionary = {
   },
   menu: {
     file: "File",
+    edit: "Edit",
+    selection: "Selection",
     newDiagram: "New Diagram...",
     openDiagram: "Open Diagram...",
     saveLocalCopy: "Save Local Copy",
@@ -41,12 +43,26 @@ export const en: TranslationDictionary = {
     exportPng: "Export to Image (.png)",
     exportXmi: "Export to Architect (.xmi)",
     exportSpringBoot: "Generate Backend Code (.zip)",
+    exportOpenApi: "API Documentation",
+    exportPostman: "Postman Collection (.json)",
     share: "Share",
     help: "Help",
     keyboardShortcuts: "Keyboard Shortcuts",
     renameDiagram: "Rename diagram…",
     shareDiagram: "Share diagram…",
     deleteDiagram: "Delete diagram…",
+    undo: "Undo",
+    redo: "Redo",
+    cut: "Cut",
+    copy: "Copy",
+    paste: "Paste",
+    duplicate: "Duplicate",
+    delete: "Delete selection",
+    fitView: "Fit to view",
+    selectAll: "Select all",
+    clearSelection: "Clear selection",
+    multiSelect: "Multi-select mode",
+    zoomToSelection: "Zoom to selection",
   },
   omnibox: {
     placeholder: "Search classes, commands or ask AI Copilot...",
@@ -97,8 +113,7 @@ export const en: TranslationDictionary = {
     importJson: "Import",
     quickStartTitle: "Templates",
     emptyStateTitle: "No diagrams found",
-    emptyStateDesc:
-      "Create a new diagram or start with an architectural template above.",
+    emptyStateDesc: "Create a new diagram or start with an architectural template above.",
     sortRecent: "Last modified",
     sortName: "Alphabetical",
     filterSource: "Source",
@@ -181,8 +196,7 @@ export const en: TranslationDictionary = {
     tabTemplate: "Use template",
     nameLabel: "Diagram Name",
     namePlaceholder: "Enter diagram name",
-    scratchHint:
-      "Creates an empty UML 2.5 Class diagram canvas ready for modeling.",
+    scratchHint: "Creates an empty UML 2.5 Class diagram canvas ready for modeling.",
     structuralCategory: "Structural Patterns",
     behavioralCategory: "Behavioral Patterns",
     creationalCategory: "Creational Patterns",
@@ -194,15 +208,13 @@ export const en: TranslationDictionary = {
   },
   share: {
     modalTitle: "Collaborative Share",
-    subtitle:
-      "Invite teammates to collaborate in real-time on this UML Class diagram.",
+    subtitle: "Invite teammates to collaborate in real-time on this UML Class diagram.",
     liveSessionBadge: "Real-Time Room",
     copyLink: "Copy Link",
     copied: "Link Copied!",
     joinSession: "Join Collaborative Session",
     accessLevel: "Permission",
-    accessDescription:
-      "Controls whether participants can edit classes or view in read-only mode.",
+    accessDescription: "Controls whether participants can edit classes or view in read-only mode.",
     collabStereotype: "«realtime-collaboration»",
     noticeLocal:
       "A copy is uploaded so anyone with the link can open it — your local diagram stays untouched.",
@@ -238,8 +250,7 @@ export const en: TranslationDictionary = {
     precisionStudio: "Precision Technical Studio",
     liveBlueprint: "Live Blueprint",
     welcomeBack: "Welcome back",
-    signInSubtitle:
-      "Sign in to access your diagrams, collaboration rooms, and versions.",
+    signInSubtitle: "Sign in to access your diagrams, collaboration rooms, and versions.",
     emailLabel: "Email",
     emailPlaceholder: "admin@umlstudio.com",
     passwordLabel: "Password",
@@ -258,8 +269,7 @@ export const en: TranslationDictionary = {
     registerDescription:
       "Create your modeler account to save diagrams in the cloud, collaborate in real time with verified presence, and generate Spring Boot code.",
     getStarted: "Create Account",
-    registerSubtitle:
-      "Enter your details to start modeling with verified identity.",
+    registerSubtitle: "Enter your details to start modeling with verified identity.",
     nameLabel: "Display name",
     namePlaceholder: "Ada Lovelace",
     passwordRequirements: "Password security requirements:",
@@ -290,8 +300,7 @@ export const en: TranslationDictionary = {
     tabWalkthrough: "Walkthrough",
     tabShortcuts: "Shortcuts",
     stepAddNodeTitle: "Add Class",
-    stepAddNodeDesc:
-      "Drag and drop one of the elements on the left side into the editor area.",
+    stepAddNodeDesc: "Drag and drop one of the elements on the left side into the editor area.",
     stepAddEdgeTitle: "Add Relationship",
     stepAddEdgeDesc:
       "Select the source class with a single click — blue circles appear around it marking connection points. Click and drag to another node to connect them.",
@@ -304,8 +313,7 @@ export const en: TranslationDictionary = {
     stepMoveClassDesc:
       "Select it with a single click, then use the arrow keys or drag and drop it.",
     stepUndoRedoTitle: "Undo & Redo",
-    stepUndoRedoDesc:
-      "Press keyboard shortcuts to undo or redo your changes at any time.",
+    stepUndoRedoDesc: "Press keyboard shortcuts to undo or redo your changes at any time.",
     groupSelection: "Selection",
     groupEditing: "Editing",
     groupHistory: "History",
@@ -328,6 +336,11 @@ export const en: TranslationDictionary = {
     zoomToSelection: "Zoom to selection",
     saveVersion: "Save a version",
     toggleVersionHistory: "Toggle version history",
+    newDiagram: "New diagram",
+    exportDiagram: "Export diagram",
+    apiDocs: "API documentation",
+    multiSelectMode: "Toggle multi-selection mode",
+    shareDiagram: "Share diagram",
     gestureAddRemove: "Add / remove from selection",
     gestureBoxSelect: "Box-select an area",
     gesturePan: "Pan the canvas",
@@ -342,8 +355,7 @@ export const en: TranslationDictionary = {
     tabProfile: "Profile Info",
     tabSecurity: "Security & Password",
     email: "Email Address",
-    emailReadonlyHint:
-      "Email is your unique account identifier and cannot be changed.",
+    emailReadonlyHint: "Email is your unique account identifier and cannot be changed.",
     displayName: "Display Name",
     displayNamePlaceholder: "Your full name or alias",
     cursorColor: "Presence / Cursor Color",
@@ -364,9 +376,70 @@ export const en: TranslationDictionary = {
     profileUpdatedToast: "Profile updated successfully",
     passwordUpdatedToast: "Password changed successfully",
     wrongCurrentPassword: "Current password is incorrect",
-    weakPassword:
-      "New password must contain at least 8 characters, numbers and a symbol",
+    weakPassword: "New password must contain at least 8 characters, numbers and a symbol",
     openProfile: "My Profile",
   },
-};
-
+  codegen: {
+    modalTitle: "Generate Spring Boot 3 & SQL Backend",
+    modalSubtitle:
+      "Generate a compilable project structured in 5 decoupled CRUD layers via Spring Initializr API and PostgreSQL 16+ scripts.",
+    tabMaven: "Maven Coordinates",
+    tabServerDb: "Server & Database",
+    tabJpa: "JPA Strategy",
+    groupId: "Group ID",
+    artifactId: "Artifact ID",
+    packageName: "Package Name",
+    serverPort: "Server HTTP Port",
+    serverPortHelp: "Default set to 9000 to avoid conflicts with local port 8080.",
+    dbName: "Database Name",
+    dbHost: "PostgreSQL Host",
+    dbPort: "PostgreSQL Port",
+    dbUser: "Database User",
+    dbPassword: "Database Password",
+    inheritance: "Inheritance Strategy",
+    joinedHelp:
+      "JOINED maps normalized tables per subclass with foreign keys referencing the parent class table.",
+    generateBtn: "Generate & Download (.zip)",
+    generating: "Generating with Spring Initializr...",
+    successToast: "Spring Boot 3 project generated and downloaded successfully.",
+    errorToast: "Failed to generate Spring Boot project.",
+    noClassesError: "The diagram must contain at least one class to generate the backend.",
+    viewApiDocs: "View API Documentation (OpenAPI 3.0)",
+  },
+  openapi: {
+    modalTitle: "API Documentation (OpenAPI 3.0 / Swagger UI)",
+    modalSubtitle: "Explore interactive Swagger endpoints, inspect schemas and export contracts.",
+    tabSwagger: "Swagger UI",
+    tabSpec: "OpenAPI Contract",
+    tabPostman: "Postman v2.1",
+    noClassesMessage: "The diagram has no class nodes to document.",
+    simulateBtn: "Simulate Call",
+    copyBtn: "Copy",
+    copiedBtn: "Copied!",
+    copiedToast: "Copied to clipboard!",
+    downloadBtn: "Download",
+    downloadPostmanBtn: "Download Collection",
+    downloadSuccessJson: "OpenAPI JSON downloaded successfully",
+    downloadSuccessYaml: "OpenAPI YAML downloaded successfully",
+    downloadSuccessPostman: "Postman Collection downloaded successfully",
+    postmanHelp:
+      "Postman Collection v2.1 with pre-configured headers, baseURL variable and request payloads.",
+  },
+  productivity: {
+    modalTitle: "Productivity, Bottlenecks & Time Management",
+    modalSubtitle: "Real-time telemetry, class contention detection, and AI-assisted diagnosis.",
+    tabBottlenecks: "Bottlenecks",
+    tabCollaborators: "Collaborators",
+    tabAi: "AI Diagnosis",
+    activeTime: "Active Time",
+    idleTime: "Idle Time",
+    classVelocity: "Class Velocity",
+    refactorCadence: "Refactor Cadence",
+    fluencyStatus: "Fluency Status",
+    fluencyScore: "Fluency Score",
+    btnAiAudit: "Analyze with AI",
+    btnExportJson: "Export JSON",
+    btnPrint: "Print Report",
+    btnRefresh: "Refresh Metrics",
+  },
+}

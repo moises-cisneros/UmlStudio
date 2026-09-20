@@ -1,6 +1,7 @@
 export * from "./useExportAsPNG";
 export * from "./useFileDownload";
 export * from "./useExportAsSpringBoot";
+export * from "./useExportAsOpenApi";
 export * from "./useExportAsXMI";
 export * from "./useFlushOnUnload";
 export * from "./useEditorShortcuts";

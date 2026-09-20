@@ -4,11 +4,8 @@
 @import "../../../packages/ui/dist/components.css";
 
 @theme {
-  --font-sans:
-    "Inter", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", Arial,
-    sans-serif;
+  --font-sans: "Inter", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
-
 
 @keyframes diagram-highlight-pulse {
   0% {
@@ -58,7 +55,6 @@ body {
 html,
 body,
 #root {
-
   transition: color 220ms ease;
 }
 
@@ -69,9 +65,11 @@ body,
 }
 
 .home-canvas-bg {
-  background-image: radial-gradient(circle at 1px 1px,
-      color-mix(in srgb, var(--umlstudio-grid) 55%, transparent) 1px,
-      transparent 0);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--umlstudio-grid) 55%, transparent) 1px,
+    transparent 0
+  );
   background-size: 50px 50px;
 
   background-position: 0 0;
@@ -79,9 +77,8 @@ body,
 
 .home-page-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb,
-      var(--home-text-secondary) 35%,
-      transparent) var(--home-surface-sunken);
+  scrollbar-color: color-mix(in srgb, var(--home-text-secondary) 35%, transparent)
+    var(--home-surface-sunken);
 }
 
 .home-page-scrollbar::-webkit-scrollbar {
@@ -90,9 +87,7 @@ body,
 
 .home-page-scrollbar::-webkit-scrollbar-track {
   border-radius: 999px;
-  background: color-mix(in srgb,
-      var(--home-surface-sunken) 78%,
-      var(--home-surface-base));
+  background: color-mix(in srgb, var(--home-surface-sunken) 78%, var(--home-surface-base));
 }
 
 .home-page-scrollbar::-webkit-scrollbar-thumb {
@@ -124,14 +119,14 @@ body,
   align-items: center;
   justify-content: center;
   background:
-    linear-gradient(180deg,
+    linear-gradient(
+      180deg,
       color-mix(in srgb, var(--home-surface-sunken) 42%, transparent),
-      transparent 34%),
+      transparent 34%
+    ),
     var(--home-surface-base);
   color: var(--home-text-primary);
-  font-family:
-    "Inter", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", Arial,
-    sans-serif;
+  font-family: "Inter", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   transition:
     background-color 220ms ease,
     color 220ms ease;
@@ -145,9 +140,11 @@ body,
   min-height: min(52vh, 420px);
   border: 1px solid var(--home-border-subtle);
   background:
-    linear-gradient(180deg,
+    linear-gradient(
+      180deg,
       color-mix(in srgb, var(--home-surface-raised-hover) 46%, transparent),
-      transparent 70%),
+      transparent 70%
+    ),
     var(--home-surface-raised);
 }
 
@@ -214,7 +211,6 @@ body,
 }
 
 .home-diagram-card {
-
   --card-min-h: 17.5rem;
   contain: layout paint;
   content-visibility: auto;
@@ -258,8 +254,7 @@ body,
 
 .home-card-icon-button:hover {
   color: var(--icon-hover-color, currentcolor);
-  background-color: var(--icon-hover-bg,
-      color-mix(in srgb, currentcolor 16%, transparent));
+  background-color: var(--icon-hover-bg, color-mix(in srgb, currentcolor 16%, transparent));
   filter: var(--icon-hover-filter, none);
 }
 
@@ -520,17 +515,27 @@ body,
   color: var(--home-text-secondary, #94a3b8);
   font-size: 0.8125rem;
   cursor: pointer;
-  transition: border-color 150ms ease, background-color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
 }
 
 .workbench-omnibox:hover {
   border-color: var(--dodger-blue, #3590f3);
-  background: color-mix(in srgb, var(--home-surface-raised, #131c31) 85%, var(--dodger-blue, #3590f3));
+  background: color-mix(
+    in srgb,
+    var(--home-surface-raised, #131c31) 85%,
+    var(--dodger-blue, #3590f3)
+  );
   color: var(--home-text-primary, #f8fafc);
 }
 
 .workbench-agent-btn {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--dodger-blue, #3590f3) 22%, transparent) 0%, color-mix(in srgb, var(--deep-sky-blue, #62bfed) 15%, transparent) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--dodger-blue, #3590f3) 22%, transparent) 0%,
+    color-mix(in srgb, var(--deep-sky-blue, #62bfed) 15%, transparent) 100%
+  );
   border: 1px solid var(--dodger-blue, #3590f3);
   color: var(--home-text-primary, #f8fafc);
   padding: 5px 12px;
@@ -546,7 +551,11 @@ body,
 }
 
 .workbench-agent-btn:hover {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--dodger-blue, #3590f3) 38%, transparent) 0%, color-mix(in srgb, var(--deep-sky-blue, #62bfed) 28%, transparent) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--dodger-blue, #3590f3) 38%, transparent) 0%,
+    color-mix(in srgb, var(--deep-sky-blue, #62bfed) 28%, transparent) 100%
+  );
   box-shadow: 0 0 16px color-mix(in srgb, var(--dodger-blue, #3590f3) 45%, transparent);
 }
 
@@ -557,7 +566,7 @@ body,
 
 /* RIGHT DOCK WORKSPACE (AGENT & INSPECTOR) */
 [data-umlstudio-control="umlstudio:host:right-rail"],
-[data-umlstudio-control="umlstudio:host:right-rail"]>div {
+[data-umlstudio-control="umlstudio:host:right-rail"] > div {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -566,17 +575,18 @@ body,
 
 .workbench-right-dock {
   box-sizing: border-box;
-  margin-top: var(--umlstudio-chrome-gap, 8px);
-  margin-bottom: var(--umlstudio-chrome-gap, 8px);
-  margin-right: var(--umlstudio-chrome-edge, 16px);
-  width: 380px;
-  max-width: calc(100vw - 32px);
-  height: calc(100% - 2 * var(--umlstudio-chrome-gap, 8px));
-  max-height: calc(100% - 2 * var(--umlstudio-chrome-gap, 8px));
-  min-height: 480px;
+  position: absolute;
+  top: calc(48px + var(--umlstudio-chrome-gap, 8px));
+  bottom: 12px;
+  right: 12px;
+  width: 420px;
+  max-width: calc(100vw - 24px);
   display: flex;
   flex-direction: column;
-  background: var(--umlstudio-chrome-glass, rgba(13, 19, 34, 0.85));
+  background: var(
+    --umlstudio-chrome-glass-solid,
+    var(--umlstudio-chrome-glass, rgba(13, 19, 34, 0.92))
+  );
   -webkit-backdrop-filter: var(--umlstudio-chrome-glass-blur, blur(16px));
   backdrop-filter: var(--umlstudio-chrome-glass-blur, blur(16px));
   color: var(--umlstudio-chrome-text, #f8fafc);
@@ -592,9 +602,9 @@ body,
 
 @media (max-width: 640px) {
   .workbench-right-dock {
-    width: calc(100vw - 32px);
-    margin-right: var(--umlstudio-chrome-gap, 8px);
-    margin-left: var(--umlstudio-chrome-gap, 8px);
+    width: calc(100vw - 24px);
+    right: 12px;
+    left: 12px;
   }
 }
 
@@ -622,7 +632,10 @@ body,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease;
 }
 
 .workbench-dock-tab:hover {
@@ -638,6 +651,7 @@ body,
 
 .workbench-dock-body {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -649,8 +663,9 @@ body,
 /* DESPLAZAMIENTO DEL MINIMAP Y ELEMENTOS VISUALES DEL LADO DERECHO CUANDO EL CHAT ESTÁ ABIERTO */
 .umlstudio-canvas[data-agent-dock-open="true"] [data-umlstudio-region="top-right"],
 .umlstudio-canvas[data-agent-dock-open="true"] [data-umlstudio-region="bottom-right"],
-.umlstudio-canvas[data-agent-dock-open="true"] .react-flow__panel.right:not([data-umlstudio-region] *) {
-  transform: translateX(calc(-1 * (380px + var(--umlstudio-chrome-gap, 8px))));
+.umlstudio-canvas[data-agent-dock-open="true"]
+  .react-flow__panel.right:not([data-umlstudio-region] *) {
+  transform: translateX(calc(-1 * (420px + var(--umlstudio-chrome-gap, 8px))));
 }
 
 .umlstudio-canvas [data-umlstudio-region="top-right"],
@@ -661,6 +676,39 @@ body,
 
 .umlstudio-canvas[data-agent-dock-open="true"] [data-umlstudio-region="right-rail"] {
   padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  grid-row: 2 / -1 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+.umlstudio-canvas[data-agent-dock-open="true"]
+  [data-umlstudio-region="right-rail"]
+  > .umlstudio-overlay-lane {
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+.umlstudio-canvas[data-agent-dock-open="true"] [data-umlstudio-control="umlstudio:host:right-rail"],
+.umlstudio-canvas[data-agent-dock-open="true"]
+  [data-umlstudio-control="umlstudio:host:right-rail"]
+  > div {
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+/* REGION INFERIOR DERECHA: BOTON FLOTANTE DE COPILOTO IA */
+[data-umlstudio-control="umlstudio:host:bottom-right"] {
+  pointer-events: none;
+}
+
+[data-umlstudio-control="umlstudio:host:bottom-right"] > * {
+  pointer-events: auto;
+}
+
+[data-umlstudio-region="bottom-right"] {
+  margin-right: var(--umlstudio-chrome-edge, 16px);
+  margin-bottom: var(--umlstudio-chrome-gap, 16px);
 }
 
 .workbench-chat-stream {

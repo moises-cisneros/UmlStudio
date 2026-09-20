@@ -8,6 +8,9 @@ import {
   HowToUseModal,
   RenameDiagramModal,
   UserProfileModal,
+  SpringBootGenModal,
+  OpenApiDocsModal,
+  ProductivityModal,
 } from "@/components/modals";
 import {
   ConfirmRestoreModal,
@@ -42,6 +45,9 @@ const MODAL_COMPONENTS = {
   CONFIRM_RESTORE: ConfirmRestoreModal,
   RENAME_DIAGRAM: RenameDiagramModal,
   USER_PROFILE: UserProfileModal,
+  SPRING_BOOT_GEN: SpringBootGenModal,
+  OPENAPI_DOCS: OpenApiDocsModal,
+  PRODUCTIVITY_METRICS: ProductivityModal,
 } satisfies Record<ModalName, React.ComponentType<never>>;
 
 const ModalProgressBar = () => {
@@ -77,13 +83,17 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ name, props }) => {
   const variant: ModalVariant =
     name === "SHARE"
       ? "editor-share"
-      : isHomeDialog || name === "RENAME_DIAGRAM"
-        ? name === "NEW_DIAGRAM"
-          ? "home-wide"
-          : "home-compact"
-        : isConfirmModal
-          ? "confirm"
-          : "plain";
+      : name === "SPRING_BOOT_GEN" ||
+          name === "OPENAPI_DOCS" ||
+          name === "PRODUCTIVITY_METRICS"
+        ? "home-wide"
+        : isHomeDialog || name === "RENAME_DIAGRAM"
+          ? name === "NEW_DIAGRAM"
+            ? "home-wide"
+            : "home-compact"
+          : isConfirmModal
+            ? "confirm"
+            : "plain";
 
   const getModalTitle = (): string => {
     switch (name) {
@@ -106,6 +116,12 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ name, props }) => {
         return "Rename Diagram";
       case "USER_PROFILE":
         return t.profile.title;
+      case "SPRING_BOOT_GEN":
+        return t.codegen.modalTitle;
+      case "OPENAPI_DOCS":
+        return t.openapi.modalTitle;
+      case "PRODUCTIVITY_METRICS":
+        return t.productivity?.modalTitle || "Productividad y Tiempos";
       default:
         return name;
     }
