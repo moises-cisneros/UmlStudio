@@ -30,15 +30,7 @@ services:
       - "traefik.http.services.http-webapp.loadbalancer.server.port=8080"
       - "traefik.http.services.https-webapp.loadbalancer.server.port=8080"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://127.0.0.1:8080/",
-        ]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -117,6 +109,49 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  mcp-server:
+    image: "ghcr.io/umlstudio/umlstudio/mcp-server:${IMAGE_TAG:-latest}"
+    restart: unless-stopped
+    expose:
+      - "8003"
+    environment:
+      - MCP_PORT=8003
+      - MCP_HOST=0.0.0.0
+    networks:
+      - umlstudio-network
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=umlstudio-network"
+      - "traefik.http.routers.http-mcp-server.entryPoints=http"
+      - "traefik.http.routers.http-mcp-server.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-mcp-server.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/mcp`)"
+      - "traefik.http.routers.http-mcp-server.service=http-mcp-server"
+      - "traefik.http.routers.http-mcp-server.priority=10"
+      - "traefik.http.routers.https-mcp-server.entryPoints=https"
+      - "traefik.http.routers.https-mcp-server.middlewares=secure-headers"
+      - "traefik.http.routers.https-mcp-server.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/mcp`)"
+      - "traefik.http.routers.https-mcp-server.service=https-mcp-server"
+      - "traefik.http.routers.https-mcp-server.tls=true"
+      - "traefik.http.routers.https-mcp-server.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-mcp-server.priority=20"
+      - "traefik.http.services.http-mcp-server.loadbalancer.server.port=8003"
+      - "traefik.http.services.https-mcp-server.loadbalancer.server.port=8003"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8003/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     logging:
       driver: "json-file"
       options:

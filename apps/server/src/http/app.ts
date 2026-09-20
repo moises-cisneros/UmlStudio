@@ -21,6 +21,8 @@ import { getJwtSecret } from "../redis.js";
 import { mountDiagramRoutes } from "../routes/diagrams.js";
 import { mountVersionRoutes } from "../routes/versions.js";
 import { mountConversionRoutes } from "../routes/conversion.js";
+import { mountCodegenRoutes } from "../routes/codegen.js";
+import { mountProductivityRoutes } from "../routes/productivity.js";
 import { mountHealthRoutes } from "../routes/health.js";
 import { mountEmbedApiRoutes, mountEmbedRoutes } from "../routes/embed.js";
 import { ConversionResource } from "../resources/conversion-resource.js";
@@ -99,6 +101,8 @@ export function buildApp(deps: AppDeps): ServerType {
   app.route("/api", mountDiagramRoutes({ config, redis, auth }, relay));
   app.route("/api", mountVersionRoutes({ config, redis, auth }, relay));
   app.route("/api", mountConversionRoutes({ getResource }));
+  app.route("/api", mountCodegenRoutes());
+  app.route("/api", mountProductivityRoutes());
   app.route(
     "/api",
     mountEmbedApiRoutes({ redis, config, getResource, previewCache }),

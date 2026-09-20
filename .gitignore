@@ -92,7 +92,6 @@ docs/.snippet-typecheck/
 
 # Docs
 docs/
-CLAUDE.md
 AGENTS.md
 openspec/
 .openspec/

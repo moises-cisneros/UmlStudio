@@ -45,6 +45,29 @@ services:
     networks:
       - umlstudio-local
 
+  codegen:
+    build:
+      context: ..
+      dockerfile: ./apps/codegen/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+    networks:
+      - umlstudio-local
+
+  mcp-server:
+    build:
+      context: ..
+      dockerfile: ./apps/mcp-server/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - MCP_PORT=8003
+      - MCP_HOST=0.0.0.0
+    networks:
+      - umlstudio-local
+
   db:
     image: redis/redis-stack-server:7.4.0-v8
     ports:
