@@ -1,0 +1,4 @@
+# UmlStudio — Unified Local Development Docker Compose
+# Runs all services: Webapp (:8080), Backend Server (:8000/:4444), Redis DB (:6379), AI Service (:8001), Codegen (:8002), MCP Server (:8003)
+include:
+  - path: ./docker/compose.local.yml

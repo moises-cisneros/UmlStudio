@@ -3,6 +3,12 @@ import {
   DiagramEdgeTypeRecord,
   DiagramNodeTypeRecord,
 } from "../modelElementTypes";
+import {
+  mapVisibilitySymbol,
+  parseUmlAttribute,
+  parseUmlMethod,
+  splitUmlParameters,
+} from "./umlMemberGrammar";
 
 export interface XmiExportOptions {
   /**
@@ -40,17 +46,7 @@ function escapeXml(unsafe: string): string {
 function mapVisibilityToXmi(
   symbol?: string,
 ): "public" | "private" | "protected" | "package" {
-  switch (symbol) {
-    case "-":
-      return "private";
-    case "#":
-      return "protected";
-    case "~":
-      return "package";
-    case "+":
-    default:
-      return "public";
-  }
+  return mapVisibilitySymbol(symbol);
 }
 
 function mapPrimitiveTypeHref(typeName: string): string {
@@ -181,12 +177,12 @@ function serializeNode(
     nodeData.attributes.forEach(
       (attr: { id?: string; name: string }, idx: number) => {
         const raw = attr.name || "";
-        const match = raw.match(
-          /^\s*([+\-#~])?\s*([a-zA-Z0-9_$]+)(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/,
+        const parsed = parseUmlAttribute(raw);
+        const visSymbol = parsed?.visibilitySymbol || "+";
+        const attrName = escapeXml(
+          parsed?.name || raw.trim() || `attr_${idx}`,
         );
-        const visSymbol = match?.[1] || "+";
-        const attrName = escapeXml(match?.[2] || raw.trim() || `attr_${idx}`);
-        const typeName = match?.[3]?.trim();
+        const typeName = parsed?.type;
         const visibility = mapVisibilityToXmi(visSymbol);
         const attrId = escapeXml(attr.id || `attr_${node.id}_${idx}`);
 
@@ -208,13 +204,14 @@ function serializeNode(
     nodeData.methods.forEach(
       (method: { id?: string; name: string }, idx: number) => {
         const raw = method.name || "";
-        const match = raw.match(
-          /^\s*([+\-#~])?\s*([a-zA-Z0-9_$]+)\s*(?:\((.*?)\))?(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/,
+        const parsed = parseUmlMethod(raw);
+        const visSymbol = parsed?.visibilitySymbol || "+";
+        const methodName = escapeXml(
+          parsed?.name || raw.trim() || `op_${idx}`,
         );
-        const visSymbol = match?.[1] || "+";
-        const methodName = escapeXml(match?.[2] || raw.trim() || `op_${idx}`);
-        const paramsRaw = match?.[3];
-        const returnType = match?.[4]?.trim();
+        const params = parsed?.params ?? splitUmlParameters("");
+        const hasParams = params.length > 0;
+        const returnType = parsed?.returnType;
         const visibility = mapVisibilityToXmi(visSymbol);
         const opId = escapeXml(method.id || `op_${node.id}_${idx}`);
 
@@ -223,14 +220,10 @@ function serializeNode(
         );
 
         // In parameters
-        if (paramsRaw && paramsRaw.trim()) {
-          const paramTokens = paramsRaw.split(",");
-          paramTokens.forEach((pt, pIdx) => {
-            const pMatch = pt
-              .trim()
-              .match(/^([a-zA-Z0-9_$]+)(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/);
-            const pName = escapeXml(pMatch?.[1] || `param_${pIdx}`);
-            const pType = pMatch?.[2]?.trim();
+        if (hasParams) {
+          params.forEach((param, pIdx) => {
+            const pName = escapeXml(param.name || `param_${pIdx}`);
+            const pType = param.type;
             const pId = `${opId}_p_${pIdx}`;
             lines.push(
               `        <ownedParameter xmi:type="uml:Parameter" xmi:id="${pId}" name="${pName}" direction="in">`,

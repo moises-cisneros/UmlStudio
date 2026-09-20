@@ -29,6 +29,7 @@
     "hono": "4.12.27",
     "jose": "catalog:",
     "jsdom": "catalog:",
+    "jszip": "3.10.1",
     "lib0": "0.2.117",
     "pdfmake": "0.3.11",
     "pino": "10.3.1",

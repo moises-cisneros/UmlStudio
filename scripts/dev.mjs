@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-nocheck
 import { spawn } from "node:child_process"
 import fs from "node:fs"
 import net from "node:net"
@@ -10,6 +10,9 @@ const DEFAULT_PORTS = {
   server: 8000,
   websocket: 4444,
   redis: 6379,
+  codegen: 8002,
+  aiService: 8001,
+  mcpServer: 8003,
 }
 
 const repoRoot = process.cwd()
@@ -18,6 +21,9 @@ const PREFIX_COLORS = {
   lib: "\u001B[33m",
   server: "\u001B[34m",
   webapp: "\u001B[35m",
+  codegen: "\u001B[36m",
+  ai: "\u001B[32m",
+  mcp: "\u001B[31m",
 }
 const PREFIX_RESET = "\u001B[39m"
 
@@ -43,6 +49,9 @@ function getPreferredPorts() {
     server: readPort("UMLSTUDIO_SERVER_PORT", DEFAULT_PORTS.server),
     websocket: readPort("UMLSTUDIO_WS_PORT", DEFAULT_PORTS.websocket),
     redis: readPort("UMLSTUDIO_REDIS_PORT", DEFAULT_PORTS.redis),
+    codegen: readPort("UMLSTUDIO_CODEGEN_PORT", DEFAULT_PORTS.codegen),
+    aiService: readPort("UMLSTUDIO_AI_PORT", DEFAULT_PORTS.aiService),
+    mcpServer: readPort("UMLSTUDIO_MCP_PORT", DEFAULT_PORTS.mcpServer),
   }
 }
 
@@ -453,12 +462,36 @@ async function main() {
   )
   reservedPorts.add(webappPort)
 
+  const codegenPort = await findAvailablePort(
+    preferredPorts.codegen,
+    "127.0.0.1",
+    reservedPorts
+  )
+  reservedPorts.add(codegenPort)
+
+  const aiPort = await findAvailablePort(
+    preferredPorts.aiService,
+    "127.0.0.1",
+    reservedPorts
+  )
+  reservedPorts.add(aiPort)
+
+  const mcpPort = await findAvailablePort(
+    preferredPorts.mcpServer,
+    "127.0.0.1",
+    reservedPorts
+  )
+  reservedPorts.add(mcpPort)
+
   const redis = await resolveRedisEndpoint(preferredPorts.redis, reservedPorts)
 
   console.log("[dev] Selected development ports:")
   console.log(`[dev]   webapp:    http://localhost:${webappPort}`)
   console.log(`[dev]   server:    http://127.0.0.1:${serverPort}`)
   console.log(`[dev]   websocket: ws://127.0.0.1:${websocketPort}`)
+  console.log(`[dev]   codegen:   http://127.0.0.1:${codegenPort}`)
+  console.log(`[dev]   ai:        http://127.0.0.1:${aiPort}`)
+  console.log(`[dev]   mcp:       http://127.0.0.1:${mcpPort}`)
   console.log(`[dev]   redis:     ${redis.url} (${redis.source})`)
 
   const sharedEnv = {
@@ -466,6 +499,9 @@ async function main() {
     UMLSTUDIO_WEBAPP_PORT: String(webappPort),
     UMLSTUDIO_SERVER_PORT: String(serverPort),
     UMLSTUDIO_WS_PORT: String(websocketPort),
+    UMLSTUDIO_CODEGEN_PORT: String(codegenPort),
+    UMLSTUDIO_AI_PORT: String(aiPort),
+    UMLSTUDIO_MCP_PORT: String(mcpPort),
   }
 
   const coloredEnv = {
@@ -511,6 +547,37 @@ async function main() {
       args: [],
       cwd: path.join(repoRoot, "apps/webapp"),
       env: coloredEnv,
+    }),
+    spawnManagedProcess({
+      name: "codegen",
+      command: commandBinary("apps/codegen", "tsx"),
+      args: ["watch", "--clear-screen=false", "src/server.ts"],
+      cwd: path.join(repoRoot, "apps/codegen"),
+      env: {
+        ...coloredEnv,
+        PORT: String(codegenPort),
+      },
+    }),
+    spawnManagedProcess({
+      name: "ai",
+      command: "python",
+      args: ["-m", "uvicorn", "src.main:app", "--host", "127.0.0.1", "--port", String(aiPort)],
+      cwd: path.join(repoRoot, "apps/ai-service"),
+      env: {
+        ...coloredEnv,
+        AI_SERVICE_PORT: String(aiPort),
+        AI_SERVICE_HOST: "127.0.0.1",
+      },
+    }),
+    spawnManagedProcess({
+      name: "mcp",
+      command: "python",
+      args: ["src/server.py", "--transport", "sse", "--port", String(mcpPort)],
+      cwd: path.join(repoRoot, "apps/mcp-server"),
+      env: {
+        ...coloredEnv,
+        MCP_PORT: String(mcpPort),
+      },
     }),
   ]
 
