@@ -8,7 +8,10 @@ export type ModalName =
   | "DELETE_VERSION"
   | "CONFIRM_RESTORE"
   | "RENAME_DIAGRAM"
-  | "USER_PROFILE";
+  | "USER_PROFILE"
+  | "SPRING_BOOT_GEN"
+  | "OPENAPI_DOCS"
+  | "PRODUCTIVITY_METRICS";
 
 
 export interface ModalProps {

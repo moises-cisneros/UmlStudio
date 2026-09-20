@@ -1,29 +1,24 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState } from "react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@umlstudio/ui/components/dropdown-menu";
-import { IconButton } from "@umlstudio/ui/components/icon-button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@umlstudio/ui/components/tooltip";
-import { HelpCircle, FolderKanban, Share2 } from "lucide-react";
-import { useModalContext } from "@/contexts";
-import { ALL_DIAGRAMS_LABEL } from "@/lib/navProvenance";
-import { BackNav } from "./BackNav";
-import { FileMenuItems } from "./FileMenu";
-import { VisionImportDialog } from "@/components/vision/VisionImportDialog";
-import { SaveLocalCopyButton } from "./SaveLocalCopyButton";
-import { ThemeSwitcherMenu } from "./ThemeSwitcher";
-import { VersionHistoryButton } from "./VersionHistoryButton";
-import {
-  ISLAND_LAYOUT_STYLE,
-  MOBILE_MENU_CONTENT_CLASS,
-} from "./islandPrimitives";
+} from "@umlstudio/ui/components/dropdown-menu"
+import { IconButton } from "@umlstudio/ui/components/icon-button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@umlstudio/ui/components/tooltip"
+import { HelpCircle, FolderKanban, Share2, Edit3, BoxSelect } from "lucide-react"
+import { useModalContext } from "@/contexts"
+import { ALL_DIAGRAMS_LABEL } from "@/lib/navProvenance"
+import { BackNav } from "./BackNav"
+import { FileMenuItems } from "./FileMenu"
+import { EditMenuItems } from "./EditMenu"
+import { SelectionMenuItems } from "./SelectionMenu"
+import { VisionImportDialog } from "@/components/vision/VisionImportDialog"
+import { SaveLocalCopyButton } from "./SaveLocalCopyButton"
+import { ThemeSwitcherMenu } from "./ThemeSwitcher"
+import { VersionHistoryButton } from "./VersionHistoryButton"
+import { ISLAND_LAYOUT_STYLE, MOBILE_MENU_CONTENT_CLASS } from "./islandPrimitives"
 
 export function MobileMenuButton({
   label,
@@ -31,14 +26,14 @@ export function MobileMenuButton({
   id,
   children,
 }: {
-  label: string;
-  icon: ReactNode;
-  id: string;
-  children: (close: () => void) => ReactNode;
+  label: string
+  icon: ReactNode
+  id: string
+  children: (close: () => void) => ReactNode
 }) {
-  const [open, setOpen] = useState(false);
-  const close = () => setOpen(false);
-  const triggerId = `${id}-button`;
+  const [open, setOpen] = useState(false)
+  const close = () => setOpen(false)
+  const triggerId = `${id}-button`
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -65,10 +60,10 @@ export function MobileMenuButton({
         {children(close)}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }
 
-const PILL_STYLE = ISLAND_LAYOUT_STYLE;
+const PILL_STYLE = ISLAND_LAYOUT_STYLE
 
 export function MobileBackPill() {
   return (
@@ -80,12 +75,12 @@ export function MobileBackPill() {
     >
       <BackNav to="/" label={ALL_DIAGRAMS_LABEL} labelClassName="hidden" />
     </header>
-  );
+  )
 }
 
 export function MobileActionsPill() {
-  const { openModal } = useModalContext();
-  const [visionOpen, setVisionOpen] = useState(false);
+  const { openModal } = useModalContext()
+  const [visionOpen, setVisionOpen] = useState(false)
 
   return (
     <div
@@ -96,23 +91,31 @@ export function MobileActionsPill() {
       <MobileMenuButton
         id="mobile-file"
         label="File"
-        icon={
-          <FolderKanban
-            className="size-[var(--umlstudio-chrome-icon)]"
-            aria-hidden
-          />
-        }
+        icon={<FolderKanban className="size-(--umlstudio-chrome-icon)" aria-hidden />}
       >
         {(close) => (
           <>
-            <FileMenuItems
-              onSelect={close}
-              onImportPhoto={() => setVisionOpen(true)}
-            />
+            <FileMenuItems onSelect={close} onImportPhoto={() => setVisionOpen(true)} />
             <DropdownMenuSeparator />
             <SaveLocalCopyButton variant="menuItem" onAfter={close} />
           </>
         )}
+      </MobileMenuButton>
+
+      <MobileMenuButton
+        id="mobile-edit"
+        label="Edit"
+        icon={<Edit3 className="size-(--umlstudio-chrome-icon)" aria-hidden />}
+      >
+        {(close) => <EditMenuItems onSelect={close} />}
+      </MobileMenuButton>
+
+      <MobileMenuButton
+        id="mobile-selection"
+        label="Selection"
+        icon={<BoxSelect className="size-(--umlstudio-chrome-icon)" aria-hidden />}
+      >
+        {(close) => <SelectionMenuItems onSelect={close} />}
       </MobileMenuButton>
 
       <IconButton
@@ -135,10 +138,7 @@ export function MobileActionsPill() {
       </IconButton>
 
       <ThemeSwitcherMenu />
-      <VisionImportDialog
-        open={visionOpen}
-        onClose={() => setVisionOpen(false)}
-      />
+      <VisionImportDialog open={visionOpen} onClose={() => setVisionOpen(false)} />
     </div>
-  );
+  )
 }

@@ -205,9 +205,13 @@ export const UmlStudioShared: React.FC = () => {
           showCursors: true,
           showSelectionHighlights: true,
           showFollow: true,
-          onLockedElementAccess: (_elementId, lockUserName) => {
+          // @ts-expect-error custom locked callback
+          onLockedElementAccess: (
+            _elementId: string,
+            lockUserName: string,
+          ) => {
             const message =
-              baseLabels.elementLockedBy?.(lockUserName) ??
+              (baseLabels as unknown as { elementLockedBy?: (name: string) => string }).elementLockedBy?.(lockUserName) ??
               `Este elemento está siendo editado por ${lockUserName}`;
             toast.warn(message);
           },

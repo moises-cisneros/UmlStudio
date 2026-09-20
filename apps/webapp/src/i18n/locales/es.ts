@@ -1,4 +1,4 @@
-import type { TranslationDictionary } from "../types";
+import type { TranslationDictionary } from "../types"
 
 export const es: TranslationDictionary = {
   common: {
@@ -29,6 +29,8 @@ export const es: TranslationDictionary = {
   },
   menu: {
     file: "Archivo",
+    edit: "Editar",
+    selection: "Selección",
     newDiagram: "Nuevo Diagrama...",
     openDiagram: "Abrir Diagrama...",
     saveLocalCopy: "Guardar Copia Local",
@@ -41,12 +43,26 @@ export const es: TranslationDictionary = {
     exportPng: "Exportar a Imagen (.png)",
     exportXmi: "Exportar a Architect (.xmi)",
     exportSpringBoot: "Generar Código Backend (.zip)",
+    exportOpenApi: "Documentación API",
+    exportPostman: "Colección Postman (.json)",
     share: "Compartir",
     help: "Ayuda",
     keyboardShortcuts: "Atajos de Teclado",
     renameDiagram: "Renombrar diagrama…",
     shareDiagram: "Compartir diagrama…",
     deleteDiagram: "Eliminar diagrama…",
+    undo: "Deshacer",
+    redo: "Rehacer",
+    cut: "Cortar",
+    copy: "Copiar",
+    paste: "Pegar",
+    duplicate: "Duplicar",
+    delete: "Eliminar selección",
+    fitView: "Ajustar a la vista",
+    selectAll: "Seleccionar todo",
+    clearSelection: "Deseleccionar todo",
+    multiSelect: "Modo Selección múltiple",
+    zoomToSelection: "Zoom a la selección",
   },
   omnibox: {
     placeholder: "Buscar clases, comandos o pedir al Copiloto IA...",
@@ -133,8 +149,7 @@ export const es: TranslationDictionary = {
     actionSaveLocalCopy: "Guardar copia",
     actionChangeSharingMode: "Cambiar modo de compartir",
     actionRemoveFromShared: "Eliminar de compartidos",
-    cannotDeleteCurrent:
-      "No se puede eliminar el diagrama actualmente en edición",
+    cannotDeleteCurrent: "No se puede eliminar el diagrama actualmente en edición",
     confirmDeleteTitle: "¿Eliminar este diagrama?",
     confirmDeleteDesc:
       "Esto eliminará permanentemente el diagrama de este dispositivo. Esta acción no se puede deshacer.",
@@ -152,11 +167,9 @@ export const es: TranslationDictionary = {
     toastSaveLocalCopyFailed: "No se pudo guardar la copia local.",
     toastSharingModeUpdated: "es ahora el enlace predeterminado.",
     toastDiagramDeletedSuccess: "Diagrama eliminado con éxito",
-    toastDiagramDeleteError:
-      "No se pudo eliminar el diagrama. Intenta nuevamente.",
+    toastDiagramDeleteError: "No se pudo eliminar el diagrama. Intenta nuevamente.",
     toastDiagramRenamedSuccess: "Diagrama renombrado con éxito",
-    toastDiagramRenameError:
-      "No se pudo renombrar el diagrama. Intenta nuevamente.",
+    toastDiagramRenameError: "No se pudo renombrar el diagrama. Intenta nuevamente.",
     diagramActionsAria: "Acciones del diagrama",
     linkExpired: "Enlace expirado",
     linkExpiredDesc: "Este diagrama compartido ya no está disponible",
@@ -184,22 +197,19 @@ export const es: TranslationDictionary = {
     tabTemplate: "Plantilla",
     nameLabel: "Nombre del diagrama",
     namePlaceholder: "Ingresa el nombre del diagrama",
-    scratchHint:
-      "Crea un lienzo en blanco para modelar diagramas de clases OMG UML 2.5.",
+    scratchHint: "Crea un lienzo en blanco para modelar diagramas de clases OMG UML 2.5.",
     structuralCategory: "Patrones Estructurales",
     behavioralCategory: "Patrones de Comportamiento",
     creationalCategory: "Patrones Creacionales",
     cancel: "Cancelar",
     create: "Crear Diagrama",
     createFromTemplate: "Crear desde Plantilla",
-    errorTemplateNotFound:
-      "No se encontraron los datos de la plantilla seleccionada",
+    errorTemplateNotFound: "No se encontraron los datos de la plantilla seleccionada",
     errorUnexpected: "Ocurrió un error inesperado",
   },
   share: {
     modalTitle: "Compartir en colaborativo",
-    subtitle:
-      "Invita a tu equipo a colaborar en tiempo real en este diagrama de clases UML.",
+    subtitle: "Invita a tu equipo a colaborar en tiempo real en este diagrama de clases UML.",
     liveSessionBadge: "Sala en tiempo real",
     copyLink: "Copiar enlace",
     copied: "¡Enlace copiado!",
@@ -213,8 +223,7 @@ export const es: TranslationDictionary = {
     nameLabel: "Nombre del diagrama",
     namePlaceholder: "Ingresa el nombre del diagrama",
     anyoneWithLink: "Cualquiera con este enlace",
-    localCopyNotice:
-      "Tu copia local y su historial se mantienen en este dispositivo.",
+    localCopyNotice: "Tu copia local y su historial se mantienen en este dispositivo.",
     createLink: "Crear enlace colaborativo",
     openDiagram: "Abrir diagrama",
     creating: "Creando sala...",
@@ -223,8 +232,7 @@ export const es: TranslationDictionary = {
     reviewMode: "puede revisar",
     copyCode: "Copiar código",
     embedTitle: "Incrustar este diagrama",
-    embedDesc:
-      "Añade este diagrama interactivo a tu documentación o sitio web.",
+    embedDesc: "Añade este diagrama interactivo a tu documentación o sitio web.",
     noticeDashboardCreate:
       "Crea una versión en vivo de este diagrama para compartir, colaborar y recibir comentarios.",
     noticeDashboardShare:
@@ -244,8 +252,7 @@ export const es: TranslationDictionary = {
     precisionStudio: "Estudio Técnico de Precisión",
     liveBlueprint: "Plano en Vivo",
     welcomeBack: "Bienvenido de nuevo",
-    signInSubtitle:
-      "Inicia sesión para acceder a tus diagramas en la nube y salas en vivo.",
+    signInSubtitle: "Inicia sesión para acceder a tus diagramas en la nube y salas en vivo.",
     emailLabel: "Correo electrónico",
     emailPlaceholder: "admin@umlstudio.com",
     passwordLabel: "Contraseña",
@@ -258,15 +265,13 @@ export const es: TranslationDictionary = {
     createAccountLink: "Crea una ahora",
     quickDemoTitle: "Cuentas Demo Rápidas",
     quickDemoSubtitle: "Haz clic para autocompletar credenciales del rol",
-    invalidCredentials:
-      "Credenciales inválidas. Verifica tu correo y contraseña.",
+    invalidCredentials: "Credenciales inválidas. Verifica tu correo y contraseña.",
     registerTitle: "Modela Arquitectura de Software con",
     registerTitleHighlight: "Precisión.",
     registerDescription:
       "Crea tu cuenta de modelador para guardar diagramas en la nube, colaborar en tiempo real con presencia verificada y generar código Spring Boot.",
     getStarted: "Crear Cuenta",
-    registerSubtitle:
-      "Ingresa tus datos para comenzar a modelar con identidad verificada.",
+    registerSubtitle: "Ingresa tus datos para comenzar a modelar con identidad verificada.",
     nameLabel: "Nombre visible",
     namePlaceholder: "Ada Lovelace",
     passwordRequirements: "Requisitos de seguridad de la contraseña:",
@@ -311,8 +316,7 @@ export const es: TranslationDictionary = {
     stepMoveClassDesc:
       "Selecciónala con un clic y usa las flechas del teclado o arrástrala con el cursor.",
     stepUndoRedoTitle: "Deshacer y Rehacer",
-    stepUndoRedoDesc:
-      "Presiona para deshacer o rehacer tus cambios en cualquier momento.",
+    stepUndoRedoDesc: "Presiona para deshacer o rehacer tus cambios en cualquier momento.",
     groupSelection: "Selección",
     groupEditing: "Edición",
     groupHistory: "Historial",
@@ -335,6 +339,11 @@ export const es: TranslationDictionary = {
     zoomToSelection: "Enfocar selección",
     saveVersion: "Guardar versión",
     toggleVersionHistory: "Historial de versiones",
+    newDiagram: "Nuevo diagrama",
+    exportDiagram: "Exportar diagrama",
+    apiDocs: "Documentación API",
+    multiSelectMode: "Activar selección múltiple",
+    shareDiagram: "Compartir diagrama",
     gestureAddRemove: "Añadir / quitar de selección",
     gestureBoxSelect: "Selección por área",
     gesturePan: "Desplazar lienzo",
@@ -349,8 +358,7 @@ export const es: TranslationDictionary = {
     tabProfile: "Datos del Perfil",
     tabSecurity: "Seguridad y Clave",
     email: "Correo Electrónico",
-    emailReadonlyHint:
-      "El correo electrónico es el identificador único y no puede modificarse.",
+    emailReadonlyHint: "El correo electrónico es el identificador único y no puede modificarse.",
     displayName: "Nombre para Mostrar",
     displayNamePlaceholder: "Tu nombre completo o alias",
     cursorColor: "Color de Presencia / Cursor",
@@ -371,9 +379,73 @@ export const es: TranslationDictionary = {
     profileUpdatedToast: "Perfil actualizado correctamente",
     passwordUpdatedToast: "Contraseña actualizada exitosamente",
     wrongCurrentPassword: "La contraseña actual es incorrecta",
-    weakPassword:
-      "La nueva contraseña debe tener al menos 8 caracteres, números y un símbolo",
+    weakPassword: "La nueva contraseña debe tener al menos 8 caracteres, números y un símbolo",
     openProfile: "Mi Perfil",
   },
-};
-
+  codegen: {
+    modalTitle: "Generar Backend Spring Boot 3 y SQL",
+    modalSubtitle:
+      "Genera un proyecto compilable en 5 capas CRUD desacopladas con Spring Initializr API y scripts PostgreSQL 16+.",
+    tabMaven: "Coordenadas Maven",
+    tabServerDb: "Servidor y Base de Datos",
+    tabJpa: "Estrategia JPA",
+    groupId: "Group ID",
+    artifactId: "Artifact ID",
+    packageName: "Package Name",
+    serverPort: "Puerto HTTP del Servidor",
+    serverPortHelp:
+      "Configurado por defecto en 9000 para evitar colisiones con el puerto 8080 local.",
+    dbName: "Nombre de Base de Datos",
+    dbHost: "Host de PostgreSQL",
+    dbPort: "Puerto de PostgreSQL",
+    dbUser: "Usuario de Base de Datos",
+    dbPassword: "Password de Base de Datos",
+    inheritance: "Estrategia de Herencia",
+    joinedHelp:
+      "JOINED crea tablas normalizadas por subclase con claves foráneas referenciando a la clase padre.",
+    generateBtn: "Generar y Descargar (.zip)",
+    generating: "Generando con Spring Initializr...",
+    successToast: "Proyecto Spring Boot 3 generado y descargado con éxito.",
+    errorToast: "Error al generar el proyecto Spring Boot.",
+    noClassesError: "El diagrama debe contener al menos una clase para generar el backend.",
+    viewApiDocs: "Documentación API",
+  },
+  openapi: {
+    modalTitle: "Documentación API",
+    modalSubtitle:
+      "Explora interactivamente los endpoints Swagger, inspecciona esquemas y exporta contratos.",
+    tabSwagger: "Swagger UI",
+    tabSpec: "Contrato OpenAPI",
+    tabPostman: "Postman v2.1",
+    noClassesMessage: "El diagrama no contiene clases para documentar.",
+    simulateBtn: "Simular Llamada",
+    copyBtn: "Copiar",
+    copiedBtn: "¡Copiado!",
+    copiedToast: "¡Copiado al portapapeles!",
+    downloadBtn: "Descargar",
+    downloadPostmanBtn: "Descargar Colección",
+    downloadSuccessJson: "OpenAPI JSON descargado con éxito",
+    downloadSuccessYaml: "OpenAPI YAML descargado con éxito",
+    downloadSuccessPostman: "Colección Postman descargada con éxito",
+    postmanHelp:
+      "Colección Postman v2.1 con encabezados preconfigurados, variable baseUrl y payloads de ejemplo.",
+  },
+  productivity: {
+    modalTitle: "Productividad y Tiempos",
+    modalSubtitle:
+      "Telemetría en tiempo real, detección de contención sobre clases y diagnóstico asistido por IA.",
+    tabBottlenecks: "Cuellos de Botella",
+    tabCollaborators: "Colaboradores",
+    tabAi: "Diagnóstico IA",
+    activeTime: "Tiempo Activo",
+    idleTime: "Tiempo Inactivo",
+    classVelocity: "Velocidad de Clases",
+    refactorCadence: "Cadencia de Refactor",
+    fluencyStatus: "Estado de Fluidez",
+    fluencyScore: "Puntuación de Fluidez",
+    btnAiAudit: "Analizar con IA",
+    btnExportJson: "Exportar JSON",
+    btnPrint: "Imprimir Reporte",
+    btnRefresh: "Refrescar Métricas",
+  },
+}

@@ -7,3 +7,6 @@ export * from "./HowToUseModal";
 export * from "./AboutModal";
 export * from "./RenameDiagramModal";
 export * from "./UserProfileModal";
+export * from "./SpringBootGenModal";
+export * from "./OpenApiDocsModal";
+export * from "./ProductivityModal";

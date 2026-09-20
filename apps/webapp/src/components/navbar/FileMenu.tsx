@@ -1,4 +1,4 @@
-import { FC, useCallback, useState } from "react";
+import { FC, useCallback, useState } from "react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,26 +6,23 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from "@umlstudio/ui/components/dropdown-menu";
-import { Button } from "@umlstudio/ui/components/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@umlstudio/ui/components/tooltip";
-import { ChevronDownIcon, FolderKanban } from "lucide-react";
-import { toast, type ToastContentProps } from "react-toastify";
-import { useModalContext } from "@/contexts";
-import { useMediaQuery } from "@/hooks";
-import { useExportAsPNG, useExportAsSpringBoot, useExportAsXMI } from "@/hooks";
-import { log } from "@/logger";
-import { JsonFileImportButton, XmiFileImportButton } from "./XmiFileImportButton";
-import { VisionPhotoImportItem } from "./VisionPhotoImportItem";
-import { SaveLocalCopyButton } from "./SaveLocalCopyButton";
-import { navbarButtonStyle } from "./styleConstants";
-import { MOBILE_MENU_CONTENT_CLASS } from "./islandPrimitives";
-import { useTranslation } from "@/i18n";
+} from "@umlstudio/ui/components/dropdown-menu"
+import { Button } from "@umlstudio/ui/components/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@umlstudio/ui/components/tooltip"
+import { ChevronDownIcon, FolderKanban } from "lucide-react"
+import { toast, type ToastContentProps } from "react-toastify"
+import { useModalContext } from "@/contexts"
+import { useMediaQuery } from "@/hooks"
+import { useExportAsPNG, useExportAsSpringBoot, useExportAsOpenApi, useExportAsXMI } from "@/hooks"
+import { log } from "@/logger"
+import { JsonFileImportButton, XmiFileImportButton } from "./XmiFileImportButton"
+import { VisionPhotoImportItem } from "./VisionPhotoImportItem"
+import { SaveLocalCopyButton } from "./SaveLocalCopyButton"
+import { navbarButtonStyle } from "./styleConstants"
+import { MOBILE_MENU_CONTENT_CLASS } from "./islandPrimitives"
+import { useTranslation } from "@/i18n"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,148 +32,135 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@umlstudio/ui/components/alert-dialog";
-import { useNavigate } from "@tanstack/react-router";
-import { useEditorContext } from "@/contexts";
-import { VisionImportDialog } from "@/components/vision/VisionImportDialog";
-import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
-import { DiagramApiClient } from "@/services/DiagramApiClient";
-import { useDiagramIdFromPath } from "@/hooks/useDiagramIdFromPath";
-import { useSharedDiagramId } from "@/hooks/useSharedDiagramId";
+} from "@umlstudio/ui/components/alert-dialog"
+import { useNavigate } from "@tanstack/react-router"
+import { useEditorContext } from "@/contexts"
+import { VisionImportDialog } from "@/components/vision/VisionImportDialog"
+import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
+import { DiagramApiClient } from "@/services/DiagramApiClient"
+import { useDiagramIdFromPath } from "@/hooks/useDiagramIdFromPath"
+import { useSharedDiagramId } from "@/hooks/useSharedDiagramId"
 
 interface FileMenuProps {
-  color?: string;
-  onClose?: () => void;
+  color?: string
+  onClose?: () => void
 }
 
-type ExportFormat = "PNG" | "Spring Boot" | "XMI" | "JSON";
+type ExportFormat = "PNG" | "Spring Boot" | "OpenAPI" | "Postman" | "XMI" | "JSON"
 
-type ExportRunResult = { clamped?: boolean; appliedScale?: number };
+type ExportRunResult = { clamped?: boolean; appliedScale?: number }
 
-const PNG_SCALES = [1, 2, 4] as const;
-const DEFAULT_PNG_SCALE = 1.5;
+const PNG_SCALES = [1, 2, 4] as const
+const DEFAULT_PNG_SCALE = 1.5
 
-function exportSuccessMessage(
-  format: ExportFormat,
-  result?: ExportRunResult | void,
-): string {
+function exportSuccessMessage(format: ExportFormat, result?: ExportRunResult | void): string {
   if (result?.clamped) {
-    return `${format} exported (downscaled to ${result.appliedScale}x to fit memory limits).`;
+    return `${format} exported (downscaled to ${result.appliedScale}x to fit memory limits).`
   }
-  return `${format} exported.`;
+  return `${format} exported.`
 }
 
 function exportErrorMessage(format: ExportFormat, err: unknown): string {
   if ((err as Error)?.name === "RasterTooLargeError") {
-    return "Diagram is too large to export as PNG.";
+    return "Diagram is too large to export as PNG."
   }
-  return `${format} export failed. Please try again.`;
+  return `${format} export failed. Please try again.`
 }
 
 export function FileMenuItems({
   onSelect,
   onImportPhoto,
 }: {
-  onSelect: () => void;
-  onImportPhoto: () => void;
+  onSelect: () => void
+  onImportPhoto: () => void
 }) {
-  const { openModal } = useModalContext();
-  const { editor } = useEditorContext();
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const diagramId = useDiagramIdFromPath();
-  const sharedDiagramId = useSharedDiagramId();
-  const deleteModel = usePersistenceModelStore((s) => s.deleteModel);
-  const exportAsPng = useExportAsPNG();
-  const exportAsSpringBoot = useExportAsSpringBoot();
-  const exportAsXMI = useExportAsXMI();
+  const { openModal } = useModalContext()
+  const { editor } = useEditorContext()
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const diagramId = useDiagramIdFromPath()
+  const sharedDiagramId = useSharedDiagramId()
+  const deleteModel = usePersistenceModelStore((s) => s.deleteModel)
+  const exportAsPng = useExportAsPNG()
+  const exportAsSpringBoot = useExportAsSpringBoot()
+  const exportAsOpenApi = useExportAsOpenApi()
+  const exportAsXMI = useExportAsXMI()
 
   const exportAsJson = useCallback(async () => {
     if (!editor) {
-      throw new Error("Editor not initialized");
+      throw new Error("Editor not initialized")
     }
-    const model = editor.model;
-    const title = editor.getDiagramMetadata()?.diagramTitle || model.title || "diagram";
-    const filename = `${title.toLowerCase().replace(/[^a-z0-9_-]/gi, "_") || "diagram"}.json`;
-    const jsonStr = JSON.stringify(model, null, 2);
-    const blob = new Blob([jsonStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [editor]);
+    const model = editor.model
+    const title = editor.getDiagramMetadata()?.diagramTitle || model.title || "diagram"
+    const filename = `${title.toLowerCase().replace(/[^a-z0-9_-]/gi, "_") || "diagram"}.json`
+    const jsonStr = JSON.stringify(model, null, 2)
+    const blob = new Blob([jsonStr], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [editor])
 
-  const [busyFormat, setBusyFormat] = useState<ExportFormat | null>(null);
-  const [pngScale, setPngScale] = useState<number>(DEFAULT_PNG_SCALE);
-  const [transparentPng, setTransparentPng] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [busyFormat, setBusyFormat] = useState<ExportFormat | null>(null)
+  const [pngScale, setPngScale] = useState<number>(DEFAULT_PNG_SCALE)
+  const [transparentPng, setTransparentPng] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleNewDiagram = useCallback(() => {
-    openModal("NEW_DIAGRAM", { dialogVariant: "home" });
-    onSelect();
-  }, [openModal, onSelect]);
+    openModal("NEW_DIAGRAM", { dialogVariant: "home" })
+    onSelect()
+  }, [openModal, onSelect])
 
   const handleRenameDiagram = useCallback(() => {
-    if (!diagramId) return;
+    if (!diagramId) return
     openModal("RENAME_DIAGRAM", {
       diagramId,
       initialTitle: editor?.getDiagramMetadata()?.diagramTitle || "",
       source: sharedDiagramId ? "shared" : "local",
-    });
-    onSelect();
-  }, [diagramId, editor, openModal, sharedDiagramId, onSelect]);
+    })
+    onSelect()
+  }, [diagramId, editor, openModal, sharedDiagramId, onSelect])
 
   const handleShareDiagram = useCallback(() => {
-    openModal("SHARE", { dialogVariant: "home" });
-    onSelect();
-  }, [openModal, onSelect]);
+    openModal("SHARE", { dialogVariant: "home" })
+    onSelect()
+  }, [openModal, onSelect])
 
   const handleRequestDelete = useCallback(() => {
-    setShowDeleteConfirm(true);
-  }, []);
+    setShowDeleteConfirm(true)
+  }, [])
 
   const handleConfirmDelete = useCallback(async () => {
-    if (!diagramId || isDeleting) return;
-    setIsDeleting(true);
+    if (!diagramId || isDeleting) return
+    setIsDeleting(true)
     try {
       if (sharedDiagramId) {
-        await DiagramApiClient.deleteDiagram(sharedDiagramId);
+        await DiagramApiClient.deleteDiagram(sharedDiagramId)
       } else {
-        deleteModel(diagramId);
+        deleteModel(diagramId)
       }
-      toast.success(t.dashboard.toastDiagramDeletedSuccess);
-      setShowDeleteConfirm(false);
-      onSelect();
-      navigate({ to: "/" });
+      toast.success(t.dashboard.toastDiagramDeletedSuccess)
+      setShowDeleteConfirm(false)
+      onSelect()
+      navigate({ to: "/" })
     } catch (err) {
-      log.error("Failed to delete diagram", err as Error);
-      toast.error(t.dashboard.toastDiagramDeleteError);
+      log.error("Failed to delete diagram", err as Error)
+      toast.error(t.dashboard.toastDiagramDeleteError)
     } finally {
-      setIsDeleting(false);
+      setIsDeleting(false)
     }
-  }, [
-    diagramId,
-    sharedDiagramId,
-    isDeleting,
-    deleteModel,
-    t,
-    navigate,
-    onSelect,
-  ]);
+  }, [diagramId, sharedDiagramId, isDeleting, deleteModel, t, navigate, onSelect])
 
   const runExport = useCallback(
-    async (
-      format: ExportFormat,
-      action: () => Promise<ExportRunResult | void>,
-    ) => {
-      if (busyFormat) return;
-      onSelect();
-      setBusyFormat(format);
+    async (format: ExportFormat, action: () => Promise<ExportRunResult | void>) => {
+      if (busyFormat) return
+      onSelect()
+      setBusyFormat(format)
       try {
         await toast.promise(action(), {
           pending: `Exporting ${format}…`,
@@ -185,23 +169,23 @@ export function FileMenuItems({
               exportSuccessMessage(format, data),
           },
           error: {
-            render: ({ data }: ToastContentProps<unknown>) =>
-              exportErrorMessage(format, data),
+            render: ({ data }: ToastContentProps<unknown>) => exportErrorMessage(format, data),
           },
-        });
+        })
       } catch (err) {
-        log.error("export failed", err as Error);
+        log.error("export failed", err as Error)
       } finally {
-        setBusyFormat(null);
+        setBusyFormat(null)
       }
     },
-    [busyFormat, onSelect],
-  );
+    [busyFormat, onSelect]
+  )
 
   return (
     <>
       <DropdownMenuItem onClick={handleNewDiagram}>
-        {t.menu.newDiagram}
+        <span>{t.menu.newDiagram}</span>
+        <DropdownMenuShortcut>Ctrl+Alt+N</DropdownMenuShortcut>
       </DropdownMenuItem>
 
       <SaveLocalCopyButton variant="menuItem" onAfter={onSelect} />
@@ -230,11 +214,7 @@ export function FileMenuItems({
             PNG scale
             {pngScale !== DEFAULT_PNG_SCALE ? ` (${pngScale}x)` : " (default)"}
           </span>
-          <div
-            className="flex items-center gap-1"
-            role="radiogroup"
-            aria-label="PNG scale"
-          >
+          <div className="flex items-center gap-1" role="radiogroup" aria-label="PNG scale">
             {PNG_SCALES.map((option) => (
               <button
                 key={option}
@@ -267,11 +247,12 @@ export function FileMenuItems({
           disabled={busyFormat === "PNG"}
           onClick={() =>
             runExport("PNG", async () =>
-              exportAsPng({ scale: pngScale, transparent: transparentPng }),
+              exportAsPng({ scale: pngScale, transparent: transparentPng })
             )
           }
         >
-          {t.menu.exportPng}
+          <span>{t.menu.exportPng}</span>
+          <DropdownMenuShortcut>Ctrl+Shift+E</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={busyFormat === "JSON"}
@@ -287,22 +268,42 @@ export function FileMenuItems({
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={busyFormat === "Spring Boot"}
-          onClick={() =>
-            runExport("Spring Boot", async () => exportAsSpringBoot())
-          }
+          onClick={() => runExport("Spring Boot", async () => exportAsSpringBoot())}
         >
           {t.menu.exportSpringBoot}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={busyFormat === "OpenAPI"}
+          onClick={() => runExport("OpenAPI", async () => exportAsOpenApi())}
+        >
+          <span>{t.menu.exportOpenApi}</span>
+          <DropdownMenuShortcut>Ctrl+Alt+A</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={busyFormat === "Postman"}
+          onClick={() =>
+            runExport("Postman", async () => exportAsOpenApi({ defaultTab: "postman" }))
+          }
+        >
+          {t.menu.exportPostman}
         </DropdownMenuItem>
       </DropdownMenuGroup>
 
       {diagramId && (
         <>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleRenameDiagram}>
-            {t.menu.renameDiagram}
-          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleRenameDiagram}>{t.menu.renameDiagram}</DropdownMenuItem>
           <DropdownMenuItem onClick={handleShareDiagram}>
-            {t.menu.shareDiagram}
+            <span>{t.menu.shareDiagram}</span>
+            <DropdownMenuShortcut>Ctrl+Alt+S</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              openModal("PRODUCTIVITY_METRICS", { diagramId })
+              onSelect()
+            }}
+          >
+            {t.productivity?.modalTitle || "Productividad y Tiempos"}
           </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
@@ -317,17 +318,11 @@ export function FileMenuItems({
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t.dashboard.confirmDeleteTitle}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t.dashboard.confirmDeleteDesc}
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t.dashboard.confirmDeleteTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{t.dashboard.confirmDeleteDesc}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              {t.common.cancel}
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={isDeleting}
@@ -339,19 +334,19 @@ export function FileMenuItems({
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }
 
 export const FileMenu: FC<FileMenuProps> = ({ color, onClose }) => {
-  const [open, setOpen] = useState(false);
-  const [visionOpen, setVisionOpen] = useState(false);
-  const isLg = useMediaQuery("(min-width: 1024px)");
-  const { t } = useTranslation();
+  const [open, setOpen] = useState(false)
+  const [visionOpen, setVisionOpen] = useState(false)
+  const isLg = useMediaQuery("(min-width: 1024px)")
+  const { t } = useTranslation()
 
   const close = useCallback(() => {
-    setOpen(false);
-    onClose?.();
-  }, [onClose]);
+    setOpen(false)
+    onClose?.()
+  }, [onClose])
 
   return (
     <>
@@ -383,16 +378,10 @@ export const FileMenu: FC<FileMenuProps> = ({ color, onClose }) => {
           aria-labelledby="file-menu-button"
           className={MOBILE_MENU_CONTENT_CLASS}
         >
-          <FileMenuItems
-            onSelect={close}
-            onImportPhoto={() => setVisionOpen(true)}
-          />
+          <FileMenuItems onSelect={close} onImportPhoto={() => setVisionOpen(true)} />
         </DropdownMenuContent>
       </DropdownMenu>
-      <VisionImportDialog
-        open={visionOpen}
-        onClose={() => setVisionOpen(false)}
-      />
+      <VisionImportDialog open={visionOpen} onClose={() => setVisionOpen(false)} />
     </>
-  );
-};
+  )
+}

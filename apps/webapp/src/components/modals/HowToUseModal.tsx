@@ -1,57 +1,47 @@
-import type { ReactNode } from "react";
-import { UMLSTUDIO_SHORTCUTS, type UmlStudioShortcutId } from "@umlstudio/core";
-import { Button } from "@umlstudio/ui/components/button";
-import { DialogFooter } from "@umlstudio/ui/components/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@umlstudio/ui/components/tabs";
-import type { HelpMenuVariant } from "@/components/home/HomeHelpMenu";
-import {
-  EDITOR_SHORTCUTS,
-  type EditorShortcutId,
-} from "@/hooks/useEditorShortcuts";
-import { formatCombo, keycaps, type Keycaps } from "@/utils/shortcutCaps";
-import { useTranslation } from "@/i18n";
-import type { TranslationDictionary } from "@/i18n/types";
-import NodeCreation from "assets/images/how-to-use-node-creation.png";
-import EdgeCreation from "assets/images/how-to-use-edge-creation.png";
-import NodeEdit from "assets/images/how-to-use-node-edit.png";
-import NodeMove from "assets/images/how-to-use-node-move.png";
+import type { ReactNode } from "react"
+import { UMLSTUDIO_SHORTCUTS, type UmlStudioShortcutId } from "@umlstudio/core"
+import { Button } from "@umlstudio/ui/components/button"
+import { DialogFooter } from "@umlstudio/ui/components/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@umlstudio/ui/components/tabs"
+import type { HelpMenuVariant } from "@/components/home/HomeHelpMenu"
+import { EDITOR_SHORTCUTS, type EditorShortcutId } from "@/hooks/useEditorShortcuts"
+import { formatCombo, keycaps, type Keycaps } from "@/utils/shortcutCaps"
+import { useTranslation } from "@/i18n"
+import type { TranslationDictionary } from "@/i18n/types"
+import NodeCreation from "assets/images/how-to-use-node-creation.png"
+import EdgeCreation from "assets/images/how-to-use-edge-creation.png"
+import NodeEdit from "assets/images/how-to-use-node-edit.png"
+import NodeMove from "assets/images/how-to-use-node-move.png"
 
 type HowToUseModalProps = {
-  variant: HelpMenuVariant;
-  isMac?: boolean;
-  onClose: () => void;
-};
+  variant: HelpMenuVariant
+  isMac?: boolean
+  onClose: () => void
+}
 
 const Kbd = ({ children }: { children: ReactNode }) => (
   <kbd className="inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-md border border-border/80 bg-muted/80 px-1.5 font-mono text-[11px] font-semibold text-foreground shadow-[0_1px_0_1px_rgba(0,0,0,0.08)]">
     {children}
   </kbd>
-);
+)
 
 const Keys = ({ keys, caps }: { keys: string[]; caps: Keycaps }) => (
   <span className="inline-flex flex-wrap items-center gap-1">
     {keys.map((key, index) => (
       <span key={key} className="inline-flex items-center gap-1">
-        {index > 0 && !caps.isMac && (
-          <span className="text-muted-foreground">+</span>
-        )}
+        {index > 0 && !caps.isMac && <span className="text-muted-foreground">+</span>}
         <Kbd>{key}</Kbd>
       </span>
     ))}
   </span>
-);
+)
 
 type Step = {
-  title: string;
-  description: ReactNode;
-  image?: string;
-  alt?: string;
-};
+  title: string
+  description: ReactNode
+  image?: string
+  alt?: string
+}
 
 const steps = (caps: Keycaps, t: TranslationDictionary): Step[] => [
   {
@@ -92,33 +82,29 @@ const steps = (caps: Keycaps, t: TranslationDictionary): Step[] => [
       <>
         <Keys keys={[caps.mod, "Z"]} caps={caps} /> {t.help.stepUndoRedoDesc}{" "}
         <Keys
-          keys={
-            caps.isMac
-              ? [caps.shift, caps.mod, "Z"]
-              : [caps.mod, caps.shift, "Z"]
-          }
+          keys={caps.isMac ? [caps.shift, caps.mod, "Z"] : [caps.mod, caps.shift, "Z"]}
           caps={caps}
         />
       </>
     ),
   },
-];
+]
 
 type Shortcut = {
-  combos: string[][];
-  label: string;
-};
+  combos: string[][]
+  label: string
+}
 
 type ShortcutGroup = {
-  title: string;
-  shortcuts: Shortcut[];
-};
+  title: string
+  shortcuts: Shortcut[]
+}
 
-type GroupTitle = "Selection" | "Editing" | "History" | "View" | "File";
+type GroupTitle = "Selection" | "Editing" | "History" | "View" | "File"
 
 const libraryShortcuts = (
   caps: Keycaps,
-  t: TranslationDictionary,
+  t: TranslationDictionary
 ): Record<
   UmlStudioShortcutId,
   { label: string; group: GroupTitle; displayCombos?: string[][] }
@@ -146,18 +132,26 @@ const libraryShortcuts = (
   "reset-zoom": { label: t.help.resetZoom, group: "View" },
   "fit-view": { label: t.help.fitView, group: "View" },
   "zoom-to-selection": { label: t.help.zoomToSelection, group: "View" },
-});
+})
 
-const getEditorShortcutLabels = (
-  t: TranslationDictionary,
-): Record<EditorShortcutId, string> => ({
-  "save-version": t.help.saveVersion,
-  "toggle-version-history": t.help.toggleVersionHistory,
-});
+const getEditorShortcutMeta = (
+  t: TranslationDictionary
+): Record<EditorShortcutId, { label: string; group: GroupTitle }> => ({
+  "save-version": { label: t.help.saveVersion, group: "File" },
+  "toggle-version-history": {
+    label: t.help.toggleVersionHistory,
+    group: "File",
+  },
+  "new-diagram": { label: t.help.newDiagram, group: "File" },
+  "share-diagram": { label: t.help.shareDiagram, group: "File" },
+  "api-docs": { label: t.help.apiDocs, group: "File" },
+  "toggle-multiselect": { label: t.help.multiSelectMode, group: "Selection" },
+  "help-modal": { label: t.menu.help, group: "File" },
+})
 
 const gestures = (
   caps: Keycaps,
-  t: TranslationDictionary,
+  t: TranslationDictionary
 ): Partial<Record<GroupTitle, Shortcut[]>> => ({
   Selection: [
     { combos: [[caps.shift, "Click"]], label: t.help.gestureAddRemove },
@@ -167,71 +161,63 @@ const gestures = (
     { combos: [["Scroll"], ["Drag"]], label: t.help.gesturePan },
     { combos: [[caps.mod, "Scroll"]], label: t.help.gestureZoom },
   ],
-});
+})
 
-const CANVAS_GROUPS: GroupTitle[] = ["Selection", "Editing", "History", "View"];
+const ALL_GROUPS: GroupTitle[] = ["File", "Editing", "Selection", "View", "History"]
+const CANVAS_GROUPS: GroupTitle[] = ["Editing", "Selection", "View", "History"]
 
-const getGroupTitleLabel = (
-  group: GroupTitle,
-  t: TranslationDictionary,
-): string => {
+const getGroupTitleLabel = (group: GroupTitle, t: TranslationDictionary): string => {
   switch (group) {
     case "Selection":
-      return t.help.groupSelection;
+      return t.help.groupSelection
     case "Editing":
-      return t.help.groupEditing;
+      return t.help.groupEditing
     case "History":
-      return t.help.groupHistory;
+      return t.help.groupHistory
     case "View":
-      return t.help.groupView;
+      return t.help.groupView
     case "File":
-      return t.help.groupFile;
+      return t.help.groupFile
   }
-};
+}
 
 const shortcutGroups = (
   caps: Keycaps,
   variant: HelpMenuVariant,
-  t: TranslationDictionary,
+  t: TranslationDictionary
 ): ShortcutGroup[] => {
-  const library = libraryShortcuts(caps, t);
-  const canvasGestures = gestures(caps, t);
-  const editorLabels = getEditorShortcutLabels(t);
+  const library = libraryShortcuts(caps, t)
+  const canvasGestures = gestures(caps, t)
+  const editorMeta = getEditorShortcutMeta(t)
 
-  const canvas = CANVAS_GROUPS.map((title) => ({
-    title: getGroupTitleLabel(title, t),
-    shortcuts: [
-      ...UMLSTUDIO_SHORTCUTS.filter(
-        (shortcut) => library[shortcut.id].group === title,
-      ).map(({ id, combos }) => ({
-        label: library[id].label,
-        combos: library[id].displayCombos ?? [formatCombo(combos[0], caps)],
-      })),
-      ...(canvasGestures[title] ?? []),
-    ],
-  }));
+  const activeGroups = variant === "editor" ? ALL_GROUPS : CANVAS_GROUPS
 
-  if (variant !== "editor") return canvas;
+  return activeGroups.map((title) => {
+    const coreShortcuts = UMLSTUDIO_SHORTCUTS.filter(
+      (shortcut) => library[shortcut.id]?.group === title
+    ).map(({ id, combos }) => ({
+      label: library[id].label,
+      combos: library[id].displayCombos ?? [formatCombo(combos[0], caps)],
+    }))
 
-  return [
-    ...canvas,
-    {
-      title: getGroupTitleLabel("File", t),
-      shortcuts: EDITOR_SHORTCUTS.map(({ id, combo }) => ({
-        label: editorLabels[id],
-        combos: [formatCombo(combo, caps)],
-      })),
-    },
-  ];
-};
+    const editorList =
+      variant === "editor"
+        ? EDITOR_SHORTCUTS.filter((s) => editorMeta[s.id]?.group === title).map(
+            ({ id, combo }) => ({
+              label: editorMeta[id].label,
+              combos: [formatCombo(combo, caps)],
+            })
+          )
+        : []
 
-const Walkthrough = ({
-  caps,
-  t,
-}: {
-  caps: Keycaps;
-  t: TranslationDictionary;
-}) => (
+    return {
+      title: getGroupTitleLabel(title, t),
+      shortcuts: [...coreShortcuts, ...editorList, ...(canvasGestures[title] ?? [])],
+    }
+  })
+}
+
+const Walkthrough = ({ caps, t }: { caps: Keycaps; t: TranslationDictionary }) => (
   <ol className="flex flex-col gap-4">
     {steps(caps, t).map((step, idx) => (
       <li
@@ -242,13 +228,9 @@ const Walkthrough = ({
           <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-(--dodger-blue)/15 text-xs font-bold text-(--dodger-blue)">
             {idx + 1}
           </span>
-          <h3 className="text-sm font-semibold text-foreground">
-            {step.title}
-          </h3>
+          <h3 className="text-sm font-semibold text-foreground">{step.title}</h3>
         </div>
-        <p className="text-xs text-muted-foreground leading-relaxed pl-8">
-          {step.description}
-        </p>
+        <p className="text-xs text-muted-foreground leading-relaxed pl-8">{step.description}</p>
         {step.image && (
           <div className="mt-1 ml-8 overflow-hidden rounded-lg border border-border/70 bg-muted/20">
             <img
@@ -262,16 +244,16 @@ const Walkthrough = ({
       </li>
     ))}
   </ol>
-);
+)
 
 const Shortcuts = ({
   groups,
   caps,
   t,
 }: {
-  groups: ShortcutGroup[];
-  caps: Keycaps;
-  t: TranslationDictionary;
+  groups: ShortcutGroup[]
+  caps: Keycaps
+  t: TranslationDictionary
 }) => (
   <div className="flex flex-col gap-3.5">
     {groups.map((group) => (
@@ -291,14 +273,9 @@ const Shortcuts = ({
               <dt className="text-foreground font-medium">{shortcut.label}</dt>
               <dd className="flex items-center justify-end gap-1.5 text-right">
                 {shortcut.combos.map((combo, comboIndex) => (
-                  <span
-                    key={combo.join("+")}
-                    className="inline-flex items-center gap-1.5"
-                  >
+                  <span key={combo.join("+")} className="inline-flex items-center gap-1.5">
                     {comboIndex > 0 && (
-                      <span className="text-[11px] text-muted-foreground">
-                        {t.help.or}
-                      </span>
+                      <span className="text-[11px] text-muted-foreground">{t.help.or}</span>
                     )}
                     <Keys keys={combo} caps={caps} />
                   </span>
@@ -309,47 +286,29 @@ const Shortcuts = ({
         </dl>
       </div>
     ))}
-    <p className="text-xs text-muted-foreground italic px-1 pt-1">
-      {t.help.shortcutsDisclaimer}
-    </p>
+    <p className="text-xs text-muted-foreground italic px-1 pt-1">{t.help.shortcutsDisclaimer}</p>
   </div>
-);
+)
 
-export const HowToUseModal = ({
-  variant,
-  isMac,
-  onClose,
-}: HowToUseModalProps) => {
-  const { t } = useTranslation();
-  const caps = keycaps(isMac);
+export const HowToUseModal = ({ variant, isMac, onClose }: HowToUseModalProps) => {
+  const { t } = useTranslation()
+  const caps = keycaps(isMac)
 
   return (
     <div className="flex flex-col gap-5 text-foreground">
       <Tabs defaultValue="walkthrough" className="gap-5">
         <TabsList className="w-full grid grid-cols-2 rounded-xl p-1 bg-muted/60 border border-border/50">
-          <TabsTrigger
-            value="walkthrough"
-            className="rounded-lg text-xs font-semibold"
-          >
+          <TabsTrigger value="walkthrough" className="rounded-lg text-xs font-semibold">
             {t.help.tabWalkthrough}
           </TabsTrigger>
-          <TabsTrigger
-            value="shortcuts"
-            className="rounded-lg text-xs font-semibold"
-          >
+          <TabsTrigger value="shortcuts" className="rounded-lg text-xs font-semibold">
             {t.help.tabShortcuts}
           </TabsTrigger>
         </TabsList>
-        <TabsContent
-          value="walkthrough"
-          className="max-h-[60vh] overflow-y-auto pr-1"
-        >
+        <TabsContent value="walkthrough" className="max-h-[60vh] overflow-y-auto pr-1">
           <Walkthrough caps={caps} t={t} />
         </TabsContent>
-        <TabsContent
-          value="shortcuts"
-          className="max-h-[60vh] overflow-y-auto pr-1"
-        >
+        <TabsContent value="shortcuts" className="max-h-[60vh] overflow-y-auto pr-1">
           <Shortcuts groups={shortcutGroups(caps, variant, t)} caps={caps} t={t} />
         </TabsContent>
       </Tabs>
@@ -359,5 +318,5 @@ export const HowToUseModal = ({
         </Button>
       </DialogFooter>
     </div>
-  );
-};
+  )
+}
