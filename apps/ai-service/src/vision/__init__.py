@@ -1,1 +1,1 @@
-"""UmlStudio AI Service — Vision image import (CU-04, Ciclo 2)."""
+"""UmlStudio AI Service — Vision image import."""
