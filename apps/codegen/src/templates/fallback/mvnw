@@ -1,0 +1,39 @@
+#!/bin/sh
+# Minimal Maven wrapper (UmlStudio FA-01 offline fallback).
+# Resolves the distribution from .mvn/wrapper/maven-wrapper.properties,
+# caches it under ~/.m2/wrapper and delegates to the real Maven binary.
+set -e
+BASE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PROPS_FILE="$BASE_DIR/.mvn/wrapper/maven-wrapper.properties"
+if [ ! -f "$PROPS_FILE" ]; then
+  echo "Missing $PROPS_FILE" >&2
+  exit 1
+fi
+DISTRIBUTION_URL=$(grep -E '^distributionUrl=' "$PROPS_FILE" | cut -d'=' -f2-)
+DIST_NAME=$(basename "$DISTRIBUTION_URL" .zip)
+CACHE_DIR="${MAVEN_WRAPPER_CACHE:-$HOME/.m2/wrapper}/$DIST_NAME"
+MVN_BIN="$CACHE_DIR/$DIST_NAME/bin/mvn"
+if [ ! -x "$MVN_BIN" ]; then
+  if ! command -v mvn >/dev/null 2>&1; then
+    echo "Downloading Maven distribution..." >&2
+    mkdir -p "$CACHE_DIR"
+    TMP_ZIP="$CACHE_DIR/maven.zip"
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL -o "$TMP_ZIP" "$DISTRIBUTION_URL"
+    elif command -v wget >/dev/null 2>&1; then
+      wget -q -O "$TMP_ZIP" "$DISTRIBUTION_URL"
+    else
+      echo "Neither curl nor wget is available to fetch Maven." >&2
+      exit 1
+    fi
+    if command -v unzip >/dev/null 2>&1; then
+      unzip -q -o "$TMP_ZIP" -d "$CACHE_DIR"
+    else
+      python3 -m zipfile -e "$TMP_ZIP" "$CACHE_DIR"
+    fi
+    rm -f "$TMP_ZIP"
+  else
+    exec mvn "$@"
+  fi
+fi
+exec "$MVN_BIN" "$@"
