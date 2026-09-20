@@ -1,5 +1,5 @@
 """
-UmlStudio AI Service — Vision validation gate (CU-04, Ciclo 2).
+UmlStudio AI Service — Vision validation gate.
 
 Enforces the POST /api/vision contract without new runtime dependencies:
 image dimension sniffing (PNG/JPEG/WebP via stdlib struct), a structural gate

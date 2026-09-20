@@ -12,10 +12,12 @@ export default {
     alias: {
       // Reuse core's Ajv build; ai-service has no node_modules of its own.
       ajv: resolve(dir, "../../packages/core/node_modules/ajv/dist/ajv.js"),
+      "@": resolve(dir, "../../packages/core/lib"),
     },
   },
   test: {
-    environment: "node",
+    environment: "jsdom",
+    setupFiles: [resolve(dir, "../../packages/core/tests/setup.ts")],
     include: ["test/**/*.test.ts"],
   },
 };

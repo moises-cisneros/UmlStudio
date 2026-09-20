@@ -1,6 +1,6 @@
 """
 UmlStudio AI Service — FastAPI REST Application (:8001).
-Unified Multi-Adapter Architecture for OMG UML 2.5 (CU-03, Ciclo 2).
+Unified Multi-Adapter Architecture for OMG UML 2.5.
 """
 
 import asyncio
@@ -29,6 +29,8 @@ from .models.uml import (
     AuditResponse,
     SolidViolation,
     PatternSuggestion,
+    ProductivityAuditRequest,
+    ProductivityAuditResponse,
 )
 from .services.pipeline import AIPipeline
 from .services.transcription import transcribe_audio_bytes
@@ -200,6 +202,80 @@ async def audit_diagram(request: AuditRequest) -> AuditResponse:
     )
 
 
+@app.post("/api/audit/productivity", response_model=ProductivityAuditResponse)
+@app.post("/audit/productivity", response_model=ProductivityAuditResponse)
+async def audit_productivity(
+    request: ProductivityAuditRequest,
+) -> ProductivityAuditResponse:
+    """
+    Evaluates collaboration telemetry, contention collisions and lock bottlenecks,
+    providing heuristic diagnosis and GoF pattern recommendations to improve team dynamics.
+    """
+    bottlenecks = request.bottlenecks or []
+    recommendations: List[str] = []
+    pattern_suggestions: List[PatternSuggestion] = []
+
+    high_contention_nodes = [
+        b
+        for b in bottlenecks
+        if b.get("contentionCount", 0) > 0
+        or b.get("averageLockDurationMs", 0) > 45000
+    ]
+
+    if not high_contention_nodes:
+        diagnosis = (
+            "Flujo de diseño óptimo. No se detectan disputas de contención "
+            "crítica ni cuellos de botella."
+        )
+        recommendations.append(
+            "Mantener el nivel actual de desacoplamiento modular entre clases."
+        )
+        status = request.fluency_status or "green"
+    else:
+        status = (
+            "red"
+            if any(b.get("contentionCount", 0) >= 3 for b in high_contention_nodes)
+            else "yellow"
+        )
+        node_names = ", ".join(
+            f"'{b.get('nodeName', b.get('nodeId'))}'" for b in high_contention_nodes
+        )
+        diagnosis = (
+            f"Se detectó fricción colaborativa sobre {len(high_contention_nodes)} clase(s): {node_names}. "
+            "La alta contención simultánea sugiere acumulación de responsabilidades o dependencia cruzada."
+        )
+
+        for b in high_contention_nodes:
+            name = b.get("nodeName", b.get("nodeId"))
+            recommendations.append(
+                f"Desacoplar '{name}': extraer métodos auxiliares a clases colaboradoras para permitir edición paralela."
+            )
+
+        pattern_suggestions.append(
+            PatternSuggestion(
+                pattern_name="Facade",
+                gof_category="Structural",
+                confidence=0.90,
+                description="Provee una interfaz unificada sobre un conjunto de interfaces en un subsistema, reduciendo la contención de edición directa.",
+            )
+        )
+        pattern_suggestions.append(
+            PatternSuggestion(
+                pattern_name="Strategy",
+                gof_category="Behavioral",
+                confidence=0.85,
+                description="Encapsula familias de algoritmos intercambiables para que colaboradores trabajen en estrategias aisladas sin bloquear la clase de contexto.",
+            )
+        )
+
+    return ProductivityAuditResponse(
+        diagnosis=diagnosis,
+        recommendations=recommendations,
+        pattern_suggestions=pattern_suggestions,
+        fluency_status=status,
+    )
+
+
 VISION_PROVIDER_TIMEOUT_S = 10.0
 
 
@@ -215,7 +291,7 @@ def _vision_error(
 @app.post("/api/vision")
 async def extract_vision(image: UploadFile = File(...)) -> Dict[str, Any]:
     """
-    Vision import endpoint (CU-04):
+    Vision import endpoint:
     Diagram photo (JPG/PNG/WebP) -> provider extraction -> validated UMLModel
     plus per-element confidence for preview-with-confirmation.
     """
