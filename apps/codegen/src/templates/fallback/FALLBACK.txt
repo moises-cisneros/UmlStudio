@@ -1,0 +1,20 @@
+UmlStudio codegen fallback scaffold (FA-01)
+=============================================
+
+This project was generated from the vendored offline fallback because the
+official Spring Initializr service (https://start.spring.io) was unreachable
+after timeout plus retries.
+
+What you got:
+- Minimal Maven wrapper (mvnw, mvnw.cmd, .mvn/wrapper/) plus a base pom.xml
+  (Spring Boot 3.x, Java 17, web, validation, data-jpa, postgresql, lombok,
+  devtools) with your groupId/artifactId already applied.
+- The same 5 generated CRUD layers as the online path (entity, repository,
+  service + impl, dto/request + response, controller), application.yml
+  (PostgreSQL, server.port 9000 by default) and schema.sql/data.sql.
+
+How to build (requires JDK 17 and Apache Maven 3.9+ on first run):
+  ./mvnw compile
+  ./mvnw spring-boot:run
+
+Regenerate online for the canonical scaffold once Initializr is reachable.
