@@ -11,6 +11,7 @@ import {
 } from "y-protocols/awareness";
 import * as Y from "yjs";
 import * as decoding from "lib0/decoding";
+import { productivityCollector } from "./services/productivity-collector.js";
 
 const AWARENESS_MSG_TYPE = 3;
 const DIAGRAM_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -233,11 +234,84 @@ export function startRelayServer(opts: StartOptions): RelayServer {
                 decodeAwarenessUpdateClients(awarenessUpdate);
               const socketIds = awarenessClientIdsBySocket.get(ws);
               if (socketIds) {
-                for (const id of present) socketIds.add(id);
+                for (const id of present) {
+                  socketIds.add(id);
+                  const clientState = roomState.awareness.getStates().get(id) as
+                    | Record<string, unknown>
+                    | undefined;
+                  if (clientState) {
+                    const user = clientState.user as
+                      | { id?: string; name?: string; color?: string }
+                      | undefined;
+                    const effectiveUserId =
+                      ws.userId || user?.id || `client-${id}`;
+                    const effectiveUserName =
+                      user?.name || ws.userId || `User ${id}`;
+                    ws.userId = ws.userId || effectiveUserId;
+
+                    productivityCollector.recordActivity(diagramId, {
+                      userId: effectiveUserId,
+                      userName: effectiveUserName,
+                      color: user?.color,
+                    });
+
+                    if ("selectedElementId" in clientState) {
+                      const selectedElementId = clientState.selectedElementId;
+                      productivityCollector.recordNodeLock(
+                        diagramId,
+                        {
+                          userId: effectiveUserId,
+                          userName: effectiveUserName,
+                        },
+                        typeof selectedElementId === "string"
+                          ? selectedElementId
+                          : null,
+                      );
+                    }
+                  }
+                }
                 for (const id of removed) socketIds.delete(id);
               }
             }
           }
+        }
+
+        if (
+          parsed.kind === "telemetry" &&
+          typeof parsed.telemetry === "object" &&
+          parsed.telemetry !== null
+        ) {
+          const t = parsed.telemetry as Record<string, unknown>;
+          const effectiveUserId =
+            ws.userId ||
+            (typeof t.userId === "string" ? t.userId : "anonymous");
+          productivityCollector.recordActivity(
+            diagramId,
+            {
+              userId: effectiveUserId,
+              userName: typeof t.userName === "string" ? t.userName : undefined,
+              color: typeof t.color === "string" ? t.color : undefined,
+            },
+            {
+              createdClasses:
+                typeof t.createdClasses === "number"
+                  ? t.createdClasses
+                  : undefined,
+              createdMethods:
+                typeof t.createdMethods === "number"
+                  ? t.createdMethods
+                  : undefined,
+              refactors:
+                typeof t.refactors === "number" ? t.refactors : undefined,
+            },
+          );
+          return;
+        }
+
+        if (ws.userId) {
+          productivityCollector.recordActivity(diagramId, {
+            userId: ws.userId,
+          });
         }
 
         if (parsed.kind === "control") {
@@ -258,6 +332,9 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     });
 
     ws.on("close", () => {
+      if (ws.userId) {
+        productivityCollector.recordDisconnection(diagramId, ws.userId);
+      }
       const r = rooms.get(diagramId);
       if (r) {
         r.delete(ws);
