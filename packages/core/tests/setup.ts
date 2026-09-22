@@ -43,8 +43,7 @@ class MockResizeObserver {
   unobserve() {}
   disconnect() {}
 }
-global.ResizeObserver =
-  MockResizeObserver as unknown as typeof global.ResizeObserver
+global.ResizeObserver = MockResizeObserver as unknown as typeof global.ResizeObserver
 
 if (typeof PointerEvent === "undefined") {
   class MockPointerEvent extends MouseEvent {

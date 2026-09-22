@@ -1,20 +1,17 @@
-import { defineConfig, type Plugin } from "vite";
-import react from "@vitejs/plugin-react";
-import dts from "vite-plugin-dts";
-import { resolve } from "path";
-import { readFileSync } from "fs";
-import type {
-  ExtractorMessage,
-  IExtractorInvokeOptions,
-} from "@microsoft/api-extractor";
+import { defineConfig, type Plugin } from "vite"
+import react from "@vitejs/plugin-react"
+import dts from "vite-plugin-dts"
+import { resolve } from "path"
+import { readFileSync } from "fs"
+import type { ExtractorMessage, IExtractorInvokeOptions } from "@microsoft/api-extractor"
 
 const dtsInvokeOptions: IExtractorInvokeOptions = {
   messageCallback(message: ExtractorMessage) {
     if (message.messageId === "console-compiler-version-notice") {
-      message.handled = true;
+      message.handled = true
     }
   },
-};
+}
 
 function emitFontLicense(): Plugin {
   return {
@@ -24,13 +21,10 @@ function emitFontLicense(): Plugin {
       this.emitFile({
         type: "asset",
         fileName: "LICENSE-InterFont",
-        source: readFileSync(
-          resolve(__dirname, "../../assets/fonts/LICENSE-InterFont"),
-          "utf8",
-        ),
-      });
+        source: readFileSync(resolve(__dirname, "../../assets/fonts/LICENSE-InterFont"), "utf8"),
+      })
     },
-  };
+  }
 }
 
 const REACT_PEERS = [
@@ -42,7 +36,7 @@ const REACT_PEERS = [
   "react-dom/client",
   "@xyflow/react",
   "@xyflow/system",
-];
+]
 
 const RUNTIME_DEPS = [
   /^@base-ui\/react(\/.*)?$/,
@@ -50,10 +44,10 @@ const RUNTIME_DEPS = [
   /^@dnd-kit\//,
   /^zustand(\/.*)?$/,
   "@chenglou/pretext",
-];
+]
 
 const ROUTING_KERNEL =
-  /packages\/core\/lib\/(?:utils\/geometry\/|utils\/(?:edgeUtils|connectionModes)\.ts|edges\/Connection\.ts)/;
+  /packages\/core\/lib\/(?:utils\/geometry\/|utils\/(?:edgeUtils|connectionModes)\.ts|edges\/Connection\.ts)/
 
 export default defineConfig({
   base: "./",
@@ -77,8 +71,7 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     cssCodeSplit: false,
-    assetsInlineLimit: (filePath) =>
-      /\.woff2?($|\?)/.test(filePath) ? true : undefined,
+    assetsInlineLimit: (filePath) => (/\.woff2?($|\?)/.test(filePath) ? true : undefined),
     lib: {
       entry: {
         index: resolve(__dirname, "lib/index.tsx"),
@@ -113,4 +106,4 @@ export default defineConfig({
       "@umlstudio/ui": resolve(__dirname, "../ui/src"),
     },
   },
-});
+})

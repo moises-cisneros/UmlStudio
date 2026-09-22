@@ -21,12 +21,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov", "html"],
       include: ["lib/**/*.{ts,tsx}"],
-      exclude: [
-        "lib/**/index.{ts,tsx}",
-        "lib/**/*.d.ts",
-        "lib/styles/**",
-        "lib/constants/**",
-      ],
+      exclude: ["lib/**/index.{ts,tsx}", "lib/**/*.d.ts", "lib/styles/**", "lib/constants/**"],
     },
   },
 })

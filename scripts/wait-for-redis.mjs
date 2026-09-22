@@ -82,9 +82,7 @@ async function main() {
     await delay(RETRY_DELAY_MS)
   }
 
-  console.error(
-    `Timed out after ${DEFAULT_TIMEOUT_MS}ms waiting for Redis on ${label}.`
-  )
+  console.error(`Timed out after ${DEFAULT_TIMEOUT_MS}ms waiting for Redis on ${label}.`)
   process.exit(1)
 }
 
