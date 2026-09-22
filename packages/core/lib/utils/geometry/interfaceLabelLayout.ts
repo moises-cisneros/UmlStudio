@@ -31,18 +31,10 @@ const sideOfPoint = (p: Pt, rect: RectLike): CardinalSide => {
   const halfH = rect.height / 2 || 1
   const dx = (p.x - (rect.x + halfW)) / halfW
   const dy = (p.y - (rect.y + halfH)) / halfH
-  return Math.abs(dx) >= Math.abs(dy)
-    ? dx >= 0
-      ? "right"
-      : "left"
-    : dy >= 0
-      ? "bottom"
-      : "top"
+  return Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? "right" : "left") : dy >= 0 ? "bottom" : "top"
 }
 
-const sideFromHandle = (
-  handle: string | null | undefined
-): CardinalSide | null => {
+const sideFromHandle = (handle: string | null | undefined): CardinalSide | null => {
   switch (handle) {
     case "top":
     case "right":
@@ -63,10 +55,7 @@ export function getOccupiedInterfaceSides(
   }
 ): Set<CardinalSide> {
   const occupied = new Set<CardinalSide>()
-  const derivedSide = (
-    edge: InterfaceEdgeLike,
-    end: "source" | "target"
-  ): CardinalSide | null => {
+  const derivedSide = (edge: InterfaceEdgeLike, end: "source" | "target"): CardinalSide | null => {
     if (!geometry || edge.id === undefined) return null
     const route = geometry.routeById[edge.id]
     if (!route || route.length < 2) return null
@@ -78,13 +67,11 @@ export function getOccupiedInterfaceSides(
     const isTarget = edge.target === nodeId
     if (!isSource && !isTarget) continue
     if (isSource) {
-      const side =
-        derivedSide(edge, "source") ?? sideFromHandle(edge.sourceHandle)
+      const side = derivedSide(edge, "source") ?? sideFromHandle(edge.sourceHandle)
       if (side) occupied.add(side)
     }
     if (isTarget) {
-      const side =
-        derivedSide(edge, "target") ?? sideFromHandle(edge.targetHandle)
+      const side = derivedSide(edge, "target") ?? sideFromHandle(edge.targetHandle)
       if (side) occupied.add(side)
     }
   }
@@ -115,8 +102,5 @@ export function computeInterfaceLabelSide(
     }
   }
 ): InterfaceLabelSide {
-  return pickInterfaceLabelSide(
-    getOccupiedInterfaceSides(edges, nodeId, opts?.geometry),
-    opts
-  )
+  return pickInterfaceLabelSide(getOccupiedInterfaceSides(edges, nodeId, opts?.geometry), opts)
 }

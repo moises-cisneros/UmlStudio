@@ -4,16 +4,11 @@ import { getPositionOnCanvas, isParentNodeType } from "@/utils/nodeUtils"
 
 const ALIGNMENT_THRESHOLD = 5
 
-const isWithinThreshold = (
-  delta: number,
-  threshold: number,
-  inclusive: boolean
-) => (inclusive ? delta <= threshold : delta < threshold)
+const isWithinThreshold = (delta: number, threshold: number, inclusive: boolean) =>
+  inclusive ? delta <= threshold : delta < threshold
 
 export const getNodeBounds = (node: Node, allNodes?: Node[]) => {
-  const position = allNodes
-    ? getPositionOnCanvas(node, allNodes)
-    : node.position
+  const position = allNodes ? getPositionOnCanvas(node, allNodes) : node.position
   const x = position.x
   const y = position.y
   const width = node.measured?.width || 100
@@ -29,11 +24,7 @@ export const getNodeBounds = (node: Node, allNodes?: Node[]) => {
   }
 }
 
-const getContainingParentId = (
-  node: Node,
-  allNodes: Node[],
-  excludeParentId?: string
-) => {
+const getContainingParentId = (node: Node, allNodes: Node[], excludeParentId?: string) => {
   if (node.parentId) {
     return node.parentId
   }
@@ -62,9 +53,7 @@ const getContainingParentId = (
       continue
     }
 
-    const area =
-      (parentBounds.right - parentBounds.left) *
-      (parentBounds.bottom - parentBounds.top)
+    const area = (parentBounds.right - parentBounds.left) * (parentBounds.bottom - parentBounds.top)
     if (area < bestArea) {
       bestArea = area
       bestParent = candidate
@@ -101,9 +90,7 @@ export const calculateAlignmentGuides = (
   allNodes: Node[],
   threshold: number = ALIGNMENT_THRESHOLD
 ): AlignmentGuide[] => {
-  const nodesWithDrag = allNodes.map((node) =>
-    node.id === draggedNode.id ? draggedNode : node
-  )
+  const nodesWithDrag = allNodes.map((node) => (node.id === draggedNode.id ? draggedNode : node))
   const draggedParentId = draggedNode.parentId
   const draggedBounds = getNodeBounds(draggedNode, nodesWithDrag)
   const guides: AlignmentGuide[] = []
@@ -143,9 +130,7 @@ export const calculateAlignmentGuides = (
         }
       }
       const centerXDelta = Math.abs(draggedBounds.centerX - alignment.pos)
-      if (
-        isWithinThreshold(centerXDelta, threshold, alignment.name === "center")
-      ) {
+      if (isWithinThreshold(centerXDelta, threshold, alignment.name === "center")) {
         if (!alignedPositions.has(alignment.pos)) {
           guides.push({
             id: `vertical-center-${alignment.pos}`,
@@ -156,9 +141,7 @@ export const calculateAlignmentGuides = (
         }
       }
       const rightDelta = Math.abs(draggedBounds.right - alignment.pos)
-      if (
-        isWithinThreshold(rightDelta, threshold, alignment.name === "right")
-      ) {
+      if (isWithinThreshold(rightDelta, threshold, alignment.name === "right")) {
         if (!alignedPositions.has(alignment.pos)) {
           guides.push({
             id: `vertical-right-${alignment.pos}`,
@@ -183,9 +166,7 @@ export const calculateAlignmentGuides = (
         }
       }
       const centerYDelta = Math.abs(draggedBounds.centerY - alignment.pos)
-      if (
-        isWithinThreshold(centerYDelta, threshold, alignment.name === "center")
-      ) {
+      if (isWithinThreshold(centerYDelta, threshold, alignment.name === "center")) {
         if (!alignedPositions.has(alignment.pos)) {
           guides.push({
             id: `horizontal-center-${alignment.pos}`,
@@ -196,9 +177,7 @@ export const calculateAlignmentGuides = (
         }
       }
       const bottomDelta = Math.abs(draggedBounds.bottom - alignment.pos)
-      if (
-        isWithinThreshold(bottomDelta, threshold, alignment.name === "bottom")
-      ) {
+      if (isWithinThreshold(bottomDelta, threshold, alignment.name === "bottom")) {
         if (!alignedPositions.has(alignment.pos)) {
           guides.push({
             id: `horizontal-bottom-${alignment.pos}`,
@@ -233,15 +212,11 @@ export const snapNodeToGuides = (
       }
       if (Math.abs(draggedBounds.centerX - guide.position) < threshold) {
         snappedPosition.x =
-          guide.position -
-          draggedPosition.x -
-          (draggedNode.measured?.width || 100) / 2
+          guide.position - draggedPosition.x - (draggedNode.measured?.width || 100) / 2
       }
       if (Math.abs(draggedBounds.right - guide.position) < threshold) {
         snappedPosition.x =
-          guide.position -
-          draggedPosition.x -
-          (draggedNode.measured?.width || 100)
+          guide.position - draggedPosition.x - (draggedNode.measured?.width || 100)
       }
     } else if (guide.type === "horizontal") {
       if (Math.abs(draggedBounds.top - guide.position) < threshold) {
@@ -249,15 +224,11 @@ export const snapNodeToGuides = (
       }
       if (Math.abs(draggedBounds.centerY - guide.position) < threshold) {
         snappedPosition.y =
-          guide.position -
-          draggedPosition.y -
-          (draggedNode.measured?.height || 100) / 2
+          guide.position - draggedPosition.y - (draggedNode.measured?.height || 100) / 2
       }
       if (Math.abs(draggedBounds.bottom - guide.position) < threshold) {
         snappedPosition.y =
-          guide.position -
-          draggedPosition.y -
-          (draggedNode.measured?.height || 100)
+          guide.position - draggedPosition.y - (draggedNode.measured?.height || 100)
       }
     }
   }

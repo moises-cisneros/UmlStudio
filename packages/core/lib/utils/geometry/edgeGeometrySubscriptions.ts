@@ -26,10 +26,7 @@ export const polylineBounds = (points: readonly IPoint[]): GeometryRect => {
 }
 
 const mayIntersect = (a: GeometryRect, b: GeometryRect): boolean =>
-  a.x <= b.x + b.width &&
-  a.x + a.width >= b.x &&
-  a.y <= b.y + b.height &&
-  a.y + a.height >= b.y
+  a.x <= b.x + b.width && a.x + a.width >= b.x && a.y <= b.y + b.height && a.y + a.height >= b.y
 
 const registryBoundsCache = new WeakMap<IPoint[], GeometryRect>()
 
@@ -90,11 +87,7 @@ export const selectRouteEntriesIntersectingRect = (
 ): SelectedRouteEntries => {
   const selected: SelectedRouteEntries = []
   for (const [id, route] of Object.entries(geometryById)) {
-    if (
-      id === excludeId ||
-      route.length < 2 ||
-      !mayIntersect(query, registryRouteBounds(route))
-    )
+    if (id === excludeId || route.length < 2 || !mayIntersect(query, registryRouteBounds(route)))
       continue
     selected.push(id, route)
   }
@@ -109,34 +102,23 @@ export const selectDisplayedRouteEntriesIntersectingRect = (
 ): SelectedRouteEntries => {
   const selected: SelectedRouteEntries = []
   const append = (id: string, route: IPoint[]) => {
-    if (
-      id !== excludeId &&
-      route.length >= 2 &&
-      mayIntersect(query, registryRouteBounds(route))
-    )
+    if (id !== excludeId && route.length >= 2 && mayIntersect(query, registryRouteBounds(route)))
       selected.push(id, route)
   }
-  for (const [id, exact] of Object.entries(geometryById))
-    append(id, previewById[id] ?? exact)
+  for (const [id, exact] of Object.entries(geometryById)) append(id, previewById[id] ?? exact)
   return selected
 }
 
 export const createRouteEntriesSelector = (
   query: GeometryRect,
   excludeId?: string
-): ((
-  geometryById: Readonly<Record<string, IPoint[]>>
-) => SelectedRouteEntries) => {
+): ((geometryById: Readonly<Record<string, IPoint[]>>) => SelectedRouteEntries) => {
   let previousGeometry: Readonly<Record<string, IPoint[]>> | undefined
   let previousSelection: SelectedRouteEntries = []
   return (geometryById) => {
     if (geometryById === previousGeometry) return previousSelection
     previousGeometry = geometryById
-    previousSelection = selectRouteEntriesIntersectingRect(
-      geometryById,
-      query,
-      excludeId
-    )
+    previousSelection = selectRouteEntriesIntersectingRect(geometryById, query, excludeId)
     return previousSelection
   }
 }

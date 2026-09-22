@@ -9,10 +9,7 @@ import {
   type EdgeGeometrySolveRequest,
   type EdgeGeometryWorkerResponse,
 } from "@/utils/geometry/edgeGeometryWorkerProtocol"
-import {
-  diffRoutingPerfCounters,
-  getRoutingPerfCounters,
-} from "@/sync/perfCounters"
+import { diffRoutingPerfCounters, getRoutingPerfCounters } from "@/sync/perfCounters"
 
 export const handleEdgeGeometryWorkerRequest = (
   request: EdgeGeometrySolveRequest,
@@ -26,9 +23,7 @@ export const handleEdgeGeometryWorkerRequest = (
   try {
     const input = deserializeSolverInput(request.input)
     if (solveCache.size === 0 && request.initialCache) {
-      for (const [edgeId, entry] of deserializeEdgeSolveCache(
-        request.initialCache
-      ))
+      for (const [edgeId, entry] of deserializeEdgeSolveCache(request.initialCache))
         solveCache.set(edgeId, entry)
     }
     const { routeById } = computeAllEdgeGeometry({ ...input, solveCache })
@@ -50,8 +45,7 @@ export const handleEdgeGeometryWorkerRequest = (
       sessionId: request.sessionId,
       revision: request.revision,
       kind: "error",
-      message:
-        error instanceof Error ? error.message : "Edge geometry solve failed",
+      message: error instanceof Error ? error.message : "Edge geometry solve failed",
     }
   }
 }

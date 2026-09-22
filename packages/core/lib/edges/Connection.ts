@@ -13,9 +13,7 @@ export interface NodeBounds {
   height: number
 }
 
-export function getPortsForElement(
-  bounds: NodeBounds
-): Record<Position, IPoint> {
+export function getPortsForElement(bounds: NodeBounds): Record<Position, IPoint> {
   return {
     [Position.Top]: { x: bounds.width / 2, y: 0 },
     [Position.Right]: { x: bounds.width, y: bounds.height / 2 },
@@ -39,9 +37,7 @@ export function computeOverlap(
 
 export function pointsToSvgPath(points: IPoint[]): string {
   if (points.length === 0) return ""
-  const pathCommands = [
-    `M ${Math.round(points[0].x)} ${Math.round(points[0].y)}`,
-  ]
+  const pathCommands = [`M ${Math.round(points[0].x)} ${Math.round(points[0].y)}`]
 
   for (let i = 1; i < points.length; i++) {
     pathCommands.push(`L ${Math.round(points[i].x)} ${Math.round(points[i].y)}`)
@@ -82,13 +78,9 @@ export function tryFindStraightPath(
   const sourceHandleEdge = source.direction
   const targetHandleEdge = target.direction
   const alignedHorizontalY =
-    endpointCoords !== undefined
-      ? (endpointCoords.sourceY + endpointCoords.targetY) / 2
-      : null
+    endpointCoords !== undefined ? (endpointCoords.sourceY + endpointCoords.targetY) / 2 : null
   const alignedVerticalX =
-    endpointCoords !== undefined
-      ? (endpointCoords.sourceX + endpointCoords.targetX) / 2
-      : null
+    endpointCoords !== undefined ? (endpointCoords.sourceX + endpointCoords.targetX) / 2 : null
 
   if (
     sourceHandleEdge === Position.Right &&
@@ -97,21 +89,14 @@ export function tryFindStraightPath(
   ) {
     if (
       endpointCoords &&
-      Math.abs(endpointCoords.sourceY - endpointCoords.targetY) >
-        HANDLE_ALIGNMENT_TOLERANCE
+      Math.abs(endpointCoords.sourceY - endpointCoords.targetY) > HANDLE_ALIGNMENT_TOLERANCE
     ) {
       return null
     }
 
     const overlapY = computeOverlap(
-      [
-        source.position.y,
-        source.position.y + Math.max(OVERLAP_THRESHOLD, source.height),
-      ],
-      [
-        target.position.y,
-        target.position.y + Math.max(OVERLAP_THRESHOLD, target.height),
-      ]
+      [source.position.y, source.position.y + Math.max(OVERLAP_THRESHOLD, source.height)],
+      [target.position.y, target.position.y + Math.max(OVERLAP_THRESHOLD, target.height)]
     )
 
     if (overlapY !== null && overlapY[1] - overlapY[0] >= OVERLAP_THRESHOLD) {
@@ -135,21 +120,14 @@ export function tryFindStraightPath(
   ) {
     if (
       endpointCoords &&
-      Math.abs(endpointCoords.sourceY - endpointCoords.targetY) >
-        HANDLE_ALIGNMENT_TOLERANCE
+      Math.abs(endpointCoords.sourceY - endpointCoords.targetY) > HANDLE_ALIGNMENT_TOLERANCE
     ) {
       return null
     }
 
     const overlapY = computeOverlap(
-      [
-        source.position.y,
-        source.position.y + Math.max(OVERLAP_THRESHOLD, source.height),
-      ],
-      [
-        target.position.y,
-        target.position.y + Math.max(OVERLAP_THRESHOLD, target.height),
-      ]
+      [source.position.y, source.position.y + Math.max(OVERLAP_THRESHOLD, source.height)],
+      [target.position.y, target.position.y + Math.max(OVERLAP_THRESHOLD, target.height)]
     )
 
     if (overlapY !== null && overlapY[1] - overlapY[0] >= OVERLAP_THRESHOLD) {
@@ -174,8 +152,7 @@ export function tryFindStraightPath(
   ) {
     if (
       endpointCoords &&
-      Math.abs(endpointCoords.sourceX - endpointCoords.targetX) >
-        HANDLE_ALIGNMENT_TOLERANCE
+      Math.abs(endpointCoords.sourceX - endpointCoords.targetX) > HANDLE_ALIGNMENT_TOLERANCE
     ) {
       return null
     }
@@ -207,8 +184,7 @@ export function tryFindStraightPath(
   ) {
     if (
       endpointCoords &&
-      Math.abs(endpointCoords.sourceX - endpointCoords.targetX) >
-        HANDLE_ALIGNMENT_TOLERANCE
+      Math.abs(endpointCoords.sourceX - endpointCoords.targetX) > HANDLE_ALIGNMENT_TOLERANCE
     ) {
       return null
     }
@@ -227,8 +203,7 @@ export function tryFindStraightPath(
 
       const end: IPoint = {
         x: middleX,
-        y:
-          endpointCoords?.targetY ?? target.position.y + target.height + offset,
+        y: endpointCoords?.targetY ?? target.position.y + target.height + offset,
       }
       return [start, end]
     }

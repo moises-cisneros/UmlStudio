@@ -43,10 +43,7 @@ export const resolveReleasedEdgeGeometryPreview = (
   if (!committedEdge || committedEdge === gesture.originalEdge) return null
   return {
     edgeId: gesture.edgeId,
-    points:
-      previewById[gesture.edgeId] ??
-      geometryById[gesture.edgeId] ??
-      gesture.latestPoints,
+    points: previewById[gesture.edgeId] ?? geometryById[gesture.edgeId] ?? gesture.latestPoints,
   }
 }
 
@@ -69,21 +66,14 @@ export const snapshotEdgeGeometryNodes = (
 
 const projectPoint = (point: IPoint, from: Rect, to: Rect): IPoint => ({
   x: to.x + (from.width > 0 ? ((point.x - from.x) / from.width) * to.width : 0),
-  y:
-    to.y +
-    (from.height > 0 ? ((point.y - from.y) / from.height) * to.height : 0),
+  y: to.y + (from.height > 0 ? ((point.y - from.y) / from.height) * to.height : 0),
 })
 
 const samePoint = (a: IPoint, b: IPoint): boolean => a.x === b.x && a.y === b.y
 
 const sameRect = (a: Rect | undefined, b: Rect | undefined): boolean =>
   a === b ||
-  (!!a &&
-    !!b &&
-    a.x === b.x &&
-    a.y === b.y &&
-    a.width === b.width &&
-    a.height === b.height)
+  (!!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height)
 
 const simplify = (points: readonly IPoint[]): IPoint[] => {
   const result: IPoint[] = []
@@ -107,9 +97,7 @@ const simplify = (points: readonly IPoint[]): IPoint[] => {
 
 type SegmentOrientation = "horizontal" | "vertical"
 
-const routeOrientations = (
-  points: readonly IPoint[]
-): SegmentOrientation[] | null => {
+const routeOrientations = (points: readonly IPoint[]): SegmentOrientation[] | null => {
   const orientations: SegmentOrientation[] = []
   for (let index = 1; index < points.length; index++) {
     const previous = points[index - 1]
@@ -128,24 +116,17 @@ const routeDirectionKey = (points: readonly IPoint[]): string | null => {
     const previous = points[index - 1]
     const point = points[index]
     if (previous.x === point.x && previous.y === point.y) continue
-    if (previous.y === point.y)
-      directions.push(point.x > previous.x ? "R" : "L")
-    else if (previous.x === point.x)
-      directions.push(point.y > previous.y ? "D" : "U")
+    if (previous.y === point.y) directions.push(point.x > previous.x ? "R" : "L")
+    else if (previous.x === point.x) directions.push(point.y > previous.y ? "D" : "U")
     else return null
   }
   return directions.join("")
 }
 
-const relativeEndpointKey = (
-  point: IPoint,
-  rect: EdgeGeometryNodeRect | undefined
-): string => {
+const relativeEndpointKey = (point: IPoint, rect: EdgeGeometryNodeRect | undefined): string => {
   if (!rect) return "?"
   const grid = CANVAS.SNAP_TO_GRID_PX
-  return `${Math.round((point.x - rect.x) / grid)},${Math.round(
-    (point.y - rect.y) / grid
-  )}`
+  return `${Math.round((point.x - rect.x) / grid)},${Math.round((point.y - rect.y) / grid)}`
 }
 
 const provisionalRouteDecisionKey = (
@@ -160,32 +141,19 @@ const provisionalRouteDecisionKey = (
   return `${directions}|${relativeEndpointKey(
     simplified[0],
     nodes.get(edge.source)
-  )}|${relativeEndpointKey(
-    simplified[simplified.length - 1],
-    nodes.get(edge.target)
-  )}`
+  )}|${relativeEndpointKey(simplified[simplified.length - 1], nodes.get(edge.target))}`
 }
 
-const segmentIntersectsRect = (
-  a: IPoint,
-  b: IPoint,
-  rect: EdgeGeometryNodeRect
-): boolean => {
+const segmentIntersectsRect = (a: IPoint, b: IPoint, rect: EdgeGeometryNodeRect): boolean => {
   const right = rect.x + rect.width
   const bottom = rect.y + rect.height
   if (a.y === b.y)
     return (
-      a.y >= rect.y &&
-      a.y <= bottom &&
-      Math.max(a.x, b.x) >= rect.x &&
-      Math.min(a.x, b.x) <= right
+      a.y >= rect.y && a.y <= bottom && Math.max(a.x, b.x) >= rect.x && Math.min(a.x, b.x) <= right
     )
   if (a.x === b.x)
     return (
-      a.x >= rect.x &&
-      a.x <= right &&
-      Math.max(a.y, b.y) >= rect.y &&
-      Math.min(a.y, b.y) <= bottom
+      a.x >= rect.x && a.x <= right && Math.max(a.y, b.y) >= rect.y && Math.min(a.y, b.y) <= bottom
     )
   return true
 }
@@ -223,8 +191,7 @@ const routeIntersectsUnrelatedNode = (
     )
       continue
     for (let index = 1; index < route.length; index++)
-      if (segmentIntersectsRect(route[index - 1], route[index], rect))
-        return true
+      if (segmentIntersectsRect(route[index - 1], route[index], rect)) return true
   }
   return false
 }
@@ -262,22 +229,13 @@ export const stabilizeProvisionalRoutes = ({
       pendingDecisionById.delete(edgeId)
       continue
     }
-    const displayedDecision = provisionalRouteDecisionKey(
-      displayed,
-      edge,
-      nodes
-    )
-    const candidateDecision = provisionalRouteDecisionKey(
-      candidate,
-      edge,
-      nodes
-    )
+    const displayedDecision = provisionalRouteDecisionKey(displayed, edge, nodes)
+    const candidateDecision = provisionalRouteDecisionKey(candidate, edge, nodes)
     const decisionsDiffer =
       displayedDecision !== null &&
       candidateDecision !== null &&
       displayedDecision !== candidateDecision
-    const displayedInvalid =
-      decisionsDiffer && routeIntersectsUnrelatedNode(displayed, edge, nodes)
+    const displayedInvalid = decisionsDiffer && routeIntersectsUnrelatedNode(displayed, edge, nodes)
     if (
       displayedDecision === null ||
       candidateDecision === null ||
@@ -338,12 +296,10 @@ const normalizeSettlementPair = (
     !fromOrientations?.length ||
     !toOrientations?.length ||
     fromOrientations.some(
-      (orientation, index) =>
-        index > 0 && orientation === fromOrientations[index - 1]
+      (orientation, index) => index > 0 && orientation === fromOrientations[index - 1]
     ) ||
     toOrientations.some(
-      (orientation, index) =>
-        index > 0 && orientation === toOrientations[index - 1]
+      (orientation, index) => index > 0 && orientation === toOrientations[index - 1]
     )
   )
     return null
@@ -365,15 +321,10 @@ export const prepareEdgeGeometrySettlement = (
   displayedById: Readonly<Record<string, IPoint[]>>,
   settledById: Readonly<Record<string, IPoint[]>>
 ): EdgeGeometrySettlementTransition => {
-  const transitions: Record<string, EdgeGeometrySettlementTransition[string]> =
-    {}
+  const transitions: Record<string, EdgeGeometrySettlementTransition[string]> = {}
   for (const [edgeId, from] of Object.entries(displayedById)) {
     const to = settledById[edgeId]
-    if (
-      !to ||
-      (from.length === to.length && from.every((p, i) => samePoint(p, to[i])))
-    )
-      continue
+    if (!to || (from.length === to.length && from.every((p, i) => samePoint(p, to[i])))) continue
     const normalized = normalizeSettlementPair(from, to)
     if (!normalized) continue
     transitions[edgeId] = {
@@ -395,10 +346,7 @@ export const interpolateEdgeGeometrySettlement = (
 ): Record<string, IPoint[]> => {
   if (progress <= 0)
     return Object.fromEntries(
-      Object.entries(transitions).map(([id, transition]) => [
-        id,
-        transition.from,
-      ])
+      Object.entries(transitions).map(([id, transition]) => [id, transition.from])
     )
   if (progress >= 1)
     return Object.fromEntries(
@@ -450,11 +398,7 @@ export const projectRoutesWhileSolving = (
     const desired = route.map((point) => ({ ...point }))
     desired[0] = projectPoint(route[0], fromSource, toSource)
     if (route.length > 1)
-      desired[desired.length - 1] = projectPoint(
-        route[route.length - 1],
-        fromTarget,
-        toTarget
-      )
+      desired[desired.length - 1] = projectPoint(route[route.length - 1], fromTarget, toTarget)
 
     if (desired.length === 2) {
       const source = desired[0]
@@ -464,30 +408,17 @@ export const projectRoutesWhileSolving = (
         continue
       }
       const wasHorizontal = route[0].y === route[1].y
-      const middle = wasHorizontal
-        ? (source.x + target.x) / 2
-        : (source.y + target.y) / 2
+      const middle = wasHorizontal ? (source.x + target.x) / 2 : (source.y + target.y) / 2
       projected[edgeId] = wasHorizontal
-        ? [
-            source,
-            { x: middle, y: source.y },
-            { x: middle, y: target.y },
-            target,
-          ]
-        : [
-            source,
-            { x: source.x, y: middle },
-            { x: target.x, y: middle },
-            target,
-          ]
+        ? [source, { x: middle, y: source.y }, { x: middle, y: target.y }, target]
+        : [source, { x: source.x, y: middle }, { x: target.x, y: middle }, target]
       continue
     }
 
     if (route[0].x === route[1].x) desired[1].x = desired[0].x
     else desired[1].y = desired[0].y
     const last = route.length - 1
-    if (route[last - 1].x === route[last].x)
-      desired[last - 1].x = desired[last].x
+    if (route[last - 1].x === route[last].x) desired[last - 1].x = desired[last].x
     else desired[last - 1].y = desired[last].y
 
     const orthogonal: IPoint[] = [desired[0]]

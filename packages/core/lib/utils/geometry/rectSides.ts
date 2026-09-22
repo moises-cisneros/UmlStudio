@@ -56,21 +56,13 @@ export const facingSide = (rect: Rect, toward: IPoint): Position => {
       : Position.Top
 }
 
-export const rangeOverlapLen = (
-  aLo: number,
-  aHi: number,
-  bLo: number,
-  bHi: number
-): number => Math.max(0, Math.min(aHi, bHi) - Math.max(aLo, bLo))
+export const rangeOverlapLen = (aLo: number, aHi: number, bLo: number, bHi: number): number =>
+  Math.max(0, Math.min(aHi, bHi) - Math.max(aLo, bLo))
 
 export const cornerMargin = (axisA: number, axisB: number): number =>
   Math.min(2 * CANVAS.SNAP_TO_GRID_PX, Math.min(axisA, axisB) * 0.3)
 
-export const canRunStraight = (
-  alongVerticalSides: boolean,
-  a: Rect,
-  b: Rect
-): boolean => {
+export const canRunStraight = (alongVerticalSides: boolean, a: Rect, b: Rect): boolean => {
   const overlap = alongVerticalSides
     ? rangeOverlapLen(a.y, a.y + a.height, b.y, b.y + b.height)
     : rangeOverlapLen(a.x, a.x + a.width, b.x, b.x + b.width)

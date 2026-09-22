@@ -63,9 +63,7 @@ export type SerializedEdgeSolveCacheEntry = {
   alternatives?: SerializedEdgeSolveCacheEntry[]
 }
 
-export type SerializedEdgeSolveCache = Array<
-  [edgeId: string, entry: SerializedEdgeSolveCacheEntry]
->
+export type SerializedEdgeSolveCache = Array<[edgeId: string, entry: SerializedEdgeSolveCacheEntry]>
 
 type SerializedRoutingEdgeData = {
   points?: IPoint[]
@@ -129,14 +127,11 @@ export type EdgeGeometrySolveError = {
   message: string
 }
 
-export type EdgeGeometryWorkerResponse =
-  | EdgeGeometrySolveResult
-  | EdgeGeometrySolveError
+export type EdgeGeometryWorkerResponse = EdgeGeometrySolveResult | EdgeGeometrySolveError
 
 const clonePoint = ({ x, y }: IPoint): IPoint => ({ x, y })
 
-const clonePoints = (points: readonly IPoint[]): IPoint[] =>
-  points.map(clonePoint)
+const clonePoints = (points: readonly IPoint[]): IPoint[] => points.map(clonePoint)
 
 const MAX_SERIALIZED_CACHE_ALTERNATIVES = 4
 
@@ -159,10 +154,7 @@ const serializeCacheEntry = (
 export const serializeEdgeSolveCache = (
   cache: ReadonlyMap<string, EdgeSolveCacheEntry>
 ): SerializedEdgeSolveCache =>
-  [...cache].map(([edgeId, entry]) => [
-    edgeId,
-    serializeCacheEntry(entry, true),
-  ])
+  [...cache].map(([edgeId, entry]) => [edgeId, serializeCacheEntry(entry, true)])
 
 const deserializeCacheEntry = (
   entry: SerializedEdgeSolveCacheEntry,
@@ -183,13 +175,9 @@ const deserializeCacheEntry = (
 export const deserializeEdgeSolveCache = (
   cache: SerializedEdgeSolveCache
 ): Map<string, EdgeSolveCacheEntry> =>
-  new Map(
-    cache.map(([edgeId, entry]) => [edgeId, deserializeCacheEntry(entry, true)])
-  )
+  new Map(cache.map(([edgeId, entry]) => [edgeId, deserializeCacheEntry(entry, true)]))
 
-const serializeAnchor = (
-  value: unknown
-): SerializedFreeformAnchor | undefined => {
+const serializeAnchor = (value: unknown): SerializedFreeformAnchor | undefined => {
   if (!value || typeof value !== "object") return undefined
   const candidate = value as { side?: unknown; ratio?: unknown }
   if (
@@ -213,9 +201,7 @@ const serializeEdge = (edge: Edge): SerializedSolverEdge => {
   const sourceAnchor = serializeAnchor(edge.data?.sourceAnchor)
   const targetAnchor = serializeAnchor(edge.data?.targetAnchor)
   const data =
-    points || sourceAnchor || targetAnchor
-      ? { points, sourceAnchor, targetAnchor }
-      : undefined
+    points || sourceAnchor || targetAnchor ? { points, sourceAnchor, targetAnchor } : undefined
 
   return {
     id: edge.id,
@@ -244,9 +230,7 @@ const serializeNode = (node: Node): SerializedSolverNode => ({
 })
 
 const serializeHandle = (
-  handle: NonNullable<
-    NonNullable<InternalNode["internals"]["handleBounds"]>["source"]
-  >[number]
+  handle: NonNullable<NonNullable<InternalNode["internals"]["handleBounds"]>["source"]>[number]
 ): SerializedHandle => ({
   id: handle.id ?? null,
   type: handle.type,
@@ -258,17 +242,13 @@ const serializeHandle = (
 })
 
 const serializeHandles = (
-  handles:
-    | NonNullable<InternalNode["internals"]["handleBounds"]>["source"]
-    | undefined
+  handles: NonNullable<InternalNode["internals"]["handleBounds"]>["source"] | undefined
 ): SerializedHandle[] | null | undefined => {
   if (handles === undefined) return undefined
   return handles?.map(serializeHandle) ?? null
 }
 
-const serializeInternalNode = (
-  node: InternalNode
-): SerializedInternalSolverNode => {
+const serializeInternalNode = (node: InternalNode): SerializedInternalSolverNode => {
   const basic = serializeNode(node)
   const handleBounds = node.internals.handleBounds
     ? {
@@ -298,12 +278,7 @@ const cloneRouteMap = (
   routeById: Readonly<Record<string, readonly IPoint[]>> | undefined
 ): Record<string, IPoint[]> | undefined =>
   routeById
-    ? Object.fromEntries(
-        Object.entries(routeById).map(([id, points]) => [
-          id,
-          clonePoints(points),
-        ])
-      )
+    ? Object.fromEntries(Object.entries(routeById).map(([id, points]) => [id, clonePoints(points)]))
     : undefined
 
 const serializeLiveOverride = (
@@ -320,14 +295,9 @@ const serializeLiveOverride = (
           strategy: override.strategy,
         }
 
-export const serializeSolverInput = (
-  input: SolverInput
-): SerializedSolverInput => ({
+export const serializeSolverInput = (input: SolverInput): SerializedSolverInput => ({
   nodes: input.nodes.map(serializeNode),
-  nodeLookup: [...input.nodeLookup].map(([id, node]) => [
-    id,
-    serializeInternalNode(node),
-  ]),
+  nodeLookup: [...input.nodeLookup].map(([id, node]) => [id, serializeInternalNode(node)]),
   connectionMode: input.connectionMode as "strict" | "loose",
   edges: input.edges.map(serializeEdge),
   straightPathTypes: [...input.straightPathTypes],
@@ -353,19 +323,13 @@ const deserializeEdge = (edge: SerializedSolverEdge): Edge =>
     data: edge.data
       ? {
           points: edge.data.points ? clonePoints(edge.data.points) : undefined,
-          sourceAnchor: edge.data.sourceAnchor
-            ? { ...edge.data.sourceAnchor }
-            : undefined,
-          targetAnchor: edge.data.targetAnchor
-            ? { ...edge.data.targetAnchor }
-            : undefined,
+          sourceAnchor: edge.data.sourceAnchor ? { ...edge.data.sourceAnchor } : undefined,
+          targetAnchor: edge.data.targetAnchor ? { ...edge.data.targetAnchor } : undefined,
         }
       : undefined,
   }) as Edge
 
-const deserializeInternalNode = (
-  node: SerializedInternalSolverNode
-): InternalNode => {
+const deserializeInternalNode = (node: SerializedInternalSolverNode): InternalNode => {
   const userNode = deserializeNode(node)
   return {
     ...userNode,
@@ -399,13 +363,9 @@ const deserializeLiveOverride = (
           strategy: override.strategy,
         }
 
-export const deserializeSolverInput = (
-  input: SerializedSolverInput
-): SolverInput => ({
+export const deserializeSolverInput = (input: SerializedSolverInput): SolverInput => ({
   nodes: input.nodes.map(deserializeNode),
-  nodeLookup: new Map(
-    input.nodeLookup.map(([id, node]) => [id, deserializeInternalNode(node)])
-  ),
+  nodeLookup: new Map(input.nodeLookup.map(([id, node]) => [id, deserializeInternalNode(node)])),
   connectionMode: input.connectionMode as ConnectionMode,
   edges: input.edges.map(deserializeEdge),
   straightPathTypes: new Set(input.straightPathTypes),

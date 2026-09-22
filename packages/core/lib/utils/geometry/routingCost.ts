@@ -36,10 +36,7 @@ export const balancedPortOffsets = (
     const rightIndex = count - 1 - leftIndex
     const left = Math.max(
       0,
-      Math.min(
-        length,
-        Math.round((length * (leftIndex + 1)) / (count + 1) / grid) * grid
-      )
+      Math.min(length, Math.round((length * (leftIndex + 1)) / (count + 1) / grid) * grid)
     )
     result[leftIndex] = left
     if (rightIndex !== leftIndex) result[rightIndex] = length - left
@@ -54,8 +51,7 @@ export const sideGapBalance = (
 ): SideGapBalance => {
   const length = Math.max(0, sideLength)
   const grid = Math.max(1, gridSize)
-  if (ratios.length === 0 || length === 0)
-    return { cost: 0, maxGapErrorPx: 0, totalGapErrorPx: 0 }
+  if (ratios.length === 0 || length === 0) return { cost: 0, maxGapErrorPx: 0, totalGapErrorPx: 0 }
 
   const snap = (value: number): number =>
     Math.max(0, Math.min(length, Math.round(value / grid) * grid))
@@ -70,9 +66,7 @@ export const sideGapBalance = (
   ]
   const actualGaps = gaps(positions)
   const balancedGaps = gaps(balanced)
-  const errors = actualGaps.map((gap, index) =>
-    Math.abs(gap - balancedGaps[index])
-  )
+  const errors = actualGaps.map((gap, index) => Math.abs(gap - balancedGaps[index]))
   const totalGapErrorPx = errors.reduce((sum, error) => sum + error, 0)
   const maxGapErrorPx = Math.max(...errors)
   return {
@@ -95,10 +89,7 @@ export const endpointPreferenceCost = (
   gridSize: number
 ): number => {
   if (!preferred) return 0
-  const maximum = Math.max(
-    0,
-    ROUTING_COST.preferredSideChangeInGridCells * gridSize
-  )
+  const maximum = Math.max(0, ROUTING_COST.preferredSideChangeInGridCells * gridSize)
   if (anchor.side !== preferred.side) return maximum
   const displacement = Math.round(
     Math.abs(anchor.ratio - preferred.ratio) *
@@ -116,10 +107,7 @@ export type WeightedRoutingMetrics = {
   crowdingPx?: number
 }
 
-export const weightedRoutingCost = (
-  metrics: WeightedRoutingMetrics,
-  gridSize: number
-): number =>
+export const weightedRoutingCost = (metrics: WeightedRoutingMetrics, gridSize: number): number =>
   (metrics.lengthPx ?? 0) +
   (metrics.bends ?? 0) * ROUTING_COST.bendInGridCells * gridSize +
   (metrics.crossings ?? 0) * ROUTING_COST.edgeCrossing +
@@ -138,9 +126,7 @@ type Segment = { a: IPoint; b: IPoint }
 const segmentsOf = (polyline: readonly IPoint[]): Segment[] =>
   polyline.slice(1).flatMap((point, index) => {
     const previous = polyline[index]
-    return point.x === previous.x && point.y === previous.y
-      ? []
-      : [{ a: previous, b: point }]
+    return point.x === previous.x && point.y === previous.y ? [] : [{ a: previous, b: point }]
   })
 
 const cross = (a: IPoint, b: IPoint, c: IPoint): number =>
@@ -165,22 +151,10 @@ const parallelOverlap = (
   if (ldx * rdy - ldy * rdx !== 0) return null
 
   const useX = Math.abs(ldx) >= Math.abs(ldy)
-  const leftLo = Math.min(
-    useX ? left.a.x : left.a.y,
-    useX ? left.b.x : left.b.y
-  )
-  const leftHi = Math.max(
-    useX ? left.a.x : left.a.y,
-    useX ? left.b.x : left.b.y
-  )
-  const rightLo = Math.min(
-    useX ? right.a.x : right.a.y,
-    useX ? right.b.x : right.b.y
-  )
-  const rightHi = Math.max(
-    useX ? right.a.x : right.a.y,
-    useX ? right.b.x : right.b.y
-  )
+  const leftLo = Math.min(useX ? left.a.x : left.a.y, useX ? left.b.x : left.b.y)
+  const leftHi = Math.max(useX ? left.a.x : left.a.y, useX ? left.b.x : left.b.y)
+  const rightLo = Math.min(useX ? right.a.x : right.a.y, useX ? right.b.x : right.b.y)
+  const rightHi = Math.max(useX ? right.a.x : right.a.y, useX ? right.b.x : right.b.y)
   const overlap = Math.min(leftHi, rightHi) - Math.max(leftLo, rightLo)
   if (overlap <= 0) return null
   const dominantLength = Math.max(Math.abs(ldx), Math.abs(ldy))
@@ -189,18 +163,13 @@ const parallelOverlap = (
   return { overlap, gap }
 }
 
-const coordinateAt = (
-  segment: Segment,
-  primary: "x" | "y",
-  at: number
-): number => {
+const coordinateAt = (segment: Segment, primary: "x" | "y", at: number): number => {
   const primaryStart = segment.a[primary]
   const primaryDelta = segment.b[primary] - primaryStart
   const secondary = primary === "x" ? "y" : "x"
   return (
     segment.a[secondary] +
-    ((at - primaryStart) / primaryDelta) *
-      (segment.b[secondary] - segment.a[secondary])
+    ((at - primaryStart) / primaryDelta) * (segment.b[secondary] - segment.a[secondary])
   )
 }
 
@@ -225,9 +194,7 @@ export const segmentCrowdingPx = (
   if (!canUseX && !canUseY) return 0
   const primary: "x" | "y" =
     canUseX &&
-    (!canUseY ||
-      Math.min(Math.abs(ldx), Math.abs(rdx)) >=
-        Math.min(Math.abs(ldy), Math.abs(rdy)))
+    (!canUseY || Math.min(Math.abs(ldx), Math.abs(rdx)) >= Math.min(Math.abs(ldy), Math.abs(rdy)))
       ? "x"
       : "y"
   const lo = Math.max(
@@ -274,19 +241,11 @@ export const polylineConflictCost = (
           if (parallel.gap === 0) overlapPx += parallel.overlap
           else if (parallel.gap < crowdingClearancePx)
             crowdingPx +=
-              (parallel.overlap * (crowdingClearancePx - parallel.gap)) /
-              crowdingClearancePx
+              (parallel.overlap * (crowdingClearancePx - parallel.gap)) / crowdingClearancePx
           continue
         }
         if (segmentsCrossOpen(left, right)) crossings++
-        else
-          crowdingPx += segmentCrowdingPx(
-            left.a,
-            left.b,
-            right.a,
-            right.b,
-            crowdingClearancePx
-          )
+        else crowdingPx += segmentCrowdingPx(left.a, left.b, right.a, right.b, crowdingClearancePx)
       }
     }
   }

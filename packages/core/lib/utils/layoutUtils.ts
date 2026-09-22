@@ -1,14 +1,10 @@
 import { CANVAS } from "@/constants"
 import { DefaultNodeProps } from "@/types"
 
-export const calculateMinWidth = (
-  maxTextWidth: number,
-  padding: number
-): number => {
+export const calculateMinWidth = (maxTextWidth: number, padding: number): number => {
   const minWidth = maxTextWidth + 2 * padding
   const minWidthWithSnapToGrid =
-    Math.ceil(minWidth / CANVAS.EXTRA_SPACE_FOR_EXTENSION) *
-    CANVAS.EXTRA_SPACE_FOR_EXTENSION
+    Math.ceil(minWidth / CANVAS.EXTRA_SPACE_FOR_EXTENSION) * CANVAS.EXTRA_SPACE_FOR_EXTENSION
   return minWidthWithSnapToGrid
 }
 
@@ -17,15 +13,17 @@ export const calculateMinHeight = (
   attributesCount: number,
   methodsCount: number,
   attributeHeight: number,
-  methodHeight: number
+  methodHeight: number,
+  reserveCompartments = true
 ): number => {
+  const effectiveAttributesCount = reserveCompartments
+    ? Math.max(1, attributesCount)
+    : attributesCount
+  const effectiveMethodsCount = reserveCompartments ? Math.max(1, methodsCount) : methodsCount
   const minHeight =
-    headerHeight +
-    attributesCount * attributeHeight +
-    methodsCount * methodHeight
+    headerHeight + effectiveAttributesCount * attributeHeight + effectiveMethodsCount * methodHeight
   const minHeightWithSnapToGrid =
-    Math.ceil(minHeight / CANVAS.EXTRA_SPACE_FOR_EXTENSION) *
-    CANVAS.EXTRA_SPACE_FOR_EXTENSION
+    Math.ceil(minHeight / CANVAS.EXTRA_SPACE_FOR_EXTENSION) * CANVAS.EXTRA_SPACE_FOR_EXTENSION
   return minHeightWithSnapToGrid
 }
 

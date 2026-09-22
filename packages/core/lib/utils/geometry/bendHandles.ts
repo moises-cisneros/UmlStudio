@@ -10,10 +10,8 @@ export function collapseCollinearPoints(points: IPoint[]): IPoint[] {
     const prev = result[result.length - 1]
     const curr = points[i]
     const next = points[i + 1]
-    const collinearX =
-      Math.abs(prev.x - curr.x) < 1 && Math.abs(curr.x - next.x) < 1
-    const collinearY =
-      Math.abs(prev.y - curr.y) < 1 && Math.abs(curr.y - next.y) < 1
+    const collinearX = Math.abs(prev.x - curr.x) < 1 && Math.abs(curr.x - next.x) < 1
+    const collinearY = Math.abs(prev.y - curr.y) < 1 && Math.abs(curr.y - next.y) < 1
     if (!collinearX && !collinearY) result.push(curr)
   }
   result.push(points[points.length - 1])
@@ -37,30 +35,20 @@ const snapToGrid = (value: number, grid: number): number => {
   return Math.round(value / grid) * grid
 }
 
-export function getSegmentOrientation(
-  points: IPoint[],
-  segmentIndex: number
-): "H" | "V" {
+export function getSegmentOrientation(points: IPoint[], segmentIndex: number): "H" | "V" {
   const start = points[segmentIndex]
   const end = points[segmentIndex + 1]
   if (!start || !end) return "H"
   return Math.abs(start.y - end.y) <= ORIENTATION_TOLERANCE_PX ? "H" : "V"
 }
 
-export function getSegmentKind(
-  segmentIndex: number,
-  totalPoints: number
-): SegmentKind {
+export function getSegmentKind(segmentIndex: number, totalPoints: number): SegmentKind {
   if (segmentIndex === 0) return "source-terminal"
   if (segmentIndex === totalPoints - 2) return "target-terminal"
   return "inner"
 }
 
-export function getStubExit(
-  nodePoint: IPoint,
-  position: Position,
-  stubLength: number
-): IPoint {
+export function getStubExit(nodePoint: IPoint, position: Position, stubLength: number): IPoint {
   switch (position) {
     case Position.Right:
       return { x: nodePoint.x + stubLength, y: nodePoint.y }
@@ -74,10 +62,7 @@ export function getStubExit(
   }
 }
 
-export function getBendHandlePosition(
-  points: IPoint[],
-  segmentIndex: number
-): IPoint {
+export function getBendHandlePosition(points: IPoint[], segmentIndex: number): IPoint {
   const totalPoints = points.length
   if (totalPoints < 2) return { x: 0, y: 0 }
 
@@ -98,10 +83,7 @@ const terminalArmFloorPx = (grid: number): number => {
 const terminalBendFloorPx = (): number =>
   EDGES.MIN_STUB_LENGTH + terminalArmFloorPx(EDGES.BEND_SNAP_GRID_PX)
 
-export function getBendableSegments(
-  points: IPoint[],
-  safeAreaPx: number
-): BendHandle[] {
+export function getBendableSegments(points: IPoint[], safeAreaPx: number): BendHandle[] {
   const collapsed = collapseCollinearPoints(points)
   if (collapsed.length < 2) return []
 
@@ -115,8 +97,7 @@ export function getBendableSegments(
     if (rawLength <= 0) continue
 
     const reserveStart = i === 0 ? Math.min(safeAreaPx, rawLength / 2) : 0
-    const reserveEnd =
-      i === lastSegment ? Math.min(safeAreaPx, rawLength / 2) : 0
+    const reserveEnd = i === lastSegment ? Math.min(safeAreaPx, rawLength / 2) : 0
     const bendRegion = rawLength - reserveStart - reserveEnd
 
     const kind = getSegmentKind(i, collapsed.length)
@@ -127,9 +108,7 @@ export function getBendableSegments(
     }
 
     const fitsPastSafeArea = bendRegion > 0
-    const centreFromStart = fitsPastSafeArea
-      ? reserveStart + bendRegion / 2
-      : rawLength / 2
+    const centreFromStart = fitsPastSafeArea ? reserveStart + bendRegion / 2 : rawLength / 2
 
     const t = centreFromStart / rawLength
     handles.push({
@@ -163,8 +142,7 @@ export function applyInnerSegmentBend(
   const updated = [...points]
 
   const adjSourceSame =
-    segmentIndex > 0 &&
-    getSegmentOrientation(points, segmentIndex - 1) === orientation
+    segmentIndex > 0 && getSegmentOrientation(points, segmentIndex - 1) === orientation
   const adjTargetSame =
     segmentIndex < lastSegmentIndex &&
     getSegmentOrientation(points, segmentIndex + 1) === orientation
@@ -249,12 +227,8 @@ export function computeToolbarPosition(
   extraClearance = 0
 ): IPoint {
   return {
-    x:
-      pathMiddlePosition.x +
-      (isMiddlePathHorizontal ? 0 : -52 - extraClearance),
-    y:
-      pathMiddlePosition.y +
-      (isMiddlePathHorizontal ? -64 - extraClearance : 0),
+    x: pathMiddlePosition.x + (isMiddlePathHorizontal ? 0 : -52 - extraClearance),
+    y: pathMiddlePosition.y + (isMiddlePathHorizontal ? -64 - extraClearance : 0),
   }
 }
 
@@ -336,12 +310,7 @@ export function applyTerminalSegmentBend(
         points[1],
       ])
     }
-    const jogY = computeTerminalJogCoordinate(
-      points[0].y,
-      updatedPoints[1].y,
-      stubLength,
-      snapGrid
-    )
+    const jogY = computeTerminalJogCoordinate(points[0].y, updatedPoints[1].y, stubLength, snapGrid)
     updatedPoints[1] = { x: newX, y: updatedPoints[1].y }
     return removeDuplicatePoints([
       points[0],
@@ -363,12 +332,7 @@ export function applyTerminalSegmentBend(
       const newY = snapToGrid(stubExit.y + delta.y, snapGrid)
       const updatedPoints = [...points]
       const cornerX = updatedPoints[lastSegIdx].x
-      const jogX = computeTerminalJogCoordinate(
-        points[lastIdx].x,
-        cornerX,
-        stubLength,
-        snapGrid
-      )
+      const jogX = computeTerminalJogCoordinate(points[lastIdx].x, cornerX, stubLength, snapGrid)
       updatedPoints[lastSegIdx] = { x: cornerX, y: newY }
       const leading = updatedPoints.slice(0, lastSegIdx + 1)
       return removeDuplicatePoints([
@@ -383,12 +347,7 @@ export function applyTerminalSegmentBend(
     const newX = snapToGrid(stubExit.x + delta.x, snapGrid)
     const updatedPoints = [...points]
     const cornerY = updatedPoints[lastSegIdx].y
-    const jogY = computeTerminalJogCoordinate(
-      points[lastIdx].y,
-      cornerY,
-      stubLength,
-      snapGrid
-    )
+    const jogY = computeTerminalJogCoordinate(points[lastIdx].y, cornerY, stubLength, snapGrid)
     updatedPoints[lastSegIdx] = { x: newX, y: cornerY }
     const leading = updatedPoints.slice(0, lastSegIdx + 1)
     return removeDuplicatePoints([

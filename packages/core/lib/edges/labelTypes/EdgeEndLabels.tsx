@@ -71,7 +71,7 @@ export const EdgeEndLabels = ({
 
   return (
     <>
-            {data?.sourceRole && (
+      {data?.sourceRole && (
         <text
           x={sourceLabels.roleX}
           y={sourceLabels.roleY}
@@ -86,7 +86,7 @@ export const EdgeEndLabels = ({
         </text>
       )}
 
-            {data?.sourceMultiplicity && (
+      {data?.sourceMultiplicity && (
         <text
           x={sourceLabels.multiplicityX}
           y={sourceLabels.multiplicityY}
@@ -101,7 +101,7 @@ export const EdgeEndLabels = ({
         </text>
       )}
 
-            {data?.targetRole && (
+      {data?.targetRole && (
         <text
           x={targetLabels.roleX}
           y={targetLabels.roleY}
@@ -116,7 +116,7 @@ export const EdgeEndLabels = ({
         </text>
       )}
 
-            {data?.targetMultiplicity && (
+      {data?.targetMultiplicity && (
         <text
           x={targetLabels.multiplicityX}
           y={targetLabels.multiplicityY}

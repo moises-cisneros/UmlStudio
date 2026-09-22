@@ -1,12 +1,8 @@
 import { CANVAS } from "./routingConstants"
 
-export const clamp = (v: number, lo: number, hi: number): number =>
-  Math.max(lo, Math.min(hi, v))
+export const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v))
 
-export const lexLess = (
-  a: readonly number[],
-  b: readonly number[]
-): boolean => {
+export const lexLess = (a: readonly number[], b: readonly number[]): boolean => {
   for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) return a[i] < b[i]
   }

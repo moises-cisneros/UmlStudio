@@ -10,10 +10,10 @@ export interface SegmentGhostHandle {
 const snap = (value: number, grid: number): number =>
   grid > 0 ? Math.round(value / grid) * grid : Math.round(value)
 
-export const snapPoint = (
-  point: IPoint,
-  grid: number = EDGES.BEND_SNAP_GRID_PX
-): IPoint => ({ x: snap(point.x, grid), y: snap(point.y, grid) })
+export const snapPoint = (point: IPoint, grid: number = EDGES.BEND_SNAP_GRID_PX): IPoint => ({
+  x: snap(point.x, grid),
+  y: snap(point.y, grid),
+})
 
 export const getSegmentGhostHandles = (
   route: readonly IPoint[],
@@ -94,20 +94,14 @@ export const isWaypointCollapseCandidate = (
   const dy = after.y - before.y
   const lengthSq = dx * dx + dy * dy
   if (lengthSq === 0) return true
-  const projection =
-    ((point.x - before.x) * dx + (point.y - before.y) * dy) / lengthSq
+  const projection = ((point.x - before.x) * dx + (point.y - before.y) * dy) / lengthSq
   if (projection < 0 || projection > 1) return false
   const distanceX = point.x - (before.x + projection * dx)
   const distanceY = point.y - (before.y + projection * dy)
-  return (
-    distanceX * distanceX + distanceY * distanceY <= tolerancePx * tolerancePx
-  )
+  return distanceX * distanceX + distanceY * distanceY <= tolerancePx * tolerancePx
 }
 
-export const removeWaypoint = (
-  interior: readonly IPoint[],
-  index: number
-): IPoint[] => {
+export const removeWaypoint = (interior: readonly IPoint[], index: number): IPoint[] => {
   if (index < 0 || index >= interior.length) return interior.slice()
   const next = interior.slice()
   next.splice(index, 1)
