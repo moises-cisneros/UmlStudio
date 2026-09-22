@@ -1,24 +1,24 @@
 export interface UmlStudioTheme {
-  primary?: string;
-  primaryForeground?: string;
-  foreground?: string;
-  secondary?: string;
-  background?: string;
-  backgroundVariant?: string;
-  gray?: string;
-  grayVariant?: string;
-  grid?: string;
-  guideVertical?: string;
-  guideHorizontal?: string;
-  danger?: string;
-  surface?: string;
-  surfaceSunken?: string;
-  border?: string;
-  borderSubtle?: string;
-  radius?: string;
-  accent?: string;
-  accentSoft?: string;
-  tint?: string;
+  primary?: string
+  primaryForeground?: string
+  foreground?: string
+  secondary?: string
+  background?: string
+  backgroundVariant?: string
+  gray?: string
+  grayVariant?: string
+  grid?: string
+  guideVertical?: string
+  guideHorizontal?: string
+  danger?: string
+  surface?: string
+  surfaceSunken?: string
+  border?: string
+  borderSubtle?: string
+  radius?: string
+  accent?: string
+  accentSoft?: string
+  tint?: string
 }
 
 const TOKEN_VAR_MAP: Record<keyof UmlStudioTheme, `--umlstudio-${string}`> = {
@@ -42,19 +42,19 @@ const TOKEN_VAR_MAP: Record<keyof UmlStudioTheme, `--umlstudio-${string}`> = {
   accent: "--umlstudio-accent",
   accentSoft: "--umlstudio-accent-soft",
   tint: "--umlstudio-tint",
-};
+}
 
 export function createUmlStudioTheme(
-  theme: UmlStudioTheme,
+  theme: UmlStudioTheme
 ): Record<`--umlstudio-${string}`, string> {
-  const style: Record<`--umlstudio-${string}`, string> = {};
+  const style: Record<`--umlstudio-${string}`, string> = {}
   for (const key of Object.keys(TOKEN_VAR_MAP) as (keyof UmlStudioTheme)[]) {
-    const value = theme[key];
+    const value = theme[key]
     if (value !== undefined) {
-      style[TOKEN_VAR_MAP[key]] = value;
+      style[TOKEN_VAR_MAP[key]] = value
     }
   }
-  return style;
+  return style
 }
 
 export const COOLORS_PALETTE = {
@@ -63,7 +63,7 @@ export const COOLORS_PALETTE = {
   babyBlueIce: "#8fb8ed",
   deepSkyBlue: "#62bfed",
   dodgerBlue: "#3590f3",
-} as const;
+} as const
 
 export const DEFAULT_LIGHT_THEME: UmlStudioTheme = {
   primary: COOLORS_PALETTE.dodgerBlue,
@@ -86,7 +86,7 @@ export const DEFAULT_LIGHT_THEME: UmlStudioTheme = {
   accent: COOLORS_PALETTE.deepSkyBlue,
   accentSoft: COOLORS_PALETTE.babyBlueIce,
   tint: COOLORS_PALETTE.periwinkle,
-};
+}
 
 export const DEFAULT_DARK_THEME: UmlStudioTheme = {
   primary: COOLORS_PALETTE.dodgerBlue,
@@ -109,4 +109,4 @@ export const DEFAULT_DARK_THEME: UmlStudioTheme = {
   accent: COOLORS_PALETTE.deepSkyBlue,
   accentSoft: "rgba(98, 191, 237, 0.2)",
   tint: COOLORS_PALETTE.periwinkle,
-};
+}

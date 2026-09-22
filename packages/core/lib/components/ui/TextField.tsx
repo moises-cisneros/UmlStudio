@@ -106,11 +106,7 @@ export const TextField: React.FC<TextFieldProps> = ({
         <Input type={type ?? "text"} {...sharedProps} />
       )}
       {helperText && (
-        <span
-          id={helperId}
-          data-slot="textfield-helper"
-          data-error={error || undefined}
-        >
+        <span id={helperId} data-slot="textfield-helper" data-error={error || undefined}>
           {helperText}
         </span>
       )}

@@ -2,10 +2,7 @@ import { CheckIcon } from "lucide-react"
 import * as React from "react"
 
 import { cn } from "../lib/utils"
-import {
-  NATIVE_COLOR_INPUT_FALLBACK,
-  SWATCH_NAMES,
-} from "../lib/color-swatch-tokens"
+import { NATIVE_COLOR_INPUT_FALLBACK, SWATCH_NAMES } from "../lib/color-swatch-tokens"
 import { Popover, PopoverContent, PopoverTrigger } from "./popover"
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group"
 
@@ -16,10 +13,7 @@ const SWATCH_TOKENS = SWATCH_NAMES.map((name) => ({
 
 const swatchValue = (token: string) => `var(${token})`
 
-type ColorPickerProps = Omit<
-  React.ComponentProps<"div">,
-  "onChange" | "defaultValue"
-> & {
+type ColorPickerProps = Omit<React.ComponentProps<"div">, "onChange" | "defaultValue"> & {
   value?: string
   defaultValue?: string
   onValueChange?: (value: string) => void
@@ -58,16 +52,10 @@ function ColorPicker({
     [setSelected]
   )
 
-  const isCustom =
-    selected !== "" &&
-    !SWATCH_TOKENS.some((s) => swatchValue(s.token) === selected)
+  const isCustom = selected !== "" && !SWATCH_TOKENS.some((s) => swatchValue(s.token) === selected)
 
   return (
-    <div
-      data-slot="color-picker"
-      className={cn("inline-flex", className)}
-      {...props}
-    >
+    <div data-slot="color-picker" className={cn("inline-flex", className)} {...props}>
       <Popover>
         <PopoverTrigger
           aria-label={ariaLabel}

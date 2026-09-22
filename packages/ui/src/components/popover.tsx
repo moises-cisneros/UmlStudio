@@ -7,9 +7,7 @@ function useAnchorLossGuard(open: boolean): {
   actionsRef: React.RefObject<{ close: () => void; unmount: () => void } | null>
   positionerRef: React.RefCallback<HTMLDivElement>
 } {
-  const [positioner, setPositioner] = React.useState<HTMLDivElement | null>(
-    null
-  )
+  const [positioner, setPositioner] = React.useState<HTMLDivElement | null>(null)
   const actionsRef = React.useRef<{
     close: () => void
     unmount: () => void
@@ -24,8 +22,7 @@ function useAnchorLossGuard(open: boolean): {
       if (rect.width > 0 || rect.height > 0) hadLayout = true
       if (!hadLayout) return false
       return (
-        positioner.hasAttribute("data-anchor-hidden") ||
-        (rect.width === 0 && rect.height === 0)
+        positioner.hasAttribute("data-anchor-hidden") || (rect.width === 0 && rect.height === 0)
       )
     }
 
@@ -47,9 +44,9 @@ function useAnchorLossGuard(open: boolean): {
   return { actionsRef, positionerRef: setPositioner }
 }
 
-const AnchorLossGuardContext = React.createContext<
-  ((node: HTMLDivElement | null) => void) | null
->(null)
+const AnchorLossGuardContext = React.createContext<((node: HTMLDivElement | null) => void) | null>(
+  null
+)
 
 function Popover({
   open: openProp,
@@ -61,7 +58,7 @@ function Popover({
   const open = openProp ?? uncontrolledOpen
   const guard = useAnchorLossGuard(open)
   return (
-    <AnchorLossGuardContext.Provider value={guard.positionerRef}>
+    <AnchorLossGuardContext value={guard.positionerRef}>
       <PopoverPrimitive.Root
         data-slot="popover"
         open={open}
@@ -72,7 +69,7 @@ function Popover({
         }}
         {...props}
       />
-    </AnchorLossGuardContext.Provider>
+    </AnchorLossGuardContext>
   )
 }
 
@@ -88,10 +85,7 @@ function PopoverContent({
   sideOffset = 4,
   ...props
 }: PopoverPrimitive.Popup.Props &
-  Pick<
-    PopoverPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
   const positionerRef = React.use(AnchorLossGuardContext)
   return (
     <PopoverPrimitive.Portal>
@@ -136,10 +130,7 @@ function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
   )
 }
 
-function PopoverDescription({
-  className,
-  ...props
-}: PopoverPrimitive.Description.Props) {
+function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {
   return (
     <PopoverPrimitive.Description
       data-slot="popover-description"
@@ -149,13 +140,6 @@ function PopoverDescription({
   )
 }
 
-export {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-}
+export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger }
 
 export { AnchorLossGuardContext, useAnchorLossGuard }

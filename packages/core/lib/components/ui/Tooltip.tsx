@@ -19,9 +19,7 @@ export const TooltipProvider: React.FC<{
   children: React.ReactNode
   delayDuration?: number
 }> = ({ children, delayDuration = 700 }) => (
-  <SharedTooltipProvider delay={delayDuration}>
-    {children}
-  </SharedTooltipProvider>
+  <SharedTooltipProvider delay={delayDuration}>{children}</SharedTooltipProvider>
 )
 
 export const Tooltip: React.FC<TooltipProps> = ({
@@ -30,8 +28,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   side = "top",
   delayDuration,
 }) => {
-  const [triggerElement, setTriggerElement] =
-    React.useState<HTMLButtonElement | null>(null)
+  const [triggerElement, setTriggerElement] = React.useState<HTMLButtonElement | null>(null)
   const portalThemeVars = usePortalThemeVars(triggerElement)
   const portalContainer = useUmlStudioPortalContainer()
 
@@ -52,11 +49,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   return (
     <SharedTooltip>
       {trigger}
-      <TooltipContent
-        side={side}
-        style={portalThemeVars}
-        portalContainer={portalContainer}
-      >
+      <TooltipContent side={side} style={portalThemeVars} portalContainer={portalContainer}>
         {title}
       </TooltipContent>
     </SharedTooltip>

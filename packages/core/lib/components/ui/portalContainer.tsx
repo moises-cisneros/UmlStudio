@@ -1,19 +1,11 @@
-import {
-  createContext,
-  use,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react"
+import { createContext, use, useMemo, useState, useSyncExternalStore, type ReactNode } from "react"
 
 interface PortalContainerContextValue {
   portalContainer: HTMLElement | null
   setPortalContainer: (container: HTMLDivElement | null) => void
 }
 
-const UmlStudioPortalContainerContext =
-  createContext<PortalContainerContextValue | null>(null)
+const UmlStudioPortalContainerContext = createContext<PortalContainerContextValue | null>(null)
 
 const fullscreenListeners = new Set<() => void>()
 const notifyFullscreenListeners = () => {
@@ -28,31 +20,17 @@ function subscribeToFullscreen(listener: () => void): () => void {
   return () => {
     fullscreenListeners.delete(listener)
     if (fullscreenListeners.size === 0) {
-      document.removeEventListener(
-        "fullscreenchange",
-        notifyFullscreenListeners
-      )
+      document.removeEventListener("fullscreenchange", notifyFullscreenListeners)
     }
   }
 }
 
-export function UmlStudioPortalContainerProvider({
-  children,
-}: {
-  children: ReactNode
-}) {
-  const [portalContainer, setPortalContainer] = useState<HTMLDivElement | null>(
-    null
-  )
-  const context = useMemo(
-    () => ({ portalContainer, setPortalContainer }),
-    [portalContainer]
-  )
+export function UmlStudioPortalContainerProvider({ children }: { children: ReactNode }) {
+  const [portalContainer, setPortalContainer] = useState<HTMLDivElement | null>(null)
+  const context = useMemo(() => ({ portalContainer, setPortalContainer }), [portalContainer])
 
   return (
-    <UmlStudioPortalContainerContext value={context}>
-      {children}
-    </UmlStudioPortalContainerContext>
+    <UmlStudioPortalContainerContext value={context}>{children}</UmlStudioPortalContainerContext>
   )
 }
 
@@ -68,8 +46,7 @@ export function UmlStudioPortalRoot() {
 }
 
 export function useUmlStudioPortalContainer(): HTMLElement {
-  const portalContainer =
-    use(UmlStudioPortalContainerContext)?.portalContainer ?? null
+  const portalContainer = use(UmlStudioPortalContainerContext)?.portalContainer ?? null
   const fullscreenElement = useSyncExternalStore(
     subscribeToFullscreen,
     () => document.fullscreenElement ?? null,

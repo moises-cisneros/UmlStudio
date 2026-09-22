@@ -1,22 +1,15 @@
 import React from "react"
 
-type TypographyVariant =
-  | "h6"
-  | "subtitle1"
-  | "subtitle2"
-  | "body1"
-  | "body2"
-  | "caption"
+type TypographyVariant = "h6" | "subtitle1" | "subtitle2" | "body1" | "body2" | "caption"
 
-const variantTag: Record<TypographyVariant, keyof React.JSX.IntrinsicElements> =
-  {
-    h6: "h6",
-    subtitle1: "p",
-    subtitle2: "p",
-    body1: "p",
-    body2: "p",
-    caption: "span",
-  }
+const variantTag: Record<TypographyVariant, keyof React.JSX.IntrinsicElements> = {
+  h6: "h6",
+  subtitle1: "p",
+  subtitle2: "p",
+  body1: "p",
+  body2: "p",
+  caption: "span",
+}
 
 export interface TypographyProps {
   variant?: TypographyVariant
@@ -35,13 +28,7 @@ export const Typography: React.FC<TypographyProps> = ({
 }) => {
   const Tag = variantTag[variant]
   return (
-    <Tag
-      id={id}
-      className={className}
-      data-slot="typography"
-      data-variant={variant}
-      style={style}
-    >
+    <Tag id={id} className={className} data-slot="typography" data-variant={variant} style={style}>
       {children}
     </Tag>
   )
