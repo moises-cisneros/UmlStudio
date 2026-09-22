@@ -1,8 +1,5 @@
 import { IPoint } from "../Connection"
-import {
-  computeMiddleLabelLayout,
-  type Rect,
-} from "@/utils/geometry/edgeLabelLayout"
+import { computeMiddleLabelLayout, type Rect } from "@/utils/geometry/edgeLabelLayout"
 import { measureTextWidth } from "@/utils/textUtils"
 import { FONT_FAMILY } from "@/fontStack"
 
@@ -32,10 +29,7 @@ export const EdgeMiddleLabels = ({
     renderPoints: activePoints,
     labelText: label,
     fontSize: LABEL_FONT_SIZE,
-    measuredWidth: measureTextWidth(
-      label,
-      `700 ${LABEL_FONT_SIZE}px ${FONT_FAMILY}`
-    ),
+    measuredWidth: measureTextWidth(label, `700 ${LABEL_FONT_SIZE}px ${FONT_FAMILY}`),
     nodeRects,
     neighborGeometry,
   })

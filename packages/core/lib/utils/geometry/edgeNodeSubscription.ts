@@ -34,8 +34,7 @@ export const selectNearbySettledNodeGeometry = (
   const geometry: number[] = []
 
   for (const node of nodes.values()) {
-    if (!node.width || !node.height || isRoutingParentNodeType(node.type))
-      continue
+    if (!node.width || !node.height || isRoutingParentNodeType(node.type)) continue
     if (
       node.x < right &&
       node.x + node.width > left &&
@@ -56,11 +55,7 @@ export const createNearbySettledNodeGeometrySelector = (
   return (nodes) => {
     if (nodes === previousNodes) return previousSelection
     previousNodes = nodes
-    previousSelection = selectNearbySettledNodeGeometry(
-      nodes,
-      edgeBounds,
-      reach
-    )
+    previousSelection = selectNearbySettledNodeGeometry(nodes, edgeBounds, reach)
     return previousSelection
   }
 }

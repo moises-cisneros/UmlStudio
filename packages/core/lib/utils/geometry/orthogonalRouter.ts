@@ -3,11 +3,7 @@ import { CANVAS, EDGES } from "@/utils/geometry/routingConstants"
 import type { IPoint } from "@/edges/Connection"
 import { recordRouterSearch } from "@/sync/perfCounters"
 import type { ObstacleRect } from "@/utils/geometry/obstacles"
-import {
-  ROUTING_COST,
-  segmentCrowdingPx,
-  validateEndpointCost,
-} from "@/utils/geometry/routingCost"
+import { ROUTING_COST, segmentCrowdingPx, validateEndpointCost } from "@/utils/geometry/routingCost"
 
 const MAX_EXPANSIONS = 60_000
 
@@ -62,10 +58,7 @@ const MIN_BENDS_BY_HEADINGS_AND_DIRECTIONS = (() => {
   ): void => {
     const offset = (start * 4 + current) * 16
     for (let required = 0; required < 16; required++) {
-      if (
-        (visitedDirections & required) === required &&
-        bends < table[offset + required]
-      )
+      if ((visitedDirections & required) === required && bends < table[offset + required])
         table[offset + required] = bends
     }
     if (bends === 4) return
@@ -76,8 +69,7 @@ const MIN_BENDS_BY_HEADINGS_AND_DIRECTIONS = (() => {
     }
   }
 
-  for (let start = Heading.Up; start <= Heading.Left; start++)
-    visit(start, start, 1 << start, 0)
+  for (let start = Heading.Up; start <= Heading.Left; start++) visit(start, start, 1 << start, 0)
   return table
 })()
 
@@ -85,20 +77,16 @@ const BEND_PENALTY_IN_CELLS = ROUTING_COST.bendInGridCells
 const EDGE_CROSSING_PENALTY = ROUTING_COST.edgeCrossing
 const CROSSING_NEAR_CORNER_PENALTY = ROUTING_COST.crossingNearCorner
 const CROSSING_CORNER_CLEARANCE = ROUTING_COST.crossingCornerClearance
-const CROSSING_CORNER_CLEARANCE_SQUARED =
-  CROSSING_CORNER_CLEARANCE * CROSSING_CORNER_CLEARANCE
+const CROSSING_CORNER_CLEARANCE_SQUARED = CROSSING_CORNER_CLEARANCE * CROSSING_CORNER_CLEARANCE
 
-const PARALLEL_CROWDING_CLEARANCE_CELLS =
-  ROUTING_COST.parallelCrowdingClearanceInGridCells
+const PARALLEL_CROWDING_CLEARANCE_CELLS = ROUTING_COST.parallelCrowdingClearanceInGridCells
 const CROWDING_COST_PER_PX = ROUTING_COST.crowdingPerPx
 const OVERLAP_COST_PER_PX = ROUTING_COST.overlapPerPx
 const SOFT_CROSSING_COST_PER_PX = ROUTING_COST.softCrossingPerPx
 
-const CLEARANCE_COST_PER_PX_AT_FULL_DEFICIT =
-  ROUTING_COST.clearancePerPxAtFullDeficit
+const CLEARANCE_COST_PER_PX_AT_FULL_DEFICIT = ROUTING_COST.clearancePerPxAtFullDeficit
 const HUGGING_COST_PER_PX = ROUTING_COST.huggingPerPx
-const CHANNEL_IMBALANCE_TIE_BREAK_PER_PX =
-  ROUTING_COST.channelImbalanceTieBreakPerPx
+const CHANNEL_IMBALANCE_TIE_BREAK_PER_PX = ROUTING_COST.channelImbalanceTieBreakPerPx
 
 const clearanceAlongside = (
   a: IPoint,
@@ -151,9 +139,7 @@ export const routeRunsTooCloseToBody = (
   const lengths: number[] = []
   let total = 0
   for (let i = 0; i < points.length - 1; i++) {
-    const length =
-      Math.abs(points[i + 1].x - points[i].x) +
-      Math.abs(points[i + 1].y - points[i].y)
+    const length = Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y)
     lengths.push(length)
     total += length
   }
@@ -231,8 +217,7 @@ export const neighborsWithinReach = (
   const left = Math.min(...xs, ...obstacles.map((o) => o.x)) - reach
   const right = Math.max(...xs, ...obstacles.map((o) => o.x + o.width)) + reach
   const top = Math.min(...ys, ...obstacles.map((o) => o.y)) - reach
-  const bottom =
-    Math.max(...ys, ...obstacles.map((o) => o.y + o.height)) + reach
+  const bottom = Math.max(...ys, ...obstacles.map((o) => o.y + o.height)) + reach
   const inside = (x: number, y: number): boolean =>
     x >= left && x <= right && y >= top && y <= bottom
   const clamp = (value: number, low: number, high: number): number =>
@@ -248,8 +233,7 @@ export const neighborsWithinReach = (
     )
       return []
 
-    const startTerminal =
-      segment.startTerminal && inside(segment.x1, segment.y1)
+    const startTerminal = segment.startTerminal && inside(segment.x1, segment.y1)
     const endTerminal = segment.endTerminal && inside(segment.x2, segment.y2)
     if (segment.y1 === segment.y2)
       return [
@@ -277,20 +261,12 @@ export const neighborsWithinReach = (
 
 const sign = (n: number): number => (n > 0 ? 1 : n < 0 ? -1 : 0)
 
-const orient = (
-  px: number,
-  py: number,
-  qx: number,
-  qy: number,
-  rx: number,
-  ry: number
-): number => sign((qx - px) * (ry - py) - (qy - py) * (rx - px))
+const orient = (px: number, py: number, qx: number, qy: number, rx: number, ry: number): number =>
+  sign((qx - px) * (ry - py) - (qy - py) * (rx - px))
 
 const segmentsCross = (a: Segment, b: Segment): boolean => {
   const straddles =
-    orient(a.x1, a.y1, a.x2, a.y2, b.x1, b.y1) *
-      orient(a.x1, a.y1, a.x2, a.y2, b.x2, b.y2) <
-    0
+    orient(a.x1, a.y1, a.x2, a.y2, b.x1, b.y1) * orient(a.x1, a.y1, a.x2, a.y2, b.x2, b.y2) < 0
   if (!straddles) return false
 
   const from = orient(b.x1, b.y1, b.x2, b.y2, a.x1, a.y1)
@@ -321,30 +297,17 @@ const parallelGap = (a: Segment, b: Segment): number | null => {
 const crossingPoint = (a: Segment, b: Segment): IPoint => {
   const determinantA = a.x1 * a.y2 - a.y1 * a.x2
   const determinantB = b.x1 * b.y2 - b.y1 * b.x2
-  const denominator =
-    (a.x1 - a.x2) * (b.y1 - b.y2) - (a.y1 - a.y2) * (b.x1 - b.x2)
+  const denominator = (a.x1 - a.x2) * (b.y1 - b.y2) - (a.y1 - a.y2) * (b.x1 - b.x2)
   return {
-    x:
-      (determinantA * (b.x1 - b.x2) - (a.x1 - a.x2) * determinantB) /
-      denominator,
-    y:
-      (determinantA * (b.y1 - b.y2) - (a.y1 - a.y2) * determinantB) /
-      denominator,
+    x: (determinantA * (b.x1 - b.x2) - (a.x1 - a.x2) * determinantB) / denominator,
+    y: (determinantA * (b.y1 - b.y2) - (a.y1 - a.y2) * determinantB) / denominator,
   }
 }
 
 const distanceSquaredToEnds = (p: IPoint, s: Segment): number =>
-  Math.min(
-    (p.x - s.x1) ** 2 + (p.y - s.y1) ** 2,
-    (p.x - s.x2) ** 2 + (p.y - s.y2) ** 2
-  )
+  Math.min((p.x - s.x1) ** 2 + (p.y - s.y1) ** 2, (p.x - s.x2) ** 2 + (p.y - s.y2) ** 2)
 
-const cornerCrowded = (
-  x: number,
-  y: number,
-  n: NeighborIndex,
-  clearance: number
-): boolean => {
+const cornerCrowded = (x: number, y: number, n: NeighborIndex, clearance: number): boolean => {
   for (let i = 0; i < n.hy.length; i++) {
     const dx = Math.max(n.hxLo[i] - x, x - n.hxHi[i], 0)
     const dy = Math.abs(y - n.hy[i])
@@ -362,10 +325,7 @@ const cornerCrowded = (
     const vx = n.dx2[i] - ax
     const vy = n.dy2[i] - ay
     const lengthSquared = vx * vx + vy * vy
-    const t = Math.max(
-      0,
-      Math.min(1, ((x - ax) * vx + (y - ay) * vy) / lengthSquared)
-    )
+    const t = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / lengthSquared))
     const dx = x - (ax + t * vx)
     const dy = y - (ay + t * vy)
     if (dx * dx + dy * dy < clearanceSquared) return true
@@ -457,16 +417,12 @@ const edgePenaltyAt = (
   for (let i = 0; i < cAt.length; i++) {
     if (!(cLo[i] < fixed && fixed < cHi[i])) continue
     const line = cAt[i]
-    const arrives =
-      to > from ? from < line && line <= to : to <= line && line < from
+    const arrives = to > from ? from < line && line <= to : to <= line && line < from
     if (!arrives) continue
 
     penalty += EDGE_CROSSING_PENALTY
 
-    const alongNeighbor = Math.min(
-      Math.abs(fixed - cLo[i]),
-      Math.abs(fixed - cHi[i])
-    )
+    const alongNeighbor = Math.min(Math.abs(fixed - cLo[i]), Math.abs(fixed - cHi[i]))
     if (alongNeighbor < CROSSING_CORNER_CLEARANCE) {
       penalty += CROSSING_NEAR_CORNER_PENALTY
     }
@@ -477,8 +433,7 @@ const edgePenaltyAt = (
     const dy1 = n.dy1[i]
     const dx2 = n.dx2[i]
     const dy2 = n.dy2[i]
-    const straddles =
-      orient(ax, ay, bx, by, dx1, dy1) * orient(ax, ay, bx, by, dx2, dy2) < 0
+    const straddles = orient(ax, ay, bx, by, dx1, dy1) * orient(ax, ay, bx, by, dx2, dy2) < 0
     if (!straddles) {
       penalty +=
         CROWDING_COST_PER_PX *
@@ -603,8 +558,7 @@ export const routeConflictScore = (
       const gap = parallelGap(seg, n)
       if (gap !== null) {
         if (gap < crowding)
-          proximityPx +=
-            (parallelOverlapLen(seg, n) * (crowding - gap)) / crowding
+          proximityPx += (parallelOverlapLen(seg, n) * (crowding - gap)) / crowding
       } else if (segmentsCross(seg, n)) crossings++
       else
         proximityPx += segmentCrowdingPx(
@@ -670,11 +624,7 @@ class MinHeap {
       const parent = (i - 1) >> 2
       const parentPriority = this.priorities[parent]
       const parentSeq = this.seqs[parent]
-      if (
-        parentPriority < priority ||
-        (parentPriority === priority && parentSeq < seq)
-      )
-        break
+      if (parentPriority < priority || (parentPriority === priority && parentSeq < seq)) break
       this.priorities[i] = parentPriority
       this.seqs[i] = parentSeq
       this.states[i] = this.states[parent]
@@ -703,11 +653,7 @@ class MinHeap {
           if (this.less(candidate, child)) child = candidate
         const childPriority = this.priorities[child]
         const childSeq = this.seqs[child]
-        if (
-          priority < childPriority ||
-          (priority === childPriority && seq < childSeq)
-        )
-          break
+        if (priority < childPriority || (priority === childPriority && seq < childSeq)) break
         this.priorities[i] = childPriority
         this.seqs[i] = childSeq
         this.states[i] = this.states[child]
@@ -756,9 +702,7 @@ export const routeAroundObstaclesBetweenCandidates = (
 ): CandidateRouteResult | null => {
   if (sources.length === 0 || targets.length === 0) return null
   const searchStartedAt =
-    import.meta.env.DEV || import.meta.env.VITE_E2E === "true"
-      ? performance.now()
-      : 0
+    import.meta.env.DEV || import.meta.env.VITE_E2E === "true" ? performance.now() : 0
   let searchLoopStartedAt = 0
   let stepPricings = 0
   let heuristicEvaluations = 0
@@ -771,8 +715,7 @@ export const routeAroundObstaclesBetweenCandidates = (
       import.meta.env.DEV || import.meta.env.VITE_E2E === "true"
         ? performance.now() - searchStartedAt
         : 0
-    const setup =
-      searchLoopStartedAt > 0 ? searchLoopStartedAt - searchStartedAt : elapsed
+    const setup = searchLoopStartedAt > 0 ? searchLoopStartedAt - searchStartedAt : elapsed
     recordRouterSearch(
       expansions,
       abandoned,
@@ -791,13 +734,9 @@ export const routeAroundObstaclesBetweenCandidates = (
   const minClearance = EDGES.MIN_NODE_CLEARANCE_PX
   const bendPenalty = BEND_PENALTY_IN_CELLS * grid
   const crowdingClearance = PARALLEL_CROWDING_CLEARANCE_CELLS * grid
-  const clearanceRate =
-    CLEARANCE_COST_PER_PX_AT_FULL_DEFICIT / (idealClearance / grid)
+  const clearanceRate = CLEARANCE_COST_PER_PX_AT_FULL_DEFICIT / (idealClearance / grid)
 
-  const compareCandidateValues = (
-    ac: RouteEndpointCandidate,
-    bc: RouteEndpointCandidate
-  ): number =>
+  const compareCandidateValues = (ac: RouteEndpointCandidate, bc: RouteEndpointCandidate): number =>
     ac.point.x - bc.point.x ||
     ac.point.y - bc.point.y ||
     (ac.position < bc.position ? -1 : ac.position > bc.position ? 1 : 0) ||
@@ -808,10 +747,7 @@ export const routeAroundObstaclesBetweenCandidates = (
     a: { candidate: RouteEndpointCandidate; inputIndex: number },
     b: { candidate: RouteEndpointCandidate; inputIndex: number }
   ): number => {
-    return (
-      compareCandidateValues(a.candidate, b.candidate) ||
-      a.inputIndex - b.inputIndex
-    )
+    return compareCandidateValues(a.candidate, b.candidate) || a.inputIndex - b.inputIndex
   }
   const canonicalSources = sources
     .map((candidate, inputIndex) => ({ candidate, inputIndex }))
@@ -842,9 +778,7 @@ export const routeAroundObstaclesBetweenCandidates = (
       obstacles,
       neighborEdges,
       incumbentRoute ? [...incumbentRoute].reverse() : undefined,
-      endpointRects
-        ? { source: endpointRects.target, target: endpointRects.source }
-        : undefined
+      endpointRects ? { source: endpointRects.target, target: endpointRects.source } : undefined
     )
     return reversed
       ? {
@@ -915,8 +849,7 @@ export const routeAroundObstaclesBetweenCandidates = (
     left.height === right.height
   const isEndpointBody = (rect: ObstacleRect): boolean =>
     endpointRects !== undefined &&
-    (sameRect(rect, endpointRects.source) ||
-      sameRect(rect, endpointRects.target))
+    (sameRect(rect, endpointRects.source) || sameRect(rect, endpointRects.target))
   const straightHard = hard.filter((rect) => !isEndpointBody(rect))
 
   for (let sourceRank = 0; sourceRank < sourceInfos.length; sourceRank++) {
@@ -924,8 +857,7 @@ export const routeAroundObstaclesBetweenCandidates = (
     for (let targetRank = 0; targetRank < targetInfos.length; targetRank++) {
       const target = targetInfos[targetRank]
       const distance =
-        Math.abs(source.point.x - target.point.x) +
-        Math.abs(source.point.y - target.point.y)
+        Math.abs(source.point.x - target.point.x) + Math.abs(source.point.y - target.point.y)
       if (source.cost + target.cost + distance !== lowerBound) continue
       if (source.forceStubTurn || target.forceStubTurn) continue
 
@@ -938,9 +870,7 @@ export const routeAroundObstaclesBetweenCandidates = (
       )
         continue
       if (
-        straightHard.some((rect) =>
-          segmentEnters(source.point, target.point, rect)
-        ) ||
+        straightHard.some((rect) => segmentEnters(source.point, target.point, rect)) ||
         soft.some((rect) => segmentEnters(source.point, target.point, rect))
       )
         continue
@@ -952,12 +882,8 @@ export const routeAroundObstaclesBetweenCandidates = (
           straightHard,
           idealClearance
         )
-        if (nearest === 0 || (nearest !== Infinity && nearest < achievable))
-          continue
-        const conflict = routeConflictScore(
-          [source.point, target.point],
-          neighborEdges
-        )
+        if (nearest === 0 || (nearest !== Infinity && nearest < achievable)) continue
+        const conflict = routeConflictScore([source.point, target.point], neighborEdges)
         if (conflict.crossings > 0 || conflict.proximityPx > 0) continue
       }
 
@@ -987,10 +913,7 @@ export const routeAroundObstaclesBetweenCandidates = (
 
   const neighborSegments = neighborsWithinReach(
     sourceInfos[0].point,
-    [
-      ...sourceInfos.slice(1).map((s) => s.point),
-      ...targetInfos.map((t) => t.point),
-    ],
+    [...sourceInfos.slice(1).map((s) => s.point), ...targetInfos.map((t) => t.point)],
     obstacles,
     neighborEdges
   )
@@ -1018,10 +941,8 @@ export const routeAroundObstaclesBetweenCandidates = (
     Math.min(...spanYs) - margin,
     Math.max(...spanYs) + margin,
   ]
-  const escapeLow = (at: number) =>
-    Math.floor((at - crowdingClearance) / grid) * grid
-  const escapeHigh = (at: number) =>
-    Math.ceil((at + crowdingClearance) / grid) * grid
+  const escapeLow = (at: number) => Math.floor((at - crowdingClearance) / grid) * grid
+  const escapeHigh = (at: number) => Math.ceil((at + crowdingClearance) / grid) * grid
   const terminalDetourLanes = (
     start: number,
     end: number,
@@ -1029,8 +950,7 @@ export const routeAroundObstaclesBetweenCandidates = (
     endTerminal: boolean
   ): number[] => {
     const lanes: number[] = []
-    if (startTerminal)
-      lanes.push(start < end ? escapeLow(start) : escapeHigh(start))
+    if (startTerminal) lanes.push(start < end ? escapeLow(start) : escapeHigh(start))
     if (endTerminal) lanes.push(end < start ? escapeLow(end) : escapeHigh(end))
     return lanes
   }
@@ -1038,54 +958,28 @@ export const routeAroundObstaclesBetweenCandidates = (
     if (s.x1 === s.x2) return [escapeLow(s.x1), escapeHigh(s.x1)]
     if (s.y1 === s.y2) {
       const lanes = [
-        ...terminalDetourLanes(
-          s.x1,
-          s.x2,
-          s.startTerminal ?? false,
-          s.endTerminal ?? false
-        ),
+        ...terminalDetourLanes(s.x1, s.x2, s.startTerminal ?? false, s.endTerminal ?? false),
       ]
       if (Math.abs(s.x2 - s.x1) >= 2 * CROSSING_CORNER_CLEARANCE + grid)
         lanes.push((s.x1 + s.x2) / 2)
       return lanes
     }
-    return terminalDetourLanes(
-      s.x1,
-      s.x2,
-      s.startTerminal ?? false,
-      s.endTerminal ?? false
-    )
+    return terminalDetourLanes(s.x1, s.x2, s.startTerminal ?? false, s.endTerminal ?? false)
   })
   const neighborYs = neighborSegments.flatMap((s) => {
     if (s.y1 === s.y2) return [escapeLow(s.y1), escapeHigh(s.y1)]
     if (s.x1 === s.x2) {
       const lanes = [
-        ...terminalDetourLanes(
-          s.y1,
-          s.y2,
-          s.startTerminal ?? false,
-          s.endTerminal ?? false
-        ),
+        ...terminalDetourLanes(s.y1, s.y2, s.startTerminal ?? false, s.endTerminal ?? false),
       ]
       if (Math.abs(s.y2 - s.y1) >= 2 * CROSSING_CORNER_CLEARANCE + grid)
         lanes.push((s.y1 + s.y2) / 2)
       return lanes
     }
-    return terminalDetourLanes(
-      s.y1,
-      s.y2,
-      s.startTerminal ?? false,
-      s.endTerminal ?? false
-    )
+    return terminalDetourLanes(s.y1, s.y2, s.startTerminal ?? false, s.endTerminal ?? false)
   })
-  const snappedXs = [
-    ...obstacles.flatMap((o) => [o.x, o.x + o.width]),
-    ...neighborXs,
-  ]
-  const snappedYs = [
-    ...obstacles.flatMap((o) => [o.y, o.y + o.height]),
-    ...neighborYs,
-  ]
+  const snappedXs = [...obstacles.flatMap((o) => [o.x, o.x + o.width]), ...neighborXs]
+  const snappedYs = [...obstacles.flatMap((o) => [o.y, o.y + o.height]), ...neighborYs]
 
   const clearanceLanes = (rects: readonly ObstacleRect[], axis: "x" | "y") =>
     rects.flatMap((o) =>
@@ -1094,10 +988,7 @@ export const routeAroundObstaclesBetweenCandidates = (
         : [o.y - idealClearance, o.y + o.height + idealClearance]
     )
 
-  const facingGapMids = (
-    rects: readonly ObstacleRect[],
-    axis: "x" | "y"
-  ): number[] => {
+  const facingGapMids = (rects: readonly ObstacleRect[], axis: "x" | "y"): number[] => {
     const mids: number[] = []
     for (const a of rects) {
       for (const b of rects) {
@@ -1122,20 +1013,12 @@ export const routeAroundObstaclesBetweenCandidates = (
 
   const xs = collectLines(
     exactXs,
-    [
-      ...snappedXs,
-      ...clearanceLanes(obstacles, "x"),
-      ...facingGapMids(obstacles, "x"),
-    ],
+    [...snappedXs, ...clearanceLanes(obstacles, "x"), ...facingGapMids(obstacles, "x")],
     grid
   )
   const ys = collectLines(
     exactYs,
-    [
-      ...snappedYs,
-      ...clearanceLanes(obstacles, "y"),
-      ...facingGapMids(obstacles, "y"),
-    ],
+    [...snappedYs, ...clearanceLanes(obstacles, "y"), ...facingGapMids(obstacles, "y")],
     grid
   )
   const xIndex = new Map(xs.map((v, i) => [v, i]))
@@ -1150,8 +1033,7 @@ export const routeAroundObstaclesBetweenCandidates = (
     return null
   }
   const stateCount = cellCount * 4
-  const stateId = (xi: number, yi: number, h: Heading): number =>
-    (xi * stride + yi) * 4 + h
+  const stateId = (xi: number, yi: number, h: Heading): number => (xi * stride + yi) * 4 + h
 
   const targetInputByState = new Int32Array(stateCount).fill(-1)
   const targetCanonicalByState = new Int32Array(stateCount).fill(-1)
@@ -1162,8 +1044,7 @@ export const routeAroundObstaclesBetweenCandidates = (
   sourceInfos.forEach((source) => {
     const xi = xIndex.get(source.point.x)
     const yi = yIndex.get(source.point.y)
-    if (xi !== undefined && yi !== undefined)
-      sourceCellMask[xi * stride + yi] = 1
+    if (xi !== undefined && yi !== undefined) sourceCellMask[xi * stride + yi] = 1
   })
   targetInfos.forEach((t, canonicalIndex) => {
     const cell = xIndex.get(t.point.x)! * stride + yIndex.get(t.point.y)!
@@ -1200,9 +1081,7 @@ export const routeAroundObstaclesBetweenCandidates = (
     else if (dy < 0) requiredDirections |= 1 << Heading.Up
 
     const bends =
-      MIN_BENDS_BY_HEADINGS_AND_DIRECTIONS[
-        (heading * 4 + arrival) * 16 + requiredDirections
-      ]
+      MIN_BENDS_BY_HEADINGS_AND_DIRECTIONS[(heading * 4 + arrival) * 16 + requiredDirections]
     return Math.abs(dx) + Math.abs(dy) + bends * bendPenalty
   }
   const heuristicByState = new Float64Array(cellCount * 4).fill(NaN)
@@ -1230,11 +1109,7 @@ export const routeAroundObstaclesBetweenCandidates = (
           MIN_BENDS_BY_HEADINGS_AND_DIRECTIONS[
             (heading * 4 + targetArrival[targetRank]) * 16 + requiredDirections
           ]
-        const cost =
-          Math.abs(dx) +
-          Math.abs(dy) +
-          bends * bendPenalty +
-          targetCost[targetRank]
+        const cost = Math.abs(dx) + Math.abs(dy) + bends * bendPenalty + targetCost[targetRank]
         if (cost < best) {
           best = cost
           bestTargetRank = targetRank
@@ -1267,13 +1142,7 @@ export const routeAroundObstaclesBetweenCandidates = (
           )
         }
       } else {
-        pathCost = relaxedCostTo(
-          xs[xi],
-          ys[yi],
-          heading,
-          target.point,
-          target.requiredArrival
-        )
+        pathCost = relaxedCostTo(xs[xi], ys[yi], heading, target.point, target.requiredArrival)
       }
 
       const cost = pathCost + target.cost
@@ -1307,13 +1176,7 @@ export const routeAroundObstaclesBetweenCandidates = (
     bodyY2[i] = rect.y + rect.height
   })
 
-  const priceStep = (
-    xi: number,
-    yi: number,
-    nxi: number,
-    nyi: number,
-    nh: Heading
-  ): number => {
+  const priceStep = (xi: number, yi: number, nxi: number, nyi: number, nh: Heading): number => {
     const slot = (xi * stride + yi) * 4 + nh
     const cached = stepCost[slot]
     if (cached !== UNPRICED) return cached
@@ -1330,9 +1193,7 @@ export const routeAroundObstaclesBetweenCandidates = (
     const top = ay < by ? ay : by
     const bottom = ay < by ? by : ay
 
-    const baseCell = horizontal
-      ? Math.min(xi, nxi) * stride + yi
-      : xi * stride + Math.min(yi, nyi)
+    const baseCell = horizontal ? Math.min(xi, nxi) * stride + yi : xi * stride + Math.min(yi, nyi)
     const baseSlot = baseCell * 2 + (horizontal ? 0 : 1)
     let baseCost = symmetricStepCost[baseSlot]
 
@@ -1341,12 +1202,7 @@ export const routeAroundObstaclesBetweenCandidates = (
       let nearestHi = Infinity
       let touchesBodyBoundary = false
       for (let i = 0; i < bodyCount; i++) {
-        if (
-          left < bodyX2[i] &&
-          right > bodyX1[i] &&
-          top < bodyY2[i] &&
-          bottom > bodyY1[i]
-        ) {
+        if (left < bodyX2[i] && right > bodyX1[i] && top < bodyY2[i] && bottom > bodyY1[i]) {
           symmetricStepCost[baseSlot] = BLOCKED
           stepCost[slot] = BLOCKED
           return BLOCKED
@@ -1357,8 +1213,7 @@ export const routeAroundObstaclesBetweenCandidates = (
         const crossesOtherAxis = horizontal
           ? ay >= bodyY1[i] && ay <= bodyY2[i]
           : ax >= bodyX1[i] && ax <= bodyX2[i]
-        if (boundaryOverlap === 0 && crossesOtherAxis)
-          touchesBodyBoundary = true
+        if (boundaryOverlap === 0 && crossesOtherAxis) touchesBodyBoundary = true
 
         const spanLo = horizontal ? bodyX1[i] : bodyY1[i]
         const spanHi = horizontal ? bodyX2[i] : bodyY2[i]
@@ -1401,15 +1256,11 @@ export const routeAroundObstaclesBetweenCandidates = (
         const half = (nearestLo + nearestHi) / 2
         const achievable = half < idealClearance ? half : idealClearance
 
-        const deficitCells = Math.max(
-          0,
-          Math.ceil((achievable - nearest) / grid)
-        )
+        const deficitCells = Math.max(0, Math.ceil((achievable - nearest) / grid))
         if (deficitCells > 0) proximity += deficitCells * clearanceRate * length
 
         const drawnOnBody = nearest === 0
-        const hugsWithRoomToSpare =
-          nearest < minClearance && achievable >= minClearance
+        const hugsWithRoomToSpare = nearest < minClearance && achievable >= minClearance
         if (drawnOnBody || hugsWithRoomToSpare) {
           proximity += HUGGING_COST_PER_PX * length
         }
@@ -1419,17 +1270,13 @@ export const routeAroundObstaclesBetweenCandidates = (
           nearestHi !== Infinity &&
           nearestLo + nearestHi < 4 * idealClearance
         ) {
-          const imbalance =
-            Math.abs(nearestLo - nearestHi) / (nearestLo + nearestHi)
+          const imbalance = Math.abs(nearestLo - nearestHi) / (nearestLo + nearestHi)
           proximity += CHANNEL_IMBALANCE_TIE_BREAK_PER_PX * imbalance * length
         }
       }
 
       baseCost =
-        length +
-        softCost +
-        proximity +
-        (touchesBodyBoundary ? HUGGING_COST_PER_PX * length : 0)
+        length + softCost + proximity + (touchesBodyBoundary ? HUGGING_COST_PER_PX * length : 0)
       symmetricStepCost[baseSlot] = baseCost
     }
 
@@ -1437,8 +1284,7 @@ export const routeAroundObstaclesBetweenCandidates = (
       stepCost[slot] = BLOCKED
       return BLOCKED
     }
-    const cost =
-      baseCost + edgePenaltyAt(ax, ay, bx, by, neighborIndex, crowdingClearance)
+    const cost = baseCost + edgePenaltyAt(ax, ay, bx, by, neighborIndex, crowdingClearance)
 
     stepCost[slot] = cost
     return cost
@@ -1455,29 +1301,20 @@ export const routeAroundObstaclesBetweenCandidates = (
     if (route.length === 0) return Infinity
 
     const headingBetween = (a: IPoint, b: IPoint): Heading | null => {
-      if (a.x === b.x)
-        return a.y < b.y ? Heading.Down : a.y > b.y ? Heading.Up : null
+      if (a.x === b.x) return a.y < b.y ? Heading.Down : a.y > b.y ? Heading.Up : null
       if (a.y === b.y) return a.x < b.x ? Heading.Right : Heading.Left
       return null
     }
-    const samePoint = (a: IPoint, b: IPoint): boolean =>
-      a.x === b.x && a.y === b.y
-    const firstHeading =
-      route.length > 1 ? headingBetween(route[0], route[1]) : null
+    const samePoint = (a: IPoint, b: IPoint): boolean => a.x === b.x && a.y === b.y
+    const firstHeading = route.length > 1 ? headingBetween(route[0], route[1]) : null
     const lastHeading =
-      route.length > 1
-        ? headingBetween(route[route.length - 2], route[route.length - 1])
-        : null
+      route.length > 1 ? headingBetween(route[route.length - 2], route[route.length - 1]) : null
     let best = Infinity
 
     for (const source of sourceInfos) {
       if (!samePoint(route[0], source.point)) continue
       if (firstHeading !== null && firstHeading !== source.heading) continue
-      if (
-        source.forceStubTurn &&
-        (route.length < 3 || !samePoint(route[1], source.exit))
-      )
-        continue
+      if (source.forceStubTurn && (route.length < 3 || !samePoint(route[1], source.exit))) continue
 
       for (const target of targetInfos) {
         if (!samePoint(route[route.length - 1], target.point)) continue
@@ -1496,11 +1333,7 @@ export const routeAroundObstaclesBetweenCandidates = (
         let total = source.cost
         let priorHeading: Heading | null = null
         let valid = true
-        for (
-          let segmentIndex = 0;
-          segmentIndex < route.length - 1;
-          segmentIndex++
-        ) {
+        for (let segmentIndex = 0; segmentIndex < route.length - 1; segmentIndex++) {
           const from = route[segmentIndex]
           const to = route[segmentIndex + 1]
           const heading = headingBetween(from, to)
@@ -1525,12 +1358,7 @@ export const routeAroundObstaclesBetweenCandidates = (
             const cornerCell = fromXi * stride + fromYi
             let crowded = cornerCrowding[cornerCell]
             if (crowded === UNKNOWN_CORNER) {
-              crowded = cornerCrowded(
-                from.x,
-                from.y,
-                neighborIndex,
-                CROSSING_CORNER_CLEARANCE
-              )
+              crowded = cornerCrowded(from.x, from.y, neighborIndex, CROSSING_CORNER_CLEARANCE)
                 ? 1
                 : 0
               cornerCrowding[cornerCell] = crowded
@@ -1541,18 +1369,8 @@ export const routeAroundObstaclesBetweenCandidates = (
           let xi = fromXi
           let yi = fromYi
           while (xi !== toXi || yi !== toYi) {
-            const nxi =
-              heading === Heading.Left
-                ? xi - 1
-                : heading === Heading.Right
-                  ? xi + 1
-                  : xi
-            const nyi =
-              heading === Heading.Up
-                ? yi - 1
-                : heading === Heading.Down
-                  ? yi + 1
-                  : yi
+            const nxi = heading === Heading.Left ? xi - 1 : heading === Heading.Right ? xi + 1 : xi
+            const nyi = heading === Heading.Up ? yi - 1 : heading === Heading.Down ? yi + 1 : yi
             if (nxi < 0 || nxi >= xs.length || nyi < 0 || nyi >= ys.length) {
               valid = false
               break
@@ -1566,15 +1384,13 @@ export const routeAroundObstaclesBetweenCandidates = (
             xi = nxi
             yi = nyi
 
-            const atRouteEnd =
-              segmentIndex === route.length - 2 && xi === toXi && yi === toYi
+            const atRouteEnd = segmentIndex === route.length - 2 && xi === toXi && yi === toYi
             const cell = xi * stride + yi
             if (
               sourceCellMask[cell] === 1 ||
               (targetCellMask[cell] === 1 &&
                 (!atRouteEnd ||
-                  stateId(xi, yi, heading) !==
-                    stateId(toXi, toYi, target.requiredArrival)))
+                  stateId(xi, yi, heading) !== stateId(toXi, toYi, target.requiredArrival)))
             ) {
               valid = false
               break
@@ -1615,17 +1431,9 @@ export const routeAroundObstaclesBetweenCandidates = (
     let sourceHeuristic = heuristic(xi, yi, source.heading)
     if (targetInputByState[state] === -1) {
       const nxi =
-        source.heading === Heading.Left
-          ? xi - 1
-          : source.heading === Heading.Right
-            ? xi + 1
-            : xi
+        source.heading === Heading.Left ? xi - 1 : source.heading === Heading.Right ? xi + 1 : xi
       const nyi =
-        source.heading === Heading.Up
-          ? yi - 1
-          : source.heading === Heading.Down
-            ? yi + 1
-            : yi
+        source.heading === Heading.Up ? yi - 1 : source.heading === Heading.Down ? yi + 1 : yi
       if (nxi < 0 || nxi >= xs.length || nyi < 0 || nyi >= ys.length) return
       const firstStep = priceStep(xi, yi, nxi, nyi, source.heading)
       if (firstStep === BLOCKED) return
@@ -1678,8 +1486,7 @@ export const routeAroundObstaclesBetweenCandidates = (
       const targetRank = heuristicTargetRankByState[current]
       if (
         sourceRank > bestGoal.sourceRank ||
-        (sourceRank === bestGoal.sourceRank &&
-          targetRank >= bestGoal.targetCanonicalIndex)
+        (sourceRank === bestGoal.sourceRank && targetRank >= bestGoal.targetCanonicalIndex)
       )
         continue
     }
@@ -1716,28 +1523,18 @@ export const routeAroundObstaclesBetweenCandidates = (
     }
 
     const g = gScore[current]
-    const leavingSource =
-      sourceStateMask[current] === 1 && cameFrom[current] === -1
+    const leavingSource = sourceStateMask[current] === 1 && cameFrom[current] === -1
     const rootSource = sourceInfos[sourceRankOf[current]]
     const rootForcesStubTurn = rootSource?.forceStubTurn ?? false
     const atSourceStubExit =
-      rootForcesStubTurn &&
-      xs[xi] === rootSource.exit.x &&
-      ys[yi] === rootSource.exit.y
+      rootForcesStubTurn && xs[xi] === rootSource.exit.x && ys[yi] === rootSource.exit.y
 
     const directionCount = leavingSource ? 1 : 3
     const directionOffset = h * 3
-    for (
-      let directionIndex = 0;
-      directionIndex < directionCount;
-      directionIndex++
-    ) {
-      const nh = (
-        leavingSource ? h : NEXT_HEADINGS[directionOffset + directionIndex]
-      ) as Heading
+    for (let directionIndex = 0; directionIndex < directionCount; directionIndex++) {
+      const nh = (leavingSource ? h : NEXT_HEADINGS[directionOffset + directionIndex]) as Heading
 
-      const nxi =
-        nh === Heading.Left ? xi - 1 : nh === Heading.Right ? xi + 1 : xi
+      const nxi = nh === Heading.Left ? xi - 1 : nh === Heading.Right ? xi + 1 : xi
       const nyi = nh === Heading.Up ? yi - 1 : nh === Heading.Down ? yi + 1 : yi
       if (nxi < 0 || nxi >= xs.length || nyi < 0 || nyi >= ys.length) continue
 
@@ -1749,8 +1546,7 @@ export const routeAroundObstaclesBetweenCandidates = (
       if (targetCellMask[nextCell] === 1 && targetHere === -1) continue
       if (targetForceTurnByState[neighbourState] === 1) {
         const targetInfo = targetInfos[targetCanonicalByState[neighbourState]]
-        const atStubExit =
-          xs[xi] === targetInfo.exit.x && ys[yi] === targetInfo.exit.y
+        const atStubExit = xs[xi] === targetInfo.exit.x && ys[yi] === targetInfo.exit.y
         if (!atStubExit || nh === h) continue
       }
 
@@ -1765,14 +1561,7 @@ export const routeAroundObstaclesBetweenCandidates = (
         const cell = xi * stride + yi
         let crowded = cornerCrowding[cell]
         if (crowded === UNKNOWN_CORNER) {
-          crowded = cornerCrowded(
-            xs[xi],
-            ys[yi],
-            neighborIndex,
-            CROSSING_CORNER_CLEARANCE
-          )
-            ? 1
-            : 0
+          crowded = cornerCrowded(xs[xi], ys[yi], neighborIndex, CROSSING_CORNER_CLEARANCE) ? 1 : 0
           cornerCrowding[cell] = crowded
         }
         if (crowded === 1) bend += CROSSING_NEAR_CORNER_PENALTY
@@ -1782,12 +1571,9 @@ export const routeAroundObstaclesBetweenCandidates = (
       const known = gScore[neighbourState]
       const unvisited = Number.isNaN(known)
       const improvesCanonicalSource =
-        !unvisited &&
-        tentative === known &&
-        sourceRankOf[current] < sourceRankOf[neighbourState]
+        !unvisited && tentative === known && sourceRankOf[current] < sourceRankOf[neighbourState]
       if (!unvisited && tentative > known) continue
-      if (!unvisited && tentative === known && !improvesCanonicalSource)
-        continue
+      if (!unvisited && tentative === known && !improvesCanonicalSource) continue
 
       const priority = tentative + heuristic(nxi, nyi, nh)
       if (priority > incumbentUpperBound) {
@@ -1827,12 +1613,7 @@ export const routeAroundObstaclesBetweenCandidates = (
   }
 
   if (incumbentUpperBound !== Infinity)
-    return routeAroundObstaclesBetweenCandidates(
-      sources,
-      targets,
-      obstacles,
-      neighborEdges
-    )
+    return routeAroundObstaclesBetweenCandidates(sources, targets, obstacles, neighborEdges)
 
   recordSearch(expansions, false)
   return null
@@ -1858,9 +1639,7 @@ export const routeAroundObstaclesToTargets = (
     obstacles,
     neighborEdges
   )
-  return result
-    ? { route: result.route, targetIndex: result.targetIndex }
-    : null
+  return result ? { route: result.route, targetIndex: result.targetIndex } : null
 }
 
 export const routeAroundObstacles = (
@@ -1898,13 +1677,9 @@ const simplifyCollinear = (points: IPoint[]): IPoint[] => {
     const curr = points[i]
     const next = points[i + 1]
     const passThroughX =
-      prev.x === curr.x &&
-      curr.x === next.x &&
-      (prev.y - curr.y) * (next.y - curr.y) < 0
+      prev.x === curr.x && curr.x === next.x && (prev.y - curr.y) * (next.y - curr.y) < 0
     const passThroughY =
-      prev.y === curr.y &&
-      curr.y === next.y &&
-      (prev.x - curr.x) * (next.x - curr.x) < 0
+      prev.y === curr.y && curr.y === next.y && (prev.x - curr.x) * (next.x - curr.x) < 0
     if (!passThroughX && !passThroughY) result.push(curr)
   }
   result.push(points[points.length - 1])

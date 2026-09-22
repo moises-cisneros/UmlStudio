@@ -24,8 +24,7 @@ type ControllerOptions = {
 
 let sessionCounter = 0
 
-export const createEdgeGeometryWorkerSessionId = (): string =>
-  `edge-geometry-${++sessionCounter}`
+export const createEdgeGeometryWorkerSessionId = (): string => `edge-geometry-${++sessionCounter}`
 
 export const shouldUseEdgeGeometryWorker = ({
   hasRunInitialSolve,
@@ -44,9 +43,7 @@ export const EDGE_GEOMETRY_WORKER_DEFAULT_CADENCE_MS = 80
 export const EDGE_GEOMETRY_WORKER_MIN_CADENCE_MS = 40
 export const EDGE_GEOMETRY_WORKER_MAX_CADENCE_MS = 160
 
-export const getEdgeGeometryWorkerCadence = (
-  roundTripMs: number | null
-): number => {
+export const getEdgeGeometryWorkerCadence = (roundTripMs: number | null): number => {
   const observedMs =
     roundTripMs !== null && Number.isFinite(roundTripMs) && roundTripMs >= 0
       ? roundTripMs * 1.25
@@ -120,10 +117,7 @@ export class EdgeGeometryWorkerController {
     return !this.disposed && this.inFlightRevision === null
   }
 
-  submit(
-    input: SerializedSolverInput,
-    initialCache?: SerializedEdgeSolveCache
-  ): number | null {
+  submit(input: SerializedSolverInput, initialCache?: SerializedEdgeSolveCache): number | null {
     if (!this.isIdle()) return null
     const isFirstRequest = !this.hasSubmitted
     this.hasSubmitted = true
@@ -164,8 +158,7 @@ export class EdgeGeometryWorkerController {
     this.onResponse?.(response)
     if (response.kind === "result") {
       if (response.revision === this.latestRevision) this.onResult(response)
-      else if (response.revision > this.hardInvalidatedThrough)
-        this.onProvisionalResult?.(response)
+      else if (response.revision > this.hardInvalidatedThrough) this.onProvisionalResult?.(response)
     } else if (response.revision === this.latestRevision) {
       this.onFailure(response.message)
       return

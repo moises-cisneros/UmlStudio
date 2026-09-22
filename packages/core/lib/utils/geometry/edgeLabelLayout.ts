@@ -56,9 +56,7 @@ export function getMidSegment(
   const lengths: number[] = []
   let total = 0
   for (let i = 0; i < points.length - 1; i++) {
-    const length =
-      Math.abs(points[i + 1].x - points[i].x) +
-      Math.abs(points[i + 1].y - points[i].y)
+    const length = Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y)
     lengths.push(length)
     total += length
   }
@@ -118,11 +116,7 @@ export function getStraightMidSegment(
     })
     .filter((segment) => segment.length > 0)
   if (usable.length === 0)
-    return getMidSegment(
-      [fallbackSource, fallbackTarget],
-      fallbackSource,
-      fallbackTarget
-    )
+    return getMidSegment([fallbackSource, fallbackTarget], fallbackSource, fallbackTarget)
 
   const total = usable.reduce((sum, segment) => sum + segment.length, 0)
   const half = total / 2
@@ -151,21 +145,13 @@ export function getStraightMidSegment(
 }
 
 const rectsIntersect = (a: Rect, b: Rect): boolean =>
-  a.x < b.x + b.width &&
-  a.x + a.width > b.x &&
-  a.y < b.y + b.height &&
-  a.y + a.height > b.y
+  a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
 export function estimateLabelWidth(text: string, fontSize: number): number {
   return text.length * fontSize * 0.6
 }
 
-export function candidateBox(
-  point: IPoint,
-  side: LabelSide,
-  w: number,
-  h: number
-): Rect {
+export function candidateBox(point: IPoint, side: LabelSide, w: number, h: number): Rect {
   const gap = EDGES.LABEL_GAP
   switch (side) {
     case "above":
@@ -193,15 +179,11 @@ const segmentCrossesBox = (
       ? seg.fixed >= box.y && seg.fixed <= box.y + box.height
       : seg.fixed >= box.x && seg.fixed <= box.x + box.width
   const lo = seg.orientation === "horizontal" ? box.x : box.y
-  const hi =
-    seg.orientation === "horizontal" ? box.x + box.width : box.y + box.height
+  const hi = seg.orientation === "horizontal" ? box.x + box.width : box.y + box.height
   return onAcross && seg.max >= lo && seg.min <= hi
 }
 
-const placeOnSide = (
-  mid: Pick<MidSegment, "point">,
-  side: LabelSide
-): PlacedLabel => {
+const placeOnSide = (mid: Pick<MidSegment, "point">, side: LabelSide): PlacedLabel => {
   const gap = EDGES.LABEL_GAP
   const { x, y } = mid.point
   switch (side) {
@@ -241,20 +223,12 @@ const placeOnSide = (
 }
 
 const countNodeHits = (box: Rect, nodeRects: Rect[]): number =>
-  nodeRects.reduce(
-    (hits, rect) => (rectsIntersect(box, rect) ? hits + 1 : hits),
-    0
-  )
+  nodeRects.reduce((hits, rect) => (rectsIntersect(box, rect) ? hits + 1 : hits), 0)
 
 const countNeighborHits = (box: Rect, polylines: IPoint[][]): number => {
   let hits = 0
   for (const polyline of polylines) {
-    if (
-      getAxisAlignedSegments(polyline).some((seg) =>
-        segmentCrossesBox(seg, box)
-      )
-    )
-      hits++
+    if (getAxisAlignedSegments(polyline).some((seg) => segmentCrossesBox(seg, box))) hits++
   }
   return hits
 }
@@ -265,8 +239,7 @@ const countOwnSegmentHits = (
   hostIndex: number
 ): number =>
   segments.reduce(
-    (hits, seg) =>
-      seg.index !== hostIndex && segmentCrossesBox(seg, box) ? hits + 1 : hits,
+    (hits, seg) => (seg.index !== hostIndex && segmentCrossesBox(seg, box) ? hits + 1 : hits),
     0
   )
 
@@ -316,8 +289,7 @@ export interface MiddleLabelInput {
 const LABEL_CLEARANCE = 5
 const MAX_ARM_SAMPLES = 20
 
-const distance = (a: IPoint, b: IPoint): number =>
-  Math.hypot(a.x - b.x, a.y - b.y)
+const distance = (a: IPoint, b: IPoint): number => Math.hypot(a.x - b.x, a.y - b.y)
 
 const inflate = (r: Rect, m: number): Rect => ({
   x: r.x - m,
@@ -360,30 +332,21 @@ export function computeMiddleLabelLayout(input: MiddleLabelInput): PlacedLabel {
       coords.add(lo)
       coords.add(hi)
       const span = hi - lo
-      const step = Math.max(
-        EDGES.LABEL_LINE_HEIGHT,
-        along / 2,
-        span / MAX_ARM_SAMPLES
-      )
+      const step = Math.max(EDGES.LABEL_LINE_HEIGHT, along / 2, span / MAX_ARM_SAMPLES)
       for (let c = lo; c <= hi; c += step) coords.add(c)
     } else {
       coords.add((seg.min + seg.max) / 2)
     }
     const fits = lo <= hi
 
-    const sides: LabelSide[] = isHorizontal
-      ? ["above", "below"]
-      : ["right", "left"]
+    const sides: LabelSide[] = isHorizontal ? ["above", "below"] : ["right", "left"]
     for (const coord of coords) {
-      const anchor: IPoint = isHorizontal
-        ? { x: coord, y: seg.fixed }
-        : { x: seg.fixed, y: coord }
+      const anchor: IPoint = isHorizontal ? { x: coord, y: seg.fixed } : { x: seg.fixed, y: coord }
       for (const side of sides) {
         const box = inflate(candidateBox(anchor, side, w, h), LABEL_CLEARANCE)
         const cost: [number, number, number, number, number] = [
           countNodeHits(box, nodeRects),
-          countOwnSegmentHits(box, segments, seg.index) +
-            countNeighborHits(box, neighbors),
+          countOwnSegmentHits(box, segments, seg.index) + countNeighborHits(box, neighbors),
           fits ? 0 : 1,
           Math.round(distance(anchor, arc)),
           side === sides[0] ? 0 : 1,
@@ -398,4 +361,3 @@ export function computeMiddleLabelLayout(input: MiddleLabelInput): PlacedLabel {
 
   return placeOnSide({ point: best!.point }, best!.side)
 }
-

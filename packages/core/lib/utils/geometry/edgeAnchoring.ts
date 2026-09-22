@@ -59,10 +59,7 @@ const ratioAt = (alongTargetPx: number, axisLength: number): number => {
 }
 
 const alignedRatio = (side: Position, rect: Rect, toward: IPoint): number =>
-  ratioAt(
-    isVerticalSide(side) ? toward.y - rect.y : toward.x - rect.x,
-    sideAxisLength(side, rect)
-  )
+  ratioAt(isVerticalSide(side) ? toward.y - rect.y : toward.x - rect.x, sideAxisLength(side, rect))
 
 const toAnchorChoice = (
   nodeType: string | undefined,
@@ -91,10 +88,7 @@ const generateCandidates = (
     pushRatio(side, alignedRatio(side, connectionRect, toward))
     pushRatio(
       side,
-      ratioAt(
-        sideAxisLength(side, connectionRect) / 2,
-        sideAxisLength(side, connectionRect)
-      )
+      ratioAt(sideAxisLength(side, connectionRect) / 2, sideAxisLength(side, connectionRect))
     )
   }
   return choices
@@ -121,14 +115,9 @@ const straightAlignedPair = (
   const tHi = vertical
     ? targetConnectionRect.y + targetConnectionRect.height
     : targetConnectionRect.x + targetConnectionRect.width
-  const sAxis = vertical
-    ? sourceConnectionRect.height
-    : sourceConnectionRect.width
-  const tAxis = vertical
-    ? targetConnectionRect.height
-    : targetConnectionRect.width
-  if (!canRunStraight(vertical, sourceConnectionRect, targetConnectionRect))
-    return null
+  const sAxis = vertical ? sourceConnectionRect.height : sourceConnectionRect.width
+  const tAxis = vertical ? targetConnectionRect.height : targetConnectionRect.width
+  if (!canRunStraight(vertical, sourceConnectionRect, targetConnectionRect)) return null
   const margin = cornerMargin(sAxis, tAxis)
   const lo = Math.max(sLo, tLo) + margin
   const hi = Math.min(sHi, tHi) - margin
@@ -179,24 +168,12 @@ const routeLength = (route: readonly IPoint[]): number => {
 }
 
 const segToRectDist = (a: IPoint, b: IPoint, r: Rect): number => {
-  const dx = Math.max(
-    0,
-    Math.min(a.x, b.x) - (r.x + r.width),
-    r.x - Math.max(a.x, b.x)
-  )
-  const dy = Math.max(
-    0,
-    Math.min(a.y, b.y) - (r.y + r.height),
-    r.y - Math.max(a.y, b.y)
-  )
+  const dx = Math.max(0, Math.min(a.x, b.x) - (r.x + r.width), r.x - Math.max(a.x, b.x))
+  const dy = Math.max(0, Math.min(a.y, b.y) - (r.y + r.height), r.y - Math.max(a.y, b.y))
   return dx + dy
 }
 
-const hugPenaltyPx = (
-  route: readonly IPoint[],
-  sourceRect: Rect,
-  targetRect: Rect
-): number => {
+const hugPenaltyPx = (route: readonly IPoint[], sourceRect: Rect, targetRect: Rect): number => {
   let total = 0
   const lastSeg = route.length - 2
   for (let i = 0; i <= lastSeg; i++) {
@@ -205,16 +182,12 @@ const hugPenaltyPx = (
     const toSource = i === 0 ? Infinity : segToRectDist(a, b, sourceRect)
     const toTarget = i === lastSeg ? Infinity : segToRectDist(a, b, targetRect)
     const clearance = Math.min(toSource, toTarget)
-    if (clearance < EDGES.MIN_NODE_CLEARANCE_PX)
-      total += EDGES.MIN_NODE_CLEARANCE_PX - clearance
+    if (clearance < EDGES.MIN_NODE_CLEARANCE_PX) total += EDGES.MIN_NODE_CLEARANCE_PX - clearance
   }
   return total
 }
 
-const routeThroughNodes = (
-  route: readonly IPoint[],
-  rects: readonly Rect[]
-): number => {
+const routeThroughNodes = (route: readonly IPoint[], rects: readonly Rect[]): number => {
   let n = 0
   for (const r of rects) {
     const loX = r.x + 1
@@ -238,10 +211,7 @@ const routeThroughNodes = (
   return n
 }
 
-const thirdPartyGrazePx = (
-  route: readonly IPoint[],
-  rects: readonly Rect[]
-): number => {
+const thirdPartyGrazePx = (route: readonly IPoint[], rects: readonly Rect[]): number => {
   if (rects.length === 0) return 0
   let total = 0
   for (let i = 0; i < route.length - 1; i++) {
@@ -249,8 +219,7 @@ const thirdPartyGrazePx = (
     const b = route[i + 1]
     for (const rect of rects) {
       const dist = segToRectDist(a, b, rect)
-      if (dist < EDGES.NODE_CLEARANCE_PX)
-        total += EDGES.NODE_CLEARANCE_PX - dist
+      if (dist < EDGES.NODE_CLEARANCE_PX) total += EDGES.NODE_CLEARANCE_PX - dist
     }
   }
   return total
@@ -289,16 +258,8 @@ const scoreKey = (
   const ds = Math.round(1000 * Math.abs(source.anchor.ratio - 0.5))
   const dt = Math.round(1000 * Math.abs(target.anchor.ratio - 0.5))
   const placement =
-    endpointPlacementCost(
-      source.anchor,
-      sideAxisLength(source.anchor.side, sourceRect),
-      GRID
-    ) +
-    endpointPlacementCost(
-      target.anchor,
-      sideAxisLength(target.anchor.side, targetRect),
-      GRID
-    )
+    endpointPlacementCost(source.anchor, sideAxisLength(source.anchor.side, sourceRect), GRID) +
+    endpointPlacementCost(target.anchor, sideAxisLength(target.anchor.side, targetRect), GRID)
   const preference =
     endpointPreferenceCost(
       source.anchor,
@@ -313,13 +274,10 @@ const scoreKey = (
       GRID
     )
   const hug = Math.round(hugPenaltyPx(route, sourceRect, targetRect) / GRID)
-  const graze =
-    bends === 0 ? Math.round(thirdPartyGrazePx(route, thirdParty) / GRID) : 0
+  const graze = bends === 0 ? Math.round(thirdPartyGrazePx(route, thirdParty) / GRID) : 0
   const through = routeThroughNodes(route, thirdParty)
   const conflict =
-    committed.length === 0
-      ? { crossings: 0, proximityPx: 0 }
-      : routeConflictScore(route, committed)
+    committed.length === 0 ? { crossings: 0, proximityPx: 0 } : routeConflictScore(route, committed)
   const generalConflict = polylineConflictCost(
     route,
     committed,
@@ -385,10 +343,7 @@ export const routeChosenAnchors = (
   obstacles: readonly ObstacleRect[],
   neighborEdges: readonly IPoint[][],
   enableStraightPath: boolean
-): IPoint[] =>
-  routeStepEdge(
-    toRouteParams(endpoints, obstacles, neighborEdges, enableStraightPath)
-  )
+): IPoint[] => routeStepEdge(toRouteParams(endpoints, obstacles, neighborEdges, enableStraightPath))
 
 export type ResolveWithAnchors = (overrides: {
   sourceAnchor?: FreeformEdgeAnchor
@@ -419,35 +374,19 @@ export type AutoAnchorResult = {
   targetAnchor?: FreeformEdgeAnchor
 }
 
-export const selectEdgeAnchors = (
-  input: AutoAnchorInput
-): AutoAnchorResult | null => {
+export const selectEdgeAnchors = (input: AutoAnchorInput): AutoAnchorResult | null => {
   const thirdParty = input.thirdPartyObstacles ?? NO_OBSTACLES
-  const sourceConnectionRect = getNodeConnectionRect(
-    input.sourceType,
-    input.sourceRect
-  )
-  const targetConnectionRect = getNodeConnectionRect(
-    input.targetType,
-    input.targetRect
-  )
+  const sourceConnectionRect = getNodeConnectionRect(input.sourceType, input.sourceRect)
+  const targetConnectionRect = getNodeConnectionRect(input.targetType, input.targetRect)
 
   const sourceFacing = null
   const targetFacing = null
   const sourceOptions = input.sourceCustom
     ? [toAnchorChoice(input.sourceType, input.sourceRect, input.sourceCustom)]
-    : generateCandidates(
-        input.sourceType,
-        input.sourceRect,
-        centerOf(targetConnectionRect)
-      )
+    : generateCandidates(input.sourceType, input.sourceRect, centerOf(targetConnectionRect))
   const targetOptions = input.targetCustom
     ? [toAnchorChoice(input.targetType, input.targetRect, input.targetCustom)]
-    : generateCandidates(
-        input.targetType,
-        input.targetRect,
-        centerOf(sourceConnectionRect)
-      )
+    : generateCandidates(input.targetType, input.targetRect, centerOf(sourceConnectionRect))
 
   const addPreferred = (
     options: AnchorChoice[],
@@ -460,9 +399,7 @@ export const selectEdgeAnchors = (
       const key = `${anchor.side}:${Math.round(anchor.ratio * 1000)}`
       if (
         options.some(
-          (option) =>
-            `${option.anchor.side}:${Math.round(option.anchor.ratio * 1000)}` ===
-            key
+          (option) => `${option.anchor.side}:${Math.round(option.anchor.ratio * 1000)}` === key
         )
       )
         return
@@ -472,28 +409,13 @@ export const selectEdgeAnchors = (
     add({ side: preferred.side, ratio: 1 - preferred.ratio })
   }
   if (!input.sourceCustom)
-    addPreferred(
-      sourceOptions,
-      input.sourcePreferred,
-      input.sourceType,
-      input.sourceRect
-    )
+    addPreferred(sourceOptions, input.sourcePreferred, input.sourceType, input.sourceRect)
   if (!input.targetCustom)
-    addPreferred(
-      targetOptions,
-      input.targetPreferred,
-      input.targetType,
-      input.targetRect
-    )
+    addPreferred(targetOptions, input.targetPreferred, input.targetType, input.targetRect)
 
   const straight =
     !input.sourceCustom && !input.targetCustom
-      ? straightAlignedPair(
-          input.sourceRect,
-          input.targetRect,
-          input.sourceType,
-          input.targetType
-        )
+      ? straightAlignedPair(input.sourceRect, input.targetRect, input.sourceType, input.targetType)
       : null
   if (straight) {
     sourceOptions.push(straight.source)
@@ -505,44 +427,24 @@ export const selectEdgeAnchors = (
     const key = `${choice.anchor.side}:${Math.round(choice.anchor.ratio * 1000)}`
     if (
       !options.some(
-        (option) =>
-          `${option.anchor.side}:${Math.round(option.anchor.ratio * 1000)}` ===
-          key
+        (option) => `${option.anchor.side}:${Math.round(option.anchor.ratio * 1000)}` === key
       )
     )
       options.push(choice)
   }
 
   if (!input.sourceCustom && input.targetPreferred) {
-    const preferred = toAnchorChoice(
-      input.targetType,
-      input.targetRect,
-      input.targetPreferred
-    )
+    const preferred = toAnchorChoice(input.targetType, input.targetRect, input.targetPreferred)
     addChoice(
       sourceOptions,
-      alignedToPinned(
-        input.sourceType,
-        input.sourceRect,
-        preferred.point,
-        preferred.position
-      )
+      alignedToPinned(input.sourceType, input.sourceRect, preferred.point, preferred.position)
     )
   }
   if (!input.targetCustom && input.sourcePreferred) {
-    const preferred = toAnchorChoice(
-      input.sourceType,
-      input.sourceRect,
-      input.sourcePreferred
-    )
+    const preferred = toAnchorChoice(input.sourceType, input.sourceRect, input.sourcePreferred)
     addChoice(
       targetOptions,
-      alignedToPinned(
-        input.targetType,
-        input.targetRect,
-        preferred.point,
-        preferred.position
-      )
+      alignedToPinned(input.targetType, input.targetRect, preferred.point, preferred.position)
     )
   }
 
@@ -584,12 +486,8 @@ export const selectEdgeAnchors = (
     targetSize: target.targetSize,
     padding: source.padding,
   })
-  const resolvedSources: Array<ResolvedEdgeEndpoints | undefined> = new Array(
-    sourceOptions.length
-  )
-  const resolvedTargets: Array<ResolvedEdgeEndpoints | undefined> = new Array(
-    targetOptions.length
-  )
+  const resolvedSources: Array<ResolvedEdgeEndpoints | undefined> = new Array(sourceOptions.length)
+  const resolvedTargets: Array<ResolvedEdgeEndpoints | undefined> = new Array(targetOptions.length)
   const sourceCandidates: Array<RouteEndpointCandidate | undefined> = new Array(
     sourceOptions.length
   )
@@ -598,10 +496,7 @@ export const selectEdgeAnchors = (
   )
   const forceStubTurn = (anchor: FreeformEdgeAnchor, rect: Rect): boolean => {
     const axis = sideAxisLength(anchor.side, rect)
-    return (
-      Math.min(anchor.ratio * axis, (1 - anchor.ratio) * axis) <=
-      EDGES.MIN_NODE_CLEARANCE_PX
-    )
+    return Math.min(anchor.ratio * axis, (1 - anchor.ratio) * axis) <= EDGES.MIN_NODE_CLEARANCE_PX
   }
   const balancedPinnedStubLengths = (() => {
     if (!input.sourceCustom || !input.targetCustom) return null
@@ -627,17 +522,14 @@ export const selectEdgeAnchors = (
 
     const sourceCoordinate = vertical ? sourcePoint.y : sourcePoint.x
     const targetCoordinate = vertical ? targetPoint.y : targetPoint.x
-    const lane =
-      Math.round((sourceCoordinate + targetCoordinate) / 2 / GRID) * GRID
+    const lane = Math.round((sourceCoordinate + targetCoordinate) / 2 / GRID) * GRID
     const sourceLength = Math.abs(sourceCoordinate - lane)
     const targetLength = Math.abs(targetCoordinate - lane)
     if (sourceLength < GRID || targetLength < GRID) return null
     return {
       sourceLength,
       targetLength,
-      requiresTurn: vertical
-        ? sourcePoint.x !== targetPoint.x
-        : sourcePoint.y !== targetPoint.y,
+      requiresTurn: vertical ? sourcePoint.x !== targetPoint.x : sourcePoint.y !== targetPoint.y,
     }
   })()
   const referenceSource = sourceOptions[0]
@@ -668,8 +560,7 @@ export const selectEdgeAnchors = (
             GRID
           ),
       forceStubTurn:
-        (Boolean(input.sourceCustom) &&
-          forceStubTurn(source.anchor, sourceConnectionRect)) ||
+        (Boolean(input.sourceCustom) && forceStubTurn(source.anchor, sourceConnectionRect)) ||
         (balancedPinnedStubLengths?.requiresTurn ?? false),
     }
   }
@@ -699,8 +590,7 @@ export const selectEdgeAnchors = (
             GRID
           ),
       forceStubTurn:
-        (Boolean(input.targetCustom) &&
-          forceStubTurn(target.anchor, targetConnectionRect)) ||
+        (Boolean(input.targetCustom) && forceStubTurn(target.anchor, targetConnectionRect)) ||
         (balancedPinnedStubLengths?.requiresTurn ?? false),
     }
   }
@@ -734,12 +624,8 @@ export const selectEdgeAnchors = (
       return {
         endpoints: combineEndpoints(resolvedSource, resolvedTarget),
         route: joint.route,
-        sourceAnchor: input.sourceCustom
-          ? undefined
-          : sourceOptions[sourceIndex].anchor,
-        targetAnchor: input.targetCustom
-          ? undefined
-          : targetOptions[targetIndex].anchor,
+        sourceAnchor: input.sourceCustom ? undefined : sourceOptions[sourceIndex].anchor,
+        targetAnchor: input.targetCustom ? undefined : targetOptions[targetIndex].anchor,
       }
     }
   }
@@ -754,23 +640,14 @@ export const selectEdgeAnchors = (
 
   for (let sourceIndex = 0; sourceIndex < sourceOptions.length; sourceIndex++) {
     const source = sourceOptions[sourceIndex]
-    for (
-      let targetIndex = 0;
-      targetIndex < targetOptions.length;
-      targetIndex++
-    ) {
+    for (let targetIndex = 0; targetIndex < targetOptions.length; targetIndex++) {
       const target = targetOptions[targetIndex]
       const resolvedSource = resolvedSources[sourceIndex]
       const resolvedTarget = resolvedTargets[targetIndex]
       if (!resolvedSource || !resolvedTarget) continue
       const endpoints = combineEndpoints(resolvedSource, resolvedTarget)
       const idealRoute = routeStepEdge(
-        toRouteParams(
-          endpoints,
-          NO_OBSTACLES,
-          NO_NEIGHBORS,
-          input.enableStraightPath
-        )
+        toRouteParams(endpoints, NO_OBSTACLES, NO_NEIGHBORS, input.enableStraightPath)
       )
       const key = scoreKey(
         idealRoute,

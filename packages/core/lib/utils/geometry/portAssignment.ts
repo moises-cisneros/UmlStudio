@@ -25,8 +25,7 @@ export const PORT_PITCH_PX = 3 * GRID
 const CORNER_CLEARANCE_PX = 2 * GRID
 
 const CROSSING_BEND_EQUIV =
-  ROUTING_COST.edgeCrossing /
-  (ROUTING_COST.bendInGridCells * CANVAS.SNAP_TO_GRID_PX)
+  ROUTING_COST.edgeCrossing / (ROUTING_COST.bendInGridCells * CANVAS.SNAP_TO_GRID_PX)
 
 const bendsForSide = (side: Position, rect: Rect, partner: Rect): number => {
   const c = centerOf(rect)
@@ -37,12 +36,7 @@ const bendsForSide = (side: Position, rect: Rect, partner: Rect): number => {
   return canRunStraight(isVerticalSide(side), rect, partner) ? 0 : 1
 }
 
-const combinedBends = (
-  sU: Position,
-  sV: Position,
-  U: Rect,
-  V: Rect
-): number => {
+const combinedBends = (sU: Position, sV: Position, U: Rect, V: Rect): number => {
   const cU = centerOf(U)
   const cV = centerOf(V)
   const dx = cV.x - cU.x
@@ -53,8 +47,7 @@ const combinedBends = (
   const alongV = -(nV.x * dx + nV.y * dy)
   if (alongU <= 0 && alongV <= 0) return 4
   if (alongU <= 0 || alongV <= 0) return 3
-  if (nU.x === -nV.x && nU.y === -nV.y)
-    return canRunStraight(isVerticalSide(sU), U, V) ? 0 : 2
+  if (nU.x === -nV.x && nU.y === -nV.y) return canRunStraight(isVerticalSide(sU), U, V) ? 0 : 2
   if (nU.x === nV.x && nU.y === nV.y) return 2
   return 1
 }
@@ -85,10 +78,7 @@ const segCutsRect = (a: IPoint, b: IPoint, r: Rect): boolean => {
   )
 }
 
-export const routeCutsAny = (
-  route: readonly IPoint[],
-  rects: readonly Rect[]
-): number => {
+export const routeCutsAny = (route: readonly IPoint[], rects: readonly Rect[]): number => {
   let n = 0
   for (const r of rects)
     for (let i = 0; i < route.length - 1; i++)
@@ -109,15 +99,13 @@ const pickLane = (
 ): number => {
   const feasible = (c: number): boolean =>
     dir === 0
-      ? c >= Math.min(anchor, betweenOther) &&
-        c <= Math.max(anchor, betweenOther)
+      ? c >= Math.min(anchor, betweenOther) && c <= Math.max(anchor, betweenOther)
       : dir > 0
         ? c >= anchor
         : c <= anchor
   const cands = new Set<number>([anchor])
   if (dir === 0) cands.add((anchor + betweenOther) / 2)
-  for (const r of rects)
-    for (const e of edgeOf(r)) if (feasible(e)) cands.add(e)
+  for (const r of rects) for (const e of edgeOf(r)) if (feasible(e)) cands.add(e)
   let best = anchor
   let bestHits = Infinity
   let bestDist = Infinity
@@ -165,8 +153,7 @@ export const approxRoute = (
   const b = sideMidpoint(sV, V)
   const uVert = isVerticalSide(sU)
   const vVert = isVerticalSide(sV)
-  if (uVert !== vVert)
-    return uVert ? [a, { x: b.x, y: a.y }, b] : [a, { x: a.x, y: b.y }, b]
+  if (uVert !== vVert) return uVert ? [a, { x: b.x, y: a.y }, b] : [a, { x: a.x, y: b.y }, b]
   if (uVert) {
     if (a.y === b.y) return [a, b]
     const { anchor, other, dir } = laneConstraint(
@@ -240,19 +227,13 @@ export const assignSides = (
     if (!set) return 0
     return set.has(exclude) ? set.size - 1 : set.size
   }
-  for (const end of reservedEnds)
-    occAdd(end.nodeId, end.side, end.partnerNodeId)
-  const singleSlotOcc = (
-    node: string,
-    side: Position,
-    exclude: string
-  ): number => (fourCenterNodes.has(node) ? occOthers(node, side, exclude) : 0)
+  for (const end of reservedEnds) occAdd(end.nodeId, end.side, end.partnerNodeId)
+  const singleSlotOcc = (node: string, side: Position, exclude: string): number =>
+    fourCenterNodes.has(node) ? occOthers(node, side, exclude) : 0
 
   const hasStraight = (e: SideEdge): boolean =>
     ALL_SIDES.some((sU) =>
-      ALL_SIDES.some(
-        (sV) => combinedBends(sU, sV, e.sourceRect, e.targetRect) === 0
-      )
+      ALL_SIDES.some((sV) => combinedBends(sU, sV, e.sourceRect, e.targetRect) === 0)
     )
   const ordered = [...edges].sort((a, b) => {
     const sa = hasStraight(a) ? 0 : 1
@@ -307,10 +288,7 @@ export const assignSides = (
           conflict.overlapPx * ROUTING_COST.overlapPerPx +
           conflict.crowdingPx * ROUTING_COST.crowdingPerPx
     })
-    return (
-      CROSSING_BEND_EQUIV * crossings +
-      nonCrossingCost / (ROUTING_COST.bendInGridCells * GRID)
-    )
+    return CROSSING_BEND_EQUIV * crossings + nonCrossingCost / (ROUTING_COST.bendInGridCells * GRID)
   }
 
   const nodesCrossed = (e: SideEdge, route: readonly IPoint[]): number => {
@@ -385,9 +363,7 @@ export const assignSides = (
       let best: Position | null = null
       let bestKey: number[] | null = null
       for (const s of ALL_SIDES) {
-        const otherFixedSide = e.sourceBand
-          ? e.targetFixedSide
-          : e.sourceFixedSide
+        const otherFixedSide = e.sourceBand ? e.targetFixedSide : e.sourceFixedSide
         let minB = Infinity
         if (otherFixedSide !== undefined) {
           const route = e.sourceBand
@@ -396,17 +372,15 @@ export const assignSides = (
           minB =
             (e.sourceBand
               ? combinedBends(s, otherFixedSide, U, V)
-              : combinedBends(otherFixedSide, s, U, V)) +
-            routeConflictBendEquiv(route)
+              : combinedBends(otherFixedSide, s, U, V)) + routeConflictBendEquiv(route)
         } else {
           for (const o of ALL_SIDES) {
             const route = e.sourceBand
               ? approxRoute(s, o, U, V, obstacles)
               : approxRoute(o, s, U, V, obstacles)
             const b =
-              (e.sourceBand
-                ? combinedBends(s, o, U, V)
-                : combinedBends(o, s, U, V)) + routeConflictBendEquiv(route)
+              (e.sourceBand ? combinedBends(s, o, U, V) : combinedBends(o, s, U, V)) +
+              routeConflictBendEquiv(route)
             if (b < minB) minB = b
           }
         }
@@ -437,11 +411,7 @@ export type SideMember = {
   dy: number
 }
 
-export const alongSideKey = (
-  side: Position,
-  dx: number,
-  dy: number
-): number => {
+export const alongSideKey = (side: Position, dx: number, dy: number): number => {
   let X: number
   let Y: number
   switch (side) {
@@ -505,10 +475,7 @@ export const crossingOrderKey = (
   return Y / H
 }
 
-export const orderSideMembers = (
-  side: Position,
-  members: readonly SideMember[]
-): SideMember[] => {
+export const orderSideMembers = (side: Position, members: readonly SideMember[]): SideMember[] => {
   const keyed = members.map((m) => ({ m, k: alongSideKey(side, m.dx, m.dy) }))
   keyed.sort((a, b) =>
     a.k !== b.k
@@ -549,8 +516,7 @@ export type AssignedPort = {
   ratio: number
 }
 
-export const endKey = (edgeId: string, end: "source" | "target"): string =>
-  `${edgeId}|${end}`
+export const endKey = (edgeId: string, end: "source" | "target"): string => `${edgeId}|${end}`
 
 const sharedStraightBand = (
   side: Position,
@@ -570,24 +536,14 @@ const sharedStraightBand = (
   return { lo: overlapLo + margin, hi: overlapHi - margin, myLo, myAxis }
 }
 
-const spreadCoords = (
-  lo: number,
-  hi: number,
-  count: number,
-  minGap: number
-): number[] => {
+const spreadCoords = (lo: number, hi: number, count: number, minGap: number): number[] => {
   if (count <= 0) return []
   const centre = (lo + hi) / 2
   if (count === 1) return [centre]
-  const balanced = balancedPortOffsets(count, hi - lo, GRID).map(
-    (offset) => lo + offset
-  )
+  const balanced = balancedPortOffsets(count, hi - lo, GRID).map((offset) => lo + offset)
   if (balanced[1] - balanced[0] >= minGap) return balanced
   const gap = minGap
-  return Array.from(
-    { length: count },
-    (_, i) => centre + ((2 * i - (count - 1)) * gap) / 2
-  )
+  return Array.from({ length: count }, (_, i) => centre + ((2 * i - (count - 1)) * gap) / 2)
 }
 
 const spreadCoordsWithinBounds = (
@@ -609,9 +565,7 @@ const spreadCoordsWithinBounds = (
       )
   feasibleGap = Math.max(0, feasibleGap)
 
-  const result = ideal.map((value, index) =>
-    clamp(value, bounds[index].lo, bounds[index].hi)
-  )
+  const result = ideal.map((value, index) => clamp(value, bounds[index].lo, bounds[index].hi))
   for (let pass = 0; pass < bounds.length; pass++) {
     for (let i = 1; i < result.length; i++)
       result[i] = clamp(
@@ -709,9 +663,7 @@ export const assignPorts = (
         const coords = spreadCoords(band.lo, band.hi, ordered.length, pitchPx)
         ordered.forEach((e, i) => {
           const immutableCoord =
-            e.immutableRatio === undefined
-              ? null
-              : myLo + e.immutableRatio * axis
+            e.immutableRatio === undefined ? null : myLo + e.immutableRatio * axis
           seats.push({
             edgeId: e.edgeId,
             end: e.end,
@@ -766,8 +718,7 @@ export const assignPorts = (
     )
     const lCoords = spreadCoords(myLo, myLo + axis, lMembers.length, pitchPx)
     lMembers.forEach(({ e, rot }, i) => {
-      const immutableCoord =
-        e.immutableRatio === undefined ? null : myLo + e.immutableRatio * axis
+      const immutableCoord = e.immutableRatio === undefined ? null : myLo + e.immutableRatio * axis
       seats.push({
         edgeId: e.edgeId,
         end: e.end,
@@ -800,9 +751,7 @@ export const assignPorts = (
     const lo = myLo + margin
     const hi = myLo + axis - margin
     const rebalancesStraightPartners =
-      byPartner.size > 1 &&
-      seats.length > 1 &&
-      seats.every((seat) => seat.fixed)
+      byPartner.size > 1 && seats.length > 1 && seats.every((seat) => seat.fixed)
     if (rebalancesStraightPartners) {
       const centred = spreadCoordsWithinBounds(
         lo,
@@ -814,23 +763,16 @@ export const assignPorts = (
         seat.coord = centred[index]
       })
     }
-    let unconstrainedGap =
-      seats.length > 1 ? Math.min(pitchPx, (hi - lo) / (seats.length - 1)) : 0
+    let unconstrainedGap = seats.length > 1 ? Math.min(pitchPx, (hi - lo) / (seats.length - 1)) : 0
     const immutableSeats = seats
       .map((seat, index) => ({ seat, index }))
       .filter(({ seat }) => seat.immutable)
     for (const { seat, index } of immutableSeats) {
       if (index > 0)
-        unconstrainedGap = Math.min(
-          unconstrainedGap,
-          Math.max(0, (seat.coord - lo) / index)
-        )
+        unconstrainedGap = Math.min(unconstrainedGap, Math.max(0, (seat.coord - lo) / index))
       const after = seats.length - 1 - index
       if (after > 0)
-        unconstrainedGap = Math.min(
-          unconstrainedGap,
-          Math.max(0, (hi - seat.coord) / after)
-        )
+        unconstrainedGap = Math.min(unconstrainedGap, Math.max(0, (hi - seat.coord) / after))
     }
     for (let later = 1; later < immutableSeats.length; later++)
       for (let earlier = 0; earlier < later; earlier++) {
@@ -838,10 +780,7 @@ export const assignPorts = (
         const right = immutableSeats[later]
         unconstrainedGap = Math.min(
           unconstrainedGap,
-          Math.max(
-            0,
-            (right.seat.coord - left.seat.coord) / (right.index - left.index)
-          )
+          Math.max(0, (right.seat.coord - left.seat.coord) / (right.index - left.index))
         )
       }
     const gap = rebalancesStraightPartners
@@ -849,21 +788,15 @@ export const assignPorts = (
           0,
           Math.min(
             unconstrainedGap,
-            ...seats
-              .slice(1)
-              .map((seat, index) => seat.coord - seats[index].coord)
+            ...seats.slice(1).map((seat, index) => seat.coord - seats[index].coord)
           )
         )
       : unconstrainedGap
-    const pos = seats.map((s) =>
-      s.immutable ? s.coord : clamp(s.coord, lo, hi)
-    )
+    const pos = seats.map((s) => (s.immutable ? s.coord : clamp(s.coord, lo, hi)))
     for (let i = 1; i < pos.length; i++)
-      if (!seats[i].fixed && pos[i] < pos[i - 1] + gap)
-        pos[i] = pos[i - 1] + gap
+      if (!seats[i].fixed && pos[i] < pos[i - 1] + gap) pos[i] = pos[i - 1] + gap
     for (let i = pos.length - 2; i >= 0; i--)
-      if (!seats[i].fixed && pos[i] > pos[i + 1] - gap)
-        pos[i] = pos[i + 1] - gap
+      if (!seats[i].fixed && pos[i] > pos[i + 1] - gap) pos[i] = pos[i + 1] - gap
     const stillCrowded = pos.some((p, i) => i > 0 && p < pos[i - 1] + gap)
     if (stillCrowded) {
       for (let pass = 0; pass < seats.length; pass++) {
@@ -879,8 +812,7 @@ export const assignPorts = (
       result.set(endKey(s.edgeId, s.end), {
         side,
         ratio: s.immutable
-          ? group.find((end) => end.edgeId === s.edgeId && end.end === s.end)!
-              .immutableRatio!
+          ? group.find((end) => end.edgeId === s.edgeId && end.end === s.end)!.immutableRatio!
           : (clamp(pos[i], lo, hi) - myLo) / axis,
       })
     )

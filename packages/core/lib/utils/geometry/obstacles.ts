@@ -1,9 +1,6 @@
 import type { Node, Rect } from "@xyflow/react"
 import { EDGES } from "@/utils/geometry/routingConstants"
-import {
-  getRoutingPositionOnCanvas,
-  isRoutingParentNodeType,
-} from "@/utils/geometry/nodeGeometry"
+import { getRoutingPositionOnCanvas, isRoutingParentNodeType } from "@/utils/geometry/nodeGeometry"
 import type { IPoint } from "@/edges/Connection"
 
 export type ObstacleRect = {
@@ -131,15 +128,13 @@ export const getEdgeObstacles = (
 
     if (entry.ancestors.has(sourceId) || entry.ancestors.has(targetId)) continue
 
-    if (contains(entry.body, sourcePoint) || contains(entry.body, targetPoint))
-      continue
+    if (contains(entry.body, sourcePoint) || contains(entry.body, targetPoint)) continue
 
     candidates.push(entry.body)
   }
 
   const pad = 2 * EDGES.STUB_LENGTH + EDGES.NODE_CLEARANCE_PX
-  let left =
-    (candidateBounds?.x ?? Math.min(sourcePoint.x, targetPoint.x)) - pad
+  let left = (candidateBounds?.x ?? Math.min(sourcePoint.x, targetPoint.x)) - pad
   let right =
     (candidateBounds
       ? candidateBounds.x + candidateBounds.width

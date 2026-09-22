@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { BaseEdgeProps, StepEdgeBody, CommonEdgeElements } from "../GenericEdge"
 import { EdgeEndLabels } from "../labelTypes/EdgeEndLabels"
-import { useEdgeConfig } from "@/hooks/useEdgeConfig"
+import { getEdgeConfig } from "@/hooks/useEdgeConfig"
 import { useStepPathEdge } from "@/hooks/useStepPathEdge"
 import { useDiagramStore, usePopoverStore } from "@/store/context"
 import { useShallow } from "zustand/shallow"
@@ -27,7 +27,7 @@ export const ClassDiagramEdge = ({
 }: BaseEdgeProps) => {
   const { handleDelete } = useToolbar({ id })
 
-  const config = useEdgeConfig(
+  const config = getEdgeConfig(
     type as
       | "ClassAggregation"
       | "ClassInheritance"
@@ -48,9 +48,7 @@ export const ClassDiagramEdge = ({
     }))
   )
 
-  const setPopOverElementId = usePopoverStore(
-    useShallow((state) => state.setPopOverElementId)
-  )
+  const setPopOverElementId = usePopoverStore(useShallow((state) => state.setPopOverElementId))
 
   const {
     pathRef,
@@ -96,10 +94,7 @@ export const ClassDiagramEdge = ({
     ?.associationClassNodeId as string | undefined
 
   const assocNode = useMemo(
-    () =>
-      associationClassNodeId
-        ? nodes.find((n) => n.id === associationClassNodeId)
-        : undefined,
+    () => (associationClassNodeId ? nodes.find((n) => n.id === associationClassNodeId) : undefined),
     [associationClassNodeId, nodes]
   )
 

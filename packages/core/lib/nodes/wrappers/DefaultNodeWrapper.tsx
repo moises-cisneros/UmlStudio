@@ -1,22 +1,22 @@
-import { AssessmentSelectableWrapper } from "@/components/wrapper/AssessmentSelectableWrapper";
-import { FeedbackDropzone } from "@/components/wrapper/FeedbackDropzone";
-import { useDiagramModifiable } from "@/hooks/useDiagramModifiable";
-import { useMetadataStore } from "@/store/context";
+import { AssessmentSelectableWrapper } from "@/components/wrapper/AssessmentSelectableWrapper"
+import { FeedbackDropzone } from "@/components/wrapper/FeedbackDropzone"
+import { useDiagramModifiable } from "@/hooks/useDiagramModifiable"
+import { useMetadataStore } from "@/store/context"
 import {
   getAxisHandlePlan,
   getDistributedHandleOffsetPercents,
   getDistributedHandleOffsets,
   reduceVisibleArcCountForZoom,
-} from "@/utils";
+} from "@/utils"
 import {
   Handle,
   Position,
   useNodeConnections,
   useStore,
   useUpdateNodeInternals,
-} from "@xyflow/react";
-import { type CSSProperties, useEffect, useMemo } from "react";
-import { useShallow } from "zustand/shallow";
+} from "@xyflow/react"
+import { type CSSProperties, useEffect, useMemo } from "react"
+import { useShallow } from "zustand/shallow"
 
 export enum HandleId {
   TopLeft = "top-left",
@@ -90,16 +90,16 @@ export const FOUR_WAY_HANDLES_PRESET: HandleId[] = [
   HandleId.LeftMidTop,
   HandleId.LeftBetweenMidTopTop,
   HandleId.LeftTop,
-];
+]
 
 interface Props {
-  children: React.ReactNode;
-  width?: number;
-  height?: number;
-  elementId: string;
-  hiddenHandles?: HandleId[] | true;
-  connectionTopInset?: number;
-  isConnectableEnd?: boolean;
+  children: React.ReactNode
+  width?: number
+  height?: number
+  elementId: string
+  hiddenHandles?: HandleId[] | true
+  connectionTopInset?: number
+  isConnectableEnd?: boolean
 }
 
 export function DefaultNodeWrapper({
@@ -111,31 +111,31 @@ export function DefaultNodeWrapper({
 }: Props) {
   const { nodeType, nodeWidth, nodeHeight } = useStore(
     useShallow((s) => {
-      const n = s.nodeLookup.get(elementId);
+      const n = s.nodeLookup.get(elementId)
       return {
         nodeType: n?.type,
         nodeWidth: n?.width ?? 0,
         nodeHeight: n?.height ?? 0,
-      };
-    }),
-  );
-  const isDiagramModifiable = useDiagramModifiable();
-  const connections = useNodeConnections({ id: elementId });
+      }
+    })
+  )
+  const isDiagramModifiable = useDiagramModifiable()
+  const connections = useNodeConnections({ id: elementId })
   const connectedHandleIds = useMemo(() => {
-    const ids = new Set<string>();
+    const ids = new Set<string>()
     for (const connection of connections) {
       if (connection.source === elementId && connection.sourceHandle)
-        ids.add(connection.sourceHandle);
+        ids.add(connection.sourceHandle)
       if (connection.target === elementId && connection.targetHandle)
-        ids.add(connection.targetHandle);
+        ids.add(connection.targetHandle)
     }
-    return ids;
-  }, [connections, elementId]);
+    return ids
+  }, [connections, elementId])
 
-  const updateNodeInternals = useUpdateNodeInternals();
+  const updateNodeInternals = useUpdateNodeInternals()
   useEffect(() => {
-    updateNodeInternals(elementId);
-  }, [connectedHandleIds, elementId, updateNodeInternals]);
+    updateNodeInternals(elementId)
+  }, [connectedHandleIds, elementId, updateNodeInternals])
   const {
     connectionGuidanceActive,
     connectionGuidanceSourceNodeId,
@@ -145,8 +145,8 @@ export function DefaultNodeWrapper({
       connectionGuidanceActive: state.connectionGuidanceActive,
       connectionGuidanceSourceNodeId: state.connectionGuidanceSourceNodeId,
       connectionGuidanceSourceHandleId: state.connectionGuidanceSourceHandleId,
-    })),
-  );
+    }))
+  )
 
   const baseHandleStyle = {
     width: 8,
@@ -157,97 +157,70 @@ export function DefaultNodeWrapper({
     zIndex: 10,
     overflow: "visible",
     boxSizing: "border-box" as const,
-  } as CSSProperties;
+  } as CSSProperties
 
   const [xs0, xs1, xs2, xs3, xs4, xs5, xs6, xs7, xs8] = useMemo(
     () => getDistributedHandleOffsetPercents(nodeWidth),
-    [nodeWidth],
-  );
-  const safeConnectionTopInset = Math.min(
-    Math.max(connectionTopInset, 0),
-    nodeHeight,
-  );
-  const connectionHeight = Math.max(0, nodeHeight - safeConnectionTopInset);
+    [nodeWidth]
+  )
+  const safeConnectionTopInset = Math.min(Math.max(connectionTopInset, 0), nodeHeight)
+  const connectionHeight = Math.max(0, nodeHeight - safeConnectionTopInset)
   const [ys0, ys1, ys2, ys3, ys4, ys5, ys6, ys7, ys8] = useMemo(
     () =>
       getDistributedHandleOffsets(connectionHeight).map(
-        (offset) => safeConnectionTopInset + offset,
+        (offset) => safeConnectionTopInset + offset
       ),
-    [connectionHeight, safeConnectionTopInset],
-  );
+    [connectionHeight, safeConnectionTopInset]
+  )
 
-  const widthPlan = useMemo(() => getAxisHandlePlan(nodeWidth), [nodeWidth]);
+  const widthPlan = useMemo(() => getAxisHandlePlan(nodeWidth), [nodeWidth])
   const widthArcs = useStore((state) =>
-    reduceVisibleArcCountForZoom(
-      widthPlan.offsets,
-      widthPlan.visibleArcCount,
-      state.transform[2],
-    ),
-  );
-  const heightPlan = useMemo(
-    () => getAxisHandlePlan(connectionHeight),
-    [connectionHeight],
-  );
+    reduceVisibleArcCountForZoom(widthPlan.offsets, widthPlan.visibleArcCount, state.transform[2])
+  )
+  const heightPlan = useMemo(() => getAxisHandlePlan(connectionHeight), [connectionHeight])
   const heightArcs = useStore((state) =>
-    reduceVisibleArcCountForZoom(
-      heightPlan.offsets,
-      heightPlan.visibleArcCount,
-      state.transform[2],
-    ),
-  );
+    reduceVisibleArcCountForZoom(heightPlan.offsets, heightPlan.visibleArcCount, state.transform[2])
+  )
 
   const hiddenHandleSet = useMemo(
     () => (hiddenHandles === true ? null : new Set<string>(hiddenHandles)),
-    [hiddenHandles],
-  );
+    [hiddenHandles]
+  )
 
   const isHandleHiddenByProp = (id: HandleId): boolean =>
-    hiddenHandleSet !== null && hiddenHandleSet.has(id);
+    hiddenHandleSet !== null && hiddenHandleSet.has(id)
 
   const middleArcForced = (cornerA: HandleId, cornerB: HandleId): boolean =>
-    isHandleHiddenByProp(cornerA) && isHandleHiddenByProp(cornerB);
+    isHandleHiddenByProp(cornerA) && isHandleHiddenByProp(cornerB)
 
   const arcClass = (side: "top" | "right" | "bottom" | "left"): string =>
-    `umlstudio-arc-handle umlstudio-arc-handle--${side}`;
+    `umlstudio-arc-handle umlstudio-arc-handle--${side}`
 
   const makeArcClass = (
     side: "top" | "right" | "bottom" | "left",
     handleId: HandleId,
     isVisible: boolean,
-    forceMiddle = false,
+    forceMiddle = false
   ): string | undefined => {
-    if (isHandleHiddenByProp(handleId)) return undefined;
-    if (isVisible || forceMiddle) return arcClass(side);
-    return undefined;
-  };
+    if (isHandleHiddenByProp(handleId)) return undefined
+    if (isVisible || forceMiddle) return arcClass(side)
+    return undefined
+  }
 
-  const topMiddleForce = middleArcForced(HandleId.TopLeft, HandleId.TopRight);
-  const bottomMiddleForce = middleArcForced(
-    HandleId.BottomLeft,
-    HandleId.BottomRight,
-  );
-  const leftMiddleForce = middleArcForced(
-    HandleId.LeftTop,
-    HandleId.LeftBottom,
-  );
-  const rightMiddleForce = middleArcForced(
-    HandleId.RightTop,
-    HandleId.RightBottom,
-  );
+  const topMiddleForce = middleArcForced(HandleId.TopLeft, HandleId.TopRight)
+  const bottomMiddleForce = middleArcForced(HandleId.BottomLeft, HandleId.BottomRight)
+  const leftMiddleForce = middleArcForced(HandleId.LeftTop, HandleId.LeftBottom)
+  const rightMiddleForce = middleArcForced(HandleId.RightTop, HandleId.RightBottom)
 
-  const showMiddleArc = (axisArcs: 1 | 3 | 5): boolean => axisArcs >= 1;
-  const showCornerArc = (axisArcs: 1 | 3 | 5): boolean => axisArcs >= 3;
-  const showMidCornerArc = (axisArcs: 1 | 3 | 5): boolean => axisArcs === 5;
+  const showMiddleArc = (axisArcs: 1 | 3 | 5): boolean => axisArcs >= 1
+  const showCornerArc = (axisArcs: 1 | 3 | 5): boolean => axisArcs >= 3
+  const showMidCornerArc = (axisArcs: 1 | 3 | 5): boolean => axisArcs === 5
 
   const handles = [
     {
       id: HandleId.TopLeft,
       position: Position.Top,
-      className: makeArcClass(
-        "top",
-        HandleId.TopLeft,
-        showCornerArc(widthArcs),
-      ),
+      className: makeArcClass("top", HandleId.TopLeft, showCornerArc(widthArcs)),
       style: { ...baseHandleStyle, left: xs0, top: safeConnectionTopInset },
     },
     {
@@ -258,11 +231,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.TopMidLeft,
       position: Position.Top,
-      className: makeArcClass(
-        "top",
-        HandleId.TopMidLeft,
-        showMidCornerArc(widthArcs),
-      ),
+      className: makeArcClass("top", HandleId.TopMidLeft, showMidCornerArc(widthArcs)),
       style: { ...baseHandleStyle, left: xs2, top: safeConnectionTopInset },
     },
     {
@@ -273,12 +242,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.Top,
       position: Position.Top,
-      className: makeArcClass(
-        "top",
-        HandleId.Top,
-        showMiddleArc(widthArcs),
-        topMiddleForce,
-      ),
+      className: makeArcClass("top", HandleId.Top, showMiddleArc(widthArcs), topMiddleForce),
       style: { ...baseHandleStyle, left: xs4, top: safeConnectionTopInset },
     },
     {
@@ -289,11 +253,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.TopMidRight,
       position: Position.Top,
-      className: makeArcClass(
-        "top",
-        HandleId.TopMidRight,
-        showMidCornerArc(widthArcs),
-      ),
+      className: makeArcClass("top", HandleId.TopMidRight, showMidCornerArc(widthArcs)),
       style: { ...baseHandleStyle, left: xs6, top: safeConnectionTopInset },
     },
     {
@@ -304,21 +264,13 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.TopRight,
       position: Position.Top,
-      className: makeArcClass(
-        "top",
-        HandleId.TopRight,
-        showCornerArc(widthArcs),
-      ),
+      className: makeArcClass("top", HandleId.TopRight, showCornerArc(widthArcs)),
       style: { ...baseHandleStyle, left: xs8, top: safeConnectionTopInset },
     },
     {
       id: HandleId.RightTop,
       position: Position.Right,
-      className: makeArcClass(
-        "right",
-        HandleId.RightTop,
-        showCornerArc(heightArcs),
-      ),
+      className: makeArcClass("right", HandleId.RightTop, showCornerArc(heightArcs)),
       style: { ...baseHandleStyle, top: ys0 },
     },
     {
@@ -329,11 +281,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.RightMidTop,
       position: Position.Right,
-      className: makeArcClass(
-        "right",
-        HandleId.RightMidTop,
-        showMidCornerArc(heightArcs),
-      ),
+      className: makeArcClass("right", HandleId.RightMidTop, showMidCornerArc(heightArcs)),
       style: { ...baseHandleStyle, top: ys2 },
     },
     {
@@ -344,12 +292,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.Right,
       position: Position.Right,
-      className: makeArcClass(
-        "right",
-        HandleId.Right,
-        showMiddleArc(heightArcs),
-        rightMiddleForce,
-      ),
+      className: makeArcClass("right", HandleId.Right, showMiddleArc(heightArcs), rightMiddleForce),
       style: { ...baseHandleStyle, top: ys4 },
     },
     {
@@ -360,11 +303,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.RightMidBottom,
       position: Position.Right,
-      className: makeArcClass(
-        "right",
-        HandleId.RightMidBottom,
-        showMidCornerArc(heightArcs),
-      ),
+      className: makeArcClass("right", HandleId.RightMidBottom, showMidCornerArc(heightArcs)),
       style: { ...baseHandleStyle, top: ys6 },
     },
     {
@@ -375,21 +314,13 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.RightBottom,
       position: Position.Right,
-      className: makeArcClass(
-        "right",
-        HandleId.RightBottom,
-        showCornerArc(heightArcs),
-      ),
+      className: makeArcClass("right", HandleId.RightBottom, showCornerArc(heightArcs)),
       style: { ...baseHandleStyle, top: ys8 },
     },
     {
       id: HandleId.BottomRight,
       position: Position.Bottom,
-      className: makeArcClass(
-        "bottom",
-        HandleId.BottomRight,
-        showCornerArc(widthArcs),
-      ),
+      className: makeArcClass("bottom", HandleId.BottomRight, showCornerArc(widthArcs)),
       style: { ...baseHandleStyle, left: xs8 },
     },
     {
@@ -400,11 +331,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.BottomMidRight,
       position: Position.Bottom,
-      className: makeArcClass(
-        "bottom",
-        HandleId.BottomMidRight,
-        showMidCornerArc(widthArcs),
-      ),
+      className: makeArcClass("bottom", HandleId.BottomMidRight, showMidCornerArc(widthArcs)),
       style: { ...baseHandleStyle, left: xs6 },
     },
     {
@@ -419,7 +346,7 @@ export function DefaultNodeWrapper({
         "bottom",
         HandleId.Bottom,
         showMiddleArc(widthArcs),
-        bottomMiddleForce,
+        bottomMiddleForce
       ),
       style: { ...baseHandleStyle, left: xs4 },
     },
@@ -431,11 +358,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.BottomMidLeft,
       position: Position.Bottom,
-      className: makeArcClass(
-        "bottom",
-        HandleId.BottomMidLeft,
-        showMidCornerArc(widthArcs),
-      ),
+      className: makeArcClass("bottom", HandleId.BottomMidLeft, showMidCornerArc(widthArcs)),
       style: { ...baseHandleStyle, left: xs2 },
     },
     {
@@ -446,21 +369,13 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.BottomLeft,
       position: Position.Bottom,
-      className: makeArcClass(
-        "bottom",
-        HandleId.BottomLeft,
-        showCornerArc(widthArcs),
-      ),
+      className: makeArcClass("bottom", HandleId.BottomLeft, showCornerArc(widthArcs)),
       style: { ...baseHandleStyle, left: xs0 },
     },
     {
       id: HandleId.LeftBottom,
       position: Position.Left,
-      className: makeArcClass(
-        "left",
-        HandleId.LeftBottom,
-        showCornerArc(heightArcs),
-      ),
+      className: makeArcClass("left", HandleId.LeftBottom, showCornerArc(heightArcs)),
       style: { ...baseHandleStyle, top: ys8 },
     },
     {
@@ -471,11 +386,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.LeftMidBottom,
       position: Position.Left,
-      className: makeArcClass(
-        "left",
-        HandleId.LeftMidBottom,
-        showMidCornerArc(heightArcs),
-      ),
+      className: makeArcClass("left", HandleId.LeftMidBottom, showMidCornerArc(heightArcs)),
       style: { ...baseHandleStyle, top: ys6 },
     },
     {
@@ -486,12 +397,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.Left,
       position: Position.Left,
-      className: makeArcClass(
-        "left",
-        HandleId.Left,
-        showMiddleArc(heightArcs),
-        leftMiddleForce,
-      ),
+      className: makeArcClass("left", HandleId.Left, showMiddleArc(heightArcs), leftMiddleForce),
       style: { ...baseHandleStyle, top: ys4 },
     },
     {
@@ -502,11 +408,7 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.LeftMidTop,
       position: Position.Left,
-      className: makeArcClass(
-        "left",
-        HandleId.LeftMidTop,
-        showMidCornerArc(heightArcs),
-      ),
+      className: makeArcClass("left", HandleId.LeftMidTop, showMidCornerArc(heightArcs)),
       style: { ...baseHandleStyle, top: ys2 },
     },
     {
@@ -517,46 +419,35 @@ export function DefaultNodeWrapper({
     {
       id: HandleId.LeftTop,
       position: Position.Left,
-      className: makeArcClass(
-        "left",
-        HandleId.LeftTop,
-        showCornerArc(heightArcs),
-      ),
+      className: makeArcClass("left", HandleId.LeftTop, showCornerArc(heightArcs)),
       style: { ...baseHandleStyle, top: ys0 },
     },
-  ];
+  ]
 
-  const visibleHandleIds = new Set<HandleId>();
+  const visibleHandleIds = new Set<HandleId>()
   for (const handle of handles) {
-    if (handle.className) visibleHandleIds.add(handle.id);
+    if (handle.className) visibleHandleIds.add(handle.id)
   }
 
   return (
     <AssessmentSelectableWrapper elementId={elementId}>
-      <FeedbackDropzone
-        elementId={elementId}
-        asElement="div"
-        elementType={nodeType}
-      >
+      <FeedbackDropzone elementId={elementId} asElement="div" elementType={nodeType}>
         {hiddenHandles !== true && (
           <>
             {handles.map((handle) => {
               if (isHandleHiddenByProp(handle.id)) {
-                return null;
+                return null
               }
 
-              if (
-                !visibleHandleIds.has(handle.id) &&
-                !connectedHandleIds.has(handle.id)
-              ) {
-                return null;
+              if (!visibleHandleIds.has(handle.id) && !connectedHandleIds.has(handle.id)) {
+                return null
               }
 
-              const isPrimaryHandle = visibleHandleIds.has(handle.id);
+              const isPrimaryHandle = visibleHandleIds.has(handle.id)
               const isGuidanceSourceHandle =
                 connectionGuidanceActive &&
                 elementId === connectionGuidanceSourceNodeId &&
-                handle.id === connectionGuidanceSourceHandleId;
+                handle.id === connectionGuidanceSourceHandleId
 
               return (
                 <Handle
@@ -564,9 +455,7 @@ export function DefaultNodeWrapper({
                   id={handle.id}
                   className={[
                     handle.className,
-                    isGuidanceSourceHandle
-                      ? "umlstudio-connection-guidance-source"
-                      : "",
+                    isGuidanceSourceHandle ? "umlstudio-connection-guidance-source" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -585,7 +474,7 @@ export function DefaultNodeWrapper({
                   isConnectableStart={isPrimaryHandle && isDiagramModifiable}
                   isConnectableEnd={isConnectableEnd}
                 />
-              );
+              )
             })}
           </>
         )}
@@ -593,5 +482,5 @@ export function DefaultNodeWrapper({
         {children}
       </FeedbackDropzone>
     </AssessmentSelectableWrapper>
-  );
+  )
 }
