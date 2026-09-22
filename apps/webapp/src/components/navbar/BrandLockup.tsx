@@ -1,4 +1,4 @@
-import { appVersion } from "@/constants";
+import { appVersion } from "@/constants"
 
 export const BrandLockup = () => {
   return (
@@ -26,5 +26,5 @@ export const BrandLockup = () => {
         UmlStudio
       </span>
     </div>
-  );
-};
+  )
+}

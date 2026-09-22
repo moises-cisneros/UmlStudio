@@ -1,4 +1,4 @@
-import { ClassNodeElement, ClassNodeProps } from "@/types"
+import { ClassNodeElement, ClassNodeProps, ClassStereotype } from "@/types"
 import { LAYOUT } from "@/constants"
 import { SeparationLine } from "@/components/svgs/nodes/SeparationLine"
 import { HeaderSection } from "../HeaderSection"
@@ -24,7 +24,18 @@ export const ClassSVG = ({
   showAssessmentResults = false,
   data,
 }: ClassSVGProps) => {
-  const { attributes, methods, name, stereotype, isAbstract } = data
+  const { name = "", stereotype, isAbstract = false } = data || {}
+  const rawAttrs = Array.isArray(data?.attributes) ? data.attributes : []
+  const rawMeths = Array.isArray(data?.methods) ? data.methods : []
+  const attributes = rawAttrs.filter((a) => a && typeof a.name === "string")
+  const methods = rawMeths.filter((m) => m && typeof m.name === "string")
+
+  const isEnumeration =
+    stereotype === ClassStereotype.Enumeration ||
+    (stereotype as unknown as string) === "<<enumeration>>"
+
+  const reserveCompartments = !isEnumeration
+
   const showStereotype = !!stereotype
   const headerHeight = showStereotype
     ? LAYOUT.DEFAULT_HEADER_HEIGHT_WITH_STEREOTYPE
@@ -32,6 +43,12 @@ export const ClassSVG = ({
   const attributeHeight = LAYOUT.DEFAULT_ATTRIBUTE_HEIGHT
   const methodHeight = LAYOUT.DEFAULT_METHOD_HEIGHT
   const padding = LAYOUT.DEFAULT_PADDING
+
+  const effectiveAttrCount = reserveCompartments
+    ? Math.max(1, attributes.length)
+    : attributes.length
+  const attrCompartmentHeight = effectiveAttrCount * attributeHeight
+  const shouldShowMethodsCompartment = !isEnumeration
 
   const assessments = useDiagramStore(useShallow((state) => state.assessments))
 
@@ -69,15 +86,9 @@ export const ClassSVG = ({
           ) : undefined
         }
       >
-        <StyledRect
-          x={0}
-          y={0}
-          width={width}
-          height={height}
-          stroke={strokeColor}
-        />
+        <StyledRect x={0} y={0} width={width} height={height} stroke={strokeColor} />
 
-                <HeaderSection
+        <HeaderSection
           showStereotype={showStereotype}
           stereotype={stereotype}
           name={name}
@@ -89,29 +100,24 @@ export const ClassSVG = ({
         />
       </AssessmentSelectableElement>
 
-            {attributes.length >= 0 && (
-        <>
-                    <SeparationLine
-            y={headerHeight}
-            width={width}
-            strokeColor={strokeColor}
-          />
-          <RowBlockSection
-            items={processedAttributes}
-            padding={padding}
-            itemHeight={attributeHeight}
-            width={width}
-            offsetFromTop={headerHeight}
-            showAssessmentResults={showAssessmentResults}
-            itemElementType="attribute"
-          />
-        </>
+      {(effectiveAttrCount > 0 || shouldShowMethodsCompartment) && (
+        <SeparationLine y={headerHeight} width={width} strokeColor={strokeColor} />
       )}
 
-            {methods.length >= 0 && (
+      <RowBlockSection
+        items={processedAttributes}
+        padding={padding}
+        itemHeight={attributeHeight}
+        width={width}
+        offsetFromTop={headerHeight}
+        showAssessmentResults={showAssessmentResults}
+        itemElementType="attribute"
+      />
+
+      {shouldShowMethodsCompartment && (
         <>
           <SeparationLine
-            y={headerHeight + attributes.length * attributeHeight}
+            y={headerHeight + attrCompartmentHeight}
             width={width}
             strokeColor={strokeColor}
           />
@@ -120,7 +126,7 @@ export const ClassSVG = ({
             padding={padding}
             itemHeight={methodHeight}
             width={width}
-            offsetFromTop={headerHeight + attributes.length * methodHeight}
+            offsetFromTop={headerHeight + attrCompartmentHeight}
             showAssessmentResults={showAssessmentResults}
             itemElementType="method"
           />

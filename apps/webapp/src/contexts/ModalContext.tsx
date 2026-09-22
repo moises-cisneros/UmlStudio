@@ -1,53 +1,45 @@
-import React, {
-  createContext,
-  lazy,
-  Suspense,
-  useContext,
-  useState,
-  ReactNode,
-  useMemo,
-} from "react";
-import { ModalName, ModalProps } from "@/types";
+import React, { createContext, lazy, Suspense, use, useState, ReactNode, useMemo } from "react"
+import { ModalName, ModalProps } from "@/types"
 
 const ModalWrapper = lazy(() =>
   import("@/wrappers/ModalWrapper").then((module) => ({
     default: module.ModalWrapper,
-  })),
-);
+  }))
+)
 
 interface ModalContextType {
-  openModal: (name: ModalName, props?: ModalProps) => void;
-  closeModal: () => void;
-  currentModal: { name: ModalName; props?: ModalProps } | null;
+  openModal: (name: ModalName, props?: ModalProps) => void
+  closeModal: () => void
+  currentModal: { name: ModalName; props?: ModalProps } | null
 }
 
-const ModalContext = createContext<ModalContextType | undefined>(undefined);
+const ModalContext = createContext<ModalContextType | undefined>(undefined)
 
 export const useModalContext = () => {
-  const context = useContext(ModalContext);
+  const context = use(ModalContext)
   if (!context) {
-    throw new Error("useModalContext must be used within a ModalProvider");
+    throw new Error("useModalContext must be used within a ModalProvider")
   }
-  return context;
-};
+  return context
+}
 
 interface Props {
-  children: ReactNode;
+  children: ReactNode
 }
 
 export const ModalProvider: React.FC<Props> = ({ children }) => {
   const [currentModal, setCurrentModal] = useState<{
-    name: ModalName;
-    props?: ModalProps;
-  } | null>(null);
+    name: ModalName
+    props?: ModalProps
+  } | null>(null)
 
   const openModal = (name: ModalName, props?: ModalProps) => {
-    setCurrentModal({ name, props });
-  };
+    setCurrentModal({ name, props })
+  }
 
   const closeModal = () => {
-    setCurrentModal(null);
-  };
+    setCurrentModal(null)
+  }
 
   const contextValue = useMemo(
     () => ({
@@ -55,11 +47,11 @@ export const ModalProvider: React.FC<Props> = ({ children }) => {
       closeModal,
       currentModal,
     }),
-    [currentModal],
-  );
+    [currentModal]
+  )
 
   return (
-    <ModalContext.Provider value={contextValue}>
+    <ModalContext value={contextValue}>
       {children}
 
       {currentModal && (
@@ -71,6 +63,6 @@ export const ModalProvider: React.FC<Props> = ({ children }) => {
           />
         </Suspense>
       )}
-    </ModalContext.Provider>
-  );
-};
+    </ModalContext>
+  )
+}

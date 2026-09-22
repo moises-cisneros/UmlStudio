@@ -1,34 +1,34 @@
-import { LocalVersionRepository } from "./LocalVersionRepository";
-import { RemoteVersionRepository } from "./RemoteVersionRepository";
-import type { VersionRepository } from "./types";
+import { LocalVersionRepository } from "./LocalVersionRepository"
+import { RemoteVersionRepository } from "./RemoteVersionRepository"
+import type { VersionRepository } from "./types"
 
-export type RepositoryKind = VersionRepository["kind"];
+export type RepositoryKind = VersionRepository["kind"]
 
 const adapters: Record<RepositoryKind, VersionRepository> = {
   local: LocalVersionRepository,
   remote: RemoteVersionRepository,
-};
+}
 
 export function getVersionRepository(kind: RepositoryKind): VersionRepository {
-  return adapters[kind];
+  return adapters[kind]
 }
 
 export function setVersionRepository(
   kind: RepositoryKind,
-  repository: VersionRepository,
+  repository: VersionRepository
 ): () => void {
-  const previous = adapters[kind];
-  adapters[kind] = repository;
+  const previous = adapters[kind]
+  adapters[kind] = repository
   return () => {
-    adapters[kind] = previous;
-  };
+    adapters[kind] = previous
+  }
 }
 
-export { LocalVersionRepository, RemoteVersionRepository };
-export { subscribeToLocalVersionEvents } from "./LocalVersionRepository";
+export { LocalVersionRepository, RemoteVersionRepository }
+export { subscribeToLocalVersionEvents } from "./LocalVersionRepository"
 export type {
   VersionRepository,
   ListVersionsResponse,
   CreateVersionResult,
   RestoreVersionResult,
-} from "./types";
+} from "./types"

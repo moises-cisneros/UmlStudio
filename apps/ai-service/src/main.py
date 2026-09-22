@@ -66,7 +66,7 @@ async def get_providers() -> Dict[str, Any]:
     }
 
 
-@app.post("/api/chat", response_model=ChatResponse)
+@app.post("/api/chat", response_model=ChatResponse, response_model_exclude_none=True)
 async def process_chat(request: ChatRequest) -> ChatResponse:
     """
     Text-based chat endpoint:
@@ -83,6 +83,18 @@ async def process_chat(request: ChatRequest) -> ChatResponse:
         )
     except ValueError as val_err:
         raise HTTPException(status_code=400, detail=str(val_err))
+    except RuntimeError as r_err:
+        if "No hay modelos" in str(r_err):
+            from .models.uml import ModelDiff, DiffAddBlock
+            return ChatResponse(
+                provider="none",
+                diff=ModelDiff(add=DiffAddBlock(elements=[], relationships=[])),
+                message=str(r_err),
+            )
+        raise HTTPException(
+            status_code=502,
+            detail=f"Fallo en pipeline de IA: {str(r_err)}",
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=502,
@@ -90,7 +102,7 @@ async def process_chat(request: ChatRequest) -> ChatResponse:
         )
 
 
-@app.post("/api/chat/voice", response_model=ChatResponse)
+@app.post("/api/chat/voice", response_model=ChatResponse, response_model_exclude_none=True)
 async def process_voice_chat(
     file: UploadFile = File(...),
     model: Optional[str] = Form(None),
@@ -123,6 +135,18 @@ async def process_voice_chat(
         )
     except ValueError as val_err:
         raise HTTPException(status_code=400, detail=str(val_err))
+    except RuntimeError as r_err:
+        if "No hay modelos" in str(r_err):
+            from .models.uml import ModelDiff, DiffAddBlock
+            return ChatResponse(
+                provider="none",
+                diff=ModelDiff(add=DiffAddBlock(elements=[], relationships=[])),
+                message=str(r_err),
+            )
+        raise HTTPException(
+            status_code=502,
+            detail=f"Fallo en pipeline de voz y LLM: {str(r_err)}",
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=502,

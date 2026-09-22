@@ -35,28 +35,12 @@ export type V3UMLPetriNetPlace = {
 }
 
 export type V3BPMNTask = {
-  taskType:
-    | "default"
-    | "user"
-    | "send"
-    | "receive"
-    | "manual"
-    | "business-rule"
-    | "script"
-  marker:
-    | "none"
-    | "parallel multi instance"
-    | "sequential multi instance"
-    | "loop"
+  taskType: "default" | "user" | "send" | "receive" | "manual" | "business-rule" | "script"
+  marker: "none" | "parallel multi instance" | "sequential multi instance" | "loop"
 }
 
 export type V3BPMNGateway = {
-  gatewayType:
-    | "complex"
-    | "event-based"
-    | "exclusive"
-    | "inclusive"
-    | "parallel"
+  gatewayType: "complex" | "event-based" | "exclusive" | "inclusive" | "parallel"
 }
 
 export type V3BPMNStartEvent = {
@@ -205,4 +189,3 @@ export type BPMNTaskProps = any
 export type BPMNEventProps = any
 export type BPMNGatewayProps = any
 export type ReachabilityGraphMarkingProps = any
-

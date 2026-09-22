@@ -1,14 +1,14 @@
-import { Link } from "@tanstack/react-router";
-import { TooltipProvider } from "@umlstudio/ui/components/tooltip";
-import { Island, GroupDivider } from "./islandPrimitives";
-import { BackNav } from "./BackNav";
-import { BrandLockup } from "./BrandLockup";
-import { ThemeSwitcherMenu } from "./ThemeSwitcher";
-import { HomeHelpMenu } from "@/components/home/HomeHelpMenu";
-import { useBackTarget } from "@/hooks/useBackTarget";
+import { Link } from "@tanstack/react-router"
+import { TooltipProvider } from "@umlstudio/ui/components/tooltip"
+import { Island, GroupDivider } from "./islandPrimitives"
+import { BackNav } from "./BackNav"
+import { BrandLockup } from "./BrandLockup"
+import { ThemeSwitcherMenu } from "./ThemeSwitcher"
+import { HomeHelpMenu } from "@/components/home/HomeHelpMenu"
+import { useBackTarget } from "@/hooks/useBackTarget"
 
 export const ChromeSubHeader = () => {
-  const backTarget = useBackTarget();
+  const backTarget = useBackTarget()
 
   return (
     <TooltipProvider>
@@ -23,11 +23,7 @@ export const ChromeSubHeader = () => {
           </Link>
           <GroupDivider />
 
-          <BackNav
-            {...backTarget}
-            tone="onDark"
-            labelClassName="hidden min-[360px]:inline"
-          />
+          <BackNav {...backTarget} tone="onDark" labelClassName="hidden min-[360px]:inline" />
         </Island>
 
         <div className="flex-1" />
@@ -38,5 +34,5 @@ export const ChromeSubHeader = () => {
         </Island>
       </div>
     </TooltipProvider>
-  );
-};
+  )
+}

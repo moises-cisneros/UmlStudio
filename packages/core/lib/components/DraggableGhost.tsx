@@ -33,13 +33,9 @@ interface DraggableGhostProps {
   dropElementConfig: DropElementConfig
 }
 
-export const DraggableGhost: React.FC<DraggableGhostProps> = ({
-  children,
-  dropElementConfig,
-}) => {
+export const DraggableGhost: React.FC<DraggableGhostProps> = ({ children, dropElementConfig }) => {
   const { getViewport } = useReactFlow()
-  const { dropAtPointer, placeAtViewportCenter } =
-    usePalettePlacement(dropElementConfig)
+  const { dropAtPointer, placeAtViewportCenter } = usePalettePlacement(dropElementConfig)
   const { addElementLabel, nodeTypeLabel } = useMetadataStore(
     useShallow((state) => ({
       addElementLabel: state.labels.addElement,
@@ -49,8 +45,7 @@ export const DraggableGhost: React.FC<DraggableGhostProps> = ({
   const portalContainer = useUmlStudioPortalContainer()
 
   const ghostDropWidth = dropElementConfig.dropWidth ?? dropElementConfig.width
-  const ghostDropHeight =
-    dropElementConfig.dropHeight ?? dropElementConfig.height
+  const ghostDropHeight = dropElementConfig.dropHeight ?? dropElementConfig.height
 
   const [isDragging, setIsDragging] = useState(false)
   const [ghostPosition, setGhostPosition] = useState({ x: 0, y: 0 })
@@ -76,17 +71,13 @@ export const DraggableGhost: React.FC<DraggableGhostProps> = ({
     setGhostTheme({
       vars: resolveUmlStudioThemeVars(event.currentTarget),
       dataTheme:
-        event.currentTarget
-          .closest("[data-theme]")
-          ?.getAttribute("data-theme") ?? undefined,
+        event.currentTarget.closest("[data-theme]")?.getAttribute("data-theme") ?? undefined,
     })
 
     const previewElement = event.currentTarget.querySelector<HTMLElement>(
       "[data-draggable-preview]"
     )
-    const previewRect = (
-      previewElement ?? event.currentTarget
-    ).getBoundingClientRect()
+    const previewRect = (previewElement ?? event.currentTarget).getBoundingClientRect()
     const previewScale = previewRect.width / dropElementConfig.width || 1
     const grabOffset = {
       x:
@@ -113,63 +104,64 @@ export const DraggableGhost: React.FC<DraggableGhostProps> = ({
     setIsDragging(true)
   }
 
-  const handlePointerMove = (event: PointerEvent) => {
-    if (!isDragging) return
-    if (startRef.current) {
-      const travelled = Math.hypot(
-        event.clientX - startRef.current.x,
-        event.clientY - startRef.current.y
-      )
-      if (travelled > maxTravelRef.current) maxTravelRef.current = travelled
-    }
-    setGhostPosition({
-      x: event.clientX - ghostOffset.x,
-      y: event.clientY - ghostOffset.y,
-    })
-  }
-
-  const resetDrag = () => {
-    enableScroll()
-    setIsDragging(false)
-    setGhostPosition({ x: 0, y: 0 })
-  }
-
   const dropRef = useRef(dropAtPointer)
   useEffect(() => {
     dropRef.current = dropAtPointer
   }, [dropAtPointer])
 
-  const suppressTrailingClick = () => {
-    draggedRef.current = true
-    window.setTimeout(() => {
-      draggedRef.current = false
-    }, 0)
-  }
-
-  const handlePointerUp = (event: PointerEvent) => {
-    resetDrag()
-    const slop =
-      pointerTypeRef.current === "touch"
-        ? DROPS.TAP_SLOP_TOUCH_PX
-        : DROPS.TAP_SLOP_MOUSE_PX
-    const placed =
-      maxTravelRef.current >= slop &&
-      dropRef.current(event, grabOffsetRef.current)
-    if (placed) suppressTrailingClick()
-    else draggedRef.current = false
-  }
-
-  const handlePointerCancel = () => {
-    suppressTrailingClick()
-    resetDrag()
-  }
-
   useEffect(() => {
     if (!isDragging) return
+    let trailingClickTimer: number | null = null
+
+    const resetDrag = () => {
+      enableScroll()
+      setIsDragging(false)
+      setGhostPosition({ x: 0, y: 0 })
+    }
+
+    const suppressTrailingClick = () => {
+      draggedRef.current = true
+      trailingClickTimer = window.setTimeout(() => {
+        draggedRef.current = false
+        trailingClickTimer = null
+      }, 0)
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (startRef.current) {
+        const travelled = Math.hypot(
+          event.clientX - startRef.current.x,
+          event.clientY - startRef.current.y
+        )
+        if (travelled > maxTravelRef.current) maxTravelRef.current = travelled
+      }
+      setGhostPosition({
+        x: event.clientX - ghostOffset.x,
+        y: event.clientY - ghostOffset.y,
+      })
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      resetDrag()
+      const slop =
+        pointerTypeRef.current === "touch" ? DROPS.TAP_SLOP_TOUCH_PX : DROPS.TAP_SLOP_MOUSE_PX
+      const placed = maxTravelRef.current >= slop && dropRef.current(event, grabOffsetRef.current)
+      if (placed) suppressTrailingClick()
+      else draggedRef.current = false
+    }
+
+    const handlePointerCancel = () => {
+      suppressTrailingClick()
+      resetDrag()
+    }
+
     document.addEventListener("pointermove", handlePointerMove)
     document.addEventListener("pointerup", handlePointerUp)
     document.addEventListener("pointercancel", handlePointerCancel)
     return () => {
+      if (trailingClickTimer !== null) {
+        window.clearTimeout(trailingClickTimer)
+      }
       document.removeEventListener("pointermove", handlePointerMove)
       document.removeEventListener("pointerup", handlePointerUp)
       document.removeEventListener("pointercancel", handlePointerCancel)
@@ -198,7 +190,7 @@ export const DraggableGhost: React.FC<DraggableGhostProps> = ({
         opacity: 0.8,
       }}
     >
-            {React.createElement(dropElementConfig.svg, {
+      {React.createElement(dropElementConfig.svg, {
         width: ghostDropWidth,
         height: ghostDropHeight,
         ...dropElementConfig.defaultData,
@@ -209,8 +201,7 @@ export const DraggableGhost: React.FC<DraggableGhostProps> = ({
   )
 
   const elementName =
-    typeof dropElementConfig.defaultData?.name === "string" &&
-    dropElementConfig.defaultData.name
+    typeof dropElementConfig.defaultData?.name === "string" && dropElementConfig.defaultData.name
       ? (dropElementConfig.defaultData.name as string)
       : nodeTypeLabel(dropElementConfig.type)
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { BookOpen, Keyboard } from "lucide-react"
 import { UMLSTUDIO_SHORTCUTS, type UmlStudioShortcutId } from "@umlstudio/core"
 import { Button } from "@umlstudio/ui/components/button"
 import { DialogFooter } from "@umlstudio/ui/components/dialog"
@@ -312,8 +313,30 @@ export const HowToUseModal = ({ variant, isMac, onClose }: HowToUseModalProps) =
           <Shortcuts groups={shortcutGroups(caps, variant, t)} caps={caps} t={t} />
         </TabsContent>
       </Tabs>
-      <DialogFooter className="pt-2">
-        <Button variant="outline" onClick={onClose} className="rounded-xl">
+      <DialogFooter className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-xl text-xs gap-1.5"
+            onClick={() => window.open("/docs", "_blank", "noopener,noreferrer")}
+          >
+            <BookOpen className="size-3.5" />
+            {t.help.openFullDocs}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-xl text-xs gap-1.5"
+            onClick={() =>
+              window.open("/docs/atajos-de-teclado/atajos", "_blank", "noopener,noreferrer")
+            }
+          >
+            <Keyboard className="size-3.5" />
+            {t.help.viewAllShortcuts}
+          </Button>
+        </div>
+        <Button variant="outline" onClick={onClose} className="rounded-xl w-full sm:w-auto">
           {t.help.close}
         </Button>
       </DialogFooter>

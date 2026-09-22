@@ -1,14 +1,10 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vitest/config"
 
 export default defineConfig({
   test: {
     globals: false,
     environment: "node",
-    include: [
-      "src/**/*.test.ts",
-      "src/__tests__/**/*.test.ts",
-      "test/**/*.test.ts",
-    ],
+    include: ["src/**/*.test.ts", "src/__tests__/**/*.test.ts", "test/**/*.test.ts"],
     exclude: ["node_modules", "dist"],
     pool: "forks",
     maxWorkers: 1,
@@ -18,4 +14,4 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 60_000,
   },
-});
+})

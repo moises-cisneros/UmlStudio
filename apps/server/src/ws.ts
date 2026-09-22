@@ -1,80 +1,76 @@
-import WebSocket, { WebSocketServer } from "ws";
-import type { IncomingMessage } from "http";
-import { URL } from "url";
-import { logger } from "./logger.js";
-import type { ControlEvent, Envelope } from "./types.js";
+import WebSocket, { WebSocketServer } from "ws"
+import type { IncomingMessage } from "http"
+import { URL } from "url"
+import { logger } from "./logger.js"
+import type { ControlEvent, Envelope } from "./types.js"
 import {
   applyAwarenessUpdate,
   Awareness,
   encodeAwarenessUpdate,
   removeAwarenessStates,
-} from "y-protocols/awareness";
-import * as Y from "yjs";
-import * as decoding from "lib0/decoding";
-import { productivityCollector } from "./services/productivity-collector.js";
+} from "y-protocols/awareness"
+import * as Y from "yjs"
+import * as decoding from "lib0/decoding"
+import { productivityCollector } from "./services/productivity-collector.js"
 
-const AWARENESS_MSG_TYPE = 3;
-const DIAGRAM_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const AWARENESS_MSG_TYPE = 3
+const DIAGRAM_ID_RE = /^[A-Za-z0-9_-]{1,64}$/
 
 type RoomAwarenessState = {
-  doc: Y.Doc;
-  awareness: Awareness;
-};
+  doc: Y.Doc
+  awareness: Awareness
+}
 
 interface ExtendedWebSocket extends WebSocket {
-  diagramId?: string;
-  userId?: string;
+  diagramId?: string
+  userId?: string
 }
 
 interface RelayServer {
-  publishControl: (diagramId: string, control: ControlEvent) => void;
-  close: () => Promise<void>;
-  roomCount: () => number;
+  publishControl: (diagramId: string, control: ControlEvent) => void
+  close: () => Promise<void>
+  roomCount: () => number
 }
 
 interface StartOptions {
-  port: number;
-  host?: string;
-  maxSocketsPerRoom?: number;
-  verifyToken?: (token: string) => Promise<string>;
+  port: number
+  host?: string
+  maxSocketsPerRoom?: number
+  verifyToken?: (token: string) => Promise<string>
 }
 
 /** Close code for rejected shared-room joins (app-level unauthorized). */
-export const WS_UNAUTHORIZED_CLOSE_CODE = 4401;
+export const WS_UNAUTHORIZED_CLOSE_CODE = 4401
 
-const MAX_PAYLOAD_BYTES = 1_048_576;
+const MAX_PAYLOAD_BYTES = 1_048_576
 
-const HEARTBEAT_INTERVAL_MS = 30_000;
-const DEFAULT_MAX_SOCKETS_PER_ROOM = 100;
+const HEARTBEAT_INTERVAL_MS = 30_000
+const DEFAULT_MAX_SOCKETS_PER_ROOM = 100
 
 interface ExtendedWebSocketWithAlive extends ExtendedWebSocket {
-  isAlive?: boolean;
+  isAlive?: boolean
 }
 
 export function startRelayServer(opts: StartOptions): RelayServer {
-  const maxSocketsPerRoom =
-    opts.maxSocketsPerRoom ?? DEFAULT_MAX_SOCKETS_PER_ROOM;
+  const maxSocketsPerRoom = opts.maxSocketsPerRoom ?? DEFAULT_MAX_SOCKETS_PER_ROOM
   const wss = new WebSocketServer({
     port: opts.port,
     host: opts.host,
     maxPayload: MAX_PAYLOAD_BYTES,
     perMessageDeflate: false,
-  });
-  const rooms: Map<string, Set<ExtendedWebSocket>> = new Map();
-  const roomAwarenessStates: Map<string, RoomAwarenessState> = new Map();
-  const awarenessClientIdsBySocket = new WeakMap<
-    ExtendedWebSocket,
-    Set<number>
-  >();
+  })
+  const rooms: Map<string, Set<ExtendedWebSocket>> = new Map()
+  const roomAwarenessStates: Map<string, RoomAwarenessState> = new Map()
+  const awarenessClientIdsBySocket = new WeakMap<ExtendedWebSocket, Set<number>>()
 
   function getOrCreateAwarenessState(diagramId: string): RoomAwarenessState {
-    const existing = roomAwarenessStates.get(diagramId);
-    if (existing) return existing;
-    const doc = new Y.Doc();
-    const awareness = new Awareness(doc);
-    const state: RoomAwarenessState = { doc, awareness };
-    roomAwarenessStates.set(diagramId, state);
-    return state;
+    const existing = roomAwarenessStates.get(diagramId)
+    if (existing) return existing
+    const doc = new Y.Doc()
+    const awareness = new Awareness(doc)
+    const state: RoomAwarenessState = { doc, awareness }
+    roomAwarenessStates.set(diagramId, state)
+    return state
   }
 
   /**
@@ -82,28 +78,28 @@ export function startRelayServer(opts: StartOptions): RelayServer {
    * are present (non-null state) or removed (null state).
    */
   function decodeAwarenessUpdateClients(update: Uint8Array): {
-    present: number[];
-    removed: number[];
+    present: number[]
+    removed: number[]
   } {
-    const present: number[] = [];
-    const removed: number[] = [];
+    const present: number[] = []
+    const removed: number[] = []
     try {
-      const decoder = decoding.createDecoder(update);
-      const len = decoding.readVarUint(decoder);
+      const decoder = decoding.createDecoder(update)
+      const len = decoding.readVarUint(decoder)
       for (let i = 0; i < len; i++) {
-        const clientId = decoding.readVarUint(decoder);
-        decoding.readVarUint(decoder); // clock
-        const state = JSON.parse(decoding.readVarString(decoder));
+        const clientId = decoding.readVarUint(decoder)
+        decoding.readVarUint(decoder) // clock
+        const state = JSON.parse(decoding.readVarString(decoder))
         if (state === null) {
-          removed.push(clientId);
+          removed.push(clientId)
         } else {
-          present.push(clientId);
+          present.push(clientId)
         }
       }
     } catch {
       // Decode error ignored for malformed awareness frame
     }
-    return { present, removed };
+    return { present, removed }
   }
 
   /**
@@ -113,164 +109,147 @@ export function startRelayServer(opts: StartOptions): RelayServer {
   function broadcastAwarenessRemoval(
     diagramId: string,
     disconnectedSocket: ExtendedWebSocket,
-    removedClientIds: number[],
+    removedClientIds: number[]
   ): void {
-    if (removedClientIds.length === 0) return;
-    const roomState = roomAwarenessStates.get(diagramId);
-    if (!roomState) return;
+    if (removedClientIds.length === 0) return
+    const roomState = roomAwarenessStates.get(diagramId)
+    if (!roomState) return
 
-    const known = removedClientIds.filter((id) =>
-      roomState.awareness.meta.has(id),
-    );
-    if (known.length === 0) return;
+    const known = removedClientIds.filter((id) => roomState.awareness.meta.has(id))
+    if (known.length === 0) return
 
-    removeAwarenessStates(roomState.awareness, known, disconnectedSocket);
+    removeAwarenessStates(roomState.awareness, known, disconnectedSocket)
 
-    const awarenessUpdate = encodeAwarenessUpdate(roomState.awareness, known);
-    const framedUpdate = new Uint8Array(1 + awarenessUpdate.length);
-    framedUpdate[0] = AWARENESS_MSG_TYPE;
-    framedUpdate.set(awarenessUpdate, 1);
+    const awarenessUpdate = encodeAwarenessUpdate(roomState.awareness, known)
+    const framedUpdate = new Uint8Array(1 + awarenessUpdate.length)
+    framedUpdate[0] = AWARENESS_MSG_TYPE
+    framedUpdate.set(awarenessUpdate, 1)
 
     const payload = JSON.stringify({
       diagramData: Buffer.from(framedUpdate).toString("base64"),
-    });
+    })
 
-    const room = rooms.get(diagramId);
-    if (!room) return;
+    const room = rooms.get(diagramId)
+    if (!room) return
     for (const client of room) {
-      if (client === disconnectedSocket) continue;
-      if (client.readyState !== WebSocket.OPEN) continue;
+      if (client === disconnectedSocket) continue
+      if (client.readyState !== WebSocket.OPEN) continue
       try {
-        client.send(payload);
+        client.send(payload)
       } catch (err) {
-        logger.error({ err, diagramId }, "ws awareness removal send failed");
+        logger.error({ err, diagramId }, "ws awareness removal send failed")
       }
     }
   }
 
   wss.on("error", (err: NodeJS.ErrnoException) => {
-    logger.error({ err, code: err.code }, "ws server error");
-  });
+    logger.error({ err, code: err.code }, "ws server error")
+  })
 
-  wss.on(
-    "connection",
-    (ws: ExtendedWebSocketWithAlive, request: IncomingMessage) => {
-      void handleConnection(ws, request);
-    },
-  );
+  wss.on("connection", (ws: ExtendedWebSocketWithAlive, request: IncomingMessage) => {
+    void handleConnection(ws, request)
+  })
 
   async function handleConnection(
     ws: ExtendedWebSocketWithAlive,
-    request: IncomingMessage,
+    request: IncomingMessage
   ): Promise<void> {
-    const url = new URL(request.url ?? "", `http://${request.headers.host}`);
-    const diagramId = url.searchParams.get("diagramId");
+    const url = new URL(request.url ?? "", `http://${request.headers.host}`)
+    const diagramId = url.searchParams.get("diagramId")
     if (!diagramId || !DIAGRAM_ID_RE.test(diagramId)) {
-      ws.close(1008, "Invalid diagramId");
-      return;
+      ws.close(1008, "Invalid diagramId")
+      return
     }
 
-    const mode = url.searchParams.get("mode") ?? "local";
+    const mode = url.searchParams.get("mode") ?? "local"
     if (mode === "shared") {
-      const token = url.searchParams.get("token");
+      const token = url.searchParams.get("token")
       if (!token || !opts.verifyToken) {
-        ws.close(WS_UNAUTHORIZED_CLOSE_CODE, "Authentication required");
-        return;
+        ws.close(WS_UNAUTHORIZED_CLOSE_CODE, "Authentication required")
+        return
       }
       try {
-        ws.userId = await opts.verifyToken(token);
+        ws.userId = await opts.verifyToken(token)
       } catch {
-        ws.close(WS_UNAUTHORIZED_CLOSE_CODE, "Authentication required");
-        return;
+        ws.close(WS_UNAUTHORIZED_CLOSE_CODE, "Authentication required")
+        return
       }
       // Token is verified then discarded — never logged.
       logger.info(
         { event: "ws.shared.join", diagramId, userId: ws.userId },
-        "ws shared join admitted",
-      );
+        "ws shared join admitted"
+      )
     }
-    ws.isAlive = true;
+    ws.isAlive = true
     ws.on("pong", () => {
-      ws.isAlive = true;
-    });
-    let room = rooms.get(diagramId);
+      ws.isAlive = true
+    })
+    let room = rooms.get(diagramId)
     if (!room) {
-      room = new Set();
-      rooms.set(diagramId, room);
+      room = new Set()
+      rooms.set(diagramId, room)
     }
     if (room.size >= maxSocketsPerRoom) {
-      logger.warn(
-        { diagramId, size: room.size },
-        "ws room over capacity, rejecting connection",
-      );
-      ws.close(1013, "Try again later");
-      return;
+      logger.warn({ diagramId, size: room.size }, "ws room over capacity, rejecting connection")
+      ws.close(1013, "Try again later")
+      return
     }
-    room.add(ws);
-    ws.diagramId = diagramId;
-    awarenessClientIdsBySocket.set(ws, new Set());
-    getOrCreateAwarenessState(diagramId);
+    room.add(ws)
+    ws.diagramId = diagramId
+    awarenessClientIdsBySocket.set(ws, new Set())
+    getOrCreateAwarenessState(diagramId)
 
     ws.on("message", (raw: WebSocket.RawData) => {
       const message =
-        typeof raw === "string"
-          ? raw
-          : raw instanceof Buffer
-            ? raw.toString("utf-8")
-            : "";
+        typeof raw === "string" ? raw : raw instanceof Buffer ? raw.toString("utf-8") : ""
 
       try {
-        const parsed = JSON.parse(message) as Record<string, unknown>;
+        const parsed = JSON.parse(message) as Record<string, unknown>
 
         if (typeof parsed.diagramData === "string") {
-          const roomState = roomAwarenessStates.get(diagramId);
+          const roomState = roomAwarenessStates.get(diagramId)
           if (roomState) {
-            const decoded = Buffer.from(parsed.diagramData, "base64");
+            const decoded = Buffer.from(parsed.diagramData, "base64")
             if (decoded.length > 0 && decoded[0] === AWARENESS_MSG_TYPE) {
-              const awarenessUpdate = new Uint8Array(decoded.subarray(1));
-              applyAwarenessUpdate(roomState.awareness, awarenessUpdate, ws);
+              const awarenessUpdate = new Uint8Array(decoded.subarray(1))
+              applyAwarenessUpdate(roomState.awareness, awarenessUpdate, ws)
 
-              const { present, removed } =
-                decodeAwarenessUpdateClients(awarenessUpdate);
-              const socketIds = awarenessClientIdsBySocket.get(ws);
+              const { present, removed } = decodeAwarenessUpdateClients(awarenessUpdate)
+              const socketIds = awarenessClientIdsBySocket.get(ws)
               if (socketIds) {
                 for (const id of present) {
-                  socketIds.add(id);
+                  socketIds.add(id)
                   const clientState = roomState.awareness.getStates().get(id) as
                     | Record<string, unknown>
-                    | undefined;
+                    | undefined
                   if (clientState) {
                     const user = clientState.user as
                       | { id?: string; name?: string; color?: string }
-                      | undefined;
-                    const effectiveUserId =
-                      ws.userId || user?.id || `client-${id}`;
-                    const effectiveUserName =
-                      user?.name || ws.userId || `User ${id}`;
-                    ws.userId = ws.userId || effectiveUserId;
+                      | undefined
+                    const effectiveUserId = ws.userId || user?.id || `client-${id}`
+                    const effectiveUserName = user?.name || ws.userId || `User ${id}`
+                    ws.userId = ws.userId || effectiveUserId
 
                     productivityCollector.recordActivity(diagramId, {
                       userId: effectiveUserId,
                       userName: effectiveUserName,
                       color: user?.color,
-                    });
+                    })
 
                     if ("selectedElementId" in clientState) {
-                      const selectedElementId = clientState.selectedElementId;
+                      const selectedElementId = clientState.selectedElementId
                       productivityCollector.recordNodeLock(
                         diagramId,
                         {
                           userId: effectiveUserId,
                           userName: effectiveUserName,
                         },
-                        typeof selectedElementId === "string"
-                          ? selectedElementId
-                          : null,
-                      );
+                        typeof selectedElementId === "string" ? selectedElementId : null
+                      )
                     }
                   }
                 }
-                for (const id of removed) socketIds.delete(id);
+                for (const id of removed) socketIds.delete(id)
               }
             }
           }
@@ -281,10 +260,9 @@ export function startRelayServer(opts: StartOptions): RelayServer {
           typeof parsed.telemetry === "object" &&
           parsed.telemetry !== null
         ) {
-          const t = parsed.telemetry as Record<string, unknown>;
+          const t = parsed.telemetry as Record<string, unknown>
           const effectiveUserId =
-            ws.userId ||
-            (typeof t.userId === "string" ? t.userId : "anonymous");
+            ws.userId || (typeof t.userId === "string" ? t.userId : "anonymous")
           productivityCollector.recordActivity(
             diagramId,
             {
@@ -293,25 +271,18 @@ export function startRelayServer(opts: StartOptions): RelayServer {
               color: typeof t.color === "string" ? t.color : undefined,
             },
             {
-              createdClasses:
-                typeof t.createdClasses === "number"
-                  ? t.createdClasses
-                  : undefined,
-              createdMethods:
-                typeof t.createdMethods === "number"
-                  ? t.createdMethods
-                  : undefined,
-              refactors:
-                typeof t.refactors === "number" ? t.refactors : undefined,
-            },
-          );
-          return;
+              createdClasses: typeof t.createdClasses === "number" ? t.createdClasses : undefined,
+              createdMethods: typeof t.createdMethods === "number" ? t.createdMethods : undefined,
+              refactors: typeof t.refactors === "number" ? t.refactors : undefined,
+            }
+          )
+          return
         }
 
         if (ws.userId) {
           productivityCollector.recordActivity(diagramId, {
             userId: ws.userId,
-          });
+          })
         }
 
         if (parsed.kind === "control") {
@@ -320,114 +291,114 @@ export function startRelayServer(opts: StartOptions): RelayServer {
               diagramId,
               type: (parsed as { control?: { type?: string } }).control?.type,
             },
-            "ws control envelope from client dropped",
-          );
-          return;
+            "ws control envelope from client dropped"
+          )
+          return
         }
       } catch {
         // Payload is not JSON or not a control envelope; ignore and treat as regular broadcast
       }
 
-      broadcast(rooms, diagramId, message, ws);
-    });
+      broadcast(rooms, diagramId, message, ws)
+    })
 
     ws.on("close", () => {
       if (ws.userId) {
-        productivityCollector.recordDisconnection(diagramId, ws.userId);
+        productivityCollector.recordDisconnection(diagramId, ws.userId)
       }
-      const r = rooms.get(diagramId);
+      const r = rooms.get(diagramId)
       if (r) {
-        r.delete(ws);
+        r.delete(ws)
 
         // Broadcast awareness removal for this socket's tracked clients
-        const socketIds = awarenessClientIdsBySocket.get(ws);
+        const socketIds = awarenessClientIdsBySocket.get(ws)
         if (socketIds && socketIds.size > 0) {
-          broadcastAwarenessRemoval(diagramId, ws, Array.from(socketIds));
+          broadcastAwarenessRemoval(diagramId, ws, Array.from(socketIds))
         }
 
         if (r.size === 0) {
-          rooms.delete(diagramId);
-          const roomState = roomAwarenessStates.get(diagramId);
+          rooms.delete(diagramId)
+          const roomState = roomAwarenessStates.get(diagramId)
           if (roomState) {
-            roomState.awareness.destroy();
-            roomState.doc.destroy();
-            roomAwarenessStates.delete(diagramId);
+            roomState.awareness.destroy()
+            roomState.doc.destroy()
+            roomAwarenessStates.delete(diagramId)
           }
         }
       }
-    });
+    })
 
     ws.on("error", (err: Error) => {
-      logger.error({ err, diagramId }, "ws client error");
-    });
+      logger.error({ err, diagramId }, "ws client error")
+    })
   }
 
   const heartbeatInterval = setInterval(() => {
     for (const room of rooms.values()) {
       for (const client of room) {
-        const alive = client as ExtendedWebSocketWithAlive;
+        const alive = client as ExtendedWebSocketWithAlive
         if (alive.isAlive === false) {
-          alive.terminate();
-          continue;
+          alive.terminate()
+          continue
         }
-        alive.isAlive = false;
+        alive.isAlive = false
         try {
-          alive.ping();
+          alive.ping()
         } catch {
-          alive.terminate();
+          alive.terminate()
         }
       }
     }
-  }, HEARTBEAT_INTERVAL_MS);
+  }, HEARTBEAT_INTERVAL_MS)
 
   function publishControl(diagramId: string, control: ControlEvent): void {
-    const envelope: Envelope = { kind: "control", control };
-    const message = JSON.stringify(envelope);
-    broadcast(rooms, diagramId, message, null);
+    const envelope: Envelope = { kind: "control", control }
+    const message = JSON.stringify(envelope)
+    broadcast(rooms, diagramId, message, null)
   }
 
   async function close(): Promise<void> {
-    clearInterval(heartbeatInterval);
+    clearInterval(heartbeatInterval)
     for (const room of rooms.values()) {
       for (const client of room) {
         try {
-          client.close();
+          client.close()
         } catch {
           // Ignore.
         }
       }
     }
-    rooms.clear();
-    await new Promise<void>((resolve) => wss.close(() => resolve()));
+    rooms.clear()
+    await new Promise<void>((resolve) => wss.close(() => resolve()))
   }
 
   logger.info(
     { event: "ws.start", host: opts.host ?? "0.0.0.0", port: opts.port },
-    "ws relay started",
-  );
+    "ws relay started"
+  )
 
   return {
     publishControl,
     close,
     roomCount: () => rooms.size,
-  };
+  }
 }
 
 function broadcast(
   rooms: Map<string, Set<ExtendedWebSocket>>,
   diagramId: string,
   message: string,
-  exclude: ExtendedWebSocket | null,
+  exclude: ExtendedWebSocket | null
 ): void {
-  const room = rooms.get(diagramId);
-  if (!room) return;
+  const room = rooms.get(diagramId)
+  if (!room) return
   for (const client of room) {
-    if (client === exclude) continue;
-    if (client.readyState !== WebSocket.OPEN) continue;
+    if (client === exclude) continue
+    if (client.readyState !== WebSocket.OPEN) continue
     try {
-      client.send(message);
+      client.send(message)
     } catch (err) {
-      logger.error({ err, diagramId }, "ws send failed");
+      logger.error({ err, diagramId }, "ws send failed")
     }
   }
 }

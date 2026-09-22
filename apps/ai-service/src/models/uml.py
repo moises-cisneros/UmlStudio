@@ -36,6 +36,7 @@ class DiffRelationshipAdd(BaseModel):
     sourceHandle: Optional[str] = None
     targetHandle: Optional[str] = None
     name: Optional[str] = None
+    associationClass: Optional[str] = None
 
 
 class DiffElementModifyChanges(BaseModel):
@@ -43,7 +44,14 @@ class DiffElementModifyChanges(BaseModel):
     stereotype: Optional[str] = None
     attributes: Optional[List[DiffAttribute]] = None
     methods: Optional[List[DiffMethod]] = None
+    removeAttributes: Optional[List[str]] = Field(default=None, alias="remove_attributes")
+    removeMethods: Optional[List[str]] = Field(default=None, alias="remove_methods")
     position: Optional[Dict[str, float]] = None
+
+    model_config = {
+        "populate_by_name": True,
+        "extra": "ignore",
+    }
 
 
 class DiffElementModify(BaseModel):
@@ -61,8 +69,13 @@ class DiffModifyBlock(BaseModel):
 
 
 class DiffRemoveBlock(BaseModel):
-    elementIds: Optional[List[str]] = None
-    relationshipIds: Optional[List[str]] = None
+    elementIds: Optional[List[str]] = Field(default=None, alias="element_ids")
+    relationshipIds: Optional[List[str]] = Field(default=None, alias="relationship_ids")
+
+    model_config = {
+        "populate_by_name": True,
+        "extra": "ignore",
+    }
 
 
 class ModelDiff(BaseModel):

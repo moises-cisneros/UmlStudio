@@ -1,29 +1,17 @@
-import { useMemo, useState, type CSSProperties } from "react";
-import {
-  MiniMap,
-  MiniMapNodeProps,
-  Panel,
-  useStore,
-  type PanelPosition,
-} from "@xyflow/react";
-import {
-  ArrowDownLeft,
-  ArrowDownRight,
-  ArrowUpLeft,
-  ArrowUpRight,
-  Compass,
-} from "lucide-react";
-import { useReactiveNode } from "@/hooks/useReactiveElement";
-import { useLabels } from "@/i18n/useLabels";
-import { ClassSVG, PackageSVG } from "./svgs";
-import { DiagramNodeType } from "@/typings";
-import { ClassNodeProps, DefaultNodeProps } from "@/types/nodes/NodeProps";
+import { useMemo, useState, type CSSProperties } from "react"
+import { MiniMap, MiniMapNodeProps, Panel, useStore, type PanelPosition } from "@xyflow/react"
+import { ArrowDownLeft, ArrowDownRight, ArrowUpLeft, ArrowUpRight, Compass } from "lucide-react"
+import { useReactiveNode } from "@/hooks/useReactiveElement"
+import { useLabels } from "@/i18n/useLabels"
+import { ClassSVG, PackageSVG } from "./svgs"
+import { DiagramNodeType } from "@/typings"
+import { ClassNodeProps, DefaultNodeProps } from "@/types/nodes/NodeProps"
 
 export interface CustomMiniMapProps {
-  position?: PanelPosition;
-  pannable?: boolean;
-  zoomable?: boolean;
-  managed?: boolean;
+  position?: PanelPosition
+  pannable?: boolean
+  zoomable?: boolean
+  managed?: boolean
 }
 
 const COLLAPSE_ARROW: Partial<Record<PanelPosition, typeof ArrowDownRight>> = {
@@ -33,9 +21,9 @@ const COLLAPSE_ARROW: Partial<Record<PanelPosition, typeof ArrowDownRight>> = {
   "bottom-left": ArrowDownLeft,
   "bottom-center": ArrowDownRight,
   "bottom-right": ArrowDownRight,
-};
+}
 
-const MINIMAP_EXPAND_MIN_WIDTH = 640;
+const MINIMAP_EXPAND_MIN_WIDTH = 640
 
 export const CustomMiniMap = ({
   position = "top-right",
@@ -43,25 +31,24 @@ export const CustomMiniMap = ({
   zoomable = true,
   managed = false,
 }: CustomMiniMapProps = {}) => {
-  const [minimapCollapsed, setMinimapCollapsed] = useState(true);
-  const t = useLabels();
-  const CollapseArrow = COLLAPSE_ARROW[position] ?? ArrowDownRight;
-  const canvasWidth = useStore((s) => s.width);
-  const tooNarrowToExpand =
-    canvasWidth > 0 && canvasWidth < MINIMAP_EXPAND_MIN_WIDTH;
+  const [minimapCollapsed, setMinimapCollapsed] = useState(true)
+  const t = useLabels()
+  const CollapseArrow = COLLAPSE_ARROW[position] ?? ArrowDownRight
+  const canvasWidth = useStore((s) => s.width)
+  const tooNarrowToExpand = canvasWidth > 0 && canvasWidth < MINIMAP_EXPAND_MIN_WIDTH
 
-  const panelPositionClasses = position.replace("-", " ");
+  const panelPositionClasses = position.replace("-", " ")
   const managedCollapseStyle = useMemo<CSSProperties>(() => {
     const [vertical, horizontal] = position.split("-") as [
       "top" | "bottom",
       "left" | "center" | "right",
-    ];
+    ]
     return {
       position: "absolute",
       [vertical]: 0,
       ...(horizontal === "left" ? { left: 0 } : { right: 0 }),
-    };
-  }, [position]);
+    }
+  }, [position])
 
   if (minimapCollapsed || tooNarrowToExpand) {
     const content = (
@@ -74,17 +61,15 @@ export const CustomMiniMap = ({
       >
         <Compass width={18} height={18} aria-hidden="true" />
       </button>
-    );
+    )
 
     return managed ? (
-      <div
-        className={`react-flow__panel ${panelPositionClasses} umlstudio-mm-panel`}
-      >
+      <div className={`react-flow__panel ${panelPositionClasses} umlstudio-mm-panel`}>
         {content}
       </div>
     ) : (
       <Panel position={position}>{content}</Panel>
-    );
+    )
   }
 
   const map = (
@@ -98,7 +83,7 @@ export const CustomMiniMap = ({
       bgColor="transparent"
       className={`umlstudio-minimap${managed ? " umlstudio-mm" : ""}`}
     />
-  );
+  )
   const collapse = (
     <button
       type="button"
@@ -109,7 +94,7 @@ export const CustomMiniMap = ({
     >
       <CollapseArrow width={18} height={18} aria-hidden="true" />
     </button>
-  );
+  )
 
   return managed ? (
     <div className="umlstudio-mm-shell">
@@ -126,12 +111,12 @@ export const CustomMiniMap = ({
       {map}
       <Panel position={position}>{collapse}</Panel>
     </>
-  );
-};
+  )
+}
 
 function MiniMapNode({ id, x, y }: MiniMapNodeProps) {
-  const nodeInfo = useReactiveNode(id);
-  if (!nodeInfo) return null;
+  const nodeInfo = useReactiveNode(id)
+  if (!nodeInfo) return null
 
   switch (nodeInfo.type as DiagramNodeType) {
     case "class":
@@ -143,7 +128,7 @@ function MiniMapNode({ id, x, y }: MiniMapNodeProps) {
           id={`minimap_${id}`}
           data={nodeInfo.data as ClassNodeProps}
         />
-      );
+      )
     case "package":
       return (
         <PackageSVG
@@ -153,8 +138,8 @@ function MiniMapNode({ id, x, y }: MiniMapNodeProps) {
           data={nodeInfo.data as DefaultNodeProps}
           svgAttributes={{ x, y }}
         />
-      );
+      )
     default:
-      return <rect x={x} y={y} width={100} height={100} fill="gray" />;
+      return <rect x={x} y={y} width={100} height={100} fill="gray" />
   }
 }

@@ -21,8 +21,7 @@ class GeminiAdapter(BaseAIAdapter):
 
     async def generate_diff(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
         if not self.api_key:
-            from .mock import MockAIAdapter
-            return await MockAIAdapter().generate_diff(prompt, current_model)
+            raise ValueError("GEMINI_API_KEY no está configurada.")
 
         system_prompt = build_uml_system_prompt(current_model)
         url = (
@@ -56,4 +55,6 @@ class GeminiAdapter(BaseAIAdapter):
                 raise RuntimeError("Gemini did not return any candidates.")
 
             content_text = candidates[0]["content"]["parts"][0]["text"]
-            return parse_and_validate_diff_payload(content_text)
+            return parse_and_validate_diff_payload(
+                content_text, user_prompt=prompt, current_model=current_model
+            )

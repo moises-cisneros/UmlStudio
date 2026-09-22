@@ -70,8 +70,7 @@ export const FeedbackDropzone: React.FC<Props> = ({
       }
 
       return {
-        outline:
-          "3px solid var(--umlstudio-dropzone-accent-fill, rgba(0, 100, 255, 0.4))",
+        outline: "3px solid var(--umlstudio-dropzone-accent-fill, rgba(0, 100, 255, 0.4))",
       }
     }
   }

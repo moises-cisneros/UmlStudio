@@ -6,12 +6,5 @@ export const StyledRect: React.FC<React.SVGProps<SVGRectElement>> = ({
   fill = "var(--umlstudio-background, white)",
   ...props
 }) => {
-  return (
-    <rect
-      stroke={stroke}
-      fill={fill}
-      strokeWidth={LAYOUT.LINE_WIDTH}
-      {...props}
-    />
-  )
+  return <rect stroke={stroke} fill={fill} strokeWidth={LAYOUT.LINE_WIDTH} {...props} />
 }

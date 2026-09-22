@@ -1,5 +1,5 @@
-export { VersionDrawer, VersionRail } from "./VersionDrawer";
-export { VersionPreviewBanner } from "./VersionPreviewBanner";
-export { UndoRestoreToast } from "./UndoRestoreToast";
-export { DeleteVersionModal } from "./DeleteVersionModal";
-export { ConfirmRestoreModal } from "./ConfirmRestoreModal";
+export { VersionDrawer, VersionRail } from "./VersionDrawer"
+export { VersionPreviewBanner } from "./VersionPreviewBanner"
+export { UndoRestoreToast } from "./UndoRestoreToast"
+export { DeleteVersionModal } from "./DeleteVersionModal"
+export { ConfirmRestoreModal } from "./ConfirmRestoreModal"

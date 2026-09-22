@@ -58,10 +58,12 @@ function parsePostmanUrl(path: string): {
 
   const matches = path.matchAll(/\{([^}]+)\}/g)
   for (const m of matches) {
+    const param = m[1]
+    if (!param) continue
     pathVariables.push({
-      key: m[1],
+      key: param,
       value: "1",
-      description: `Path parameter ${m[1]}`,
+      description: `Path parameter ${param}`,
     })
   }
 

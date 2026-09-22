@@ -1,19 +1,16 @@
-import { Island, IslandInput } from "./islandPrimitives";
+import { Island, IslandInput } from "./islandPrimitives"
 
 export function HeaderTitleField({
   value,
   onValueChange,
   placeholder = "Untitled diagram",
 }: {
-  value: string;
-  onValueChange: (value: string) => void;
-  placeholder?: string;
+  value: string
+  onValueChange: (value: string) => void
+  placeholder?: string
 }) {
   return (
-    <Island
-      className="umlstudio-chrome-title-island w-fit"
-      style={{ maxWidth: "560px" }}
-    >
+    <Island className="umlstudio-chrome-title-island w-fit" style={{ maxWidth: "560px" }}>
       <IslandInput
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
@@ -23,5 +20,5 @@ export function HeaderTitleField({
         className="min-w-0 max-w-full"
       />
     </Island>
-  );
+  )
 }

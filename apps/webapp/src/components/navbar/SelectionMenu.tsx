@@ -86,6 +86,11 @@ export function SelectionMenuItems({ onSelect }: { onSelect: () => void }) {
 
       <DropdownMenuSeparator />
 
+      <DropdownMenuItem onClick={() => handleAction(() => editor?.fitView?.())}>
+        <span>{t.menu.fitView}</span>
+        <DropdownMenuShortcut>Ctrl+Shift+1</DropdownMenuShortcut>
+      </DropdownMenuItem>
+
       <DropdownMenuItem
         onClick={() =>
           handleAction(() => dispatchKey("2", { ctrl: true, shift: true, code: "Digit2" }))

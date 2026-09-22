@@ -336,6 +336,8 @@ export interface TranslationDictionary {
     shortcutsDisclaimer: string
     or: string
     close: string
+    openFullDocs: string
+    viewAllShortcuts: string
   }
   profile: {
     title: string

@@ -30,9 +30,7 @@ export const TagChips: React.FC<Pick<TagControlProps, "tags" | "onChange">> = ({
           <IconButton
             ariaLabel={t.removeTag(tag)}
             tooltip={t.removeTag(tag)}
-            onClick={() =>
-              onChange(tags.filter((existing) => existing !== tag))
-            }
+            onClick={() => onChange(tags.filter((existing) => existing !== tag))}
           >
             <X width={12} height={12} aria-hidden="true" />
           </IconButton>
@@ -42,11 +40,7 @@ export const TagChips: React.FC<Pick<TagControlProps, "tags" | "onChange">> = ({
   )
 }
 
-export const TagPicker: React.FC<TagControlProps> = ({
-  tags,
-  onChange,
-  subject,
-}) => {
+export const TagPicker: React.FC<TagControlProps> = ({ tags, onChange, subject }) => {
   const t = useLabels()
   const { enabled, available, allowCreate } = useTagConfig()
   const [draft, setDraft] = useState("")
@@ -128,10 +122,7 @@ export const TagPicker: React.FC<TagControlProps> = ({
             )}
 
             {options.length === 0 && !allowCreate && (
-              <div
-                data-slot="tag-picker-empty"
-                className="umlstudio-tag-picker__empty"
-              >
+              <div data-slot="tag-picker-empty" className="umlstudio-tag-picker__empty">
                 {t.noTags}
               </div>
             )}
@@ -147,11 +138,7 @@ export const TagPicker: React.FC<TagControlProps> = ({
                   onChange={(event) => setDraft(event.target.value)}
                   onKeyDown={handleKeyDown}
                 />
-                <IconButton
-                  ariaLabel={t.addTag}
-                  tooltip={t.addTag}
-                  onClick={addFromDraft}
-                >
+                <IconButton ariaLabel={t.addTag} tooltip={t.addTag} onClick={addFromDraft}>
                   <Plus width={16} height={16} aria-hidden="true" />
                 </IconButton>
               </div>

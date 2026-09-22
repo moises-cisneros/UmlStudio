@@ -1,22 +1,22 @@
-import React, { useState } from "react";
-import { toast } from "react-toastify";
-import { Button } from "@umlstudio/ui/components/button";
-import { Input } from "@umlstudio/ui/components/input";
-import { Field, FieldLabel } from "@umlstudio/ui/components/field";
-import { DialogFooter } from "@umlstudio/ui/components/dialog";
-import { useModalContext, useEditorContext } from "@/contexts";
-import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
-import { DiagramApiClient } from "@/services/DiagramApiClient";
-import { log } from "@/logger";
-import { useTranslation } from "@/i18n";
-import { HomeDialogContent } from "./HomeDialog";
+import React, { useState } from "react"
+import { toast } from "react-toastify"
+import { Button } from "@umlstudio/ui/components/button"
+import { Input } from "@umlstudio/ui/components/input"
+import { Field, FieldLabel } from "@umlstudio/ui/components/field"
+import { DialogFooter } from "@umlstudio/ui/components/dialog"
+import { useModalContext, useEditorContext } from "@/contexts"
+import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
+import { DiagramApiClient } from "@/services/DiagramApiClient"
+import { log } from "@/logger"
+import { useTranslation } from "@/i18n"
+import { HomeDialogContent } from "./HomeDialog"
 
 interface RenameDiagramModalProps {
-  diagramId: string;
-  initialTitle?: string;
-  source?: "local" | "shared";
-  onRenamed?: (newTitle: string) => void;
-  onClose?: () => void;
+  diagramId: string
+  initialTitle?: string
+  source?: "local" | "shared"
+  onRenamed?: (newTitle: string) => void
+  onClose?: () => void
 }
 
 export const RenameDiagramModal: React.FC<RenameDiagramModalProps> = ({
@@ -26,56 +26,53 @@ export const RenameDiagramModal: React.FC<RenameDiagramModalProps> = ({
   onRenamed,
   onClose,
 }) => {
-  const { t } = useTranslation();
-  const { closeModal } = useModalContext();
-  const { editor } = useEditorContext();
-  const renameModel = usePersistenceModelStore((state) => state.renameModel);
-  const [title, setTitle] = useState(initialTitle);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useTranslation()
+  const { closeModal } = useModalContext()
+  const { editor } = useEditorContext()
+  const renameModel = usePersistenceModelStore((state) => state.renameModel)
+  const [title, setTitle] = useState(initialTitle)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const trimmed = title.trim();
-  const isValid = trimmed.length > 0 && trimmed.length <= 200;
+  const trimmed = title.trim()
+  const isValid = trimmed.length > 0 && trimmed.length <= 200
 
   const handleClose = () => {
-    onClose?.();
-    closeModal();
-  };
+    onClose?.()
+    closeModal()
+  }
 
   const handleSave = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!isValid || isSubmitting) return;
+    e?.preventDefault()
+    if (!isValid || isSubmitting) return
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       if (source === "shared") {
-        await DiagramApiClient.patchDiagramTitle(diagramId, trimmed);
+        await DiagramApiClient.patchDiagramTitle(diagramId, trimmed)
       } else {
-        renameModel(diagramId, trimmed);
+        renameModel(diagramId, trimmed)
       }
 
       if (editor?.getDiagramMetadata()?.diagramTitle !== undefined) {
-        editor.updateDiagramTitle(trimmed);
+        editor.updateDiagramTitle(trimmed)
       }
 
-      toast.success(t.dashboard.toastDiagramRenamedSuccess);
-      onRenamed?.(trimmed);
-      handleClose();
+      toast.success(t.dashboard.toastDiagramRenamedSuccess)
+      onRenamed?.(trimmed)
+      handleClose()
     } catch (err) {
-      log.error("Failed to rename diagram", err as Error);
-      toast.error(t.dashboard.toastDiagramRenameError);
+      log.error("Failed to rename diagram", err as Error)
+      toast.error(t.dashboard.toastDiagramRenameError)
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSave} className="flex min-w-0 flex-col gap-4">
       <HomeDialogContent testId="rename-diagram-dialog">
         <Field className="gap-1.5">
-          <FieldLabel
-            htmlFor="diagram-new-title"
-            className="text-xs font-semibold text-foreground"
-          >
+          <FieldLabel htmlFor="diagram-new-title" className="text-xs font-semibold text-foreground">
             {t.newDiagram.nameLabel}
           </FieldLabel>
           <Input
@@ -92,22 +89,13 @@ export const RenameDiagramModal: React.FC<RenameDiagramModalProps> = ({
       </HomeDialogContent>
 
       <DialogFooter className="mt-2 flex items-center justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleClose}
-          disabled={isSubmitting}
-        >
+        <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
           {t.common.cancel}
         </Button>
-        <Button
-          type="submit"
-          variant="default"
-          disabled={!isValid || isSubmitting}
-        >
+        <Button type="submit" variant="default" disabled={!isValid || isSubmitting}>
           {isSubmitting ? t.common.savingChanges : t.common.save}
         </Button>
       </DialogFooter>
     </form>
-  );
-};
+  )
+}

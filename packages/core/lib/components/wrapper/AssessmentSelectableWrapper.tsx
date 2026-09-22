@@ -1,11 +1,7 @@
 import React from "react"
 import { INTERACTIVE_SELECTION_COLOR } from "@/constants"
 import { useAssessmentSelection } from "@/hooks/useAssessmentSelection"
-import {
-  useAssessmentSelectionStore,
-  useDiagramStore,
-  useMetadataStore,
-} from "@/store"
+import { useAssessmentSelectionStore, useDiagramStore, useMetadataStore } from "@/store"
 import { UmlStudioMode, UmlStudioView } from "@/typings"
 import { useShallow } from "zustand/shallow"
 
@@ -15,9 +11,11 @@ interface AssessmentSelectableWrapperProps {
   asElement?: "div" | "g"
 }
 
-export const AssessmentSelectableWrapper: React.FC<
-  AssessmentSelectableWrapperProps
-> = ({ elementId, children, asElement = "div" }) => {
+export const AssessmentSelectableWrapper: React.FC<AssessmentSelectableWrapperProps> = ({
+  elementId,
+  children,
+  asElement = "div",
+}) => {
   const { mode, readonly, view } = useMetadataStore(
     useShallow((state) => ({
       mode: state.mode,
@@ -28,9 +26,7 @@ export const AssessmentSelectableWrapper: React.FC<
   const { isInteractiveSelected, toggleInteractiveElement } = useDiagramStore(
     useShallow((state) => ({
       isInteractiveSelected:
-        state.interactiveElements[elementId] ||
-        state.interactiveRelationships[elementId] ||
-        false,
+        state.interactiveElements[elementId] || state.interactiveRelationships[elementId] || false,
       toggleInteractiveElement: state.toggleInteractiveElement,
     }))
   )
@@ -44,9 +40,7 @@ export const AssessmentSelectableWrapper: React.FC<
   } = useAssessmentSelection(elementId)
 
   const showInteractiveInteraction =
-    mode === UmlStudioMode.Modelling &&
-    view === UmlStudioView.Highlight &&
-    !readonly
+    mode === UmlStudioMode.Modelling && view === UmlStudioView.Highlight && !readonly
 
   const highlightColor = useAssessmentSelectionStore(
     (state) => state.highlightedElements[elementId]

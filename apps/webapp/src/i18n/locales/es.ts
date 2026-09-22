@@ -352,6 +352,8 @@ export const es: TranslationDictionary = {
       "Los atajos se ignoran mientras editas texto en un campo, salvo guardar como JSON que siempre funciona.",
     or: "o",
     close: "Cerrar",
+    openFullDocs: "Ver documentación completa",
+    viewAllShortcuts: "Ver todos los atajos",
   },
   profile: {
     title: "Perfil y Seguridad",

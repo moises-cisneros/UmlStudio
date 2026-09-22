@@ -1,36 +1,45 @@
 from .base import BaseAIAdapter
+from .cloudflare import CloudflareAdapter
+from .openrouter import OpenRouterAdapter
 from .gemini import GeminiAdapter
-from .openai import OpenAIAdapter
-from .anthropic import AnthropicAdapter
-from .local_gemma import LocalGemmaAdapter
-from .mock import MockAIAdapter
+from .lmstudio import LMStudioAdapter
+from .ollama import OllamaAdapter
 from .auto import AutoAdaptiveAdapter
 
 
 def get_adapter(provider_name: str = None) -> BaseAIAdapter:
+    from ..core.config import settings
+
     normalized = (provider_name or "").lower().strip()
-    if not normalized or normalized == "auto":
-        return AutoAdaptiveAdapter()
+    if not normalized or normalized == "default":
+        normalized = (settings.DEFAULT_PROVIDER or "auto").lower().strip()
+
+    if normalized in ("auto", "adaptive"):
+        return AutoAdaptiveAdapter(mode="auto")
+    elif normalized in ("local", "laptop"):
+        return AutoAdaptiveAdapter(mode="local")
+    elif normalized in ("cloud", "remote"):
+        return AutoAdaptiveAdapter(mode="cloud")
+    elif "cloudflare" in normalized:
+        return CloudflareAdapter()
+    elif "openrouter" in normalized:
+        return OpenRouterAdapter()
     elif "gemini" in normalized:
         return GeminiAdapter()
-    elif "openai" in normalized or "gpt" in normalized:
-        return OpenAIAdapter()
-    elif "claude" in normalized or "anthropic" in normalized:
-        return AnthropicAdapter()
-    elif "gemma" in normalized or "local" in normalized:
-        return LocalGemmaAdapter()
-    elif "mock" in normalized:
-        return MockAIAdapter()
-    return AutoAdaptiveAdapter()
+    elif "lmstudio" in normalized or "lm-studio" in normalized:
+        return LMStudioAdapter()
+    elif "ollama" in normalized or "gemma" in normalized:
+        return OllamaAdapter()
+    return AutoAdaptiveAdapter(mode=normalized)
 
 
 __all__ = [
     "BaseAIAdapter",
+    "CloudflareAdapter",
+    "OpenRouterAdapter",
     "GeminiAdapter",
-    "OpenAIAdapter",
-    "AnthropicAdapter",
-    "LocalGemmaAdapter",
-    "MockAIAdapter",
+    "LMStudioAdapter",
+    "OllamaAdapter",
     "AutoAdaptiveAdapter",
     "get_adapter",
 ]

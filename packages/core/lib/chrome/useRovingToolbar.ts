@@ -51,10 +51,7 @@ export function useRovingToolbar<T extends HTMLElement = HTMLDivElement>() {
         next = current < 0 ? 0 : (current + 1) % buttons.length
         break
       default:
-        next =
-          current < 0
-            ? buttons.length - 1
-            : (current - 1 + buttons.length) % buttons.length
+        next = current < 0 ? buttons.length - 1 : (current - 1 + buttons.length) % buttons.length
     }
     event.preventDefault()
     for (const b of buttons) b.tabIndex = -1

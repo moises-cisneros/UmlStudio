@@ -1,23 +1,16 @@
-import {
-  useAssessmentSelectionStore,
-  useDiagramStore,
-  useMetadataStore,
-} from "../store/context"
+import { useAssessmentSelectionStore, useDiagramStore, useMetadataStore } from "../store/context"
 import { useShallow } from "zustand/shallow"
 
 export function AssessmentSelectionDebug() {
   const debug = useMetadataStore(useShallow((state) => state.debug))
-  const {
-    selectedElementIds,
-    highlightedElementId,
-    isAssessmentSelectionMode,
-  } = useAssessmentSelectionStore(
-    useShallow((state) => ({
-      selectedElementIds: state.selectedElementIds,
-      highlightedElementId: state.highlightedElementId,
-      isAssessmentSelectionMode: state.isAssessmentSelectionMode,
-    }))
-  )
+  const { selectedElementIds, highlightedElementId, isAssessmentSelectionMode } =
+    useAssessmentSelectionStore(
+      useShallow((state) => ({
+        selectedElementIds: state.selectedElementIds,
+        highlightedElementId: state.highlightedElementId,
+        isAssessmentSelectionMode: state.isAssessmentSelectionMode,
+      }))
+    )
   const assessments = useDiagramStore(useShallow((state) => state.assessments))
 
   if (!import.meta.env.DEV || !isAssessmentSelectionMode || !debug) {
@@ -83,8 +76,7 @@ export function AssessmentSelectionDebug() {
                   <strong>Element Type:</strong> {assessment.elementType}
                 </div>
                 <div>
-                  <strong>Correction Status:</strong>{" "}
-                  {assessment.correctionStatus?.status}
+                  <strong>Correction Status:</strong> {assessment.correctionStatus?.status}
                 </div>
                 <div>
                   <strong>Correction Description:</strong>{" "}

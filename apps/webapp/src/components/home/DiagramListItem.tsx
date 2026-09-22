@@ -6,20 +6,20 @@ import {
   useState,
   type FC,
   type MouseEvent as ReactMouseEvent,
-} from "react";
-import { Heart, Unlink, FileCode2 } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { Badge } from "@umlstudio/ui/components/badge";
-import { Button } from "@umlstudio/ui/components/button";
-import { cn } from "@umlstudio/ui/lib/utils";
-import { Skeleton } from "@umlstudio/ui/components/skeleton";
-import { useTranslation } from "@/i18n";
-import { useMinuteTick } from "@/hooks/useMinuteTick";
-import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
-import { getCachedThumbnailSources } from "@/utils/thumbnailTheme";
-import { runWhenIdle } from "@/utils/idle";
-import { getSharedDiagramViewBadge } from "@/utils/sharedDiagramLinks";
-import type { DiagramView } from "@/types";
+} from "react"
+import { Heart, Unlink, FileCode2 } from "lucide-react"
+import { Link } from "@tanstack/react-router"
+import { Badge } from "@umlstudio/ui/components/badge"
+import { Button } from "@umlstudio/ui/components/button"
+import { cn } from "@umlstudio/ui/lib/utils"
+import { Skeleton } from "@umlstudio/ui/components/skeleton"
+import { useTranslation } from "@/i18n"
+import { useMinuteTick } from "@/hooks/useMinuteTick"
+import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
+import { getCachedThumbnailSources } from "@/utils/thumbnailTheme"
+import { runWhenIdle } from "@/utils/idle"
+import { getSharedDiagramViewBadge } from "@/utils/sharedDiagramLinks"
+import type { DiagramView } from "@/types"
 import {
   DiagramActionsMenu,
   formatRelativeLastModified,
@@ -27,22 +27,22 @@ import {
   type DiagramCardThumbnail,
   type DiagramPreviewState,
   type RecentDiagram,
-} from "./DiagramCard";
+} from "./DiagramCard"
 
 export type DiagramListItemProps = {
-  diagram: RecentDiagram;
-  previewState: DiagramPreviewState;
-  thumbnail?: DiagramCardThumbnail | null;
-  showSourceBadge?: boolean;
-  isHighlighted?: boolean;
-  isFavorite?: boolean;
-  onToggleFavorite?: (diagram: RecentDiagram) => void;
-  onSharedDiagramRemoved?: (diagramId: string) => void;
-  onSharedDiagramViewChange?: (diagramId: string, view: DiagramView) => void;
-  onOpen?: () => void;
-  observeViewport?: (id: string, node: Element | null) => () => void;
-  className?: string;
-};
+  diagram: RecentDiagram
+  previewState: DiagramPreviewState
+  thumbnail?: DiagramCardThumbnail | null
+  showSourceBadge?: boolean
+  isHighlighted?: boolean
+  isFavorite?: boolean
+  onToggleFavorite?: (diagram: RecentDiagram) => void
+  onSharedDiagramRemoved?: (diagramId: string) => void
+  onSharedDiagramViewChange?: (diagramId: string, view: DiagramView) => void
+  onOpen?: () => void
+  observeViewport?: (id: string, node: Element | null) => () => void
+  className?: string
+}
 
 export const DiagramListItem: FC<DiagramListItemProps> = ({
   diagram,
@@ -58,74 +58,65 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
   observeViewport,
   className,
 }) => {
-  const { t } = useTranslation();
-  const isExpired = previewState === "expired";
-  const isLocalDiagram = (diagram.source ?? "local") === "local";
-  const title = diagram.title.trim() || t.dashboard.emptyStateTitle;
-  const isUntitled = !diagram.title.trim();
+  const { t } = useTranslation()
+  const isExpired = previewState === "expired"
+  const isLocalDiagram = (diagram.source ?? "local") === "local"
+  const title = diagram.title.trim() || t.dashboard.emptyStateTitle
+  const isUntitled = !diagram.title.trim()
 
-  useMinuteTick();
+  useMinuteTick()
   const relativeDate = formatRelativeLastModified(
     diagram.lastModifiedAt,
     // eslint-disable-next-line react-hooks/purity
-    Date.now(),
-  );
+    Date.now()
+  )
 
-  const sharedViewLabel = getSharedDiagramViewBadge(diagram.lastSharedView);
+  const sharedViewLabel = getSharedDiagramViewBadge(diagram.lastSharedView)
   const sourceLabel = isLocalDiagram
     ? t.dashboard.filterSourceLocal
-    : t.dashboard.filterSourceShared;
+    : t.dashboard.filterSourceShared
 
-  const thumbnailSvg = usePersistenceModelStore(
-    (state) => state.thumbnails[diagram.id],
-  );
+  const thumbnailSvg = usePersistenceModelStore((state) => state.thumbnails[diagram.id])
   const thumbnailRevision = usePersistenceModelStore(
-    (state) => state.thumbnailRevisions[diagram.id] ?? 0,
-  );
+    (state) => state.thumbnailRevisions[diagram.id] ?? 0
+  )
 
-  const itemObserveId = `diagram-list-thumb-${diagram.id}`;
-  const observeCleanupRef = useRef<(() => void) | null>(null);
+  const itemObserveId = `diagram-list-thumb-${diagram.id}`
+  const observeCleanupRef = useRef<(() => void) | null>(null)
 
   const rowRef = useCallback(
     (node: HTMLDivElement | null) => {
-      observeCleanupRef.current?.();
-      observeCleanupRef.current = null;
+      observeCleanupRef.current?.()
+      observeCleanupRef.current = null
       if (node && observeViewport) {
-        observeCleanupRef.current = observeViewport(itemObserveId, node);
+        observeCleanupRef.current = observeViewport(itemObserveId, node)
       }
     },
-    [observeViewport, itemObserveId],
-  );
+    [observeViewport, itemObserveId]
+  )
 
-  const thumbnailCacheKey = `${diagram.id}:${thumbnailRevision}`;
+  const thumbnailCacheKey = `${diagram.id}:${thumbnailRevision}`
   const lightDataUrl = useMemo(() => {
-    if (thumbnail?.lightDataUrl) return thumbnail.lightDataUrl;
-    return (
-      getCachedThumbnailSources(thumbnailCacheKey, thumbnailSvg)
-        ?.lightDataUrl ?? null
-    );
-  }, [thumbnail?.lightDataUrl, thumbnailCacheKey, thumbnailSvg]);
+    if (thumbnail?.lightDataUrl) return thumbnail.lightDataUrl
+    return getCachedThumbnailSources(thumbnailCacheKey, thumbnailSvg)?.lightDataUrl ?? null
+  }, [thumbnail?.lightDataUrl, thumbnailCacheKey, thumbnailSvg])
 
-  const [rawDarkDataUrl, setRawDarkDataUrl] = useState<string | null>(null);
+  const [rawDarkDataUrl, setRawDarkDataUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!thumbnailSvg) {
-      return;
+      return
     }
     return runWhenIdle(() => {
-      const sources = getCachedThumbnailSources(
-        thumbnailCacheKey,
-        thumbnailSvg,
-        { eager: true },
-      );
+      const sources = getCachedThumbnailSources(thumbnailCacheKey, thumbnailSvg, { eager: true })
       if (sources) {
-        setRawDarkDataUrl(sources.darkDataUrl);
+        setRawDarkDataUrl(sources.darkDataUrl)
       }
-    });
-  }, [thumbnailCacheKey, thumbnailSvg]);
+    })
+  }, [thumbnailCacheKey, thumbnailSvg])
 
-  const darkDataUrl = thumbnailSvg ? rawDarkDataUrl : null;
-  const nav = getDiagramNav(diagram);
+  const darkDataUrl = thumbnailSvg ? rawDarkDataUrl : null
+  const nav = getDiagramNav(diagram)
 
   return (
     <div
@@ -136,7 +127,7 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
         isHighlighted &&
           "animate-[diagram-highlight-pulse_2.4s_ease-out_forwards] border-(--dodger-blue) bg-accent-hover",
         isExpired && "opacity-60",
-        className,
+        className
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -145,19 +136,17 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label={
-              isFavorite ? t.dashboard.removeFavorite : t.dashboard.addFavorite
-            }
+            aria-label={isFavorite ? t.dashboard.removeFavorite : t.dashboard.addFavorite}
             aria-pressed={isFavorite}
             className={cn(
               "shrink-0 transition-colors",
               isFavorite
                 ? "text-rose-500 opacity-100"
-                : "text-muted-foreground opacity-40 hover:text-rose-500 hover:opacity-100 group-hover:opacity-100",
+                : "text-muted-foreground opacity-40 hover:text-rose-500 hover:opacity-100 group-hover:opacity-100"
             )}
             onClick={(event) => {
-              event.stopPropagation();
-              onToggleFavorite?.(diagram);
+              event.stopPropagation()
+              onToggleFavorite?.(diagram)
             }}
           >
             <Heart
@@ -172,10 +161,7 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
 
         <div className="flex h-9 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border-subtle bg-muted/40">
           {isExpired ? (
-            <Unlink
-              className="size-4 text-muted-foreground"
-              aria-hidden="true"
-            />
+            <Unlink className="size-4 text-muted-foreground" aria-hidden="true" />
           ) : previewState === "loading" ? (
             <Skeleton className="size-full rounded-none" />
           ) : lightDataUrl ? (
@@ -197,10 +183,7 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
               )}
             </div>
           ) : (
-            <FileCode2
-              className="size-4 text-muted-foreground"
-              aria-hidden="true"
-            />
+            <FileCode2 className="size-4 text-muted-foreground" aria-hidden="true" />
           )}
         </div>
 
@@ -209,16 +192,16 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
             {...nav}
             onClick={(event: ReactMouseEvent<HTMLAnchorElement>) => {
               if (isExpired) {
-                event.preventDefault();
-                return;
+                event.preventDefault()
+                return
               }
-              onOpen?.();
+              onOpen?.()
             }}
             aria-disabled={isExpired}
             className={cn(
               "block truncate text-sm font-semibold text-(--home-text-strong) transition-colors hover:text-(--dodger-blue) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
               isUntitled && "italic text-muted-foreground",
-              isExpired && "pointer-events-none",
+              isExpired && "pointer-events-none"
             )}
             title={diagram.title.trim() || undefined}
           >
@@ -276,5 +259,5 @@ export const DiagramListItem: FC<DiagramListItemProps> = ({
         />
       </div>
     </div>
-  );
-};
+  )
+}

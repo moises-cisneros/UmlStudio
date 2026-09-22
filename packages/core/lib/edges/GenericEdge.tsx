@@ -1,6 +1,5 @@
 import {
   useState,
-  useEffect,
   useCallback,
   type ReactNode,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -14,10 +13,7 @@ import { IPoint } from "./Connection"
 import { PopoverManager } from "@/components/popovers/PopoverManager"
 import { usePopoverAnchor } from "@/hooks/usePopoverAnchor"
 import AssessmentIcon from "@/components/svgs/AssessmentIcon"
-import {
-  EdgeInlineMarkers,
-  type InterfaceGeometry,
-} from "@/components/svgs/edges/InlineMarker"
+import { EdgeInlineMarkers, type InterfaceGeometry } from "@/components/svgs/edges/InlineMarker"
 import type { DiagramEdgeType } from "./types"
 import { Assessment } from "@/typings"
 import type { BendHandle } from "@/utils/geometry/bendHandles"
@@ -40,13 +36,15 @@ const FREEFORM_ENDPOINT_GRIP_STROKE = 4
 const FREEFORM_ENDPOINT_GRIP_MARGIN = 2
 
 export const useEdgeState = (initialPoints?: IPoint[]) => {
-  const [customPoints, setCustomPoints] = useState<IPoint[]>([])
+  const [prevInitialPoints, setPrevInitialPoints] = useState(initialPoints)
+  const [customPoints, setCustomPoints] = useState<IPoint[]>(() => initialPoints ?? [])
 
-  useEffect(() => {
+  if (initialPoints !== prevInitialPoints) {
+    setPrevInitialPoints(initialPoints)
     if (initialPoints && initialPoints.length > 0) {
       setCustomPoints(initialPoints)
     }
-  }, [initialPoints])
+  }
 
   return {
     customPoints,
@@ -76,11 +74,7 @@ const normalizeDir = (v: IPoint): IPoint => {
   return len === 0 ? { x: 0, y: 0 } : { x: v.x / len, y: v.y / len }
 }
 
-const getEndpointRun = (
-  point: IPoint,
-  otherPoint: IPoint,
-  direction: IPoint
-): number => {
+const getEndpointRun = (point: IPoint, otherPoint: IPoint, direction: IPoint): number => {
   const toOther = { x: otherPoint.x - point.x, y: otherPoint.y - point.y }
   const towardsOther = direction.x * toOther.x + direction.y * toOther.y
   if (towardsOther <= 0) return Number.POSITIVE_INFINITY
@@ -88,12 +82,8 @@ const getEndpointRun = (
   return Math.hypot(toOther.x, toOther.y) / 2
 }
 
-const renderedBendHandleHalfLength = (
-  bendableLength: number,
-  screenScale: number
-): number => {
-  const room =
-    bendableLength - 2 * EDGES.BEND_HANDLE_CORNER_CLEARANCE_PX * screenScale
+const renderedBendHandleHalfLength = (bendableLength: number, screenScale: number): number => {
+  const room = bendableLength - 2 * EDGES.BEND_HANDLE_CORNER_CLEARANCE_PX * screenScale
   const longAxis = Math.min(
     Math.max(room, EDGES.BEND_HANDLE_MIN_SCREEN_LENGTH_PX * screenScale),
     EDGES.BEND_HANDLE_SCREEN_LENGTH_PX * screenScale
@@ -115,10 +105,7 @@ const nearestHandleReach = (
       (handle.position.x - endpoint.x) * direction.x +
       (handle.position.y - endpoint.y) * direction.y
     if (along <= 0) continue
-    const nearEdge =
-      along -
-      renderedBendHandleHalfLength(handle.bendableLength, screenScale) -
-      gap
+    const nearEdge = along - renderedBendHandleHalfLength(handle.bendableLength, screenScale) - gap
     if (nearEdge > 0) reach = Math.min(reach, nearEdge)
   }
   return reach
@@ -133,9 +120,7 @@ export const getEndpointHitTargetRect = (
   run: number = Number.POSITIVE_INFINITY,
   nodeGap = 0
 ) => {
-  const direction = outwardDir
-    ? normalizeDir(outwardDir)
-    : getEndpointDirection(side)
+  const direction = outwardDir ? normalizeDir(outwardDir) : getEndpointDirection(side)
   const hitSize = Math.max(
     Math.min(hitTargetSize * screenScale, run),
     EDGES.MIN_ENDPOINT_HIT_TARGET_PX * screenScale
@@ -167,10 +152,7 @@ const getEndpointGripRect = (
     FREEFORM_ENDPOINT_GRIP_MIN_LONG_AXIS * screenScale
   )
   const baseClearance = long / 2 + radius
-  const clearance = Math.max(
-    Math.min(baseClearance, run - long / 2 - margin),
-    long / 2
-  )
+  const clearance = Math.max(Math.min(baseClearance, run - long / 2 - margin), long / 2)
 
   if (outwardDir) {
     const dir = normalizeDir(outwardDir)
@@ -348,9 +330,7 @@ export const EdgeEndpointMarkers = ({
         rx={sourceHitTarget.radius}
         ry={sourceHitTarget.radius}
         style={{ zIndex: 10000 }}
-        pointerEvents={
-          canEditEndpoint && onEndpointPointerDown ? "all" : "none"
-        }
+        pointerEvents={canEditEndpoint && onEndpointPointerDown ? "all" : "none"}
         onPointerDown={
           canEditEndpoint && onEndpointPointerDown
             ? (event) => onEndpointPointerDown(event, "source")
@@ -366,9 +346,7 @@ export const EdgeEndpointMarkers = ({
         rx={targetHitTarget.radius}
         ry={targetHitTarget.radius}
         style={{ zIndex: 10000 }}
-        pointerEvents={
-          canEditEndpoint && onEndpointPointerDown ? "all" : "none"
-        }
+        pointerEvents={canEditEndpoint && onEndpointPointerDown ? "all" : "none"}
         onPointerDown={
           canEditEndpoint && onEndpointPointerDown
             ? (event) => onEndpointPointerDown(event, "target")
@@ -432,28 +410,16 @@ export const EdgeWaypointHandles = ({
   route: IPoint[]
   interior: IPoint[]
   selectedWaypointIndex: number | null
-  onWaypointPointerDown: (
-    event: ReactPointerEvent<SVGRectElement>,
-    index: number
-  ) => void
+  onWaypointPointerDown: (event: ReactPointerEvent<SVGRectElement>, index: number) => void
   onWaypointDoubleClick: (index: number) => void
-  onWaypointKeyDown: (
-    event: ReactKeyboardEvent<SVGRectElement>,
-    index: number
-  ) => void
-  onGhostPointerDown: (
-    event: ReactPointerEvent<SVGRectElement>,
-    segmentIndex: number
-  ) => void
+  onWaypointKeyDown: (event: ReactKeyboardEvent<SVGRectElement>, index: number) => void
+  onGhostPointerDown: (event: ReactPointerEvent<SVGRectElement>, segmentIndex: number) => void
 }) => {
   const t = useLabels()
   const screenScale = useHandleScreenScale()
   const midpoints =
     selectedWaypointIndex === null
-      ? getSegmentGhostHandles(
-          route,
-          EDGES.WAYPOINT_GHOST_MIN_SEGMENT_PX * screenScale
-        )
+      ? getSegmentGhostHandles(route, EDGES.WAYPOINT_GHOST_MIN_SEGMENT_PX * screenScale)
       : []
   const hit = EDGES.WAYPOINT_HIT_TARGET_PX * screenScale
   const radius = EDGES.WAYPOINT_HANDLE_RADIUS_PX * screenScale
@@ -515,9 +481,7 @@ export const EdgeWaypointHandles = ({
         point(
           waypoint,
           "edge-circle edge-waypoint-handle" +
-            (selectedWaypointIndex === index
-              ? " edge-waypoint-handle--active"
-              : ""),
+            (selectedWaypointIndex === index ? " edge-waypoint-handle--active" : ""),
           `waypoint-${index}`,
           (event) => onWaypointPointerDown(event, index),
           t.moveEdgeWaypoint,
@@ -580,10 +544,7 @@ export const StepEdgeBody = ({
   ) => void
   allowMidpointDragging: boolean
   bendHandles: BendHandle[]
-  handlePointerDown: (
-    event: ReactPointerEvent<SVGRectElement>,
-    handle: BendHandle
-  ) => void
+  handlePointerDown: (event: ReactPointerEvent<SVGRectElement>, handle: BendHandle) => void
   children?: ReactNode
 }) => {
   return (
@@ -602,7 +563,7 @@ export const StepEdgeBody = ({
         }}
       />
 
-            <EdgeInlineMarkers
+      <EdgeInlineMarkers
         pathD={currentPath}
         markerEnd={markerEnd}
         markerStart={markerStart}
@@ -623,11 +584,7 @@ export const StepEdgeBody = ({
       {isDiagramModifiable &&
         allowMidpointDragging &&
         bendHandles
-          .filter(
-            (handle) =>
-              !isBendDragging ||
-              handle.segmentIndex === draggingHandleSegmentIndex
-          )
+          .filter((handle) => !isBendDragging || handle.segmentIndex === draggingHandleSegmentIndex)
           .map((handle) => (
             <EdgeBendHandle
               key={`${id}-bend-${handle.segmentIndex}`}
@@ -640,7 +597,7 @@ export const StepEdgeBody = ({
             />
           ))}
 
-            <EdgeEndpointMarkers
+      <EdgeEndpointMarkers
         sourcePoint={sourcePoint}
         targetPoint={targetPoint}
         sourcePosition={sourcePosition}
@@ -686,8 +643,7 @@ export const CommonEdgeElements = ({
   const points = data?.points
   const hasManualPoints = Array.isArray(points) && points.length > 0
   const hasPinnedAnchor =
-    isFreeformEdgeAnchor(data?.sourceAnchor) ||
-    isFreeformEdgeAnchor(data?.targetAnchor)
+    isFreeformEdgeAnchor(data?.sourceAnchor) || isFreeformEdgeAnchor(data?.targetAnchor)
   const hasManualRoute = hasManualPoints || hasPinnedAnchor
 
   const handleResetRouting = useCallback(() => {
@@ -723,11 +679,7 @@ export const CommonEdgeElements = ({
         />
       )}
 
-      <PopoverManager
-        elementId={id}
-        anchorEl={anchorEl}
-        type={type as DiagramEdgeType}
-      />
+      <PopoverManager elementId={id} anchorEl={anchorEl} type={type as DiagramEdgeType} />
     </>
   )
 }

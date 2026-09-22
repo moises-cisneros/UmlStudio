@@ -1,39 +1,39 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react"
 
 interface SpeechRecognitionHookOptions {
-  onResult?: (transcript: string) => void;
-  onError?: (error: string) => void;
-  lang?: string;
+  onResult?: (transcript: string) => void
+  onError?: (error: string) => void
+  lang?: string
 }
 
 interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
+  results: SpeechRecognitionResultList
 }
 
 interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
+  error: string
 }
 
 // Window type augmentation for Web Speech API
 interface IWindow extends Window {
   SpeechRecognition?: {
-    new (): SpeechRecognitionInstance;
-  };
+    new (): SpeechRecognitionInstance
+  }
   webkitSpeechRecognition?: {
-    new (): SpeechRecognitionInstance;
-  };
+    new (): SpeechRecognitionInstance
+  }
 }
 
 interface SpeechRecognitionInstance extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-  onend: (() => void) | null;
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  start: () => void
+  stop: () => void
+  abort: () => void
+  onresult: ((event: SpeechRecognitionEvent) => void) | null
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null
+  onend: (() => void) | null
 }
 
 export function useSpeechRecognition({
@@ -41,92 +41,91 @@ export function useSpeechRecognition({
   onError,
   lang = "es-ES",
 }: SpeechRecognitionHookOptions = {}) {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
+  const [isListening, setIsListening] = useState(false)
+  const [transcript, setTranscript] = useState("")
 
   const [hasSupport] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const win = window as unknown as IWindow;
-    return Boolean(win.SpeechRecognition || win.webkitSpeechRecognition);
-  });
+    if (typeof window === "undefined") return false
+    const win = window as unknown as IWindow
+    return Boolean(win.SpeechRecognition || win.webkitSpeechRecognition)
+  })
 
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const win = window as unknown as IWindow;
-    const SpeechRecognitionClass =
-      win.SpeechRecognition || win.webkitSpeechRecognition;
+    if (typeof window === "undefined") return
+    const win = window as unknown as IWindow
+    const SpeechRecognitionClass = win.SpeechRecognition || win.webkitSpeechRecognition
 
     if (SpeechRecognitionClass) {
-      const recognition = new SpeechRecognitionClass();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = lang;
+      const recognition = new SpeechRecognitionClass()
+      recognition.continuous = false
+      recognition.interimResults = true
+      recognition.lang = lang
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let currentTranscript = "";
+        let currentTranscript = ""
         for (let i = 0; i < event.results.length; i++) {
-          const item = event.results.item(i);
+          const item = event.results.item(i)
           if (item && item[0]) {
-            currentTranscript += item[0].transcript;
+            currentTranscript += item[0].transcript
           }
         }
-        setTranscript(currentTranscript);
+        setTranscript(currentTranscript)
         if (onResult && currentTranscript.trim()) {
-          onResult(currentTranscript);
+          onResult(currentTranscript)
         }
-      };
+      }
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        setIsListening(false);
+        setIsListening(false)
         if (onError) {
-          onError(event.error);
+          onError(event.error)
         }
-      };
+      }
 
       recognition.onend = () => {
-        setIsListening(false);
-      };
+        setIsListening(false)
+      }
 
-      recognitionRef.current = recognition;
+      recognitionRef.current = recognition
     }
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        recognitionRef.current.abort()
       }
-    };
-  }, [lang, onResult, onError]);
+    }
+  }, [lang, onResult, onError])
 
   const startListening = useCallback(() => {
-    if (!recognitionRef.current) return;
-    setTranscript("");
+    if (!recognitionRef.current) return
+    setTranscript("")
     try {
-      recognitionRef.current.start();
-      setIsListening(true);
+      recognitionRef.current.start()
+      setIsListening(true)
     } catch {
       // Already running or permission blocked
     }
-  }, []);
+  }, [])
 
   const stopListening = useCallback(() => {
-    if (!recognitionRef.current) return;
+    if (!recognitionRef.current) return
     try {
-      recognitionRef.current.stop();
-      setIsListening(false);
+      recognitionRef.current.stop()
+      setIsListening(false)
     } catch {
       // Ignored
     }
-  }, []);
+  }, [])
 
   const toggleListening = useCallback(() => {
     if (isListening) {
-      stopListening();
+      stopListening()
     } else {
-      startListening();
+      startListening()
     }
-  }, [isListening, startListening, stopListening]);
+  }, [isListening, startListening, stopListening])
 
   return {
     isListening,
@@ -135,5 +134,5 @@ export function useSpeechRecognition({
     startListening,
     stopListening,
     toggleListening,
-  };
+  }
 }

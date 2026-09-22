@@ -40,16 +40,10 @@ export const StereotypeAndName: FC<Props> = ({
 
   const nameMaxLines =
     verticalAnchor === "top"
-      ? maxLinesForHeight(
-          height - topAnchorY - LAYOUT.NAME_LINE_HEIGHT,
-          LAYOUT.NAME_LINE_HEIGHT
-        )
+      ? maxLinesForHeight(height - topAnchorY - LAYOUT.NAME_LINE_HEIGHT, LAYOUT.NAME_LINE_HEIGHT)
       : showStereotype
         ? maxLinesForHeight(
-            height -
-              LAYOUT.STEREOTYPE_LINE_HEIGHT -
-              LAYOUT.STEREOTYPE_NAME_GAP -
-              8,
+            height - LAYOUT.STEREOTYPE_LINE_HEIGHT - LAYOUT.STEREOTYPE_NAME_GAP - 8,
             LAYOUT.NAME_LINE_HEIGHT
           )
         : maxLinesForHeight(height - 16, LAYOUT.NAME_LINE_HEIGHT)
@@ -70,9 +64,7 @@ export const StereotypeAndName: FC<Props> = ({
       return {
         stereotypeCenterY: topAnchorY - LAYOUT.STEREOTYPE_LINE_HEIGHT / 2,
         nameFirstLineCenterY: showStereotype
-          ? topAnchorY +
-            LAYOUT.STEREOTYPE_LINE_HEIGHT -
-            LAYOUT.STEREOTYPE_NAME_GAP
+          ? topAnchorY + LAYOUT.STEREOTYPE_LINE_HEIGHT - LAYOUT.STEREOTYPE_NAME_GAP
           : topAnchorY,
       }
     }

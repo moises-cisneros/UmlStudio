@@ -180,43 +180,32 @@ class GeminiVisionProvider:
             return await self._stub.extract(image, mime)
 
 
-class OpenAIVisionProvider:
-    """OpenAI GPT-4o multimodal vision provider."""
+class LMStudioVisionProvider:
+    """LM Studio local vision provider using Qwen3 VL (qwen3-vl-4b-instruct)."""
 
-    provider_name = "openai-vision"
+    provider_name = "lmstudio-vision"
 
-    def __init__(self, api_key: str = None, model: str = None) -> None:
-        self.api_key = api_key or settings.OPENAI_API_KEY
-        self.model = model or "gpt-4o"
+    def __init__(self, endpoint_url: str = None, model: str = None) -> None:
+        self.endpoint_url = (endpoint_url or settings.LMSTUDIO_URL).rstrip("/")
+        self.model = model or settings.LMSTUDIO_VISION_MODEL
         self._stub = StubVisionProvider()
 
     async def extract(self, image: bytes, mime: str) -> VisionResult:
-        if not self.api_key:
-            logger.warning("OPENAI_API_KEY not configured, falling back to stub vision provider.")
-            return await self._stub.extract(image, mime)
-
         b64_image = base64.b64encode(image).decode("utf-8")
-        url = "https://api.openai.com/v1/chat/completions"
-
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        url = f"{self.endpoint_url}/chat/completions"
 
         payload = {
             "model": self.model,
-            "response_format": {"type": "json_object"},
             "messages": [
                 {"role": "system", "content": VISION_SYSTEM_INSTRUCTION},
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Extract the UML Class Diagram from this image as JSON."},
+                        {"type": "text", "text": "Extract the UML Class Diagram from this image as strict JSON."},
                         {
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:{mime};base64,{b64_image}",
-                                "detail": "high",
                             },
                         },
                     ],
@@ -226,34 +215,54 @@ class OpenAIVisionProvider:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=25.0) as client:
-                resp = await client.post(url, headers=headers, json=payload)
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(url, json=payload)
                 if resp.status_code != 200:
-                    logger.error("OpenAI Vision API error (%s): %s", resp.status_code, resp.text)
+                    logger.error("LM Studio Vision error (%s): %s", resp.status_code, resp.text)
                     return await self._stub.extract(image, mime)
 
                 data = resp.json()
                 choice = data.get("choices", [{}])[0]
                 text = choice.get("message", {}).get("content", "").strip()
+
+                # Clean possible markdown fence
+                if "```" in text:
+                    parts = text.split("```")
+                    for part in parts[1::2]:
+                        cand = part.strip()
+                        if cand.startswith("json"):
+                            cand = cand[4:].strip()
+                        try:
+                            parsed = json.loads(cand)
+                            return VisionResult(
+                                model=parsed.get("model", parsed),
+                                confidence=parsed.get("confidence", {}),
+                            )
+                        except Exception:
+                            continue
+
                 parsed = json.loads(text)
                 return VisionResult(
-                    model=parsed.get("model", {}),
+                    model=parsed.get("model", parsed),
                     confidence=parsed.get("confidence", {}),
                 )
         except Exception as exc:
-            logger.exception("OpenAI Vision extraction failed: %s", exc)
+            logger.exception("LM Studio Vision extraction failed: %s", exc)
             return await self._stub.extract(image, mime)
 
 
-def get_vision_provider(name: str = "stub") -> AIProvider:
+def get_vision_provider(name: str = "auto") -> AIProvider:
     """Resolve the vision provider."""
-    normalized = (name or "stub").strip().lower()
+    normalized = (name or "auto").strip().lower()
     if normalized in ("stub", "mock", "mock-local"):
         return StubVisionProvider()
+    if normalized in ("lmstudio", "lm-studio", "qwen-vl", "local"):
+        return LMStudioVisionProvider()
     if normalized in ("gemini", "google"):
         return GeminiVisionProvider()
-    if normalized in ("openai", "gpt-4o"):
-        return OpenAIVisionProvider()
-    raise ValueError(
-        f"Unknown vision provider '{name}'. Available: 'stub', 'gemini', 'openai'."
-    )
+    # Default 'auto' mode: Gemini -> LM Studio -> Stub
+    if normalized in ("auto", ""):
+        if settings.GEMINI_API_KEY:
+            return GeminiVisionProvider()
+        return LMStudioVisionProvider()
+    return StubVisionProvider()

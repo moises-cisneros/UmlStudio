@@ -1,19 +1,19 @@
-import { ChevronDown, ChevronRight, Layers } from "lucide-react";
-import { useState, type FC } from "react";
-import { VersionListItem } from "./VersionListItem";
-import { useVersioningTranslation } from "./strings";
-import type { GroupedEntry } from "./utils";
+import { ChevronDown, ChevronRight, Layers } from "lucide-react"
+import { useState, type FC } from "react"
+import { VersionListItem } from "./VersionListItem"
+import { useVersioningTranslation } from "./strings"
+import type { GroupedEntry } from "./utils"
 
 interface AutoGroupRowProps {
-  group: Extract<GroupedEntry, { kind: "auto-group" }>;
-  diagramId: string;
-  onPreview: (versionId: string) => void;
-  onRestore: (versionId: string) => void;
-  onDelete: (versionId: string) => void;
-  previewingVersionId: string | null;
-  versionNumberById: Map<string, number>;
-  latestSavedId?: string;
-  hasUnsavedChanges: boolean;
+  group: Extract<GroupedEntry, { kind: "auto-group" }>
+  diagramId: string
+  onPreview: (versionId: string) => void
+  onRestore: (versionId: string) => void
+  onDelete: (versionId: string) => void
+  previewingVersionId: string | null
+  versionNumberById: Map<string, number>
+  latestSavedId?: string
+  hasUnsavedChanges: boolean
 }
 
 export const AutoGroupRow: FC<AutoGroupRowProps> = ({
@@ -27,8 +27,8 @@ export const AutoGroupRow: FC<AutoGroupRowProps> = ({
   latestSavedId,
   hasUnsavedChanges,
 }) => {
-  const t = useVersioningTranslation();
-  const [expanded, setExpanded] = useState(false);
+  const t = useVersioningTranslation()
+  const [expanded, setExpanded] = useState(false)
 
   return (
     <li className="list-none mb-3">
@@ -88,5 +88,5 @@ export const AutoGroupRow: FC<AutoGroupRowProps> = ({
         )}
       </div>
     </li>
-  );
-};
+  )
+}

@@ -1,10 +1,10 @@
 // @ts-check
-import globals from "globals";
-import pluginJs from "@eslint/js";
-import tseslint from "typescript-eslint";
-import eslintReact from "@eslint-react/eslint-plugin";
-import reactHooks from "eslint-plugin-react-hooks";
-import pluginQuery from "@tanstack/eslint-plugin-query";
+import globals from "globals"
+import pluginJs from "@eslint/js"
+import tseslint from "typescript-eslint"
+import eslintReact from "@eslint-react/eslint-plugin"
+import reactHooks from "eslint-plugin-react-hooks"
+import pluginQuery from "@tanstack/eslint-plugin-query"
 
 export default [
   {
@@ -80,4 +80,4 @@ export default [
     ],
     rules: { "react-hooks/set-state-in-effect": "warn" },
   },
-];
+]

@@ -1,60 +1,53 @@
-import { create } from "zustand";
-import { devtools, persist, createJSONStorage } from "zustand/middleware";
-import type { UMLModel } from "@umlstudio/core";
+import { create } from "zustand"
+import { devtools, persist, createJSONStorage } from "zustand/middleware"
+import type { UMLModel } from "@umlstudio/core"
 
-type DiagramId = string;
-type VersionId = string;
+type DiagramId = string
+type VersionId = string
 
 interface PreviewState {
-  diagramId: DiagramId;
-  versionId: VersionId;
-  body: UMLModel;
+  diagramId: DiagramId
+  versionId: VersionId
+  body: UMLModel
 }
 
 interface UndoRestoreState {
-  diagramId: DiagramId;
-  autoSnapshotVersionId: VersionId;
-  restoredFromVersionId: VersionId;
-  restoredVersionName: string;
-  expiresAt: number;
+  diagramId: DiagramId
+  autoSnapshotVersionId: VersionId
+  restoredFromVersionId: VersionId
+  restoredVersionName: string
+  expiresAt: number
 }
 
 interface State {
-  drawerOpenByDiagram: Record<DiagramId, boolean>;
-  saveRequestByDiagram: Record<DiagramId, number>;
-  preview: PreviewState | null;
-  undoRestore: UndoRestoreState | null;
-  pendingRestoreFromId: VersionId | null;
+  drawerOpenByDiagram: Record<DiagramId, boolean>
+  saveRequestByDiagram: Record<DiagramId, number>
+  preview: PreviewState | null
+  undoRestore: UndoRestoreState | null
+  pendingRestoreFromId: VersionId | null
 }
 
 interface Actions {
-  openDrawer: (diagramId: DiagramId) => void;
-  closeDrawer: (diagramId: DiagramId) => void;
-  requestSave: (diagramId: DiagramId) => void;
-  clearSaveRequest: (diagramId: DiagramId) => void;
+  openDrawer: (diagramId: DiagramId) => void
+  closeDrawer: (diagramId: DiagramId) => void
+  requestSave: (diagramId: DiagramId) => void
+  clearSaveRequest: (diagramId: DiagramId) => void
 
-  enterPreview: (
-    diagramId: DiagramId,
-    versionId: VersionId,
-    body: UMLModel,
-  ) => void;
-  exitPreview: () => void;
+  enterPreview: (diagramId: DiagramId, versionId: VersionId, body: UMLModel) => void
+  exitPreview: () => void
 
-  beginRestore: (versionId: VersionId) => void;
-  completeRestore: (undo: Omit<UndoRestoreState, "expiresAt">) => void;
-  cancelRestore: () => void;
-  dismissUndoRestore: () => void;
+  beginRestore: (versionId: VersionId) => void
+  completeRestore: (undo: Omit<UndoRestoreState, "expiresAt">) => void
+  cancelRestore: () => void
+  dismissUndoRestore: () => void
 }
 
-export type VersionStore = State & Actions;
+export type VersionStore = State & Actions
 
-export const UNDO_WINDOW_MS = 10_000;
+export const UNDO_WINDOW_MS = 10_000
 
-export function selectScopedPreview(
-  state: State,
-  diagramId: string,
-): PreviewState | null {
-  return state.preview?.diagramId === diagramId ? state.preview : null;
+export function selectScopedPreview(state: State, diagramId: string): PreviewState | null {
+  return state.preview?.diagramId === diagramId ? state.preview : null
 }
 
 export const useVersionStore = create<VersionStore>()(
@@ -120,8 +113,8 @@ export const useVersionStore = create<VersionStore>()(
         partialize: (state) => ({
           drawerOpenByDiagram: state.drawerOpenByDiagram,
         }),
-      },
+      }
     ),
-    { name: "umlstudio-version-store" },
-  ),
-);
+    { name: "umlstudio-version-store" }
+  )
+)

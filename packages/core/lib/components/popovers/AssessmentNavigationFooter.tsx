@@ -7,9 +7,7 @@ interface AssessmentNavigationFooterProps {
   elementId: string
 }
 
-export const AssessmentNavigationFooter = ({
-  elementId,
-}: AssessmentNavigationFooterProps) => {
+export const AssessmentNavigationFooter = ({ elementId }: AssessmentNavigationFooterProps) => {
   const t = useLabels()
   const { canNavigate, navigate } = useAssessmentNavigation(elementId)
 

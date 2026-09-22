@@ -3,15 +3,11 @@ import { generateUUID, type DropElementConfig } from "@/constants"
 
 function hasStringId(item: unknown): item is { id: string } {
   return (
-    typeof item === "object" &&
-    item !== null &&
-    typeof (item as { id?: unknown }).id === "string"
+    typeof item === "object" && item !== null && typeof (item as { id?: unknown }).id === "string"
   )
 }
 
-export function remintNestedChildIds<T extends Record<string, unknown>>(
-  data: T
-): T {
+export function remintNestedChildIds<T extends Record<string, unknown>>(data: T): T {
   const result: Record<string, unknown> = { ...data }
   for (const [key, value] of Object.entries(data)) {
     if (Array.isArray(value) && value.some(hasStringId)) {

@@ -1,27 +1,27 @@
-import { Eye } from "lucide-react";
-import { useState, type CSSProperties, type FC } from "react";
-import { cn } from "@umlstudio/ui/lib/utils";
-import { selectScopedPreview, useVersionStore } from "@/stores/useVersionStore";
-import { useVersionsQuery } from "@/queries/versionQueries";
-import { useVersionRepositoryKind } from "@/contexts/VersionRepositoryContext";
-import { useVersioningTranslation } from "./strings";
-import { relativeTime } from "./relativeTime";
+import { Eye } from "lucide-react"
+import { useState, type CSSProperties, type FC } from "react"
+import { cn } from "@umlstudio/ui/lib/utils"
+import { selectScopedPreview, useVersionStore } from "@/stores/useVersionStore"
+import { useVersionsQuery } from "@/queries/versionQueries"
+import { useVersionRepositoryKind } from "@/contexts/VersionRepositoryContext"
+import { useVersioningTranslation } from "./strings"
+import { relativeTime } from "./relativeTime"
 
-const COMPACT_WIDTH_PX = 768;
+const COMPACT_WIDTH_PX = 768
 
 interface ViewProps {
-  label: string;
-  ago: string;
-  authorName?: string;
-  authorAvatar?: string;
-  authorColor?: string;
-  versionId: string;
-  canRestore: boolean;
-  containerWidth?: number;
-  onExitPreview: () => void;
-  onRestore: (versionId: string) => void | Promise<void>;
-  className?: string;
-  ref?: React.Ref<HTMLDivElement>;
+  label: string
+  ago: string
+  authorName?: string
+  authorAvatar?: string
+  authorColor?: string
+  versionId: string
+  canRestore: boolean
+  containerWidth?: number
+  onExitPreview: () => void
+  onRestore: (versionId: string) => void | Promise<void>
+  className?: string
+  ref?: React.Ref<HTMLDivElement>
 }
 
 const buttonStyle: CSSProperties = {
@@ -30,7 +30,7 @@ const buttonStyle: CSSProperties = {
   border: "1px solid var(--home-banner-warning-btn-border)",
   backgroundColor: "var(--home-banner-warning-btn-bg)",
   color: "var(--home-banner-warning-btn-text)",
-};
+}
 
 export function VersionPreviewBannerView({
   label,
@@ -46,11 +46,10 @@ export function VersionPreviewBannerView({
   className,
   ref,
 }: ViewProps) {
-  const t = useVersioningTranslation();
-  const isSmall =
-    containerWidth !== undefined && containerWidth < COMPACT_WIDTH_PX;
+  const t = useVersioningTranslation()
+  const isSmall = containerWidth !== undefined && containerWidth < COMPACT_WIDTH_PX
 
-  const [restoring, setRestoring] = useState(false);
+  const [restoring, setRestoring] = useState(false)
 
   return (
     <div
@@ -59,7 +58,7 @@ export function VersionPreviewBannerView({
       aria-live="polite"
       className={cn(
         "flex w-max max-w-[calc(100%-16px)] items-center rounded-xl border backdrop-blur-md",
-        className,
+        className
       )}
       style={{
         backgroundColor: "var(--home-banner-warning-bg)",
@@ -86,11 +85,7 @@ export function VersionPreviewBannerView({
           <span className="inline-flex items-center gap-1 font-normal opacity-90">
             · by
             {authorAvatar ? (
-              <img
-                src={authorAvatar}
-                alt=""
-                className="size-3.5 rounded-full object-cover"
-              />
+              <img src={authorAvatar} alt="" className="size-3.5 rounded-full object-cover" />
             ) : (
               <span
                 className="size-2 rounded-full inline-block shrink-0"
@@ -128,11 +123,11 @@ export function VersionPreviewBannerView({
             type="button"
             disabled={restoring}
             onClick={async () => {
-              setRestoring(true);
+              setRestoring(true)
               try {
-                await onRestore(versionId);
+                await onRestore(versionId)
               } finally {
-                setRestoring(false);
+                setRestoring(false)
               }
             }}
             className="inline-flex cursor-pointer items-center justify-center rounded-md text-caption font-semibold transition-colors hover:[background:var(--home-banner-warning-btn-hover)] disabled:cursor-not-allowed disabled:opacity-60"
@@ -146,16 +141,16 @@ export function VersionPreviewBannerView({
         )}
       </div>
     </div>
-  );
+  )
 }
 
 interface ContainerProps {
-  diagramId: string;
-  onExitPreview: () => void;
-  onRestore: (versionId: string) => void | Promise<void>;
-  canRestore: boolean;
-  containerWidth?: number;
-  className?: string;
+  diagramId: string
+  onExitPreview: () => void
+  onRestore: (versionId: string) => void | Promise<void>
+  canRestore: boolean
+  containerWidth?: number
+  className?: string
 }
 
 export const VersionPreviewBanner: FC<ContainerProps> = ({
@@ -166,16 +161,15 @@ export const VersionPreviewBanner: FC<ContainerProps> = ({
   containerWidth,
   className,
 }) => {
-  const t = useVersioningTranslation();
-  const preview = useVersionStore((s) => selectScopedPreview(s, diagramId));
-  const kind = useVersionRepositoryKind();
-  const { data } = useVersionsQuery(kind, diagramId);
-  if (!preview) return null;
+  const t = useVersioningTranslation()
+  const preview = useVersionStore((s) => selectScopedPreview(s, diagramId))
+  const kind = useVersionRepositoryKind()
+  const { data } = useVersionsQuery(kind, diagramId)
+  if (!preview) return null
 
-  const summary = data?.versions.find((v) => v.id === preview.versionId);
-  const label =
-    summary?.description?.trim() || summary?.name?.trim() || t.unnamed;
-  const ago = summary ? relativeTime(summary.createdAt) : "";
+  const summary = data?.versions.find((v) => v.id === preview.versionId)
+  const label = summary?.description?.trim() || summary?.name?.trim() || t.unnamed
+  const ago = summary ? relativeTime(summary.createdAt) : ""
 
   return (
     <VersionPreviewBannerView
@@ -191,5 +185,5 @@ export const VersionPreviewBanner: FC<ContainerProps> = ({
       onRestore={onRestore}
       className={className}
     />
-  );
-};
+  )
+}

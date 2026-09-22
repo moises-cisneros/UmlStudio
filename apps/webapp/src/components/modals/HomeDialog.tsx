@@ -1,71 +1,59 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
-import type { ModalProps } from "@/types";
-import { Button } from "@umlstudio/ui/components/button";
-import { DialogFooter } from "@umlstudio/ui/components/dialog";
-import { Input } from "@umlstudio/ui/components/input";
-import { Field, FieldLabel } from "@umlstudio/ui/components/field";
-import { Alert, AlertDescription } from "@umlstudio/ui/components/alert";
-import { cn } from "@umlstudio/ui/lib/utils";
-import { ModalFooterPortal } from "@/wrappers/ModalFrame";
+import type { InputHTMLAttributes, ReactNode } from "react"
+import type { ModalProps } from "@/types"
+import { Button } from "@umlstudio/ui/components/button"
+import { DialogFooter } from "@umlstudio/ui/components/dialog"
+import { Input } from "@umlstudio/ui/components/input"
+import { Field, FieldLabel } from "@umlstudio/ui/components/field"
+import { Alert, AlertDescription } from "@umlstudio/ui/components/alert"
+import { cn } from "@umlstudio/ui/lib/utils"
+import { ModalFooterPortal } from "@/wrappers/ModalFrame"
 
-export type HomeDialogSize = "compact" | "wide";
+export type HomeDialogSize = "compact" | "wide"
 
 export type HomeDialogOption<T extends string> = {
-  value: T;
-  label: string;
-  icon?: ReactNode;
-};
+  value: T
+  label: string
+  icon?: ReactNode
+}
 
 export const isHomeDialogVariant = (props?: ModalProps | unknown) =>
-  Boolean(
-    props &&
-    typeof props === "object" &&
-    (props as ModalProps).dialogVariant === "home",
-  );
+  Boolean(props && typeof props === "object" && (props as ModalProps).dialogVariant === "home")
 
 export const getHomeDialogWidth = (size: HomeDialogSize) =>
-  size === "wide" ? "min(620px, 92vw)" : "min(460px, 92vw)";
+  size === "wide" ? "min(620px, 92vw)" : "min(460px, 92vw)"
 
 export const HomeDialogContent = ({
   children,
   className = "",
   testId,
 }: {
-  children: ReactNode;
-  className?: string;
-  testId?: string;
+  children: ReactNode
+  className?: string
+  testId?: string
 }) => (
-  <div
-    data-testid={testId}
-    className={cn("flex min-w-0 flex-col gap-5", className)}
-  >
+  <div data-testid={testId} className={cn("flex min-w-0 flex-col gap-5", className)}>
     {children}
   </div>
-);
+)
 
 export const HomeDialogNotice = ({ children }: { children: ReactNode }) => (
   <Alert className="border-l-[5px] border-l-primary bg-accent-soft p-2">
-    <AlertDescription className="text-sm font-normal text-foreground">
-      {children}
-    </AlertDescription>
+    <AlertDescription className="text-sm font-normal text-foreground">{children}</AlertDescription>
   </Alert>
-);
+)
 
 export const HomeDialogField = ({
   label,
   htmlFor,
   children,
 }: {
-  label: string;
-  htmlFor?: string;
-  children: ReactNode;
+  label: string
+  htmlFor?: string
+  children: ReactNode
 }) => (
   <Field className="gap-1.5">
     {htmlFor ? (
-      <FieldLabel
-        htmlFor={htmlFor}
-        className="text-xs font-semibold text-foreground"
-      >
+      <FieldLabel htmlFor={htmlFor} className="text-xs font-semibold text-foreground">
         {label}
       </FieldLabel>
     ) : (
@@ -73,25 +61,23 @@ export const HomeDialogField = ({
     )}
     {children}
   </Field>
-);
+)
 
-export const HomeDialogTextInput = (
-  props: InputHTMLAttributes<HTMLInputElement>,
-) => (
+export const HomeDialogTextInput = (props: InputHTMLAttributes<HTMLInputElement>) => (
   <Input
     {...props}
     className={cn(
       "h-9 rounded-md border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-60",
-      props.className,
+      props.className
     )}
   />
-);
+)
 
 export const HomeDialogValueBox = ({ children }: { children: ReactNode }) => (
   <div className="h-9 rounded-md border border-border bg-muted px-3 py-2 text-sm font-medium text-foreground">
     {children}
   </div>
-);
+)
 
 export const HomeDialogOptionGroup = <T extends string>({
   label,
@@ -103,25 +89,23 @@ export const HomeDialogOptionGroup = <T extends string>({
   onConfirm,
   hideLabel = false,
 }: {
-  label: string;
-  options: readonly HomeDialogOption<T>[];
-  value: T;
-  onChange: (value: T) => void;
-  columns?: 1 | 2;
-  disabled?: boolean;
-  onConfirm?: () => void;
-  hideLabel?: boolean;
+  label: string
+  options: readonly HomeDialogOption<T>[]
+  value: T
+  onChange: (value: T) => void
+  columns?: 1 | 2
+  disabled?: boolean
+  onConfirm?: () => void
+  hideLabel?: boolean
 }) => {
-  const headingId = `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-group`;
-  const hasIcons = options.some((option) => option.icon);
+  const headingId = `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-group`
+  const hasIcons = options.some((option) => option.icon)
 
   return (
     <section className="flex flex-col gap-2" aria-labelledby={headingId}>
       <h3
         id={headingId}
-        className={
-          hideLabel ? "sr-only" : "text-xs font-semibold text-foreground"
-        }
+        className={hideLabel ? "sr-only" : "text-xs font-semibold text-foreground"}
       >
         {label}
       </h3>
@@ -132,11 +116,11 @@ export const HomeDialogOptionGroup = <T extends string>({
             ? columns === 2
               ? "grid-cols-2"
               : "grid-cols-2 min-[480px]:grid-cols-3"
-            : ["grid-cols-1", columns === 2 && "sm:grid-cols-2"],
+            : ["grid-cols-1", columns === 2 && "sm:grid-cols-2"]
         )}
       >
         {options.map((option) => {
-          const selected = option.value === value;
+          const selected = option.value === value
 
           return (
             <button
@@ -153,18 +137,18 @@ export const HomeDialogOptionGroup = <T extends string>({
                   : "min-h-9 px-3 py-2 text-left text-sm font-medium",
                 selected
                   ? "border-primary bg-accent-soft text-accent-strong"
-                  : "border-border bg-card text-foreground hover:bg-accent-hover",
+                  : "border-border bg-card text-foreground hover:bg-accent-hover"
               )}
             >
               {option.icon}
               <span className="line-clamp-2">{option.label}</span>
             </button>
-          );
+          )
         })}
       </div>
     </section>
-  );
-};
+  )
+}
 
 export const HomeDialogActions = ({
   cancelLabel = "Cancel",
@@ -175,26 +159,22 @@ export const HomeDialogActions = ({
   onCancel,
   onConfirm,
 }: {
-  cancelLabel?: string;
-  confirmLabel: string;
-  loadingLabel?: string;
-  loading?: boolean;
-  confirmDisabled?: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
+  cancelLabel?: string
+  confirmLabel: string
+  loadingLabel?: string
+  loading?: boolean
+  confirmDisabled?: boolean
+  onCancel: () => void
+  onConfirm: () => void
 }) => (
   <ModalFooterPortal>
     <DialogFooter>
       <Button variant="outline" disabled={loading} onClick={onCancel}>
         {cancelLabel}
       </Button>
-      <Button
-        variant="default"
-        disabled={loading || confirmDisabled}
-        onClick={onConfirm}
-      >
+      <Button variant="default" disabled={loading || confirmDisabled} onClick={onConfirm}>
         {loading && loadingLabel ? loadingLabel : confirmLabel}
       </Button>
     </DialogFooter>
   </ModalFooterPortal>
-);
+)

@@ -1,10 +1,5 @@
 import { UMLDiagramType } from "@/types"
-import {
-  UmlStudioEdge,
-  UmlStudioNode,
-  DiagramEdgeType,
-  DiagramNodeType,
-} from "@/typings"
+import { UmlStudioEdge, UmlStudioNode, DiagramEdgeType, DiagramNodeType } from "@/typings"
 import { type Node, type Edge } from "@xyflow/react"
 const diagramTypeValues = new Set(Object.values(UMLDiagramType))
 

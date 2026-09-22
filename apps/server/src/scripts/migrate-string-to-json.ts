@@ -1,9 +1,9 @@
-import "../env.js";
-import { loadConfig } from "../config.js";
-import { createRedisClient, k } from "../redis.js";
-import { logger } from "../logger.js";
+import "../env.js"
+import { loadConfig } from "../config.js"
+import { createRedisClient, k } from "../redis.js"
+import { logger } from "../logger.js"
 
-const LEGACY_HEAD_RE = /^diagram:(?!\{)(.+)$/;
+const LEGACY_HEAD_RE = /^diagram:(?!\{)(.+)$/
 
 function isNonHeadKey(key: string): boolean {
   return (
@@ -11,71 +11,71 @@ function isNonHeadKey(key: string): boolean {
     key.endsWith(":meta") ||
     key.endsWith(":versions") ||
     key.endsWith(":auto-version-marker")
-  );
+  )
 }
 
 async function main() {
-  const config = loadConfig();
-  const redis = createRedisClient(config.REDIS_URL);
-  await redis.connect();
+  const config = loadConfig()
+  const redis = createRedisClient(config.REDIS_URL)
+  await redis.connect()
 
-  let scanned = 0;
-  let migrated = 0;
-  let alreadyJson = 0;
-  let skippedOther = 0;
+  let scanned = 0
+  let migrated = 0
+  let alreadyJson = 0
+  let skippedOther = 0
 
   for await (const keys of redis.scanIterator({
     MATCH: "diagram:*",
     COUNT: 200,
   })) {
-    const arr = Array.isArray(keys) ? keys : [keys];
+    const arr = Array.isArray(keys) ? keys : [keys]
     for (const key of arr as string[]) {
-      scanned++;
+      scanned++
       if (isNonHeadKey(key)) {
-        skippedOther++;
-        continue;
+        skippedOther++
+        continue
       }
 
       // Already in new format — `diagram:{<id>}` with ReJSON type.
-      const type = await redis.type(key);
+      const type = await redis.type(key)
       if (type === "ReJSON-RL") {
-        alreadyJson++;
-        continue;
+        alreadyJson++
+        continue
       }
       if (type !== "string") {
-        skippedOther++;
-        continue;
+        skippedOther++
+        continue
       }
 
       // Extract the diagram ID from the legacy key.
-      const match = LEGACY_HEAD_RE.exec(key);
+      const match = LEGACY_HEAD_RE.exec(key)
       if (!match) {
-        logger.warn({ key }, "skipped key — could not extract diagram ID");
-        skippedOther++;
-        continue;
+        logger.warn({ key }, "skipped key — could not extract diagram ID")
+        skippedOther++
+        continue
       }
-      const diagramId = match[1]!;
-      const newHeadKey = k.diagram(diagramId);
-      const newMetaKey = k.diagramMeta(diagramId);
+      const diagramId = match[1]!
+      const newHeadKey = k.diagram(diagramId)
+      const newMetaKey = k.diagramMeta(diagramId)
 
-      const ttl = await redis.ttl(key);
-      const raw = await redis.get(key);
-      if (!raw) continue;
+      const ttl = await redis.ttl(key)
+      const raw = await redis.get(key)
+      if (!raw) continue
 
-      let parsed: unknown;
+      let parsed: unknown
       try {
-        parsed = JSON.parse(raw);
+        parsed = JSON.parse(raw)
       } catch {
-        logger.warn({ key }, "skipped non-JSON STRING");
-        skippedOther++;
-        continue;
+        logger.warn({ key }, "skipped non-JSON STRING")
+        skippedOther++
+        continue
       }
 
       // Atomic: write new ReJSON HEAD + meta hash + TTLs + delete old key.
       // Safe to re-run: if newHeadKey already exists as ReJSON, the outer
       // loop would have hit the `alreadyJson` branch. If it somehow
       // exists as a STRING (partial prior run), this overwrites it cleanly.
-      const ttlStr = String(ttl > 0 ? ttl : config.DIAGRAM_TTL_SECONDS);
+      const ttlStr = String(ttl > 0 ? ttl : config.DIAGRAM_TTL_SECONDS)
       await redis.eval(
         `redis.call('JSON.SET', KEYS[2], '$', ARGV[1])
          redis.call('EXPIRE', KEYS[2], ARGV[2])
@@ -87,45 +87,37 @@ async function main() {
         {
           keys: [key, newHeadKey, newMetaKey],
           arguments: [JSON.stringify(parsed), ttlStr],
-        },
-      );
+        }
+      )
 
-      logger.info(
-        { from: key, to: newHeadKey, ttl: Number(ttlStr) },
-        "migrated diagram",
-      );
-      migrated++;
+      logger.info({ from: key, to: newHeadKey, ttl: Number(ttlStr) }, "migrated diagram")
+      migrated++
     }
   }
 
-  logger.info(
-    { scanned, migrated, alreadyJson, skippedOther },
-    "migration complete",
-  );
+  logger.info({ scanned, migrated, alreadyJson, skippedOther }, "migration complete")
 
   // Final assertion: no STRING-typed diagram HEAD keys remain (legacy or new format).
   for await (const keys of redis.scanIterator({
     MATCH: "diagram:*",
     COUNT: 200,
   })) {
-    const arr = Array.isArray(keys) ? keys : [keys];
+    const arr = Array.isArray(keys) ? keys : [keys]
     for (const key of arr as string[]) {
-      if (isNonHeadKey(key)) continue;
-      const type = await redis.type(key);
+      if (isNonHeadKey(key)) continue
+      const type = await redis.type(key)
       if (type === "string") {
-        await redis.quit();
-        throw new Error(
-          `Migration incomplete: ${key} still has type 'string'. Aborting.`,
-        );
+        await redis.quit()
+        throw new Error(`Migration incomplete: ${key} still has type 'string'. Aborting.`)
       }
     }
   }
 
-  await redis.quit();
-  logger.info("migration verified — no STRING HEAD keys remain");
+  await redis.quit()
+  logger.info("migration verified — no STRING HEAD keys remain")
 }
 
 main().catch((err) => {
-  logger.error({ err }, "migration failed");
-  process.exit(1);
-});
+  logger.error({ err }, "migration failed")
+  process.exit(1)
+})

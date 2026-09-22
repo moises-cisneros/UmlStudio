@@ -1,3 +1,3 @@
 export type WebSocketMessage = {
-  diagramData: string;
-};
+  diagramData: string
+}

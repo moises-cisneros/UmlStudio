@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus } from "lucide-react"
 
 export function HomeNewFab({ onNewDiagram }: { onNewDiagram?: () => void }) {
   return (
@@ -11,5 +11,5 @@ export function HomeNewFab({ onNewDiagram }: { onNewDiagram?: () => void }) {
       <Plus className="size-5" aria-hidden />
       New diagram
     </button>
-  );
+  )
 }

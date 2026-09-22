@@ -1,15 +1,15 @@
-import { IconButton, TextField, Typography } from "@/components/ui";
-import { EdgeStyleEditor } from "@/components/styleEditor";
-import { CustomEdgeProps } from "@/edges/EdgeProps";
-import { ArrowLeftRight, ArrowRight, Circle, CircleDot } from "lucide-react";
-import { useEdgePopOver, useReactiveEdge, useReactiveNodeName } from "@/hooks";
-import { PopoverProps } from "../types";
-import { EdgeTypeSelect, EdgeTypeOption } from "./EdgeTypeSelect";
-import { useLabels } from "@/i18n/useLabels";
-import { PopoverLayout, PopoverSection } from "../PopoverLayout";
+import { IconButton, TextField, Typography } from "@/components/ui"
+import { EdgeStyleEditor } from "@/components/styleEditor"
+import { CustomEdgeProps } from "@/edges/EdgeProps"
+import { ArrowLeftRight, ArrowRight, Circle, CircleDot } from "lucide-react"
+import { useEdgePopOver, useReactiveEdge, useReactiveNodeName } from "@/hooks"
+import { PopoverProps } from "../types"
+import { EdgeTypeSelect, EdgeTypeOption } from "./EdgeTypeSelect"
+import { useLabels } from "@/i18n/useLabels"
+import { PopoverLayout, PopoverSection } from "../PopoverLayout"
 
 export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
-  const t = useLabels();
+  const t = useLabels()
 
   const CLASS_EDGE_TYPE_OPTIONS: ReadonlyArray<EdgeTypeOption> = [
     { value: "ClassBidirectional", label: t.association ?? t.biAssociation },
@@ -18,11 +18,11 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
     { value: "ClassInheritance", label: t.inheritance },
     { value: "ClassDependency", label: t.dependency },
     { value: "ClassRealization", label: t.realization },
-  ];
+  ]
 
-  const edge = useReactiveEdge(elementId);
-  const sourceName = useReactiveNodeName(edge?.source, t.source);
-  const targetName = useReactiveNodeName(edge?.target, t.target);
+  const edge = useReactiveEdge(elementId)
+  const sourceName = useReactiveNodeName(edge?.source, t.source)
+  const targetName = useReactiveNodeName(edge?.target, t.target)
 
   const {
     handleSourceRoleChange,
@@ -31,13 +31,13 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
     handleTargetMultiplicityChange,
     handleEdgeTypeChange,
     handleSwap,
-  } = useEdgePopOver(elementId);
+  } = useEdgePopOver(elementId)
 
   if (!edge) {
-    return null;
+    return null
   }
 
-  const edgeData = edge.data as CustomEdgeProps | undefined;
+  const edgeData = edge.data as CustomEdgeProps | undefined
 
   return (
     <PopoverLayout title={t.edge}>
@@ -52,8 +52,7 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
           borderRadius: 8,
           backgroundColor:
             "color-mix(in srgb, var(--dodger-blue, #3590f3) 8%, var(--umlstudio-surface, #1e293b))",
-          border:
-            "1px solid color-mix(in srgb, var(--dodger-blue, #3590f3) 22%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--dodger-blue, #3590f3) 22%, transparent)",
         }}
       >
         <div
@@ -155,8 +154,7 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
             gap: 8,
             padding: "8px 10px",
             borderRadius: 8,
-            border:
-              "1px solid var(--umlstudio-border, var(--border-subtle, #243046))",
+            border: "1px solid var(--umlstudio-border, var(--border-subtle, #243046))",
             backgroundColor:
               "color-mix(in srgb, var(--umlstudio-surface, #1e293b) 60%, transparent)",
           }}
@@ -169,15 +167,8 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <CircleDot
-                width={13}
-                height={13}
-                style={{ color: "var(--dodger-blue, #3590f3)" }}
-              />
-              <Typography
-                variant="subtitle2"
-                style={{ fontWeight: 600, fontSize: "0.8125rem" }}
-              >
+              <CircleDot width={13} height={13} style={{ color: "var(--dodger-blue, #3590f3)" }} />
+              <Typography variant="subtitle2" style={{ fontWeight: 600, fontSize: "0.8125rem" }}>
                 {t.source}
               </Typography>
             </div>
@@ -187,8 +178,7 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
                 fontWeight: 600,
                 padding: "1px 6px",
                 borderRadius: 4,
-                backgroundColor:
-                  "color-mix(in srgb, var(--dodger-blue, #3590f3) 14%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--dodger-blue, #3590f3) 14%, transparent)",
                 color: "var(--dodger-blue, #3590f3)",
                 maxWidth: 120,
                 overflow: "hidden",
@@ -227,8 +217,7 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
             gap: 8,
             padding: "8px 10px",
             borderRadius: 8,
-            border:
-              "1px solid var(--umlstudio-border, var(--border-subtle, #243046))",
+            border: "1px solid var(--umlstudio-border, var(--border-subtle, #243046))",
             backgroundColor:
               "color-mix(in srgb, var(--umlstudio-surface, #1e293b) 60%, transparent)",
           }}
@@ -241,15 +230,8 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Circle
-                width={13}
-                height={13}
-                style={{ color: "var(--brand-cyan, #00d8ff)" }}
-              />
-              <Typography
-                variant="subtitle2"
-                style={{ fontWeight: 600, fontSize: "0.8125rem" }}
-              >
+              <Circle width={13} height={13} style={{ color: "var(--brand-cyan, #00d8ff)" }} />
+              <Typography variant="subtitle2" style={{ fontWeight: 600, fontSize: "0.8125rem" }}>
                 {t.target}
               </Typography>
             </div>
@@ -259,8 +241,7 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
                 fontWeight: 600,
                 padding: "1px 6px",
                 borderRadius: 4,
-                backgroundColor:
-                  "color-mix(in srgb, var(--brand-cyan, #00d8ff) 14%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--brand-cyan, #00d8ff) 14%, transparent)",
                 color: "var(--brand-cyan, #00d8ff)",
                 maxWidth: 120,
                 overflow: "hidden",
@@ -290,5 +271,5 @@ export const EdgeEditPopover: React.FC<PopoverProps> = ({ elementId }) => {
         </div>
       </PopoverSection>
     </PopoverLayout>
-  );
-};
+  )
+}

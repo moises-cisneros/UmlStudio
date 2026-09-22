@@ -1,18 +1,14 @@
-import { useTranslation, type Locale } from "@/i18n";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@umlstudio/ui/components/tooltip";
+import { useTranslation, type Locale } from "@/i18n"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@umlstudio/ui/components/tooltip"
 
 export function LanguageSwitcher() {
-  const { locale, setLocale, t } = useTranslation();
+  const { locale, setLocale, t } = useTranslation()
 
   const handleToggle = (newLocale: Locale) => {
     if (newLocale !== locale) {
-      setLocale(newLocale);
+      setLocale(newLocale)
     }
-  };
+  }
 
   return (
     <Tooltip>
@@ -58,5 +54,5 @@ export function LanguageSwitcher() {
         </span>
       </TooltipContent>
     </Tooltip>
-  );
+  )
 }

@@ -176,10 +176,7 @@ export function getPathEndInfo(pathD: string): PathEndInfo | null {
     lastCommandType = absType
   }
 
-  const direction = calculateDirection(
-    { x: prevX, y: prevY },
-    { x: currentX, y: currentY }
-  )
+  const direction = calculateDirection({ x: prevX, y: prevY }, { x: currentX, y: currentY })
 
   return {
     endPoint: { x: currentX, y: currentY },
@@ -270,10 +267,7 @@ export function getPathStartInfo(pathD: string): PathStartInfo | null {
 
   if (!foundStart || !foundSecond) return null
 
-  const direction = calculateDirection(
-    { x: secondX, y: secondY },
-    { x: startX, y: startY }
-  )
+  const direction = calculateDirection({ x: secondX, y: secondY }, { x: startX, y: startY })
 
   return {
     startPoint: { x: startX, y: startY },

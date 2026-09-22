@@ -1,9 +1,6 @@
-import {
-  DiagramNodeTypeRecord,
-  DiagramEdgeTypeRecord,
-} from "../../modelElementTypes";
-import type { UMLModel } from "../../typings";
-import type { AIAdapter, ModelDiff } from "../types";
+import { DiagramNodeTypeRecord, DiagramEdgeTypeRecord } from "../../modelElementTypes"
+import type { UMLModel } from "../../typings"
+import type { AIAdapter, ModelDiff } from "../types"
 
 /**
  * Deterministic Mock AI Adapter for offline testing and CI execution.
@@ -11,19 +8,13 @@ import type { AIAdapter, ModelDiff } from "../types";
  * and producing structured, spec-compliant ModelDiff JSON payloads.
  */
 export class MockAIAdapter implements AIAdapter {
-  readonly providerName = "mock-local";
+  readonly providerName = "mock-local"
 
-  async generateDiff(
-    prompt: string,
-    _currentModel: UMLModel,
-  ): Promise<ModelDiff> {
-    const normalizedPrompt = prompt.toLowerCase();
+  async generateDiff(prompt: string, _currentModel: UMLModel): Promise<ModelDiff> {
+    const normalizedPrompt = prompt.toLowerCase()
 
     // Strategy Pattern (INT-CU03 requirement)
-    if (
-      normalizedPrompt.includes("strategy") ||
-      normalizedPrompt.includes("estrategia")
-    ) {
+    if (normalizedPrompt.includes("strategy") || normalizedPrompt.includes("estrategia")) {
       return {
         add: {
           elements: [
@@ -83,14 +74,11 @@ export class MockAIAdapter implements AIAdapter {
             },
           ],
         },
-      };
+      }
     }
 
     // Observer Pattern
-    if (
-      normalizedPrompt.includes("observer") ||
-      normalizedPrompt.includes("observador")
-    ) {
+    if (normalizedPrompt.includes("observer") || normalizedPrompt.includes("observador")) {
       return {
         add: {
           elements: [
@@ -132,7 +120,7 @@ export class MockAIAdapter implements AIAdapter {
             },
           ],
         },
-      };
+      }
     }
 
     // Default fallback: empty diff
@@ -141,6 +129,6 @@ export class MockAIAdapter implements AIAdapter {
         elements: [],
         relationships: [],
       },
-    };
+    }
   }
 }

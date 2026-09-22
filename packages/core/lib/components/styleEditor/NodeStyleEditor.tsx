@@ -32,9 +32,7 @@ export const NodeStyleEditor: React.FC<NodeStyleEditorProps> = ({
       {preElements}
       {showNameInputChange ? (
         <TextField
-          onChange={(event) =>
-            handleDataFieldUpdate("name", event.target.value)
-          }
+          onChange={(event) => handleDataFieldUpdate("name", event.target.value)}
           style={{ flex: 1, minWidth: 90 }}
           value={nodeData.name ?? ""}
           placeholder={inputPlaceholder ?? t.namePlaceholder}

@@ -1,10 +1,10 @@
-import { appVersion } from "@/constants";
-import { Button } from "@umlstudio/ui/components/button";
-import { DialogFooter } from "@umlstudio/ui/components/dialog";
+import { appVersion } from "@/constants"
+import { Button } from "@umlstudio/ui/components/button"
+import { DialogFooter } from "@umlstudio/ui/components/dialog"
 
 type AboutModalProps = {
-  onClose: () => void;
-};
+  onClose: () => void
+}
 
 export const AboutModal = ({ onClose }: AboutModalProps) => {
   return (
@@ -27,16 +27,14 @@ export const AboutModal = ({ onClose }: AboutModalProps) => {
         </div>
         <div>
           <h2 className="text-base font-bold">UmlStudio</h2>
-          <p className="text-xs text-muted-foreground">
-            Editor de Diagramas de Clases UML
-          </p>
+          <p className="text-xs text-muted-foreground">Editor de Diagramas de Clases UML</p>
         </div>
       </div>
 
       <p className="leading-relaxed">
-        UmlStudio es una herramienta de modelado visual para diagramas de clases
-        UML, diseñada para soportar edición interactiva, colaboración en tiempo
-        real y generación de arquitectura de software.
+        UmlStudio es una herramienta de modelado visual para diagramas de clases UML, diseñada para
+        soportar edición interactiva, colaboración en tiempo real y generación de arquitectura de
+        software.
       </p>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5">
@@ -52,5 +50,5 @@ export const AboutModal = ({ onClose }: AboutModalProps) => {
         </Button>
       </DialogFooter>
     </div>
-  );
-};
+  )
+}

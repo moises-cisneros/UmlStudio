@@ -1,4 +1,4 @@
-import type { RepositoryKind } from "@/services/versionRepository";
+import type { RepositoryKind } from "@/services/versionRepository"
 
 export const versionKeys = {
   all: ["versions"] as const,
@@ -6,4 +6,4 @@ export const versionKeys = {
     [...versionKeys.all, "list", kind, diagramId] as const,
   body: (kind: RepositoryKind, diagramId: string, versionId: string) =>
     [...versionKeys.all, "body", kind, diagramId, versionId] as const,
-};
+}

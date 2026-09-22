@@ -1,5 +1,5 @@
-import { appVersion } from "@/constants";
-import { ISLAND_LAYOUT_STYLE } from "@/components/navbar/islandPrimitives";
+import { appVersion } from "@/constants"
+import { ISLAND_LAYOUT_STYLE } from "@/components/navbar/islandPrimitives"
 
 export function HomeBrandPill() {
   return (
@@ -26,5 +26,5 @@ export function HomeBrandPill() {
         </svg>
       </div>
     </header>
-  );
+  )
 }

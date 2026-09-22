@@ -43,7 +43,7 @@ export const PackageSVG: React.FC<PackageSVGProps> = ({
       {...svgAttributes}
     >
       <g>
-                <rect
+        <rect
           x={0}
           y={0}
           width={40}
@@ -53,7 +53,7 @@ export const PackageSVG: React.FC<PackageSVGProps> = ({
           fill={fillColor}
         />
 
-                <rect
+        <rect
           x={0}
           y={PACKAGE_TAB_HEIGHT}
           width={width}
@@ -63,7 +63,7 @@ export const PackageSVG: React.FC<PackageSVGProps> = ({
           fill={fillColor}
         />
 
-                <MultilineText
+        <MultilineText
           text={name}
           x={width / 2}
           y={PACKAGE_TAB_HEIGHT + padding + 7}
@@ -79,9 +79,7 @@ export const PackageSVG: React.FC<PackageSVGProps> = ({
         />
       </g>
 
-      {showAssessmentResults && (
-        <AssessmentIcon x={width - 15} y={-5} score={nodeScore} />
-      )}
+      {showAssessmentResults && <AssessmentIcon x={width - 15} y={-5} score={nodeScore} />}
     </svg>
   )
 }

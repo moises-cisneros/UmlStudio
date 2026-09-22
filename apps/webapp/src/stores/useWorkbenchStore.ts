@@ -1,19 +1,19 @@
-import { create } from "zustand";
+import { create } from "zustand"
 
-export type WorkbenchDockTab = "agent" | "inspector";
+export type WorkbenchDockTab = "agent" | "inspector"
 
 interface WorkbenchState {
-  isAgentDockOpen: boolean;
-  activeDockTab: WorkbenchDockTab;
-  isCommandPaletteOpen: boolean;
-  selectedElementId: string | null;
+  isAgentDockOpen: boolean
+  activeDockTab: WorkbenchDockTab
+  isCommandPaletteOpen: boolean
+  selectedElementId: string | null
 
-  toggleAgentDock: () => void;
-  setAgentDockOpen: (open: boolean) => void;
-  setActiveDockTab: (tab: WorkbenchDockTab) => void;
-  toggleCommandPalette: () => void;
-  setCommandPaletteOpen: (open: boolean) => void;
-  setSelectedElementId: (id: string | null) => void;
+  toggleAgentDock: () => void
+  setAgentDockOpen: (open: boolean) => void
+  setActiveDockTab: (tab: WorkbenchDockTab) => void
+  toggleCommandPalette: () => void
+  setCommandPaletteOpen: (open: boolean) => void
+  setSelectedElementId: (id: string | null) => void
 }
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
@@ -22,12 +22,11 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   isCommandPaletteOpen: false,
   selectedElementId: null,
 
-  toggleAgentDock: () =>
-    set((state) => ({ isAgentDockOpen: !state.isAgentDockOpen })),
+  toggleAgentDock: () => set((state) => ({ isAgentDockOpen: !state.isAgentDockOpen })),
   setAgentDockOpen: (open) => set({ isAgentDockOpen: open }),
   setActiveDockTab: (tab) => set({ activeDockTab: tab, isAgentDockOpen: true }),
   toggleCommandPalette: () =>
     set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
   setCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
   setSelectedElementId: (id) => set({ selectedElementId: id }),
-}));
+}))

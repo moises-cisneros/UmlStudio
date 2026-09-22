@@ -1,30 +1,30 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@umlstudio/ui/components/card";
-import { Badge } from "@umlstudio/ui/components/badge";
-import { RegisterForm } from "@/components/auth/RegisterForm";
-import { safeRedirectTarget } from "@/components/auth/redirect";
-import { BrandLockup } from "@/components/navbar/BrandLockup";
-import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher";
-import { LanguageSwitcher } from "@/components/navbar/LanguageSwitcher";
-import { useTranslation } from "@/i18n";
-import { CheckCircle2, Sparkles, Cpu, GitBranch } from "lucide-react";
+} from "@umlstudio/ui/components/card"
+import { Badge } from "@umlstudio/ui/components/badge"
+import { RegisterForm } from "@/components/auth/RegisterForm"
+import { safeRedirectTarget } from "@/components/auth/redirect"
+import { BrandLockup } from "@/components/navbar/BrandLockup"
+import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher"
+import { LanguageSwitcher } from "@/components/navbar/LanguageSwitcher"
+import { useTranslation } from "@/i18n"
+import { CheckCircle2, Sparkles, Cpu, GitBranch } from "lucide-react"
 
 interface RegisterPageProps {
-  redirect?: string;
+  redirect?: string
 }
 
 export function RegisterPage({ redirect }: RegisterPageProps) {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
+  const navigate = useNavigate()
+  const { t } = useTranslation()
 
   function handleSuccess() {
-    void navigate({ to: safeRedirectTarget(redirect) as "/", replace: true });
+    void navigate({ to: safeRedirectTarget(redirect) as "/", replace: true })
   }
 
   return (
@@ -80,9 +80,7 @@ export function RegisterPage({ redirect }: RegisterPageProps) {
             {/* Showcase card */}
             <div className="relative rounded-xl border border-border bg-surface-raised/80 p-5 shadow-xl backdrop-blur-md">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs font-bold text-foreground">
-                  UmlStudio Core:
-                </span>
+                <span className="text-xs font-bold text-foreground">UmlStudio Core:</span>
                 <Sparkles className="size-4 text-(--dodger-blue)" />
               </div>
 
@@ -90,26 +88,22 @@ export function RegisterPage({ redirect }: RegisterPageProps) {
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="size-4 shrink-0 text-emerald-500 mt-0.5" />
                   <span>
-                    <strong className="text-foreground">OMG UML 2.5</strong>:
-                    Classes, Interfaces, Enums, Packages, Association Classes.
+                    <strong className="text-foreground">OMG UML 2.5</strong>: Classes, Interfaces,
+                    Enums, Packages, Association Classes.
                   </span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <GitBranch className="size-4 shrink-0 text-(--dodger-blue) mt-0.5" />
                   <span>
-                    <strong className="text-foreground">
-                      CRDT Yjs & Snapshots
-                    </strong>
-                    : Real-time collaboration and immutable version history.
+                    <strong className="text-foreground">CRDT Yjs & Snapshots</strong>: Real-time
+                    collaboration and immutable version history.
                   </span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Cpu className="size-4 shrink-0 text-(--deep-sky-blue) mt-0.5" />
                   <span>
-                    <strong className="text-foreground">
-                      XMI & Code Generation
-                    </strong>
-                    : Enterprise Architect interoperability and Spring Boot.
+                    <strong className="text-foreground">XMI & Code Generation</strong>: Enterprise
+                    Architect interoperability and Spring Boot.
                   </span>
                 </li>
               </ul>
@@ -123,9 +117,7 @@ export function RegisterPage({ redirect }: RegisterPageProps) {
                 <CardTitle className="text-xl font-bold tracking-tight">
                   {t.auth.getStarted}
                 </CardTitle>
-                <CardDescription className="text-xs">
-                  {t.auth.registerSubtitle}
-                </CardDescription>
+                <CardDescription className="text-xs">{t.auth.registerSubtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <RegisterForm redirect={redirect} onSuccess={handleSuccess} />
@@ -137,11 +129,8 @@ export function RegisterPage({ redirect }: RegisterPageProps) {
 
       {/* Footer */}
       <footer className="border-t border-border-subtle/60 py-3 text-center text-xs text-muted-foreground">
-        <p>
-          UmlStudio &copy; 2026 — Formal Object-Oriented Software Architecture
-          Studio
-        </p>
+        <p>UmlStudio &copy; 2026 — Formal Object-Oriented Software Architecture Studio</p>
       </footer>
     </div>
-  );
+  )
 }

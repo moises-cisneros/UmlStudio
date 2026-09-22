@@ -56,9 +56,7 @@ export const EdgeTypeSelect = ({
             justify="space-between"
           />
         ),
-        renderValue: () => (
-          <EdgeTypeRow label={option.label} edgeType={option.value} gap={8} />
-        ),
+        renderValue: () => <EdgeTypeRow label={option.label} edgeType={option.value} gap={8} />,
       })),
     [options]
   )

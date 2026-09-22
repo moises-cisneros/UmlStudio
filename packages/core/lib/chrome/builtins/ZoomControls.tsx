@@ -1,43 +1,32 @@
-import { useReactFlow, useStore } from "@xyflow/react";
-import { useShallow } from "zustand/shallow";
-import {
-  Maximize,
-  Redo2,
-  SquareMousePointer,
-  Undo2,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
-import {
-  useDiagramStore,
-  useMetadataStore,
-  useOverlayStore,
-} from "@/store/context";
-import { useDiagramModifiable } from "@/hooks/useDiagramModifiable";
-import { insetAwareFitView } from "@/overlay/fitView";
-import { ariaKeyshortcuts } from "@/keyboard";
-import { Tooltip } from "@/components/ui";
-import { useLabels } from "@/i18n/useLabels";
-import { useRovingToolbar } from "../useRovingToolbar";
+import { useReactFlow, useStore } from "@xyflow/react"
+import { useShallow } from "zustand/shallow"
+import { Maximize, Redo2, SquareMousePointer, Undo2, ZoomIn, ZoomOut } from "lucide-react"
+import { useDiagramStore, useMetadataStore, useOverlayStore } from "@/store/context"
+import { useDiagramModifiable } from "@/hooks/useDiagramModifiable"
+import { insetAwareFitView } from "@/overlay/fitView"
+import { ariaKeyshortcuts } from "@/keyboard"
+import { Tooltip } from "@/components/ui"
+import { useLabels } from "@/i18n/useLabels"
+import { useRovingToolbar } from "../useRovingToolbar"
 
 export interface ZoomControlsProps {
-  history?: boolean;
-  vertical?: boolean;
-  showFitView?: boolean;
-  showSelection?: boolean;
+  history?: boolean
+  vertical?: boolean
+  showFitView?: boolean
+  showSelection?: boolean
 }
 
 export function ZoomControls({
   history = false,
   vertical = false,
-  showFitView = false,
+  showFitView = true,
   showSelection = false,
 }: ZoomControlsProps) {
-  const rf = useReactFlow();
-  const t = useLabels();
-  const zoomLevelPercent = useStore((s) => Math.round(s.transform[2] * 100));
-  const insets = useOverlayStore((s) => s.insets);
-  const safeArea = useOverlayStore((s) => s.safeArea);
+  const rf = useReactFlow()
+  const t = useLabels()
+  const zoomLevelPercent = useStore((s) => Math.round(s.transform[2] * 100))
+  const insets = useOverlayStore((s) => s.insets)
+  const safeArea = useOverlayStore((s) => s.safeArea)
 
   const { canUndo, canRedo, undo, redo, undoManagerExist } = useDiagramStore(
     useShallow((state) => ({
@@ -46,19 +35,18 @@ export function ZoomControls({
       undo: state.undo,
       redo: state.redo,
       undoManagerExist: state.undoManager !== null,
-    })),
-  );
+    }))
+  )
 
-  const isDiagramModifiable = useDiagramModifiable();
+  const isDiagramModifiable = useDiagramModifiable()
   const { multiSelectionMode, setMultiSelectionMode } = useMetadataStore(
     useShallow((state) => ({
       multiSelectionMode: state.multiSelectionMode,
       setMultiSelectionMode: state.setMultiSelectionMode,
-    })),
-  );
+    }))
+  )
 
-  const { ref: toolbarRef, onKeyDown: onToolbarKeyDown } =
-    useRovingToolbar<HTMLDivElement>();
+  const { ref: toolbarRef, onKeyDown: onToolbarKeyDown } = useRovingToolbar<HTMLDivElement>()
 
   return (
     <div
@@ -110,12 +98,7 @@ export function ZoomControls({
             aria-keyshortcuts={ariaKeyshortcuts("zoom-out")}
             aria-label={t.zoomOut}
           >
-            <ZoomOut
-              width={16}
-              height={16}
-              strokeWidth={2}
-              aria-hidden="true"
-            />
+            <ZoomOut width={16} height={16} strokeWidth={2} aria-hidden="true" />
           </button>
         </Tooltip>
 
@@ -128,12 +111,7 @@ export function ZoomControls({
               aria-keyshortcuts={ariaKeyshortcuts("fit-view")}
               aria-label={t.fitView}
             >
-              <Maximize
-                width={16}
-                height={16}
-                strokeWidth={2}
-                aria-hidden="true"
-              />
+              <Maximize width={16} height={16} strokeWidth={2} aria-hidden="true" />
             </button>
           </Tooltip>
         )}
@@ -147,12 +125,7 @@ export function ZoomControls({
               aria-label={t.multiSelection}
               aria-pressed={multiSelectionMode}
             >
-              <SquareMousePointer
-                width={16}
-                height={16}
-                strokeWidth={2}
-                aria-hidden="true"
-              />
+              <SquareMousePointer width={16} height={16} strokeWidth={2} aria-hidden="true" />
             </button>
           </Tooltip>
         )}
@@ -172,12 +145,7 @@ export function ZoomControls({
                 disabled={!canUndo}
                 aria-label={t.undo}
               >
-                <Undo2
-                  width={16}
-                  height={16}
-                  strokeWidth={2}
-                  aria-hidden="true"
-                />
+                <Undo2 width={16} height={16} strokeWidth={2} aria-hidden="true" />
               </button>
             </span>
           </Tooltip>
@@ -191,17 +159,12 @@ export function ZoomControls({
                 disabled={!canRedo}
                 aria-label={t.redo}
               >
-                <Redo2
-                  width={16}
-                  height={16}
-                  strokeWidth={2}
-                  aria-hidden="true"
-                />
+                <Redo2 width={16} height={16} strokeWidth={2} aria-hidden="true" />
               </button>
             </span>
           </Tooltip>
         </div>
       )}
     </div>
-  );
+  )
 }

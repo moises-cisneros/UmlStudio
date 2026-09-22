@@ -730,13 +730,14 @@ body,
 }
 
 .agent-bubble {
-  background: var(--home-surface-raised, #151d2e);
-  border: 1px solid var(--home-border-subtle, #192233);
+  background: var(--home-surface-raised, #111827);
+  border: 1px solid var(--home-border-subtle, #243046);
   color: var(--home-text-primary, #f8fafc);
   padding: 12px 14px;
   border-radius: 12px 12px 12px 2px;
   font-size: 0.8125rem;
   line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .user-bubble {
@@ -746,16 +747,20 @@ body,
   padding: 10px 14px;
   border-radius: 12px 12px 2px 12px;
   font-size: 0.8125rem;
+  font-weight: 500;
   line-height: 1.45;
   max-width: 85%;
+  box-shadow: 0 2px 6px rgba(53, 144, 243, 0.3);
 }
 
 .agent-diff-card {
-  background: color-mix(in srgb, black 35%, var(--home-surface-base, #0b0f19));
-  border: 1px solid color-mix(in srgb, var(--dodger-blue, #3590f3) 40%, transparent);
+  background: var(--home-surface-sunken, #0b0f19);
+  border: 1px solid var(--home-border-subtle, #243046);
+  color: var(--home-text-primary, #f8fafc);
   border-radius: 8px;
-  padding: 10px;
-  margin-top: 8px;
+  padding: 12px;
+  margin-top: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
 }
 
 .agent-prompt-container {

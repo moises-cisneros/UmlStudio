@@ -1,16 +1,16 @@
-import { createMiddleware } from "hono/factory";
-import type { AppEnv } from "../env.js";
-import { Errors } from "../errors.js";
-import { AuthError, type AuthService } from "../../services/auth-service.js";
+import { createMiddleware } from "hono/factory"
+import type { AppEnv } from "../env.js"
+import { Errors } from "../errors.js"
+import { AuthError, type AuthService } from "../../services/auth-service.js"
 
 interface GuardDeps {
-  auth: AuthService;
+  auth: AuthService
 }
 
 function readBearerToken(header: string | undefined): string | undefined {
-  if (!header) return undefined;
-  const match = /^Bearer (.+)$/.exec(header.trim());
-  return match ? match[1] : undefined;
+  if (!header) return undefined
+  const match = /^Bearer (.+)$/.exec(header.trim())
+  return match ? match[1] : undefined
 }
 
 /**
@@ -20,17 +20,17 @@ function readBearerToken(header: string | undefined): string | undefined {
  */
 export function authGuard({ auth }: GuardDeps) {
   return createMiddleware<AppEnv>(async (c, next) => {
-    const token = readBearerToken(c.req.header("Authorization"));
-    if (!token) throw Errors.unauthorized();
+    const token = readBearerToken(c.req.header("Authorization"))
+    if (!token) throw Errors.unauthorized()
     try {
-      const { userId } = await auth.verifyAccess(token);
-      c.set("user", await auth.getProfile(userId));
+      const { userId } = await auth.verifyAccess(token)
+      c.set("user", await auth.getProfile(userId))
     } catch (err) {
-      if (err instanceof AuthError) throw Errors.unauthorized();
-      throw err;
+      if (err instanceof AuthError) throw Errors.unauthorized()
+      throw err
     }
-    await next();
-  });
+    await next()
+  })
 }
 
 /**
@@ -41,15 +41,15 @@ export function authGuard({ auth }: GuardDeps) {
  */
 export function authOptional({ auth }: GuardDeps) {
   return createMiddleware<AppEnv>(async (c, next) => {
-    const token = readBearerToken(c.req.header("Authorization"));
+    const token = readBearerToken(c.req.header("Authorization"))
     if (token) {
       try {
-        const { userId } = await auth.verifyAccess(token);
-        c.set("user", await auth.getProfile(userId));
+        const { userId } = await auth.verifyAccess(token)
+        c.set("user", await auth.getProfile(userId))
       } catch {
         // Anonymous: invalid tokens are simply ignored here.
       }
     }
-    await next();
-  });
+    await next()
+  })
 }

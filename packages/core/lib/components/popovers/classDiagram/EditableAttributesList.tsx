@@ -1,13 +1,13 @@
-import React, { useState, KeyboardEvent, ChangeEvent } from "react";
-import { GripVertical, ListTree, Plus, Trash2 } from "lucide-react";
-import { IconButton, TextField, Typography } from "@/components/ui";
-import { NodeStyleEditor } from "@/components/styleEditor";
-import { useLabels } from "@/i18n/useLabels";
-import { generateUUID, withTags } from "@/utils";
-import { useDiagramStore } from "@/store";
-import { useShallow } from "zustand/shallow";
-import { ClassNodeElement, ClassNodeProps } from "@/types";
-import { TagChips, TagPicker } from "../TagPicker";
+import React, { useState, KeyboardEvent, ChangeEvent } from "react"
+import { GripVertical, ListTree, Plus, Trash2 } from "lucide-react"
+import { IconButton, TextField, Typography } from "@/components/ui"
+import { NodeStyleEditor } from "@/components/styleEditor"
+import { useLabels } from "@/i18n/useLabels"
+import { generateUUID, withTags } from "@/utils"
+import { useDiagramStore } from "@/store"
+import { useShallow } from "zustand/shallow"
+import { ClassNodeElement, ClassNodeProps } from "@/types"
+import { TagChips, TagPicker } from "../TagPicker"
 import {
   DndContext,
   closestCenter,
@@ -16,27 +16,27 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from "@dnd-kit/core";
+} from "@dnd-kit/core"
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 interface Props {
-  nodeId: string;
+  nodeId: string
 }
 
 interface SortableAttributeRowProps {
-  id: string;
-  nodeId: string;
-  item: ClassNodeElement;
-  onAttributeChange: (id: string, key: string, value: string) => void;
-  onTagsChange: (id: string, tags: string[]) => void;
-  onDelete: (id: string) => void;
+  id: string
+  nodeId: string
+  item: ClassNodeElement
+  onAttributeChange: (id: string, key: string, value: string) => void
+  onTagsChange: (id: string, tags: string[]) => void
+  onDelete: (id: string) => void
 }
 
 const SortableAttributeRow: React.FC<SortableAttributeRowProps> = ({
@@ -46,22 +46,17 @@ const SortableAttributeRow: React.FC<SortableAttributeRowProps> = ({
   onTagsChange,
   onDelete,
 }) => {
-  const t = useLabels();
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
+  const t = useLabels()
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  })
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 999 : undefined,
-  };
+  }
 
   return (
     <div
@@ -73,10 +68,8 @@ const SortableAttributeRow: React.FC<SortableAttributeRowProps> = ({
         gap: 4,
         padding: "4px 6px",
         borderRadius: 6,
-        border:
-          "1px solid var(--umlstudio-border, var(--border-subtle, #243046))",
-        backgroundColor:
-          "color-mix(in srgb, var(--umlstudio-surface, #1e293b) 70%, transparent)",
+        border: "1px solid var(--umlstudio-border, var(--border-subtle, #243046))",
+        backgroundColor: "color-mix(in srgb, var(--umlstudio-surface, #1e293b) 70%, transparent)",
       }}
     >
       <div
@@ -105,9 +98,7 @@ const SortableAttributeRow: React.FC<SortableAttributeRowProps> = ({
 
         <NodeStyleEditor
           nodeData={item}
-          handleDataFieldUpdate={(key, value) =>
-            onAttributeChange(item.id, key, value)
-          }
+          handleDataFieldUpdate={(key, value) => onAttributeChange(item.id, key, value)}
           sideElements={[
             <TagPicker
               key={`tags_${item.id}`}
@@ -127,106 +118,91 @@ const SortableAttributeRow: React.FC<SortableAttributeRowProps> = ({
         />
       </div>
 
-      <TagChips
-        tags={item.tags ?? []}
-        onChange={(tags) => onTagsChange(item.id, tags)}
-      />
+      <TagChips tags={item.tags ?? []} onChange={(tags) => onTagsChange(item.id, tags)} />
     </div>
-  );
-};
+  )
+}
 
 export const EditableAttributeList: React.FC<Props> = ({ nodeId }) => {
-  const t = useLabels();
+  const t = useLabels()
   const { nodes, setNodes } = useDiagramStore(
-    useShallow((state) => ({ setNodes: state.setNodes, nodes: state.nodes })),
-  );
-  const [newItem, setNewItem] = useState("");
+    useShallow((state) => ({ setNodes: state.setNodes, nodes: state.nodes }))
+  )
+  const [newItem, setNewItem] = useState("")
 
-  const nodeData = nodes.find((node) => node.id === nodeId)?.data as
-    | ClassNodeProps
-    | undefined;
-  const attributes = nodeData?.attributes ?? [];
+  const nodeData = nodes.find((node) => node.id === nodeId)?.data as ClassNodeProps | undefined
+  const attributes = nodeData?.attributes ?? []
 
   const patchAttributes = (updatedAttributes: typeof attributes) => {
     setNodes((nodes) =>
       nodes.map((node) =>
         node.id === nodeId
           ? { ...node, data: { ...node.data, attributes: updatedAttributes } }
-          : node,
-      ),
-    );
-  };
+          : node
+      )
+    )
+  }
 
   const handleAttributeChange = (id: string, key: string, value: string) => {
-    patchAttributes(
-      attributes.map((item) =>
-        item.id === id ? { ...item, [key]: value } : item,
-      ),
-    );
-  };
+    patchAttributes(attributes.map((item) => (item.id === id ? { ...item, [key]: value } : item)))
+  }
 
   const handleTagsChange = (id: string, tags: string[]) => {
-    patchAttributes(
-      attributes.map((item) => (item.id === id ? withTags(item, tags) : item)),
-    );
-  };
+    patchAttributes(attributes.map((item) => (item.id === id ? withTags(item, tags) : item)))
+  }
 
   const handleItemDelete = (id: string) => {
     setNodes((nodes) =>
       nodes.map((node) => {
-        if (node.id !== nodeId) return node;
+        if (node.id !== nodeId) return node
         return {
           ...node,
           data: {
             ...node.data,
             attributes: attributes.filter((item) => item.id !== id),
           },
-          height: node.height! - 30,
-          measured: { ...node.measured, height: node.height! - 30 },
-        };
-      }),
-    );
-  };
+        }
+      })
+    )
+  }
 
   const handleAddItem = () => {
-    if (newItem.trim() === "") return;
-    const newAttribute = { id: generateUUID(), name: newItem };
+    if (newItem.trim() === "") return
+    const newAttribute = { id: generateUUID(), name: newItem }
     setNodes((nodes) =>
       nodes.map((node) => {
-        if (node.id !== nodeId) return node;
+        if (node.id !== nodeId) return node
         return {
           ...node,
           data: {
             ...node.data,
             attributes: [...attributes, newAttribute],
           },
-          height: node.height! + 30,
-          measured: { ...node.measured, height: node.height! + 30 },
-        };
-      }),
-    );
-    setNewItem("");
-  };
+        }
+      })
+    )
+    setNewItem("")
+  }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") handleAddItem();
-  };
+    if (event.key === "Enter") handleAddItem()
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+    })
+  )
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    const { active, over } = event
+    if (!over || active.id === over.id) return
 
-    const oldIndex = attributes.findIndex((a) => a.id === active.id);
-    const newIndex = attributes.findIndex((a) => a.id === over.id);
-    patchAttributes(arrayMove(attributes, oldIndex, newIndex));
-  };
+    const oldIndex = attributes.findIndex((a) => a.id === active.id)
+    const newIndex = attributes.findIndex((a) => a.id === over.id)
+    patchAttributes(arrayMove(attributes, oldIndex, newIndex))
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -239,15 +215,8 @@ export const EditableAttributeList: React.FC<Props> = ({ nodeId }) => {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <ListTree
-            width={14}
-            height={14}
-            style={{ color: "var(--dodger-blue, #3590f3)" }}
-          />
-          <Typography
-            variant="subtitle2"
-            style={{ fontWeight: 600, fontSize: "0.8125rem" }}
-          >
+          <ListTree width={14} height={14} style={{ color: "var(--dodger-blue, #3590f3)" }} />
+          <Typography variant="subtitle2" style={{ fontWeight: 600, fontSize: "0.8125rem" }}>
             {t.attributes}
           </Typography>
         </div>
@@ -257,8 +226,7 @@ export const EditableAttributeList: React.FC<Props> = ({ nodeId }) => {
             fontWeight: 700,
             padding: "1px 6px",
             borderRadius: 9999,
-            backgroundColor:
-              "color-mix(in srgb, var(--dodger-blue, #3590f3) 14%, transparent)",
+            backgroundColor: "color-mix(in srgb, var(--dodger-blue, #3590f3) 14%, transparent)",
             color: "var(--dodger-blue, #3590f3)",
           }}
         >
@@ -266,15 +234,8 @@ export const EditableAttributeList: React.FC<Props> = ({ nodeId }) => {
         </span>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={attributes.map((a) => a.id)}
-          strategy={verticalListSortingStrategy}
-        >
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={attributes.map((a) => a.id)} strategy={verticalListSortingStrategy}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {attributes.map((item) => (
               <SortableAttributeRow
@@ -297,23 +258,17 @@ export const EditableAttributeList: React.FC<Props> = ({ nodeId }) => {
           aria-label={t.newAttribute}
           placeholder={t.addAttribute}
           value={newItem}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setNewItem(e.target.value)
-          }
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setNewItem(e.target.value)}
           onBlur={() => {
-            if (newItem.trim() !== "") handleAddItem();
-            else setNewItem("");
+            if (newItem.trim() !== "") handleAddItem()
+            else setNewItem("")
           }}
           onKeyDown={handleKeyDown}
         />
-        <IconButton
-          ariaLabel={t.addAttribute}
-          tooltip={t.addAttribute}
-          onClick={handleAddItem}
-        >
+        <IconButton ariaLabel={t.addAttribute} tooltip={t.addAttribute} onClick={handleAddItem}>
           <Plus width={16} height={16} aria-hidden="true" />
         </IconButton>
       </div>
     </div>
-  );
-};
+  )
+}

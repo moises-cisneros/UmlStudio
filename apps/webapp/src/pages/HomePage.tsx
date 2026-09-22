@@ -1,78 +1,69 @@
-import React, { lazy, Suspense, useEffect, useMemo, useRef } from "react";
-import { useLocation } from "@tanstack/react-router";
-import { type UMLDiagramType } from "@umlstudio/core";
-import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
-import { useModalContext } from "@/contexts";
-import { useImportDiagramFile } from "@/hooks/useImportDiagramFile";
-import { DiagramGallerySkeleton } from "@/components/home/DiagramGallerySkeleton";
-import { HomeWorkbenchHeader } from "@/components/home/HomeWorkbenchHeader";
-import { QuickStartTemplates } from "@/components/home/QuickStartTemplates";
-import { PageShell } from "@/components/PageShell";
-import { useHomeChrome } from "@/components/home/useHomeChrome";
-import { getDiagramTypeLabel } from "@/components/home/diagramTypeMeta";
-import { pruneExpiredSharedDiagrams } from "@/utils/sharedDiagramStorage";
-import { readHighlightSharedDiagramId } from "@/lib/navProvenance";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { useTranslation } from "@/i18n";
+import React, { lazy, Suspense, useEffect, useMemo, useRef } from "react"
+import { useLocation } from "@tanstack/react-router"
+import { type UMLDiagramType } from "@umlstudio/core"
+import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
+import { useModalContext } from "@/contexts"
+import { useImportDiagramFile } from "@/hooks/useImportDiagramFile"
+import { DiagramGallerySkeleton } from "@/components/home/DiagramGallerySkeleton"
+import { HomeWorkbenchHeader } from "@/components/home/HomeWorkbenchHeader"
+import { PageShell } from "@/components/PageShell"
+import { useHomeChrome } from "@/components/home/useHomeChrome"
+import { getDiagramTypeLabel } from "@/components/home/diagramTypeMeta"
+import { pruneExpiredSharedDiagrams } from "@/utils/sharedDiagramStorage"
+import { readHighlightSharedDiagramId } from "@/lib/navProvenance"
+import { useDocumentTitle } from "@/hooks/useDocumentTitle"
+import { useTranslation } from "@/i18n"
 
-import { Heart, LayoutGrid, List, SlidersHorizontal } from "lucide-react";
-import { Button } from "@umlstudio/ui/components/button";
-import { Badge } from "@umlstudio/ui/components/badge";
-import { cn } from "@umlstudio/ui/lib/utils";
-import { RefinePopover } from "@/components/home/RefinePopover";
-import { HomeRefinementChips } from "@/components/home/HomeRefinementChips";
+import { Heart, LayoutGrid, List, SlidersHorizontal } from "lucide-react"
+import { Button } from "@umlstudio/ui/components/button"
+import { Badge } from "@umlstudio/ui/components/badge"
+import { cn } from "@umlstudio/ui/lib/utils"
+import { RefinePopover } from "@/components/home/RefinePopover"
+import { HomeRefinementChips } from "@/components/home/HomeRefinementChips"
 
 const DiagramGallery = lazy(() =>
   import("@/components/home/DiagramGallery").then((module) => ({
     default: module.DiagramGallery,
-  })),
-);
+  }))
+)
 
 export const HomePage = () => {
-  const { t } = useTranslation();
-  useDocumentTitle(t.dashboard.title);
-  const location = useLocation();
-  const highlightSharedDiagramId =
-    readHighlightSharedDiagramId(location.state) ?? null;
-  const { openModal } = useModalContext();
-  const setCurrentModelId = usePersistenceModelStore(
-    (state) => state.setCurrentModelId,
-  );
-  const jsonImportRef = useRef<HTMLInputElement>(null);
-  const importFile = useImportDiagramFile();
+  const { t } = useTranslation()
+  useDocumentTitle(t.dashboard.title)
+  const location = useLocation()
+  const highlightSharedDiagramId = readHighlightSharedDiagramId(location.state) ?? null
+  const { openModal } = useModalContext()
+  const setCurrentModelId = usePersistenceModelStore((state) => state.setCurrentModelId)
+  const jsonImportRef = useRef<HTMLInputElement>(null)
+  const importFile = useImportDiagramFile()
 
-  const chrome = useHomeChrome();
+  const chrome = useHomeChrome()
 
-  const openNewDiagram = () =>
-    openModal("NEW_DIAGRAM", { dialogVariant: "home" });
-  const triggerJsonImport = () => jsonImportRef.current?.click();
+  const openNewDiagram = () => openModal("NEW_DIAGRAM", { dialogVariant: "home" })
+  const triggerJsonImport = () => jsonImportRef.current?.click()
 
   const handleJsonImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) void importFile(file);
-    e.target.value = "";
-  };
+    const file = e.target.files?.[0]
+    if (file) void importFile(file)
+    e.target.value = ""
+  }
 
   useEffect(() => {
-    setCurrentModelId(null);
-  }, [setCurrentModelId]);
+    setCurrentModelId(null)
+  }, [setCurrentModelId])
 
   useEffect(() => {
-    pruneExpiredSharedDiagrams();
-  }, []);
+    pruneExpiredSharedDiagrams()
+  }, [])
 
-  const [presentTypes, setPresentTypes] = React.useState<
-    readonly UMLDiagramType[]
-  >([]);
+  const [presentTypes, setPresentTypes] = React.useState<readonly UMLDiagramType[]>([])
   const typeOptions = useMemo(
     () =>
       [...presentTypes].sort((firstType, secondType) =>
-        getDiagramTypeLabel(firstType).localeCompare(
-          getDiagramTypeLabel(secondType),
-        ),
+        getDiagramTypeLabel(firstType).localeCompare(getDiagramTypeLabel(secondType))
       ),
-    [presentTypes],
-  );
+    [presentTypes]
+  )
 
   return (
     <PageShell
@@ -96,12 +87,6 @@ export const HomePage = () => {
       />
 
       <div className="mt-6 px-4 md:px-0">
-        <QuickStartTemplates onNewDiagram={openNewDiagram} />
-
-        <div className="my-8">
-          <hr className="border-border-subtle" />
-        </div>
-
         <div className="mb-6 flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-2xl font-black tracking-tight text-(--home-text-primary)">
@@ -121,7 +106,7 @@ export const HomePage = () => {
                   "h-8 gap-1.5 border-border-subtle px-3 text-xs font-medium transition-colors",
                   chrome.favoritesOnly
                     ? "border-rose-500/50 bg-rose-500/15 text-rose-500 hover:bg-rose-500/20 hover:text-rose-500"
-                    : "bg-(--home-card-surface) text-secondary-foreground hover:bg-(--home-surface-hover) hover:text-(--home-text-primary)",
+                    : "bg-(--home-card-surface) text-secondary-foreground hover:bg-(--home-surface-hover) hover:text-(--home-text-primary)"
                 )}
               >
                 <Heart
@@ -168,7 +153,7 @@ export const HomePage = () => {
                     "h-8 gap-1.5 px-3 text-xs font-medium transition-colors",
                     chrome.viewMode === "list"
                       ? "bg-(--home-surface-hover) text-(--home-text-primary) shadow-2xs"
-                      : "text-muted-foreground hover:text-(--home-text-primary)",
+                      : "text-muted-foreground hover:text-(--home-text-primary)"
                   )}
                   onClick={() => chrome.setViewMode("list")}
                   aria-label={t.dashboard.viewModeListAria}
@@ -185,7 +170,7 @@ export const HomePage = () => {
                     "h-8 gap-1.5 px-3 text-xs font-medium transition-colors",
                     chrome.viewMode === "cards"
                       ? "bg-(--home-surface-hover) text-(--home-text-primary) shadow-2xs"
-                      : "text-muted-foreground hover:text-(--home-text-primary)",
+                      : "text-muted-foreground hover:text-(--home-text-primary)"
                   )}
                   onClick={() => chrome.setViewMode("cards")}
                   aria-label={t.dashboard.viewModeCardsAria}
@@ -210,5 +195,5 @@ export const HomePage = () => {
         </Suspense>
       </div>
     </PageShell>
-  );
-};
+  )
+}

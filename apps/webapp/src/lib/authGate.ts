@@ -4,29 +4,29 @@
  * `loadSession()` and then applies the decision. Authoritative enforcement
  * stays server-side (shared WS JWT gate, snapshot authorship).
  */
-export type AuthGateStatus = "anonymous" | "authenticating" | "authenticated";
+export type AuthGateStatus = "anonymous" | "authenticating" | "authenticated"
 
 export interface AuthGateInput {
-  pathname: string;
-  href: string;
-  status: AuthGateStatus;
-  onLine: boolean;
+  pathname: string
+  href: string
+  status: AuthGateStatus
+  onLine: boolean
 }
 
 export type AuthGateDecision =
   | { kind: "allow" }
-  | { kind: "redirect"; to: "/login"; search: { redirect: string } };
+  | { kind: "redirect"; to: "/login"; search: { redirect: string } }
 
-const PUBLIC_PATHS = new Set(["/login", "/register"]);
+const PUBLIC_PATHS = new Set(["/login", "/register"])
 
 export function resolveAuthGate(input: AuthGateInput): AuthGateDecision {
-  if (PUBLIC_PATHS.has(input.pathname)) return { kind: "allow" };
+  if (PUBLIC_PATHS.has(input.pathname)) return { kind: "allow" }
   if (input.status === "authenticated") {
-    return { kind: "allow" };
+    return { kind: "allow" }
   }
   // local-first boundary: offline cached local diagrams stay editable.
   if (!input.onLine && input.pathname.startsWith("/local/")) {
-    return { kind: "allow" };
+    return { kind: "allow" }
   }
-  return { kind: "redirect", to: "/login", search: { redirect: input.href } };
+  return { kind: "redirect", to: "/login", search: { redirect: input.href } }
 }

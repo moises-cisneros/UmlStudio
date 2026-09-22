@@ -57,9 +57,7 @@ export const UMLSTUDIO_PORTAL_THEME_VARS = [
   "--home-radius-lg",
 ] as const
 
-export function resolveUmlStudioThemeVars(
-  anchor: Element | null | undefined
-): React.CSSProperties {
+export function resolveUmlStudioThemeVars(anchor: Element | null | undefined): React.CSSProperties {
   const source = anchor?.closest(".umlstudio-editor") ?? anchor
   if (!source) return {}
 
@@ -125,9 +123,7 @@ const getThemeVersion = () => themeVersion
 const useUmlStudioThemeVersion = (): number =>
   React.useSyncExternalStore(subscribeToTheme, getThemeVersion, getThemeVersion)
 
-export function usePortalThemeVars(
-  anchor: Element | null | undefined
-): React.CSSProperties {
+export function usePortalThemeVars(anchor: Element | null | undefined): React.CSSProperties {
   const version = useUmlStudioThemeVersion()
   return React.useMemo(() => {
     void version

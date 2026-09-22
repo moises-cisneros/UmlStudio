@@ -1,35 +1,30 @@
-import {
-  CircleHelpIcon,
-  FolderInput,
-  SlidersHorizontal,
-  Heart,
-} from "lucide-react";
-import { Badge } from "@umlstudio/ui/components/badge";
+import { CircleHelpIcon, FolderInput, SlidersHorizontal, Heart } from "lucide-react"
+import { Badge } from "@umlstudio/ui/components/badge"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@umlstudio/ui/components/tooltip";
-import type { UMLDiagramType } from "@umlstudio/core";
-import { useModalContext } from "@/contexts";
-import { ISLAND_LAYOUT_STYLE } from "@/components/navbar/islandPrimitives";
-import { useTranslation } from "@/i18n";
-import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher";
-import { RefinePopover } from "./RefinePopover";
-import type { HomeChrome } from "./useHomeChrome";
+} from "@umlstudio/ui/components/tooltip"
+import type { UMLDiagramType } from "@umlstudio/core"
+import { useModalContext } from "@/contexts"
+import { ISLAND_LAYOUT_STYLE } from "@/components/navbar/islandPrimitives"
+import { useTranslation } from "@/i18n"
+import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher"
+import { RefinePopover } from "./RefinePopover"
+import type { HomeChrome } from "./useHomeChrome"
 
 export function HomeActionsPill({
   chrome,
   typeOptions,
   onImportJson,
 }: {
-  chrome: HomeChrome;
-  typeOptions: readonly UMLDiagramType[];
-  onImportJson?: () => void;
+  chrome: HomeChrome
+  typeOptions: readonly UMLDiagramType[]
+  onImportJson?: () => void
 }) {
-  const { openModal } = useModalContext();
-  const { t } = useTranslation();
+  const { openModal } = useModalContext()
+  const { t } = useTranslation()
 
   return (
     <TooltipProvider>
@@ -46,14 +41,10 @@ export function HomeActionsPill({
                 className="umlstudio-chrome-iconbtn"
                 aria-pressed={chrome.favoritesOnly}
                 aria-label={
-                  chrome.favoritesOnly
-                    ? "Mostrar todos los diagramas"
-                    : t.dashboard.filterFavorites
+                  chrome.favoritesOnly ? "Mostrar todos los diagramas" : t.dashboard.filterFavorites
                 }
                 onClick={chrome.toggleFavoritesOnly}
-                style={
-                  chrome.favoritesOnly ? { color: "rgb(244 63 94)" } : undefined
-                }
+                style={chrome.favoritesOnly ? { color: "rgb(244 63 94)" } : undefined}
               >
                 <Heart
                   className="size-[var(--umlstudio-chrome-icon)]"
@@ -74,11 +65,7 @@ export function HomeActionsPill({
             trigger={
               <TooltipTrigger
                 render={
-                  <button
-                    type="button"
-                    className="umlstudio-chrome-iconbtn"
-                    aria-label="Filter"
-                  >
+                  <button type="button" className="umlstudio-chrome-iconbtn" aria-label="Filter">
                     <SlidersHorizontal
                       className="size-[var(--umlstudio-chrome-icon)]"
                       aria-hidden
@@ -108,10 +95,7 @@ export function HomeActionsPill({
                 aria-label={t.dashboard.importJson}
                 onClick={onImportJson}
               >
-                <FolderInput
-                  className="size-[var(--umlstudio-chrome-icon)]"
-                  aria-hidden
-                />
+                <FolderInput className="size-[var(--umlstudio-chrome-icon)]" aria-hidden />
               </button>
             }
           />
@@ -128,10 +112,7 @@ export function HomeActionsPill({
                 aria-label={t.menu.help}
                 onClick={() => openModal("HowToUseModal", { variant: "home" })}
               >
-                <CircleHelpIcon
-                  className="size-[var(--umlstudio-chrome-icon)]"
-                  aria-hidden
-                />
+                <CircleHelpIcon className="size-[var(--umlstudio-chrome-icon)]" aria-hidden />
               </button>
             }
           />
@@ -141,5 +122,5 @@ export function HomeActionsPill({
         <ThemeSwitcherMenu />
       </div>
     </TooltipProvider>
-  );
+  )
 }

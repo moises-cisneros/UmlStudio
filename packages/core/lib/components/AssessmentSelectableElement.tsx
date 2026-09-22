@@ -5,11 +5,7 @@ import {
   INTERACTIVE_SELECTION_STROKE_SOFT,
 } from "@/constants"
 import { useAssessmentSelection } from "@/hooks"
-import {
-  useAssessmentSelectionStore,
-  useDiagramStore,
-  useMetadataStore,
-} from "@/store"
+import { useAssessmentSelectionStore, useDiagramStore, useMetadataStore } from "@/store"
 import { UmlStudioMode, UmlStudioView } from "@/typings"
 import { FC } from "react"
 import { useShallow } from "zustand/shallow"
@@ -24,9 +20,7 @@ interface AssessmentSelectableElementProps {
   children: React.ReactNode
 }
 
-export const AssessmentSelectableElement: FC<
-  AssessmentSelectableElementProps
-> = ({
+export const AssessmentSelectableElement: FC<AssessmentSelectableElementProps> = ({
   elementId,
   width,
   itemHeight,
@@ -45,9 +39,7 @@ export const AssessmentSelectableElement: FC<
   const { isInteractiveSelected, toggleInteractiveElement } = useDiagramStore(
     useShallow((state) => ({
       isInteractiveSelected:
-        state.interactiveElements[elementId] ||
-        state.interactiveRelationships[elementId] ||
-        false,
+        state.interactiveElements[elementId] || state.interactiveRelationships[elementId] || false,
       toggleInteractiveElement: state.toggleInteractiveElement,
     }))
   )
@@ -81,14 +73,10 @@ export const AssessmentSelectableElement: FC<
     ) : null
 
   const showInteractiveInteraction =
-    mode === UmlStudioMode.Modelling &&
-    view === UmlStudioView.Highlight &&
-    !readonly
+    mode === UmlStudioMode.Modelling && view === UmlStudioView.Highlight && !readonly
 
   if (showInteractiveInteraction) {
-    const handleInteractivePointerDown = (
-      e: React.PointerEvent<SVGGElement>
-    ) => {
+    const handleInteractivePointerDown = (e: React.PointerEvent<SVGGElement>) => {
       e.stopPropagation()
       e.preventDefault()
       toggleInteractiveElement(elementId)
@@ -153,16 +141,8 @@ export const AssessmentSelectableElement: FC<
           y={yOffset}
           width={width}
           height={itemHeight}
-          fill={
-            isSelected
-              ? INTERACTIVE_SELECTION_FILL
-              : INTERACTIVE_SELECTION_FILL_FAINT
-          }
-          stroke={
-            isSelected
-              ? INTERACTIVE_SELECTION_COLOR
-              : INTERACTIVE_SELECTION_STROKE_SOFT
-          }
+          fill={isSelected ? INTERACTIVE_SELECTION_FILL : INTERACTIVE_SELECTION_FILL_FAINT}
+          stroke={isSelected ? INTERACTIVE_SELECTION_COLOR : INTERACTIVE_SELECTION_STROKE_SOFT}
           strokeWidth={isSelected ? 2 : 1}
           rx={2}
           pointerEvents="none"

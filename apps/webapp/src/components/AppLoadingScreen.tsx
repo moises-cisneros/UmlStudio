@@ -1,7 +1,7 @@
 type AppLoadingScreenProps = {
-  label?: string;
-  variant?: "page" | "panel";
-};
+  label?: string
+  variant?: "page" | "panel"
+}
 
 export const AppLoadingScreen = ({
   label = "Loading workspace...",
@@ -34,5 +34,5 @@ export const AppLoadingScreen = ({
         <span className="app-loading-progress" aria-hidden="true" />
       </div>
     </div>
-  );
-};
+  )
+}

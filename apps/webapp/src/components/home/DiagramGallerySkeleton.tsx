@@ -1,13 +1,11 @@
-import { Skeleton } from "@umlstudio/ui/components/skeleton";
+import { Skeleton } from "@umlstudio/ui/components/skeleton"
 
 type DiagramGallerySkeletonProps = {
-  count?: number;
-};
+  count?: number
+}
 
-export const DiagramGallerySkeleton = ({
-  count = 6,
-}: DiagramGallerySkeletonProps) => {
-  const cards = Array.from({ length: count }, (_, i) => i);
+export const DiagramGallerySkeleton = ({ count = 6 }: DiagramGallerySkeletonProps) => {
+  const cards = Array.from({ length: count }, (_, i) => i)
 
   return (
     <div className="w-full" role="status" aria-label="Loading diagrams">
@@ -56,5 +54,5 @@ export const DiagramGallerySkeleton = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

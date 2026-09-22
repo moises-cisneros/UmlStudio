@@ -137,4 +137,44 @@ describe("OpenAPI 3.0 Builder Unit Tests", () => {
     expect(yaml).toContain('"/api/products":')
     expect(yaml).toContain("ProductRequest:")
   })
+
+  it("generates realistic executable examples for date, time, email, and price", () => {
+    const dateModel: UMLModel = {
+      id: "model-examples",
+      title: "AppointmentApi",
+      version: "4.0.0",
+      type: "ClassDiagram" as UMLModel["type"],
+      assessments: {},
+      nodes: [
+        {
+          id: "node-app",
+          type: "class",
+          width: 200,
+          height: 150,
+          measured: { width: 200, height: 150 },
+          data: {
+            name: "Appointment",
+            attributes: [
+              { id: "1", name: "+ scheduledDate: Date" },
+              { id: "2", name: "+ startTime: Time" },
+              { id: "3", name: "+ clientEmail: String" },
+              { id: "4", name: "+ fee: BigDecimal" },
+            ],
+          },
+          position: { x: 0, y: 0 },
+        },
+      ],
+      edges: [],
+    }
+
+    const spec = generateOpenApiSpec(dateModel)
+    const props = spec.components.schemas?.["AppointmentRequest"]?.properties
+    expect(props).toBeDefined()
+    expect(props?.["scheduledDate"]?.example).toBe("2026-09-21")
+    expect(props?.["scheduledDate"]?.format).toBe("date")
+    expect(props?.["startTime"]?.example).toBe("14:30:00")
+    expect(props?.["startTime"]?.format).toBe("time")
+    expect(props?.["clientEmail"]?.example).toBe("usuario@example.com")
+    expect(props?.["fee"]?.example).toBe(99.95)
+  })
 })

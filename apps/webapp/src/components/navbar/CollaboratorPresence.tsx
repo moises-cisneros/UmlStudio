@@ -1,34 +1,30 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { UmlStudioEditor } from "@umlstudio/core";
-import { useTranslation } from "@/i18n";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@umlstudio/ui/components/tooltip";
-import { cn } from "@umlstudio/ui/lib/utils";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
+import type { UmlStudioEditor } from "@umlstudio/core"
+import { useTranslation } from "@/i18n"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@umlstudio/ui/components/tooltip"
+import { cn } from "@umlstudio/ui/lib/utils"
 
 export interface Collaborator {
-  id: string;
-  name?: string;
-  color?: string;
-  imageUrl?: string;
-  clientIds?: number[];
-  isLocal?: boolean;
+  id: string
+  name?: string
+  color?: string
+  imageUrl?: string
+  clientIds?: number[]
+  isLocal?: boolean
 }
 
 interface CollaboratorPresenceProps {
-  editor?: UmlStudioEditor;
+  editor?: UmlStudioEditor
 }
 
-const EMPTY_COLLABORATORS: Collaborator[] = [];
+const EMPTY_COLLABORATORS: Collaborator[] = []
 
 function sameCollaborators(a: Collaborator[], b: Collaborator[]): boolean {
-  if (a === b) return true;
-  if (a.length !== b.length) return false;
+  if (a === b) return true
+  if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i += 1) {
-    const current = a[i];
-    const incoming = b[i];
+    const current = a[i]
+    const incoming = b[i]
     if (
       current.id !== incoming.id ||
       current.name !== incoming.name ||
@@ -37,77 +33,76 @@ function sameCollaborators(a: Collaborator[], b: Collaborator[]): boolean {
       current.isLocal !== incoming.isLocal ||
       (current.clientIds?.length ?? 0) !== (incoming.clientIds?.length ?? 0)
     ) {
-      return false;
+      return false
     }
   }
-  return true;
+  return true
 }
 
 function readCollaborators(editor?: UmlStudioEditor): Collaborator[] {
-  if (!editor?.getCollaborators) return EMPTY_COLLABORATORS;
+  if (!editor?.getCollaborators) return EMPTY_COLLABORATORS
   try {
-    const incoming =
-      (editor.getCollaborators() as Collaborator[]) ?? EMPTY_COLLABORATORS;
+    const incoming = (editor.getCollaborators() as Collaborator[]) ?? EMPTY_COLLABORATORS
     // Presence renders registered session identity only. Entries with
     // neither a registered name/avatar nor an id are pre-auth noise and are
     // hidden instead of being rendered with a placeholder identity.
-    return incoming.filter((c) => c.isLocal || c.name || c.imageUrl || c.id);
+    return incoming.filter((c) => c.isLocal || c.name || c.imageUrl || c.id)
   } catch {
-    return EMPTY_COLLABORATORS;
+    return EMPTY_COLLABORATORS
   }
 }
 
 export function CollaboratorPresence({ editor }: CollaboratorPresenceProps) {
-  const snapshotRef = useRef<Collaborator[]>(EMPTY_COLLABORATORS);
+  const snapshotRef = useRef<Collaborator[]>(EMPTY_COLLABORATORS)
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
       if (!editor?.subscribeToCollaboratorChanges) {
-        snapshotRef.current = EMPTY_COLLABORATORS;
-        return () => {};
+        snapshotRef.current = EMPTY_COLLABORATORS
+        return () => {}
       }
-      snapshotRef.current = readCollaborators(editor);
+      snapshotRef.current = readCollaborators(editor)
       const subId = editor.subscribeToCollaboratorChanges((incoming) => {
-        const next = incoming ?? EMPTY_COLLABORATORS;
+        const next = incoming ?? EMPTY_COLLABORATORS
         if (!sameCollaborators(snapshotRef.current, next)) {
-          snapshotRef.current = next;
-          onStoreChange();
+          snapshotRef.current = next
+          onStoreChange()
         }
-      });
+      })
       return () => {
-        editor.unsubscribe(subId);
-      };
+        editor.unsubscribe(subId)
+      }
     },
-    [editor],
-  );
+    [editor]
+  )
 
-  const getSnapshot = useCallback(() => snapshotRef.current, []);
+  const getSnapshot = useCallback(() => snapshotRef.current, [])
 
-  const collaborators = useSyncExternalStore(subscribe, getSnapshot);
-  const [followingClientId, setFollowingClientId] = useState<number | null>(() =>
-    editor?.getFollowingClientId?.() ?? null,
-  );
+  const collaborators = useSyncExternalStore(subscribe, getSnapshot)
+  const [followingClientId, setFollowingClientId] = useState<number | null>(
+    () => editor?.getFollowingClientId?.() ?? null
+  )
 
   useEffect(() => {
-    if (!editor?.subscribeToAwarenessChanges) return;
+    if (!editor?.subscribeToAwarenessChanges) return
     const subId = editor.subscribeToAwarenessChanges((states) => {
-      const localId = editor.getLocalAwarenessClientId?.();
-      const localState = localId ? states.get(localId) : null;
-      setFollowingClientId(localState?.followingClientId ?? null);
-    });
+      const localId = editor.getLocalAwarenessClientId?.()
+      const localState = localId ? states.get(localId) : null
+      setFollowingClientId(localState?.followingClientId ?? null)
+    })
     return () => {
-      editor.unsubscribe(subId);
-    };
-  }, [editor]);
+      editor.unsubscribe(subId)
+    }
+  }, [editor])
 
-  const { t } = useTranslation();
+  const { t } = useTranslation()
 
   if (collaborators.length === 0) {
-    return null;
+    return null
   }
 
-  const visibleCollaborators = collaborators.slice(0, 3);
-  const overflowCount = collaborators.length - visibleCollaborators.length;
+  const visibleCollaborators = collaborators.slice(0, 3)
+  const overflowCount = collaborators.length - visibleCollaborators.length
 
   return (
     <div
@@ -124,34 +119,33 @@ export function CollaboratorPresence({ editor }: CollaboratorPresenceProps) {
               .slice(0, 2)
           : collab.isLocal
             ? t.collaborators.you.slice(0, 2).toUpperCase()
-            : "U";
+            : "U"
 
-        const badgeColor = collab.color || "var(--dodger-blue)";
+        const badgeColor = collab.color || "var(--dodger-blue)"
         const targetClientId =
           !collab.isLocal && collab.clientIds && collab.clientIds.length > 0
             ? collab.clientIds[0]
-            : null;
-        const isFollowable = targetClientId !== null;
-        const isFollowing =
-          targetClientId !== null && followingClientId === targetClientId;
+            : null
+        const isFollowable = targetClientId !== null
+        const isFollowing = targetClientId !== null && followingClientId === targetClientId
 
         const handleAvatarClick = () => {
-          if (!isFollowable || targetClientId === null) return;
+          if (!isFollowable || targetClientId === null) return
           if (isFollowing) {
-            editor?.followCollaborator?.(null);
+            editor?.followCollaborator?.(null)
           } else {
-            editor?.focusOnCollaborator?.(targetClientId);
-            editor?.followCollaborator?.(targetClientId);
+            editor?.focusOnCollaborator?.(targetClientId)
+            editor?.followCollaborator?.(targetClientId)
           }
-        };
+        }
 
         const handleKeyDown = (event: React.KeyboardEvent) => {
-          if (!isFollowable) return;
+          if (!isFollowable) return
           if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            handleAvatarClick();
+            event.preventDefault()
+            handleAvatarClick()
           }
-        };
+        }
 
         const labelText = collab.isLocal
           ? `${collab.name || t.collaborators.activeUsers} (${t.collaborators.you})`
@@ -159,7 +153,7 @@ export function CollaboratorPresence({ editor }: CollaboratorPresenceProps) {
             ? `${collab.name || t.collaborators.activeUsers} (${t.collaborators.followingClickToStop})`
             : isFollowable
               ? `${collab.name || t.collaborators.activeUsers} (${t.collaborators.clickToFollow})`
-              : collab.name || t.collaborators.activeUsers;
+              : collab.name || t.collaborators.activeUsers
 
         return (
           <Tooltip key={collab.id}>
@@ -175,11 +169,13 @@ export function CollaboratorPresence({ editor }: CollaboratorPresenceProps) {
                   className={cn(
                     "relative flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm ring-2 transition-transform hover:z-10 hover:scale-110 focus:outline-none",
                     isFollowable && "cursor-pointer",
-                    isFollowing && "ring-primary ring-offset-1 ring-offset-background",
+                    isFollowing && "ring-primary ring-offset-1 ring-offset-background"
                   )}
                   style={{
                     backgroundColor: badgeColor,
-                    borderColor: isFollowing ? "var(--color-brand-cyan)" : "var(--home-surface-base)",
+                    borderColor: isFollowing
+                      ? "var(--color-brand-cyan)"
+                      : "var(--home-surface-base)",
                   }}
                 >
                   {collab.imageUrl ? (
@@ -194,9 +190,11 @@ export function CollaboratorPresence({ editor }: CollaboratorPresenceProps) {
                   <span
                     className={cn(
                       "absolute -bottom-0.5 -right-0.5 size-2 rounded-full border border-surface",
-                      isFollowing ? "bg-(--color-brand-cyan) animate-ping" : "bg-(--color-success)",
+                      isFollowing ? "bg-(--color-brand-cyan) animate-ping" : "bg-(--color-success)"
                     )}
-                    title={isFollowing ? t.collaborators.followingClickToStop : t.collaborators.online}
+                    title={
+                      isFollowing ? t.collaborators.followingClickToStop : t.collaborators.online
+                    }
                   />
                 </div>
               }
@@ -219,7 +217,7 @@ export function CollaboratorPresence({ editor }: CollaboratorPresenceProps) {
               </div>
             </TooltipContent>
           </Tooltip>
-        );
+        )
       })}
 
       {overflowCount > 0 && (
@@ -242,5 +240,5 @@ export function CollaboratorPresence({ editor }: CollaboratorPresenceProps) {
         </Tooltip>
       )}
     </div>
-  );
+  )
 }

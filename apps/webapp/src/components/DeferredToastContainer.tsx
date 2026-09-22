@@ -1,26 +1,26 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { useThemeStore } from "@/stores/useThemeStore";
+import { lazy, Suspense, useEffect, useState } from "react"
+import { useThemeStore } from "@/stores/useThemeStore"
 
 const ToastContainer = lazy(() =>
   import("react-toastify").then((module) => ({
     default: module.ToastContainer,
-  })),
-);
+  }))
+)
 
 export const DeferredToastContainer = () => {
-  const [shouldLoadToasts, setShouldLoadToasts] = useState(false);
-  const currentTheme = useThemeStore((state) => state.currentTheme);
+  const [shouldLoadToasts, setShouldLoadToasts] = useState(false)
+  const currentTheme = useThemeStore((state) => state.currentTheme)
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      setShouldLoadToasts(true);
-    }, 1000);
+      setShouldLoadToasts(true)
+    }, 1000)
 
-    return () => window.clearTimeout(timeout);
-  }, []);
+    return () => window.clearTimeout(timeout)
+  }, [])
 
   if (!shouldLoadToasts) {
-    return null;
+    return null
   }
 
   return (
@@ -32,5 +32,5 @@ export const DeferredToastContainer = () => {
         toastClassName="home-toast"
       />
     </Suspense>
-  );
-};
+  )
+}

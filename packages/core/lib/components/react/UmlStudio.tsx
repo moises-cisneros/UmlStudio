@@ -184,15 +184,10 @@ export function UmlStudio(props: UmlStudioProps) {
   const mergedStyle: CSSProperties = { ...style, ...theme }
 
   return (
-    <UmlStudioInstanceContext.Provider value={editor}>
-      <div
-        ref={containerRef}
-        className={className}
-        style={mergedStyle}
-        data-theme={dataTheme}
-      />
+    <UmlStudioInstanceContext value={editor}>
+      <div ref={containerRef} className={className} style={mergedStyle} data-theme={dataTheme} />
       {children === undefined ? <UmlStudioDefaultControls /> : children}
-    </UmlStudioInstanceContext.Provider>
+    </UmlStudioInstanceContext>
   )
 }
 
