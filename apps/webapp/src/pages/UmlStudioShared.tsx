@@ -13,13 +13,13 @@ import {
 import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "react-toastify"
-import { DiagramView } from "@/types"
+import { DiagramView, type Diagram } from "@/types"
 import { WebSocketManager } from "@/services/WebSocketManager"
 import { createDiagramAutosaver, type DiagramAutosaver } from "@/services/createDiagramAutosaver"
 import { selectScopedPreview, useVersionStore } from "@/stores/useVersionStore"
 import { useDiagramSeed } from "@/hooks/useDiagramSeed"
 import { DiagramApiClient } from "@/services/DiagramApiClient"
-import { prefetchVersions } from "@/queries/versionQueries"
+import { fetchVersionBody, prefetchVersions } from "@/queries/versionQueries"
 import { useVersionRepositoryKind } from "@/contexts/VersionRepositoryContext"
 import { useRestoreVersionMutation } from "@/queries/versionMutations"
 import { applyControlEventToCache } from "@/queries/versionCacheEvents"
@@ -386,7 +386,19 @@ export const UmlStudioShared: React.FC = () => {
     closePreview()
   }, [closePreview])
 
+  const resolveBody = useCallback(
+    async (versionId: string): Promise<Diagram> => {
+      if (preview?.versionId === versionId) return preview.body as Diagram
+      if (!diagramId) {
+        throw new Error("No current diagram id")
+      }
+      return fetchVersionBody(queryClient, kind, diagramId, versionId)
+    },
+    [preview, diagramId, queryClient, kind]
+  )
+
   const handleRestore = useCallback(
+    // eslint-disable-next-line react-hooks/immutability
     async (versionId: string) => {
       if (!diagramId || !editor) return
       const previewing = selectScopedPreview(useVersionStore.getState(), diagramId) !== null
@@ -396,18 +408,23 @@ export const UmlStudioShared: React.FC = () => {
       }
       const liveBody = editor.model
       try {
+        const body = await resolveBody(versionId)
         const { headRev } = await restoreMutation.mutateAsync({
           versionId,
           currentBody: liveBody,
         })
+        // eslint-disable-next-line react-hooks/immutability
+        editor.model = importDiagram(body) as UMLModel
+        editor.fitView()
         handleVersionSaved(headRev)
         if (previewing) closePreview()
+        toast.success(t.restoredSnack(versionId), { autoClose: 4000 })
       } catch {
         restoredDuringPreviewRef.current = false
         toast.error(t.restoreFailed)
       }
     },
-    [diagramId, editor, handleVersionSaved, restoreMutation, closePreview, t.restoreFailed]
+    [diagramId, editor, resolveBody, handleVersionSaved, restoreMutation, closePreview, t]
   )
 
   const isLoading = seedPending || !editor

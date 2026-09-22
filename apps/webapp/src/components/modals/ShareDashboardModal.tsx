@@ -9,10 +9,10 @@ import {
 import { useNavigate } from "@tanstack/react-router"
 import { useModalContext } from "@/contexts"
 import { useModalProgress } from "@/contexts/ModalProgressContext"
-import { DiagramView } from "@/types"
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
-import { randomCollabName } from "@umlstudio/core"
+import { useAuthStore } from "@/stores/useAuthStore"
 import { sharedDiagramRoute } from "@/utils/sharedDiagramLinks"
+import { toast } from "react-toastify"
 import {
   HomeDialogActions,
   HomeDialogContent,
@@ -30,17 +30,15 @@ type ShareDashboardModalProps = {
 
 export const ShareDashboardModal = ({ modelId }: ShareDashboardModalProps) => {
   const { t } = useTranslation()
-  const { closeModal, openModal } = useModalContext()
+  const { closeModal } = useModalContext()
   const navigate = useNavigate()
+  const authUser = useAuthStore((s) => s.user)
 
   const persistedModel = usePersistenceModelStore((state) =>
     modelId ? state.models[modelId] : null
   )
   const modelData = persistedModel?.model ?? null
   const [name, setName] = useState(persistedModel?.model?.title?.trim() || "Untitled Diagram")
-  const [collaborateName, setCollaborateName] = useState(
-    () => sessionStorage.getItem("umlstudio-collab-name") || ""
-  )
 
   const share = useShareableDiagram(modelData)
 
@@ -49,16 +47,8 @@ export const ShareDashboardModal = ({ modelId }: ShareDashboardModalProps) => {
 
   const openShared = () => {
     if (!share.diagramId) return
-    if (share.mode === DiagramView.EDITOR) {
-      const id = share.diagramId
-      openModal("COLLABORATE_NAME", {
-        initialName: collaborateName.trim() || randomCollabName(),
-        onConfirm: (chosen: string) => {
-          sessionStorage.setItem("umlstudio-collab-name", chosen)
-          setCollaborateName(chosen)
-          navigate(sharedDiagramRoute(id, share.mode))
-        },
-      })
+    if (!authUser) {
+      toast.error(t.auth?.authRequiredShared ?? "Authentication required to collaborate")
       return
     }
     closeModal()
@@ -77,7 +67,7 @@ export const ShareDashboardModal = ({ modelId }: ShareDashboardModalProps) => {
               }
               aria-label="More information"
             >
-              <InfoIcon className="size-4 text-[color:var(--home-accent-base)]" aria-hidden />
+              <InfoIcon className="size-4 text-(--home-accent-base)" aria-hidden />
             </TooltipTrigger>
             <TooltipContent>
               {share.diagramId ? (

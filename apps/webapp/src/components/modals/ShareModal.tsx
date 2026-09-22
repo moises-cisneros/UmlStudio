@@ -3,12 +3,12 @@ import { useNavigate } from "@tanstack/react-router"
 import { Users, Radio, ArrowRight } from "lucide-react"
 import { useEditorContext, useModalContext } from "@/contexts"
 import { useModalProgress } from "@/contexts/ModalProgressContext"
-import { DiagramView } from "@/types"
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
-import { randomCollabName } from "@umlstudio/core"
+import { useAuthStore } from "@/stores/useAuthStore"
 import { sharedDiagramRoute } from "@/utils/sharedDiagramLinks"
 import { useSharedDiagramId } from "@/hooks/useSharedDiagramId"
 import { Button } from "@umlstudio/ui/components/button"
+import { toast } from "react-toastify"
 import { ShareLinkRow, MODE_OPTIONS } from "./ShareLinkRow"
 import { useShareableDiagram } from "./useShareableDiagram"
 import { useTranslation } from "@/i18n"
@@ -16,17 +16,15 @@ import { useTranslation } from "@/i18n"
 export const ShareModal = () => {
   const { t } = useTranslation()
   const { editor } = useEditorContext()
-  const { closeModal, openModal } = useModalContext()
+  const { closeModal } = useModalContext()
   const navigate = useNavigate()
+  const authUser = useAuthStore((s) => s.user)
 
   const modelData = editor?.model ?? null
   const sharedId = useSharedDiagramId()
   const share = useShareableDiagram(modelData, sharedId)
 
   const [name, setName] = useState(() => editor?.model?.title?.trim() || "Untitled Diagram")
-  const [collaborateName, setCollaborateName] = useState(
-    () => sessionStorage.getItem("umlstudio-collab-name") || ""
-  )
   const hasLocalOriginal = Boolean(usePersistenceModelStore.getState().currentModelId)
 
   const { setLoading } = useModalProgress()
@@ -34,17 +32,8 @@ export const ShareModal = () => {
 
   const openShared = () => {
     if (!share.diagramId) return
-    if (share.mode === DiagramView.EDITOR) {
-      const id = share.diagramId
-      openModal("COLLABORATE_NAME", {
-        initialName: collaborateName.trim() || randomCollabName(),
-        onConfirm: (chosen: string) => {
-          sessionStorage.setItem("umlstudio-collab-name", chosen)
-          setCollaborateName(chosen)
-          closeModal()
-          navigate(sharedDiagramRoute(id, share.mode))
-        },
-      })
+    if (!authUser) {
+      toast.error(t.auth?.authRequiredShared ?? "Authentication required to collaborate")
       return
     }
     closeModal()

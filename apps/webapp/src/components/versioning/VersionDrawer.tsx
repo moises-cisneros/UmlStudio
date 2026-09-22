@@ -137,14 +137,16 @@ export const VersionSidebarBody: FC<Props> = ({
     : t.noVersionYet
 
   const latestSavedVersion = versions.find((v) => !v.pending && !v.failed)
+  const initialListLoaded = !versionsQuery.isPending
   const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null)
   const [hasChanges, setHasChanges] = useState(true)
   const [baselineVersionId, setBaselineVersionId] = useState<string | null | undefined>(undefined)
-  const baselineResolved = baselineVersionId === (latestSavedVersion?.id ?? null)
-  const initialListLoaded = !versionsQuery.isPending
+  const baselineResolved = !latestSavedVersion
+    ? initialListLoaded
+    : baselineVersionId === latestSavedVersion.id
 
   const latestSavedVersionId = latestSavedVersion?.id ?? null
-  const [prevVersionId, setPrevVersionId] = useState(latestSavedVersionId)
+  const [prevVersionId, setPrevVersionId] = useState<string | null>(null)
   if (latestSavedVersionId !== prevVersionId) {
     setPrevVersionId(latestSavedVersionId)
     if (!latestSavedVersion) {

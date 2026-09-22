@@ -40,6 +40,7 @@ import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
 import { DiagramApiClient } from "@/services/DiagramApiClient"
 import { useDiagramIdFromPath } from "@/hooks/useDiagramIdFromPath"
 import { useSharedDiagramId } from "@/hooks/useSharedDiagramId"
+import { useVersionStore } from "@/stores/useVersionStore"
 
 interface FileMenuProps {
   color?: string
@@ -296,6 +297,15 @@ export function FileMenuItems({
           <DropdownMenuItem onClick={handleShareDiagram}>
             <span>{t.menu.shareDiagram}</span>
             <DropdownMenuShortcut>Ctrl+Alt+S</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              useVersionStore.getState().openDrawer(diagramId)
+              onSelect()
+            }}
+          >
+            <span>{t.menu.versionHistory}</span>
+            <DropdownMenuShortcut>Alt+Shift+H</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {

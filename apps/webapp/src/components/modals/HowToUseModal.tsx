@@ -9,10 +9,10 @@ import { EDITOR_SHORTCUTS, type EditorShortcutId } from "@/hooks/useEditorShortc
 import { formatCombo, keycaps, type Keycaps } from "@/utils/shortcutCaps"
 import { useTranslation } from "@/i18n"
 import type { TranslationDictionary } from "@/i18n/types"
-import NodeCreation from "assets/images/how-to-use-node-creation.png"
-import EdgeCreation from "assets/images/how-to-use-edge-creation.png"
-import NodeEdit from "assets/images/how-to-use-node-edit.png"
-import NodeMove from "assets/images/how-to-use-node-move.png"
+import NodeCreation from "assets/images/Crear-Clase.png"
+import EdgeCreation from "assets/images/Agregar-Relacion.png"
+import NodeEdit from "assets/images/Editar-Clase.png"
+import NodeMove from "assets/images/Mover-Clase.png"
 
 type HowToUseModalProps = {
   variant: HelpMenuVariant
