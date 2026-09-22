@@ -47,26 +47,26 @@ export const Select: React.FC<SelectProps> = ({
       options.findIndex((o) => o.value === value)
     )
   )
-  const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const optionListRef = useRef<Array<HTMLButtonElement | null>>([])
   const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null)
-  const typeahead = useRef<{ query: string; at: number }>({ query: "", at: 0 })
+  const typeaheadRef = useRef<{ query: string; at: number }>({ query: "", at: 0 })
 
   const portalThemeVars = usePortalThemeVars(trigger)
   const portalContainer = useUmlStudioPortalContainer()
 
   const selected = options.find((o) => o.value === value)
 
-  const wasOpen = useRef(false)
+  const wasOpenRef = useRef(false)
   useEffect(() => {
-    if (open && !wasOpen.current) {
+    if (open && !wasOpenRef.current) {
       const idx = Math.max(
         0,
         options.findIndex((o) => o.value === value)
       )
       setActiveIndex(idx)
-      requestAnimationFrame(() => optionRefs.current[idx]?.focus())
+      requestAnimationFrame(() => optionListRef.current[idx]?.focus())
     }
-    wasOpen.current = open
+    wasOpenRef.current = open
   }, [open, options, value])
 
   const commit = useCallback(
@@ -81,7 +81,7 @@ export const Select: React.FC<SelectProps> = ({
     (next: number) => {
       const clamped = Math.max(0, Math.min(options.length - 1, next))
       setActiveIndex(clamped)
-      optionRefs.current[clamped]?.focus()
+      optionListRef.current[clamped]?.focus()
     },
     [options.length]
   )
@@ -114,14 +114,10 @@ export const Select: React.FC<SelectProps> = ({
           if (e.key.length !== 1) return
           const now = Date.now()
           const query =
-            now - typeahead.current.at < 600
-              ? typeahead.current.query + e.key
-              : e.key
-          typeahead.current = { query, at: now }
+            now - typeaheadRef.current.at < 600 ? typeaheadRef.current.query + e.key : e.key
+          typeaheadRef.current = { query, at: now }
           const lower = query.toLowerCase()
-          const match = options.findIndex((o) =>
-            o.label.toLowerCase().startsWith(lower)
-          )
+          const match = options.findIndex((o) => o.label.toLowerCase().startsWith(lower))
           if (match >= 0) moveActive(match)
         }
       }
@@ -130,10 +126,7 @@ export const Select: React.FC<SelectProps> = ({
   )
 
   return (
-    <span
-      className="umlstudio-select"
-      style={{ width: fullWidth ? "100%" : undefined }}
-    >
+    <span className="umlstudio-select" style={{ width: fullWidth ? "100%" : undefined }}>
       {label && (
         <label htmlFor={triggerId} className="umlstudio-select-label">
           {label}
@@ -163,11 +156,7 @@ export const Select: React.FC<SelectProps> = ({
                   </span>
                 )}
               </span>
-              <ChevronDown
-                size={16}
-                aria-hidden
-                className="umlstudio-select-icon"
-              />
+              <ChevronDown size={16} aria-hidden className="umlstudio-select-icon" />
             </button>
           }
         />
@@ -199,7 +188,7 @@ export const Select: React.FC<SelectProps> = ({
                       aria-selected={isSelected}
                       tabIndex={index === activeIndex ? 0 : -1}
                       ref={(el) => {
-                        optionRefs.current[index] = el
+                        optionListRef.current[index] = el
                       }}
                       className={`umlstudio-select-option${
                         isSelected ? " umlstudio-select-option--selected" : ""

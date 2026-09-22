@@ -2,17 +2,8 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 
 import { cn } from "../lib/utils"
 
-function TooltipProvider({
-  delay = 0,
-  ...props
-}: TooltipPrimitive.Provider.Props) {
-  return (
-    <TooltipPrimitive.Provider
-      data-slot="tooltip-provider"
-      delay={delay}
-      {...props}
-    />
-  )
+function TooltipProvider({ delay = 0, ...props }: TooltipPrimitive.Provider.Props) {
+  return <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delay} {...props} />
 }
 
 function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
@@ -33,10 +24,7 @@ function TooltipContent({
   children,
   ...props
 }: TooltipPrimitive.Popup.Props &
-  Pick<
-    TooltipPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
-  > & {
+  Pick<TooltipPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
     portalContainer?: TooltipPrimitive.Portal.Props["container"]
   }) {
   return (
@@ -48,11 +36,7 @@ function TooltipContent({
         side={side}
         sideOffset={sideOffset}
       >
-        <TooltipPrimitive.Popup
-          data-slot="tooltip-content"
-          className={cn(className)}
-          {...props}
-        >
+        <TooltipPrimitive.Popup data-slot="tooltip-content" className={cn(className)} {...props}>
           {children}
           <TooltipPrimitive.Arrow data-slot="tooltip-arrow" />
         </TooltipPrimitive.Popup>

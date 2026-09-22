@@ -4,10 +4,7 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cn } from "../lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip"
 
-export interface IconButtonProps extends Omit<
-  ButtonPrimitive.Props,
-  "aria-label" | "children"
-> {
+export interface IconButtonProps extends Omit<ButtonPrimitive.Props, "aria-label" | "children"> {
   ariaLabel: string
   tooltip?: React.ReactNode
   children: React.ReactNode

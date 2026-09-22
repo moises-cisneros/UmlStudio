@@ -7,12 +7,7 @@ interface DividerLineProps {
   color?: string
 }
 
-export const DividerLine: React.FC<DividerLineProps> = ({
-  width,
-  height,
-  margin,
-  color,
-}) => (
+export const DividerLine: React.FC<DividerLineProps> = ({ width, height, margin, color }) => (
   <div
     data-slot="divider-line"
     style={

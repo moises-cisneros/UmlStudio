@@ -14,7 +14,7 @@ function DropdownMenu({
   const open = openProp ?? uncontrolledOpen
   const guard = useAnchorLossGuard(open)
   return (
-    <AnchorLossGuardContext.Provider value={guard.positionerRef}>
+    <AnchorLossGuardContext value={guard.positionerRef}>
       <MenuPrimitive.Root
         data-slot="dropdown-menu"
         open={open}
@@ -25,7 +25,7 @@ function DropdownMenu({
         }}
         {...props}
       />
-    </AnchorLossGuardContext.Provider>
+    </AnchorLossGuardContext>
   )
 }
 
@@ -45,10 +45,7 @@ function DropdownMenuContent({
   className,
   ...props
 }: MenuPrimitive.Popup.Props &
-  Pick<
-    MenuPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
   const positionerRef = React.use(AnchorLossGuardContext)
   return (
     <MenuPrimitive.Portal>
@@ -122,9 +119,9 @@ function DropdownMenuItem({
 
 function DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props) {
   return (
-    <AnchorLossGuardContext.Provider value={null}>
+    <AnchorLossGuardContext value={null}>
       <MenuPrimitive.SubmenuRoot data-slot="dropdown-menu-sub" {...props} />
-    </AnchorLossGuardContext.Provider>
+    </AnchorLossGuardContext>
   )
 }
 
@@ -206,19 +203,10 @@ function DropdownMenuCheckboxItem({
 }
 
 function DropdownMenuRadioGroup({ ...props }: MenuPrimitive.RadioGroup.Props) {
-  return (
-    <MenuPrimitive.RadioGroup
-      data-slot="dropdown-menu-radio-group"
-      {...props}
-    />
-  )
+  return <MenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />
 }
 
-function DropdownMenuRadioItem({
-  className,
-  children,
-  ...props
-}: MenuPrimitive.RadioItem.Props) {
+function DropdownMenuRadioItem({ className, children, ...props }: MenuPrimitive.RadioItem.Props) {
   return (
     <MenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
@@ -241,10 +229,7 @@ function DropdownMenuRadioItem({
   )
 }
 
-function DropdownMenuSeparator({
-  className,
-  ...props
-}: MenuPrimitive.Separator.Props) {
+function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.Props) {
   return (
     <MenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
@@ -254,10 +239,7 @@ function DropdownMenuSeparator({
   )
 }
 
-function DropdownMenuShortcut({
-  className,
-  ...props
-}: React.ComponentProps<"span">) {
+function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
       data-slot="dropdown-menu-shortcut"
