@@ -4,53 +4,37 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@umlstudio/ui/components/dropdown-menu";
-import { Button } from "@umlstudio/ui/components/button";
-import {
-  Clock,
-  Copy,
-  Eye,
-  MoreHorizontal,
-  Pencil,
-  RotateCcw,
-  Trash2,
-  Check,
-} from "lucide-react";
-import { VersionThumbnail } from "./VersionThumbnail";
-import {
-  Fragment,
-  useState,
-  useRef,
-  type FC,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
-import { toast } from "react-toastify";
-import { cn } from "@umlstudio/ui/lib/utils";
-import { Textarea } from "@umlstudio/ui/components/textarea";
-import { log } from "@/logger";
-import type { PendingVersion } from "@/types";
-import { useEditVersionInfoMutation } from "@/queries/versionMutations";
-import { getVersionRepository } from "@/services/versionRepository";
-import { useVersionRepositoryKind } from "@/contexts/VersionRepositoryContext";
-import { MAX_DESCRIPTION_LENGTH, useVersioningTranslation } from "./strings";
-import { relativeTime } from "./relativeTime";
-import { isNamedVersion } from "@/lib/version/predicates";
+} from "@umlstudio/ui/components/dropdown-menu"
+import { Button } from "@umlstudio/ui/components/button"
+import { Clock, Copy, Eye, MoreHorizontal, Pencil, RotateCcw, Trash2, Check } from "lucide-react"
+import { VersionThumbnail } from "./VersionThumbnail"
+import { Fragment, useState, useRef, type FC, type KeyboardEvent, type ReactNode } from "react"
+import { toast } from "react-toastify"
+import { cn } from "@umlstudio/ui/lib/utils"
+import { Textarea } from "@umlstudio/ui/components/textarea"
+import { log } from "@/logger"
+import type { PendingVersion } from "@/types"
+import { useEditVersionInfoMutation } from "@/queries/versionMutations"
+import { getVersionRepository } from "@/services/versionRepository"
+import { useVersionRepositoryKind } from "@/contexts/VersionRepositoryContext"
+import { MAX_DESCRIPTION_LENGTH, useVersioningTranslation } from "./strings"
+import { relativeTime } from "./relativeTime"
+import { isNamedVersion } from "@/lib/version/predicates"
 
 interface ViewProps {
-  version: PendingVersion;
-  thumbnail?: ReactNode;
-  versionNumber?: number;
-  isPreviewing: boolean;
-  canRestore: boolean;
-  hasPermalink?: boolean;
-  onPreview: (versionId: string) => void;
-  onRestore: (versionId: string) => void;
-  onDelete: (versionId: string) => void;
-  onEditDescription: (versionId: string, description: string) => Promise<void>;
-  onCopyLink: (versionId: string) => void;
-  className?: string;
-  ref?: React.Ref<HTMLLIElement>;
+  version: PendingVersion
+  thumbnail?: ReactNode
+  versionNumber?: number
+  isPreviewing: boolean
+  canRestore: boolean
+  hasPermalink?: boolean
+  onPreview: (versionId: string) => void
+  onRestore: (versionId: string) => void
+  onDelete: (versionId: string) => void
+  onEditDescription: (versionId: string, description: string) => Promise<void>
+  onCopyLink: (versionId: string) => void
+  className?: string
+  ref?: React.Ref<HTMLLIElement>
 }
 
 export function VersionListItemView({
@@ -68,61 +52,60 @@ export function VersionListItemView({
   className,
   ref,
 }: ViewProps) {
-  const t = useVersioningTranslation();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(version.description ?? "");
-  const cancellingRef = useRef(false);
+  const t = useVersioningTranslation()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(version.description ?? "")
+  const cancellingRef = useRef(false)
 
-  const closeMenu = () => setMenuOpen(false);
+  const closeMenu = () => setMenuOpen(false)
 
   const startEditing = () => {
-    setDraft(version.description ?? "");
-    setEditing(true);
-  };
+    setDraft(version.description ?? "")
+    setEditing(true)
+  }
 
   const submitEdit = async () => {
     if (cancellingRef.current) {
-      cancellingRef.current = false;
-      return;
+      cancellingRef.current = false
+      return
     }
-    setEditing(false);
-    const next = draft.trim();
-    if (next === (version.description ?? "").trim()) return;
+    setEditing(false)
+    const next = draft.trim()
+    if (next === (version.description ?? "").trim()) return
     try {
-      await onEditDescription(version.id, next);
+      await onEditDescription(version.id, next)
     } catch {
-      setDraft(version.description ?? "");
+      setDraft(version.description ?? "")
     }
-  };
+  }
 
   const cancelEdit = () => {
-    cancellingRef.current = true;
-    setDraft(version.description ?? "");
-    setEditing(false);
-  };
+    cancellingRef.current = true
+    setDraft(version.description ?? "")
+    setEditing(false)
+  }
 
   const onEditKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      void submitEdit();
+      e.preventDefault()
+      void submitEdit()
     } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancelEdit();
+      e.preventDefault()
+      cancelEdit()
     }
-  };
+  }
 
   const handleCopyLink = () => {
-    closeMenu();
-    onCopyLink(version.id);
-  };
+    closeMenu()
+    onCopyLink(version.id)
+  }
 
-  const named = isNamedVersion(version);
-  const ago = relativeTime(version.createdAt);
-  const description = version.description?.trim();
+  const named = isNamedVersion(version)
+  const ago = relativeTime(version.createdAt)
+  const description = version.description?.trim()
   const title =
-    version.name?.trim() ||
-    (versionNumber !== undefined ? `#${versionNumber}` : t.autoSaved);
+    version.name?.trim() || (versionNumber !== undefined ? `#${versionNumber}` : t.autoSaved)
 
   const stereotype = version.pending
     ? "«saving»"
@@ -130,7 +113,7 @@ export function VersionListItemView({
       ? "«failed»"
       : named
         ? t.checkpointStereotype
-        : t.autoGroupStereotype;
+        : t.autoGroupStereotype
 
   return (
     <li
@@ -143,7 +126,7 @@ export function VersionListItemView({
         isPreviewing &&
           "ring-2 ring-(--umlstudio-primary) bg-(--umlstudio-surface-active) border-(--umlstudio-primary)",
         version.failed && "border-l-4 border-l-destructive",
-        className,
+        className
       )}
       style={{
         opacity: version.pending ? 0.85 : 1,
@@ -187,8 +170,8 @@ export function VersionListItemView({
             {canRestore && (
               <DropdownMenuItem
                 onClick={() => {
-                  closeMenu();
-                  onRestore(version.id);
+                  closeMenu()
+                  onRestore(version.id)
                 }}
               >
                 <RotateCcw className="size-3.5 mr-2 text-(--umlstudio-text-muted)" />
@@ -205,8 +188,8 @@ export function VersionListItemView({
 
             <DropdownMenuItem
               onClick={() => {
-                closeMenu();
-                requestAnimationFrame(() => startEditing());
+                closeMenu()
+                requestAnimationFrame(() => startEditing())
               }}
             >
               <Pencil className="size-3.5 mr-2 text-(--umlstudio-text-muted)" />
@@ -219,8 +202,8 @@ export function VersionListItemView({
                 <DropdownMenuItem
                   variant="destructive"
                   onClick={() => {
-                    closeMenu();
-                    onDelete(version.id);
+                    closeMenu()
+                    onDelete(version.id)
                   }}
                 >
                   <Trash2 className="size-3.5 mr-2" />
@@ -255,9 +238,7 @@ export function VersionListItemView({
               autoFocus
               rows={2}
               value={draft}
-              onChange={(e) =>
-                setDraft(e.target.value.slice(0, MAX_DESCRIPTION_LENGTH))
-              }
+              onChange={(e) => setDraft(e.target.value.slice(0, MAX_DESCRIPTION_LENGTH))}
               onClick={(e) => e.stopPropagation()}
               onBlur={() => void submitEdit()}
               onKeyDown={onEditKeyDown}
@@ -296,8 +277,7 @@ export function VersionListItemView({
                   <span
                     className="size-2 rounded-full shrink-0 flex items-center justify-center text-[8px]"
                     style={{
-                      backgroundColor:
-                        version.authorColor || "var(--umlstudio-primary)",
+                      backgroundColor: version.authorColor || "var(--umlstudio-primary)",
                     }}
                     aria-hidden
                   />
@@ -308,12 +288,8 @@ export function VersionListItemView({
               </div>
             )}
 
-            {version.pending && (
-              <span className="text-(--umlstudio-accent)">· {t.saving}</span>
-            )}
-            {version.failed && (
-              <span className="text-destructive">· error</span>
-            )}
+            {version.pending && <span className="text-(--umlstudio-accent)">· {t.saving}</span>}
+            {version.failed && <span className="text-destructive">· error</span>}
           </div>
         </div>
       </div>
@@ -355,51 +331,45 @@ export function VersionListItemView({
         </div>
       </div>
     </li>
-  );
+  )
 }
 
 type ContainerProps = Omit<
   ViewProps,
   "onEditDescription" | "onCopyLink" | "thumbnail" | "hasPermalink"
 > & {
-  diagramId: string;
-};
+  diagramId: string
+}
 
-export const VersionListItem: FC<ContainerProps> = ({
-  diagramId,
-  ...props
-}) => {
-  const t = useVersioningTranslation();
-  const kind = useVersionRepositoryKind();
-  const editVersionInfo = useEditVersionInfoMutation(kind, diagramId);
-  const permalinkUrl = getVersionRepository(kind).permalink(
-    diagramId,
-    props.version.id,
-  );
+export const VersionListItem: FC<ContainerProps> = ({ diagramId, ...props }) => {
+  const t = useVersioningTranslation()
+  const kind = useVersionRepositoryKind()
+  const editVersionInfo = useEditVersionInfoMutation(kind, diagramId)
+  const permalinkUrl = getVersionRepository(kind).permalink(diagramId, props.version.id)
 
   const onEditDescription = async (versionId: string, description: string) => {
     try {
       await editVersionInfo.mutateAsync({
         versionId,
         patch: { description },
-      });
+      })
     } catch (err) {
-      log.error("Edit description failed", err);
-      toast.error(t.failureToEdit);
-      throw err;
+      log.error("Edit description failed", err)
+      toast.error(t.failureToEdit)
+      throw err
     }
-  };
+  }
 
   const onCopyLink = async () => {
-    if (!permalinkUrl) return;
+    if (!permalinkUrl) return
     try {
-      await navigator.clipboard.writeText(permalinkUrl);
-      toast.success(t.copied);
+      await navigator.clipboard.writeText(permalinkUrl)
+      toast.success(t.copied)
     } catch (err) {
-      log.error("Copy link failed", err);
-      toast.error(t.copyFailed);
+      log.error("Copy link failed", err)
+      toast.error(t.copyFailed)
     }
-  };
+  }
 
   return (
     <VersionListItemView
@@ -416,5 +386,5 @@ export const VersionListItem: FC<ContainerProps> = ({
       onEditDescription={onEditDescription}
       onCopyLink={onCopyLink}
     />
-  );
-};
+  )
+}

@@ -1,61 +1,46 @@
-import { create } from "zustand";
-import type { UMLModel, UMLDiagramType } from "@umlstudio/core";
-import { persist, devtools } from "zustand/middleware";
+import { create } from "zustand"
+import type { UMLModel, UMLDiagramType } from "@umlstudio/core"
+import { persist, devtools } from "zustand/middleware"
 
-const PERSISTENCE_STORE_VERSION = 3;
+const PERSISTENCE_STORE_VERSION = 3
 
 type PersistentModelEntity = {
-  id: string;
-  model: UMLModel;
-  lastModifiedAt: string;
-  createdAt: string;
-  favorite: boolean;
-};
+  id: string
+  model: UMLModel
+  lastModifiedAt: string
+  createdAt: string
+  favorite: boolean
+}
 
 type PersistenceModelStore = {
-  models: Record<string, PersistentModelEntity>;
-  thumbnails: Record<string, string>;
-  thumbnailRevisions: Record<string, number>;
-  thumbnailLastModifiedAt: Record<string, string>;
-  currentModelId: string | null;
-  setCurrentModelId: (id: string | null) => void;
-  createModel: (model: UMLModel) => void;
-  createModelByTitleAndType: (title: string, type: UMLDiagramType) => string;
-  importModels: (
-    models: { model: UMLModel; lastModifiedAt?: string }[],
-  ) => void;
-  updateModel: (model: UMLModel) => void;
-  duplicateModel: (id: string) => string;
-  deleteModel: (id: string) => void;
-  renameModel: (id: string, title: string) => void;
-  toggleFavorite: (id: string) => void;
-  setThumbnail: (
-    id: string,
-    svgString: string,
-    lastModifiedAt?: string,
-  ) => void;
-  getThumbnail: (id: string) => string | null;
-};
+  models: Record<string, PersistentModelEntity>
+  thumbnails: Record<string, string>
+  thumbnailRevisions: Record<string, number>
+  thumbnailLastModifiedAt: Record<string, string>
+  currentModelId: string | null
+  setCurrentModelId: (id: string | null) => void
+  createModel: (model: UMLModel) => void
+  createModelByTitleAndType: (title: string, type: UMLDiagramType) => string
+  importModels: (models: { model: UMLModel; lastModifiedAt?: string }[]) => void
+  updateModel: (model: UMLModel) => void
+  duplicateModel: (id: string) => string
+  deleteModel: (id: string) => void
+  renameModel: (id: string, title: string) => void
+  toggleFavorite: (id: string) => void
+  setThumbnail: (id: string, svgString: string, lastModifiedAt?: string) => void
+  getThumbnail: (id: string) => string | null
+}
 
-type PersistedPersistenceModelStore = Pick<
-  PersistenceModelStore,
-  "models" | "currentModelId"
-> &
+type PersistedPersistenceModelStore = Pick<PersistenceModelStore, "models" | "currentModelId"> &
   Partial<
-    Pick<
-      PersistenceModelStore,
-      "thumbnails" | "thumbnailRevisions" | "thumbnailLastModifiedAt"
-    >
-  >;
+    Pick<PersistenceModelStore, "thumbnails" | "thumbnailRevisions" | "thumbnailLastModifiedAt">
+  >
 
-const omitKey = <V,>(
-  record: Record<string, V>,
-  key: string,
-): Record<string, V> => {
-  const rest = { ...record };
-  delete rest[key];
-  return rest;
-};
+const omitKey = <V,>(record: Record<string, V>, key: string): Record<string, V> => {
+  const rest = { ...record }
+  delete rest[key]
+  return rest
+}
 
 const populateNewModel = () => ({
   id: crypto.randomUUID(),
@@ -65,13 +50,13 @@ const populateNewModel = () => ({
   nodes: [],
   title: "",
   version: "4.0.0" as const,
-});
+})
 
 const normalizePersistedModels = (
-  models: PersistedPersistenceModelStore["models"] | undefined,
+  models: PersistedPersistenceModelStore["models"] | undefined
 ): Record<string, PersistentModelEntity> => {
   if (!models) {
-    return {};
+    return {}
   }
 
   return Object.fromEntries(
@@ -80,13 +65,11 @@ const normalizePersistedModels = (
       {
         ...entity,
         favorite: Boolean(entity.favorite),
-        createdAt:
-          (entity as Partial<PersistentModelEntity>).createdAt ??
-          entity.lastModifiedAt,
+        createdAt: (entity as Partial<PersistentModelEntity>).createdAt ?? entity.lastModifiedAt,
       },
-    ]),
-  );
-};
+    ])
+  )
+}
 
 export const usePersistenceModelStore = create<PersistenceModelStore>()(
   devtools(
@@ -98,16 +81,15 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
         thumbnailLastModifiedAt: {},
         currentModelId: null,
 
-        setCurrentModelId: (id) =>
-          set({ currentModelId: id }, false, "setCurrentModelId"),
+        setCurrentModelId: (id) => set({ currentModelId: id }, false, "setCurrentModelId"),
 
         createModelByTitleAndType: (title, type) => {
-          const now = new Date().toISOString();
+          const now = new Date().toISOString()
           const model: UMLModel = {
             ...populateNewModel(),
             title,
             type,
-          };
+          }
 
           const persistentEntity: PersistentModelEntity = {
             id: model.id,
@@ -115,7 +97,7 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
             lastModifiedAt: now,
             createdAt: now,
             favorite: false,
-          };
+          }
 
           set(
             (state) => ({
@@ -123,21 +105,21 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
               currentModelId: model.id,
             }),
             false,
-            "createModel",
-          );
+            "createModel"
+          )
 
-          return model.id;
+          return model.id
         },
 
         createModel: (model) => {
-          const now = new Date().toISOString();
+          const now = new Date().toISOString()
           const persistentEntity: PersistentModelEntity = {
             id: model.id,
             model,
             lastModifiedAt: now,
             createdAt: now,
             favorite: false,
-          };
+          }
 
           set(
             (state) => ({
@@ -145,50 +127,50 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
               currentModelId: model.id,
             }),
             false,
-            "createModel",
-          );
+            "createModel"
+          )
         },
 
         importModels: (models) => {
           set(
             (state) => {
-              const importedModels = { ...state.models };
-              let latestId: string | null = null;
-              let latestTime = "";
+              const importedModels = { ...state.models }
+              let latestId: string | null = null
+              let latestTime = ""
 
               for (const { model, lastModifiedAt } of models) {
                 if (importedModels[model.id]) {
-                  continue;
+                  continue
                 }
 
-                const persistedAt = lastModifiedAt ?? new Date().toISOString();
+                const persistedAt = lastModifiedAt ?? new Date().toISOString()
                 importedModels[model.id] = {
                   id: model.id,
                   model,
                   lastModifiedAt: persistedAt,
                   createdAt: persistedAt,
                   favorite: false,
-                };
+                }
 
-                latestId ??= model.id;
+                latestId ??= model.id
                 if (lastModifiedAt && lastModifiedAt > latestTime) {
-                  latestTime = lastModifiedAt;
-                  latestId = model.id;
+                  latestTime = lastModifiedAt
+                  latestId = model.id
                 }
               }
 
               return {
                 models: importedModels,
                 currentModelId: state.currentModelId ?? latestId,
-              };
+              }
             },
             false,
-            "importModels",
-          );
+            "importModels"
+          )
         },
 
         updateModel: (model) => {
-          const lastModifiedAt = new Date().toISOString();
+          const lastModifiedAt = new Date().toISOString()
 
           set(
             (state) => {
@@ -199,51 +181,50 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
                     id: model.id,
                     model,
                     lastModifiedAt,
-                    createdAt:
-                      state.models[model.id]?.createdAt ?? lastModifiedAt,
+                    createdAt: state.models[model.id]?.createdAt ?? lastModifiedAt,
                     favorite: state.models[model.id]?.favorite ?? false,
                   },
                 },
-              };
+              }
             },
             false,
-            "updateModel",
-          );
+            "updateModel"
+          )
         },
 
         duplicateModel: (id) => {
-          const sourceEntity = get().models[id];
+          const sourceEntity = get().models[id]
 
           if (!sourceEntity) {
-            return "";
+            return ""
           }
 
-          const sourceModel = sourceEntity.model;
+          const sourceModel = sourceEntity.model
           const clonedModel: UMLModel =
             typeof structuredClone === "function"
               ? structuredClone(sourceModel)
-              : JSON.parse(JSON.stringify(sourceModel));
+              : JSON.parse(JSON.stringify(sourceModel))
 
           const existingTitles = new Set(
-            Object.values(get().models).map((entity) => entity.model.title),
-          );
-          const sourceTitle = sourceModel.title;
-          const defaultCopyTitle = `${sourceTitle} (Copy)`;
-          let copyTitle = defaultCopyTitle;
-          let counter = 2;
+            Object.values(get().models).map((entity) => entity.model.title)
+          )
+          const sourceTitle = sourceModel.title
+          const defaultCopyTitle = `${sourceTitle} (Copy)`
+          let copyTitle = defaultCopyTitle
+          let counter = 2
 
           while (existingTitles.has(copyTitle)) {
-            copyTitle = `${sourceTitle} (Copy ${counter})`;
-            counter += 1;
+            copyTitle = `${sourceTitle} (Copy ${counter})`
+            counter += 1
           }
 
-          const duplicatedId = crypto.randomUUID();
+          const duplicatedId = crypto.randomUUID()
           const duplicatedModel: UMLModel = {
             ...clonedModel,
             id: duplicatedId,
             title: copyTitle,
-          };
-          const lastModifiedAt = new Date().toISOString();
+          }
+          const lastModifiedAt = new Date().toISOString()
 
           set(
             (state) => ({
@@ -274,10 +255,10 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
                 : state.thumbnailLastModifiedAt,
             }),
             false,
-            "duplicateModel",
-          );
+            "duplicateModel"
+          )
 
-          return duplicatedId;
+          return duplicatedId
         },
 
         deleteModel: (id) => {
@@ -286,24 +267,21 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
               models: omitKey(state.models, id),
               thumbnails: omitKey(state.thumbnails, id),
               thumbnailRevisions: omitKey(state.thumbnailRevisions, id),
-              thumbnailLastModifiedAt: omitKey(
-                state.thumbnailLastModifiedAt,
-                id,
-              ),
+              thumbnailLastModifiedAt: omitKey(state.thumbnailLastModifiedAt, id),
             }),
             false,
-            "deleteModel",
-          );
+            "deleteModel"
+          )
         },
 
         renameModel: (id, title) => {
           set(
             (state) => {
-              const targetEntity = state.models[id];
+              const targetEntity = state.models[id]
               if (!targetEntity) {
-                return state;
+                return state
               }
-              const lastModifiedAt = new Date().toISOString();
+              const lastModifiedAt = new Date().toISOString()
               return {
                 models: {
                   ...state.models,
@@ -316,19 +294,19 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
                     },
                   },
                 },
-              };
+              }
             },
             false,
-            "renameModel",
-          );
+            "renameModel"
+          )
         },
 
         toggleFavorite: (id) => {
           set(
             (state) => {
-              const targetModel = state.models[id];
+              const targetModel = state.models[id]
               if (!targetModel) {
-                return state;
+                return state
               }
 
               return {
@@ -339,11 +317,11 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
                     favorite: !targetModel.favorite,
                   },
                 },
-              };
+              }
             },
             false,
-            "toggleFavorite",
-          );
+            "toggleFavorite"
+          )
         },
 
         setThumbnail: (id, svgString, lastModifiedAt) =>
@@ -360,13 +338,11 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
               thumbnailLastModifiedAt: {
                 ...state.thumbnailLastModifiedAt,
                 [id]:
-                  lastModifiedAt ??
-                  state.models[id]?.lastModifiedAt ??
-                  new Date().toISOString(),
+                  lastModifiedAt ?? state.models[id]?.lastModifiedAt ?? new Date().toISOString(),
               },
             }),
             false,
-            "setThumbnail",
+            "setThumbnail"
           ),
 
         getThumbnail: (id) => get().thumbnails[id] ?? null,
@@ -379,19 +355,19 @@ export const usePersistenceModelStore = create<PersistenceModelStore>()(
           currentModelId: state.currentModelId,
         }),
         migrate: (persistedState) => {
-          const state = persistedState as PersistedPersistenceModelStore;
+          const state = persistedState as PersistedPersistenceModelStore
           return {
             ...state,
             models: normalizePersistedModels(state.models),
             thumbnails: {},
             thumbnailRevisions: {},
             thumbnailLastModifiedAt: {},
-          };
+          }
         },
-      },
+      }
     ),
     {
       name: "Standalone persistenceModelStore DevTools",
-    },
-  ),
-);
+    }
+  )
+)

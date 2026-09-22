@@ -1,4 +1,4 @@
-import { cn } from "@umlstudio/ui/lib/utils";
+import { cn } from "@umlstudio/ui/lib/utils"
 
 export const navbarButtonStyle = (className?: string): string =>
   cn(
@@ -9,15 +9,12 @@ export const navbarButtonStyle = (className?: string): string =>
     "hover:bg-[var(--umlstudio-chrome-surface-hover)]",
     "active:bg-[var(--umlstudio-chrome-surface-active)]",
     "focus-visible:shadow-[0_0_0_2px_color-mix(in_srgb,var(--umlstudio-chrome-accent)_45%,transparent)] focus-visible:outline-none",
-    className,
-  );
+    className
+  )
 
-export type ChromeReveal = "lg" | "wide" | "always";
-export const CHROME_REVEAL: Record<
-  ChromeReveal,
-  { labelClass: string; mq: string }
-> = {
+export type ChromeReveal = "lg" | "wide" | "always"
+export const CHROME_REVEAL: Record<ChromeReveal, { labelClass: string; mq: string }> = {
   lg: { labelClass: "hidden lg:inline", mq: "(min-width: 1024px)" },
   wide: { labelClass: "hidden min-[940px]:inline", mq: "(min-width: 940px)" },
   always: { labelClass: "inline", mq: "(min-width: 0px)" },
-};
+}

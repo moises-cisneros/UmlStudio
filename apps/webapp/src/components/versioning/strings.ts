@@ -1,9 +1,9 @@
-import { useTranslation } from "@/i18n";
-import { useMemo } from "react";
+import { useTranslation } from "@/i18n"
+import { useMemo } from "react"
 
-export const MAX_DESCRIPTION_LENGTH = 240;
+export const MAX_DESCRIPTION_LENGTH = 240
 
-export const MAX_NAME_LENGTH = 80;
+export const MAX_NAME_LENGTH = 80
 
 export const versioningStringsEn = {
   drawerTitle: "Version history",
@@ -13,14 +13,10 @@ export const versioningStringsEn = {
   previewFailed: "Failed to load preview.",
   previewUnavailable: "This version is no longer available.",
   restoreFailed: "Restore failed.",
-  emptyBody:
-    "Save a version before risky changes. You can always come back to this exact state.",
-  emptyBodyLocal:
-    "No versions yet. Save one before risky changes — they're stored on this device.",
+  emptyBody: "Save a version before risky changes. You can always come back to this exact state.",
+  emptyBodyLocal: "No versions yet. Save one before risky changes — they're stored on this device.",
   emptyCtaLocal: "Save first version",
-  composerHint: /mac/i.test(navigator.userAgent)
-    ? "⌘+Enter to save"
-    : "Ctrl+Enter to save",
+  composerHint: /mac/i.test(navigator.userAgent) ? "⌘+Enter to save" : "Ctrl+Enter to save",
   emptyDiagramTooltip: "Add a node before saving a version.",
   createPlaceholder: "Describe this version (optional)",
   createButton: "Save version",
@@ -40,16 +36,14 @@ export const versioningStringsEn = {
   deleteFallbackBody: "This version will be permanently removed.",
   exitPreview: "Exit preview",
   restoreThis: "Restore this version",
-  restoredSnack: (name: string) =>
-    `Restored '${name}'. Your previous canvas was saved.`,
+  restoredSnack: (name: string) => `Restored '${name}'. Your previous canvas was saved.`,
   undoRestore: "Undo restore",
   collaboratorRestoredTitle: (actor: string) =>
     `${actor} restored an earlier version. Your view was updated.`,
   noChangesToSave: "No changes to save since the last version.",
   failureToCreate: "Couldn't save version. Try again.",
   failureToEdit: "Couldn't update description. Try again.",
-  failureRedis:
-    "Version history is temporarily unavailable. Your edits are still being saved.",
+  failureRedis: "Version history is temporarily unavailable. Your edits are still being saved.",
   failureToLoad: "Couldn't load version history. Reopen the panel to retry.",
   failureSchemaUnsupported:
     "This snapshot was created by an older version of the editor and can't be restored automatically.",
@@ -59,8 +53,7 @@ export const versioningStringsEn = {
     `Restore ${label}? This replaces your current canvas. We'll save an auto-snapshot first so you can come back.`,
   confirmRestoreButton: "Restore",
   saveLocalCopyButton: "Save a local copy",
-  saveLocalCopySuccess:
-    "Saved as a local copy on this device. You can keep editing here.",
+  saveLocalCopySuccess: "Saved as a local copy on this device. You can keep editing here.",
   saveLocalCopyFailed: "Couldn't save a local copy. Try again.",
   justNow: "just now",
   minutesAgo: (n: number) => `${n}m ago`,
@@ -68,16 +61,14 @@ export const versioningStringsEn = {
   daysAgo: (n: number) => `${n}d ago`,
   liveCanvas: "Live canvas",
   previewModeActive: "Preview mode active",
-  previewReadonlyNotice:
-    "Exploring a historical checkpoint. The canvas is in read-only mode.",
+  previewReadonlyNotice: "Exploring a historical checkpoint. The canvas is in read-only mode.",
   returnToCurrent: "Return to current",
   noVersionsYet: "No checkpoints yet",
   noVersionsYetDesc: "No checkpoints have been created for this diagram yet.",
   upToDateTitle: "Up to date",
   upToDateSubtitle: (ago: string) => `Synced with last saved version ${ago}.`,
   unsavedChangesTitle: "Unsaved edits",
-  unsavedChangesSubtitle: (ago: string) =>
-    `Canvas edits since last save ${ago}.`,
+  unsavedChangesSubtitle: (ago: string) => `Canvas edits since last save ${ago}.`,
   autoGroupTitle: (count: number) => `${count} automatic versions`,
   previewButton: "Preview",
   previewingButton: "Active",
@@ -91,9 +82,9 @@ export const versioningStringsEn = {
   previewStereotype: "«preview-mode»",
   checkpointStereotype: "«checkpoint»",
   autoGroupStereotype: "«auto-group»",
-};
+}
 
-export const versioningStrings = versioningStringsEn;
+export const versioningStrings = versioningStringsEn
 
 const versioningStringsEs: typeof versioningStringsEn = {
   drawerTitle: "Historial de versiones",
@@ -130,8 +121,7 @@ const versioningStringsEs: typeof versioningStringsEn = {
   deleteFallbackBody: "Esta versión se eliminará permanentemente.",
   exitPreview: "Salir de la vista previa",
   restoreThis: "Restaurar esta versión",
-  restoredSnack: (name: string) =>
-    `Se restauró '${name}'. Tu lienzo anterior ha sido guardado.`,
+  restoredSnack: (name: string) => `Se restauró '${name}'. Tu lienzo anterior ha sido guardado.`,
   undoRestore: "Deshacer restauración",
   collaboratorRestoredTitle: (actor: string) =>
     `${actor} restauró una versión anterior. Tu vista ha sido actualizada.`,
@@ -140,8 +130,7 @@ const versioningStringsEs: typeof versioningStringsEn = {
   failureToEdit: "No se pudo actualizar la descripción. Inténtalo de nuevo.",
   failureRedis:
     "El historial de versiones no está disponible temporalmente. Tus cambios se siguen guardando.",
-  failureToLoad:
-    "No se pudo cargar el historial de versiones. Vuelve a abrir el panel.",
+  failureToLoad: "No se pudo cargar el historial de versiones. Vuelve a abrir el panel.",
   failureSchemaUnsupported:
     "Esta instantánea fue creada por una versión antigua del editor y no se puede restaurar automáticamente.",
   unnamed: "Instantánea sin título",
@@ -163,11 +152,9 @@ const versioningStringsEs: typeof versioningStringsEn = {
     "Explorando un punto de control histórico. El lienzo está en modo solo lectura.",
   returnToCurrent: "Volver al actual",
   noVersionsYet: "Sin puntos de control",
-  noVersionsYetDesc:
-    "Aún no se ha creado ningún punto de control para este diagrama.",
+  noVersionsYetDesc: "Aún no se ha creado ningún punto de control para este diagrama.",
   upToDateTitle: "Al día",
-  upToDateSubtitle: (ago: string) =>
-    `Sincronizado con la última versión guardada (${ago}).`,
+  upToDateSubtitle: (ago: string) => `Sincronizado con la última versión guardada (${ago}).`,
   unsavedChangesTitle: "Cambios pendientes",
   unsavedChangesSubtitle: (ago: string) =>
     `Ediciones realizadas desde el último guardado (${ago}).`,
@@ -184,11 +171,11 @@ const versioningStringsEs: typeof versioningStringsEn = {
   previewStereotype: "«modo-previa»",
   checkpointStereotype: "«punto-control»",
   autoGroupStereotype: "«grupo-auto»",
-};
+}
 
 export function useVersioningTranslation() {
-  const { locale } = useTranslation();
+  const { locale } = useTranslation()
   return useMemo(() => {
-    return locale === "es" ? versioningStringsEs : versioningStringsEn;
-  }, [locale]);
+    return locale === "es" ? versioningStringsEs : versioningStringsEn
+  }, [locale])
 }

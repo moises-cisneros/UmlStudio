@@ -173,9 +173,7 @@ export type Assessment = {
 }
 
 export type ExportOptions = {
-  margin?:
-    | number
-    | { top?: number; right?: number; bottom?: number; left?: number }
+  margin?: number | { top?: number; right?: number; bottom?: number; left?: number }
   keepOriginalSize?: boolean
   include?: string[]
   exclude?: string[]

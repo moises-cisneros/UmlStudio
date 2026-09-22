@@ -1,55 +1,67 @@
-import { useEffect, useState } from "react";
-import { UMLDiagramType } from "@umlstudio/core";
-import { Spinner } from "@umlstudio/ui/components/spinner";
-import { getDiagramTypeIcon } from "@/components/home/diagramTypeMeta";
-import { getCachedThumbnailSources } from "@/utils/thumbnailTheme";
-import { runWhenIdle } from "@/utils/idle";
+import { useEffect, useState } from "react"
+import { UMLDiagramType } from "@umlstudio/core"
+import { Spinner } from "@umlstudio/ui/components/spinner"
+import { getDiagramTypeIcon } from "@/components/home/diagramTypeMeta"
+import { getCachedThumbnailSources } from "@/utils/thumbnailTheme"
+import { runWhenIdle } from "@/utils/idle"
 import {
   getResolvedTemplateSvg,
   requestTemplateThumbnail,
   subscribeTemplateThumbnails,
-} from "@/utils/templateThumbnails";
+} from "@/utils/templateThumbnails"
 
 export function TemplateThumbnail({ name }: { name: string }) {
   const [lightSvg, setLightSvg] = useState<string | null | undefined>(() =>
-    getResolvedTemplateSvg(name),
-  );
-  const [darkDataUrl, setDarkDataUrl] = useState<string | null>(null);
+    getResolvedTemplateSvg(name)
+  )
+  const [darkDataUrl, setDarkDataUrl] = useState<string | null>(null)
+
+  const [prevName, setPrevName] = useState(name)
+  if (name !== prevName) {
+    setPrevName(name)
+    setLightSvg(getResolvedTemplateSvg(name))
+  }
+
+  const [prevSvg, setPrevSvg] = useState(lightSvg)
+  if (lightSvg !== prevSvg) {
+    setPrevSvg(lightSvg)
+    if (typeof lightSvg !== "string") {
+      setDarkDataUrl(null)
+    }
+  }
 
   useEffect(() => {
-    const resolved = getResolvedTemplateSvg(name);
-    setLightSvg(resolved);
-    if (resolved !== undefined) return;
+    const resolved = getResolvedTemplateSvg(name)
+    if (resolved !== undefined) return
 
     const unsubscribe = subscribeTemplateThumbnails((readyName, svg) => {
       if (readyName === name) {
-        setLightSvg(svg);
+        setLightSvg(svg)
       }
-    });
-    requestTemplateThumbnail(name);
-    return unsubscribe;
-  }, [name]);
+    })
+    requestTemplateThumbnail(name)
+    return unsubscribe
+  }, [name])
 
-  const cacheKey = `template:${name}`;
+  const cacheKey = `template:${name}`
   const lightDataUrl =
     typeof lightSvg === "string"
       ? (getCachedThumbnailSources(cacheKey, lightSvg)?.lightDataUrl ?? null)
-      : null;
+      : null
 
   useEffect(() => {
     if (typeof lightSvg !== "string") {
-      setDarkDataUrl(null);
-      return;
+      return
     }
     return runWhenIdle(() => {
       const sources = getCachedThumbnailSources(cacheKey, lightSvg, {
         eager: true,
-      });
+      })
       if (sources) {
-        setDarkDataUrl(sources.darkDataUrl);
+        setDarkDataUrl(sources.darkDataUrl)
       }
-    });
-  }, [cacheKey, lightSvg]);
+    })
+  }, [cacheKey, lightSvg])
 
   return (
     <div className="relative h-[120px] w-full">
@@ -82,5 +94,5 @@ export function TemplateThumbnail({ name }: { name: string }) {
         </div>
       )}
     </div>
-  );
+  )
 }

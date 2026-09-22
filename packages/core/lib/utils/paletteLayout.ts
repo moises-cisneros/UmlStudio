@@ -29,8 +29,7 @@ export interface PaletteLayout {
   scroll: boolean
 }
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, value))
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
 function cellHeightFor(
   cols: number,
@@ -105,8 +104,5 @@ export function previewScaleForCell(
 ): number {
   const metrics = compact ? COMPACT_PALETTE : PALETTE
   const inset = 2 * metrics.CONTENT_INSET
-  return Math.min(
-    (cellW - inset) / naturalWidth,
-    (cellH - inset) / naturalHeight
-  )
+  return Math.min((cellW - inset) / naturalWidth, (cellH - inset) / naturalHeight)
 }

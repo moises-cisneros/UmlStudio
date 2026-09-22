@@ -1,56 +1,49 @@
-import type { VersionSummary } from "@/types";
-import type { VersionListData } from "./versionQueries";
+import type { VersionSummary } from "@/types"
+import type { VersionListData } from "./versionQueries"
 
 export function patchVersionInList(
   data: VersionListData | undefined,
   versionId: string,
-  patch: Partial<VersionSummary>,
+  patch: Partial<VersionSummary>
 ): VersionListData | undefined {
-  if (!data) return data;
+  if (!data) return data
   return {
     ...data,
     pages: data.pages.map((page) => ({
       ...page,
-      versions: page.versions.map((v) =>
-        v.id === versionId ? { ...v, ...patch } : v,
-      ),
+      versions: page.versions.map((v) => (v.id === versionId ? { ...v, ...patch } : v)),
     })),
-  };
+  }
 }
 
 export function replaceVersionInList(
   data: VersionListData | undefined,
-  updated: VersionSummary,
+  updated: VersionSummary
 ): VersionListData | undefined {
-  if (!data) return data;
+  if (!data) return data
   return {
     ...data,
     pages: data.pages.map((page) => ({
       ...page,
       versions: page.versions.map((v) => (v.id === updated.id ? updated : v)),
     })),
-  };
+  }
 }
 
 export function removeVersionFromList(
   data: VersionListData | undefined,
-  versionId: string,
+  versionId: string
 ): VersionListData | undefined {
-  if (!data) return data;
+  if (!data) return data
   return {
     ...data,
     pages: data.pages.map((page) => ({
       ...page,
       versions: page.versions.filter((v) => v.id !== versionId),
     })),
-  };
+  }
 }
 
-export function listContainsVersion(
-  data: VersionListData | undefined,
-  versionId: string,
-): boolean {
-  return Boolean(
-    data?.pages.some((page) => page.versions.some((v) => v.id === versionId)),
-  );
+export function listContainsVersion(data: VersionListData | undefined, versionId: string): boolean {
+  return Boolean(data?.pages.some((page) => page.versions.some((v) => v.id === versionId)))
 }

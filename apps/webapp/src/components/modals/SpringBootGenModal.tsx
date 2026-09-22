@@ -1,98 +1,95 @@
-import React, { useState } from "react";
-import { toast } from "react-toastify";
-import JSZip from "jszip";
-import { Button } from "@umlstudio/ui/components/button";
-import { Input } from "@umlstudio/ui/components/input";
-import { Field, FieldLabel } from "@umlstudio/ui/components/field";
-import { DialogFooter } from "@umlstudio/ui/components/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@umlstudio/ui/components/tabs";
+import React, { useState } from "react"
+import { toast } from "react-toastify"
+import JSZip from "jszip"
+import { Button } from "@umlstudio/ui/components/button"
+import { Input } from "@umlstudio/ui/components/input"
+import { Field, FieldLabel } from "@umlstudio/ui/components/field"
+import { DialogFooter } from "@umlstudio/ui/components/dialog"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@umlstudio/ui/components/tabs"
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@umlstudio/ui/components/select";
-import { Alert, AlertDescription } from "@umlstudio/ui/components/alert";
-import { useEditorContext, useModalContext } from "@/contexts";
-import { useFileDownload } from "@/hooks/useFileDownload";
-import { useTranslation } from "@/i18n";
+} from "@umlstudio/ui/components/select"
+import { Alert, AlertDescription } from "@umlstudio/ui/components/alert"
+import { useEditorContext, useModalContext } from "@/contexts"
+import { useFileDownload } from "@/hooks/useFileDownload"
+import { useTranslation } from "@/i18n"
 import {
   exportSpringBootFull,
   generateMavenScaffold,
   type SpringBootInheritanceStrategy,
-} from "@umlstudio/core/export";
-import { serverURL } from "@/constants/urls";
-import { HomeDialogContent } from "./HomeDialog";
+} from "@umlstudio/core/export"
+import { serverURL } from "@/constants/urls"
+import { HomeDialogContent } from "./HomeDialog"
 
 interface SpringBootGenModalProps {
-  onClose?: () => void;
+  onClose?: () => void
 }
 
 export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose }) => {
-  const { t } = useTranslation();
-  const { editor } = useEditorContext();
-  const { openModal, closeModal } = useModalContext();
-  const downloadFile = useFileDownload();
+  const { t } = useTranslation()
+  const { editor } = useEditorContext()
+  const { openModal, closeModal } = useModalContext()
+  const downloadFile = useFileDownload()
 
-  const modelTitle = editor?.model?.title || "demo";
-  const defaultArtifactId = modelTitle
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/gi, "-");
+  const modelTitle = editor?.model?.title || "demo"
+  const defaultArtifactId = modelTitle.toLowerCase().replace(/[^a-z0-9_-]/gi, "-")
 
-  const [groupId, setGroupId] = useState("com.example");
-  const [artifactId, setArtifactId] = useState(defaultArtifactId);
+  const [groupId, setGroupId] = useState("com.example")
+  const [artifactId, setArtifactId] = useState(defaultArtifactId)
   const [packageName, setPackageName] = useState(
-    `com.example.${defaultArtifactId.replace(/[^a-z0-9_]/gi, "")}`,
-  );
-  const [serverPort, setServerPort] = useState<number>(9000);
-  const [dbName, setDbName] = useState("umlstudio_demo");
-  const [dbHost, setDbHost] = useState("localhost");
-  const [dbPort, setDbPort] = useState<number>(5432);
-  const [dbUser, setDbUser] = useState("postgres");
-  const [dbPassword, setDbPassword] = useState("postgres");
-  const [inheritance, setInheritance] = useState<SpringBootInheritanceStrategy>("JOINED");
-  const [isGenerating, setIsGenerating] = useState(false);
+    `com.example.${defaultArtifactId.replace(/[^a-z0-9_]/gi, "")}`
+  )
+  const [serverPort, setServerPort] = useState<number>(9000)
+  const [dbName, setDbName] = useState("umlstudio_demo")
+  const [dbHost, setDbHost] = useState("localhost")
+  const [dbPort, setDbPort] = useState<number>(5433)
+  const [dbUser, setDbUser] = useState("postgres")
+  const [dbPassword, setDbPassword] = useState("postgres")
+  const [inheritance, setInheritance] = useState<SpringBootInheritanceStrategy>("JOINED")
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const handleClose = () => {
-    onClose?.();
-    closeModal();
-  };
+    onClose?.()
+    closeModal()
+  }
 
   const handleGroupIdChange = (value: string) => {
-    setGroupId(value);
-    const cleanArt = artifactId.replace(/[^a-z0-9_]/gi, "");
-    setPackageName(`${value}.${cleanArt}`);
-  };
+    setGroupId(value)
+    const cleanArt = artifactId.replace(/[^a-z0-9_]/gi, "")
+    setPackageName(`${value}.${cleanArt}`)
+  }
 
   const handleArtifactIdChange = (value: string) => {
-    setArtifactId(value);
-    const cleanArt = value.replace(/[^a-z0-9_]/gi, "");
-    setPackageName(`${groupId}.${cleanArt}`);
-  };
+    setArtifactId(value)
+    const cleanArt = value.replace(/[^a-z0-9_]/gi, "")
+    setPackageName(`${groupId}.${cleanArt}`)
+  }
 
   const handleGenerate = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!editor?.model) return;
+    e?.preventDefault()
+    if (!editor?.model) return
 
     const classCount = (editor.model.nodes ?? []).filter(
-      (n) => !n.type || n.type === "class",
-    ).length;
+      (n) => !n.type || n.type === "class"
+    ).length
 
     if (classCount === 0) {
-      toast.error(t.codegen.noClassesError);
-      return;
+      toast.error(t.codegen.noClassesError)
+      return
     }
 
-    setIsGenerating(true);
-    const fileName = `${artifactId || "demo"}.zip`;
+    setIsGenerating(true)
+    const fileName = `${artifactId || "demo"}.zip`
 
     const codegenBaseUrl =
-      (import.meta.env["VITE_CODEGEN_SERVICE_URL"] as string | undefined) ||
-      "http://localhost:8002";
+      (import.meta.env["VITE_CODEGEN_SERVICE_URL"] as string | undefined) || "http://localhost:8002"
 
     try {
-      let zipBlob: Blob | null = null;
+      let zipBlob: Blob | null = null
 
       // 1. Try apps/server endpoint (:8000), which is always active during dev and calls Spring Initializr
       try {
@@ -114,10 +111,10 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
               inheritance,
             },
           }),
-        });
+        })
 
         if (response.ok) {
-          zipBlob = await response.blob();
+          zipBlob = await response.blob()
         }
       } catch {
         // Fallback to codegen service or client engine
@@ -144,10 +141,10 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
                 inheritance,
               },
             }),
-          });
+          })
 
           if (response.ok) {
-            zipBlob = await response.blob();
+            zipBlob = await response.blob()
           }
         } catch {
           // Fall back to client engine
@@ -159,9 +156,9 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
         const fullExport = await exportSpringBootFull(editor.model, {
           packageName,
           inheritance,
-        });
+        })
 
-        const zip = new JSZip();
+        const zip = new JSZip()
 
         // Add complete Maven project scaffolding (pom.xml, mvnw, mvnw.cmd, .mvn/, .gitignore, Application.java)
         const scaffoldFiles = generateMavenScaffold({
@@ -170,15 +167,15 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
           packageName,
           javaVersion: 17,
           platformVersion: "3.4.0",
-        });
+        })
 
         for (const file of scaffoldFiles) {
-          zip.file(file.path, file.content);
+          zip.file(file.path, file.content)
         }
 
         // Add 5 generated CRUD layers
         for (const file of fullExport.files) {
-          zip.file(file.path, file.content);
+          zip.file(file.path, file.content)
         }
 
         // Add configured application.yml in port 9000
@@ -200,28 +197,28 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
           "server:",
           `  port: ${serverPort}`,
           "",
-        ].join("\n");
-        zip.file("src/main/resources/application.yml", appYml);
+        ].join("\n")
+        zip.file("src/main/resources/application.yml", appYml)
 
         zipBlob = await zip.generateAsync({
           type: "blob",
           compression: "DEFLATE",
-        });
+        })
       }
 
       const fileToDownload = new File([zipBlob], fileName, {
         type: "application/zip",
-      });
-      downloadFile({ file: fileToDownload, fileName });
+      })
+      downloadFile({ file: fileToDownload, fileName })
 
-      toast.success(t.codegen.successToast);
-      handleClose();
+      toast.success(t.codegen.successToast)
+      handleClose()
     } catch {
-      toast.error(t.codegen.errorToast);
+      toast.error(t.codegen.errorToast)
     } finally {
-      setIsGenerating(false);
+      setIsGenerating(false)
     }
-  };
+  }
 
   return (
     <form onSubmit={handleGenerate} className="flex min-w-0 flex-col gap-4">
@@ -251,7 +248,10 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
             </Field>
 
             <Field className="gap-1">
-              <FieldLabel htmlFor="sb-artifact-id" className="text-xs font-semibold text-foreground">
+              <FieldLabel
+                htmlFor="sb-artifact-id"
+                className="text-xs font-semibold text-foreground"
+              >
                 {t.codegen.artifactId}
               </FieldLabel>
               <Input
@@ -264,7 +264,10 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
             </Field>
 
             <Field className="gap-1">
-              <FieldLabel htmlFor="sb-package-name" className="text-xs font-semibold text-foreground">
+              <FieldLabel
+                htmlFor="sb-package-name"
+                className="text-xs font-semibold text-foreground"
+              >
                 {t.codegen.packageName}
               </FieldLabel>
               <Input
@@ -278,14 +281,19 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
 
             <div className="flex items-center justify-between rounded-md border border-border bg-muted/50 p-2 text-xs text-muted-foreground">
               <span>Java 17 (LTS) • Spring Boot 3.4.0 (3.x line)</span>
-              <span className="font-mono text-[11px] text-primary">Maven + Lombok + JPA</span>
+              <span className="font-mono text-[11px] text-primary">
+                Maven + Lombok + JPA + Validation
+              </span>
             </div>
           </TabsContent>
 
           {/* TAB 2: Server & Database */}
           <TabsContent value="server" className="mt-3 flex flex-col gap-3">
             <Field className="gap-1">
-              <FieldLabel htmlFor="sb-server-port" className="text-xs font-semibold text-foreground">
+              <FieldLabel
+                htmlFor="sb-server-port"
+                className="text-xs font-semibold text-foreground"
+              >
                 {t.codegen.serverPort}
               </FieldLabel>
               <Input
@@ -356,7 +364,10 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
               </Field>
 
               <Field className="gap-1">
-                <FieldLabel htmlFor="sb-db-password" className="text-xs font-semibold text-foreground">
+                <FieldLabel
+                  htmlFor="sb-db-password"
+                  className="text-xs font-semibold text-foreground"
+                >
                   {t.codegen.dbPassword}
                 </FieldLabel>
                 <Input
@@ -374,14 +385,17 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
           {/* TAB 3: JPA Strategy */}
           <TabsContent value="jpa" className="mt-3 flex flex-col gap-3">
             <Field className="gap-1">
-              <FieldLabel htmlFor="sb-inheritance" className="text-xs font-semibold text-foreground">
+              <FieldLabel
+                htmlFor="sb-inheritance"
+                className="text-xs font-semibold text-foreground"
+              >
                 {t.codegen.inheritance}
               </FieldLabel>
               <Select
                 value={inheritance}
                 onValueChange={(val) => {
                   if (val === "JOINED" || val === "SINGLE_TABLE") {
-                    setInheritance(val);
+                    setInheritance(val)
                   }
                 }}
                 disabled={isGenerating}
@@ -391,7 +405,9 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="JOINED">JOINED (Normalizado con FKs)</SelectItem>
-                  <SelectItem value="SINGLE_TABLE">SINGLE_TABLE (Columna discriminadora)</SelectItem>
+                  <SelectItem value="SINGLE_TABLE">
+                    SINGLE_TABLE (Columna discriminadora)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -410,8 +426,8 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
           type="button"
           variant="secondary"
           onClick={() => {
-            handleClose();
-            openModal("OPENAPI_DOCS");
+            handleClose()
+            openModal("OPENAPI_DOCS")
           }}
           disabled={isGenerating}
           className="text-xs"
@@ -419,12 +435,7 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
           {t.codegen.viewApiDocs}
         </Button>
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isGenerating}
-          >
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isGenerating}>
             {t.common.cancel}
           </Button>
           <Button
@@ -437,5 +448,5 @@ export const SpringBootGenModal: React.FC<SpringBootGenModalProps> = ({ onClose 
         </div>
       </DialogFooter>
     </form>
-  );
-};
+  )
+}

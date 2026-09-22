@@ -21,9 +21,4 @@ export {
   layoutTextInDiamond,
   maxLinesForHeight,
 } from "./svgTextLayout"
-export type {
-  WrappedText,
-  ShapeLayout,
-  SvgFontSpec,
-  WhiteSpaceMode,
-} from "./svgTextLayout"
+export type { WrappedText, ShapeLayout, SvgFontSpec, WhiteSpaceMode } from "./svgTextLayout"

@@ -8,7 +8,6 @@ const GUIDE_LINE_SLOTS = 12
 export const AlignmentGuides = () => {
   const { guides } = useAlignmentGuidesStore(
     useShallow((state) => ({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       guides: state.guides,
     }))
   )
@@ -53,9 +52,7 @@ export const AlignmentGuides = () => {
             x2={vertical ? screen : "100%"}
             y2={vertical ? "100%" : screen}
             className={`alignment-guide-line ${
-              vertical
-                ? "alignment-guide-vertical"
-                : "alignment-guide-horizontal"
+              vertical ? "alignment-guide-vertical" : "alignment-guide-horizontal"
             }`}
             vectorEffect="non-scaling-stroke"
           />

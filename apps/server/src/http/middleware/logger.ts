@@ -1,20 +1,20 @@
-import { createMiddleware } from "hono/factory";
-import type { AppEnv } from "../env.js";
-import { logger } from "../../logger.js";
+import { createMiddleware } from "hono/factory"
+import type { AppEnv } from "../env.js"
+import { logger } from "../../logger.js"
 
 interface HttpLoggerOptions {
-  autoLogging?: boolean;
+  autoLogging?: boolean
 }
 
 export function httpLogger({ autoLogging = true }: HttpLoggerOptions = {}) {
   return createMiddleware<AppEnv>(async (c, next) => {
     if (!autoLogging) {
-      await next();
-      return;
+      await next()
+      return
     }
-    const start = Date.now();
-    await next();
-    const responseTime = Date.now() - start;
+    const start = Date.now()
+    await next()
+    const responseTime = Date.now() - start
     logger.info(
       {
         req: {
@@ -29,7 +29,7 @@ export function httpLogger({ autoLogging = true }: HttpLoggerOptions = {}) {
         responseTime,
         requestId: c.get("requestId"),
       },
-      "request completed",
-    );
-  });
+      "request completed"
+    )
+  })
 }

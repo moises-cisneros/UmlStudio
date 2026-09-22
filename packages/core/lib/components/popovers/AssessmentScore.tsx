@@ -24,8 +24,7 @@ export const AssessmentScore: React.FC<{ score?: number }> = ({ score }) => {
   const t = useLabels()
   const tone = toneFor(score)
   const Icon = iconFor[tone]
-  const label =
-    score === undefined ? t.notGraded : score > 0 ? `+${score}` : `${score}`
+  const label = score === undefined ? t.notGraded : score > 0 ? `+${score}` : `${score}`
 
   return (
     <span data-slot="assessment-score" data-tone={tone}>

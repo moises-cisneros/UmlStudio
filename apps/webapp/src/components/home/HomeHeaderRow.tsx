@@ -1,44 +1,37 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  ChevronDownIcon,
-  FolderInput,
-  Plus,
-  Search,
-  SlidersHorizontal,
-  Heart,
-} from "lucide-react";
-import type { UMLDiagramType } from "@umlstudio/core";
-import { Badge } from "@umlstudio/ui/components/badge";
+import { useEffect, useRef, useState } from "react"
+import { ChevronDownIcon, FolderInput, Plus, Search, SlidersHorizontal, Heart } from "lucide-react"
+import type { UMLDiagramType } from "@umlstudio/core"
+import { Badge } from "@umlstudio/ui/components/badge"
 import {
   GroupDivider,
   Island,
   IslandInput,
   ISLAND_LAYOUT_STYLE,
-} from "@/components/navbar/islandPrimitives";
+} from "@/components/navbar/islandPrimitives"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@umlstudio/ui/components/tooltip";
-import { navbarButtonStyle } from "@/components/navbar/styleConstants";
-import { useMediaQuery } from "@/hooks";
-import { BrandLockup } from "@/components/navbar/BrandLockup";
-import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher";
-import { RefinePopover } from "./RefinePopover";
-import { HomeRefinementChips } from "./HomeRefinementChips";
-import { HomeBrandPill } from "./HomeBrandPill";
-import { HomeActionsPill } from "./HomeActionsPill";
-import { HomeHelpMenu } from "./HomeHelpMenu";
-import type { HomeChrome } from "./useHomeChrome";
+} from "@umlstudio/ui/components/tooltip"
+import { navbarButtonStyle } from "@/components/navbar/styleConstants"
+import { useMediaQuery } from "@/hooks"
+import { BrandLockup } from "@/components/navbar/BrandLockup"
+import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher"
+import { RefinePopover } from "./RefinePopover"
+import { HomeRefinementChips } from "./HomeRefinementChips"
+import { HomeBrandPill } from "./HomeBrandPill"
+import { HomeActionsPill } from "./HomeActionsPill"
+import { HomeHelpMenu } from "./HomeHelpMenu"
+import type { HomeChrome } from "./useHomeChrome"
 
 export type HomeHeaderRowProps = {
-  chrome: HomeChrome;
-  count: number;
-  typeOptions: readonly UMLDiagramType[];
-  onNewDiagram?: () => void;
-  onImportJson?: () => void;
-};
+  chrome: HomeChrome
+  count: number
+  typeOptions: readonly UMLDiagramType[]
+  onNewDiagram?: () => void
+  onImportJson?: () => void
+}
 
 export function HomeHeaderRow({
   chrome,
@@ -69,16 +62,12 @@ export function HomeHeaderRow({
         <div className="min-w-0 flex-1">
           <MobileSearchPill chrome={chrome} count={count} />
         </div>
-        <HomeActionsPill
-          chrome={chrome}
-          typeOptions={typeOptions}
-          onImportJson={onImportJson}
-        />
+        <HomeActionsPill chrome={chrome} typeOptions={typeOptions} onImportJson={onImportJson} />
       </div>
 
       <HomeRefinementChips chrome={chrome} />
     </div>
-  );
+  )
 }
 
 function HomeBrandIsland() {
@@ -86,28 +75,22 @@ function HomeBrandIsland() {
     <Island as="header" role="banner" ariaLabel="Home">
       <BrandLockup />
     </Island>
-  );
+  )
 }
 
-function HomeSearchIsland({
-  chrome,
-  count,
-}: {
-  chrome: HomeChrome;
-  count: number;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
+function HomeSearchIsland({ chrome, count }: { chrome: HomeChrome; count: number }) {
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        inputRef.current?.focus();
+        event.preventDefault()
+        inputRef.current?.focus()
       }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
 
   return (
     <Island
@@ -135,7 +118,7 @@ function HomeSearchIsland({
         {count}
       </span>
     </Island>
-  );
+  )
 }
 
 function HomeActionsIsland({
@@ -144,12 +127,12 @@ function HomeActionsIsland({
   onNewDiagram,
   onImportJson,
 }: {
-  chrome: HomeChrome;
-  typeOptions: readonly UMLDiagramType[];
-  onNewDiagram?: () => void;
-  onImportJson?: () => void;
+  chrome: HomeChrome
+  typeOptions: readonly UMLDiagramType[]
+  onNewDiagram?: () => void
+  onImportJson?: () => void
 }) {
-  const isWide = useMediaQuery("(min-width: 940px)");
+  const isWide = useMediaQuery("(min-width: 940px)")
   return (
     <TooltipProvider>
       <Island ariaLabel="Home actions">
@@ -160,15 +143,9 @@ function HomeActionsIsland({
                 type="button"
                 className="umlstudio-chrome-iconbtn"
                 aria-pressed={chrome.favoritesOnly}
-                aria-label={
-                  chrome.favoritesOnly
-                    ? "Show all diagrams"
-                    : "Show favorites only"
-                }
+                aria-label={chrome.favoritesOnly ? "Show all diagrams" : "Show favorites only"}
                 onClick={chrome.toggleFavoritesOnly}
-                style={
-                  chrome.favoritesOnly ? { color: "rgb(244 63 94)" } : undefined
-                }
+                style={chrome.favoritesOnly ? { color: "rgb(244 63 94)" } : undefined}
               >
                 <Heart
                   className="size-[var(--umlstudio-chrome-icon)]"
@@ -246,25 +223,19 @@ function HomeActionsIsland({
         <ThemeSwitcherMenu />
       </Island>
     </TooltipProvider>
-  );
+  )
 }
 
-function MobileSearchPill({
-  chrome,
-  count,
-}: {
-  chrome: HomeChrome;
-  count: number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+function MobileSearchPill({ chrome, count }: { chrome: HomeChrome; count: number }) {
+  const [expanded, setExpanded] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const open = () => {
-    setExpanded(true);
-    requestAnimationFrame(() => inputRef.current?.focus());
-  };
+    setExpanded(true)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
 
-  const isActive = expanded || chrome.searchTerm.length > 0;
+  const isActive = expanded || chrome.searchTerm.length > 0
 
   if (!isActive) {
     return (
@@ -283,7 +254,7 @@ function MobileSearchPill({
           Search diagrams
         </span>
       </button>
-    );
+    )
   }
 
   return (
@@ -312,5 +283,5 @@ function MobileSearchPill({
         {count}
       </span>
     </div>
-  );
+  )
 }

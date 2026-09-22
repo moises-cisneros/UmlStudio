@@ -1,22 +1,22 @@
-import React, { ReactNode } from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { EditorProvider, ModalProvider } from "@/contexts";
-import { queryClient } from "@/queryClient";
+import React, { ReactNode } from "react"
+import { QueryClientProvider } from "@tanstack/react-query"
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
+import { EditorProvider, ModalProvider } from "@/contexts"
+import { queryClient } from "@/queryClient"
 
 interface Props {
-  children: ReactNode;
+  children: ReactNode
 }
 
 const SHOW_QUERY_DEVTOOLS =
   import.meta.env.DEV &&
   (() => {
     try {
-      return localStorage.getItem("umlstudio:query-devtools") === "1";
+      return localStorage.getItem("umlstudio:query-devtools") === "1"
     } catch {
-      return false;
+      return false
     }
-  })();
+  })()
 
 export const AppProviders: React.FC<Props> = ({ children }) => {
   return (
@@ -26,5 +26,5 @@ export const AppProviders: React.FC<Props> = ({ children }) => {
       </EditorProvider>
       {SHOW_QUERY_DEVTOOLS && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
-  );
-};
+  )
+}

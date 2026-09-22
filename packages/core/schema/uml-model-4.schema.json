@@ -68,15 +68,7 @@
           }
         },
         "additionalProperties": false,
-        "required": [
-          "data",
-          "height",
-          "id",
-          "measured",
-          "position",
-          "type",
-          "width"
-        ]
+        "required": ["data", "height", "id", "measured", "position", "type", "width"]
       }
     },
     "edges": {
@@ -107,15 +99,7 @@
           }
         },
         "additionalProperties": false,
-        "required": [
-          "data",
-          "id",
-          "source",
-          "sourceHandle",
-          "target",
-          "targetHandle",
-          "type"
-        ]
+        "required": ["data", "id", "source", "sourceHandle", "target", "targetHandle", "type"]
       }
     },
     "assessments": {
@@ -182,15 +166,7 @@
     }
   },
   "additionalProperties": false,
-  "required": [
-    "assessments",
-    "edges",
-    "id",
-    "nodes",
-    "title",
-    "type",
-    "version"
-  ],
+  "required": ["assessments", "edges", "id", "nodes", "title", "type", "version"],
   "definitions": {
     "DiagramNodeType": {
       "enum": ["class", "package"],

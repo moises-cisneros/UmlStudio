@@ -1,27 +1,22 @@
-import { useState, type ChangeEvent, type KeyboardEvent } from "react";
-import { useModalContext } from "@/contexts/ModalContext";
-import { UMLDiagramType } from "@umlstudio/core";
-import { useNavigate } from "@tanstack/react-router";
-import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
-import { useAuthStore } from "@/stores/useAuthStore";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@umlstudio/ui/components/tabs";
-import { log } from "@/logger";
-import { prepareTemplateModel } from "@/utils/templateModels";
-import { useTranslation } from "@/i18n";
-import { cn } from "@umlstudio/ui/lib/utils";
-import { TemplateThumbnail } from "./TemplateThumbnail";
+import { useState, type ChangeEvent, type KeyboardEvent } from "react"
+import { useModalContext } from "@/contexts/ModalContext"
+import { UMLDiagramType } from "@umlstudio/core"
+import { useNavigate } from "@tanstack/react-router"
+import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
+import { useAuthStore } from "@/stores/useAuthStore"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@umlstudio/ui/components/tabs"
+import { log } from "@/logger"
+import { prepareTemplateModel } from "@/utils/templateModels"
+import { useTranslation } from "@/i18n"
+import { cn } from "@umlstudio/ui/lib/utils"
+import { TemplateThumbnail } from "./TemplateThumbnail"
 import {
   HomeDialogActions,
   HomeDialogContent,
   HomeDialogField,
   HomeDialogNotice,
   HomeDialogTextInput,
-} from "./HomeDialog";
+} from "./HomeDialog"
 
 enum TemplateType {
   Adapter = "Adapter",
@@ -32,16 +27,11 @@ enum TemplateType {
 }
 
 interface TemplateMeta {
-  id: TemplateType;
-  titleKey: "adapter" | "bridge" | "command" | "factory" | "observer";
-  descKey:
-    | "adapterDesc"
-    | "bridgeDesc"
-    | "commandDesc"
-    | "factoryDesc"
-    | "observerDesc";
-  badgeKey: "gofStructural" | "gofBehavioral" | "gofCreational";
-  category: "structural" | "behavioral" | "creational";
+  id: TemplateType
+  titleKey: "adapter" | "bridge" | "command" | "factory" | "observer"
+  descKey: "adapterDesc" | "bridgeDesc" | "commandDesc" | "factoryDesc" | "observerDesc"
+  badgeKey: "gofStructural" | "gofBehavioral" | "gofCreational"
+  category: "structural" | "behavioral" | "creational"
 }
 
 const TEMPLATE_METAS: TemplateMeta[] = [
@@ -80,121 +70,109 @@ const TEMPLATE_METAS: TemplateMeta[] = [
     badgeKey: "gofCreational",
     category: "creational",
   },
-];
+]
 
 export const NewDiagramModal = () => {
-  const { closeModal } = useModalContext();
-  const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"scratch" | "template">("scratch");
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>(
-    TemplateType.Adapter,
-  );
-  const [isDiagramNameDefault, setIsDiagramNameDefault] =
-    useState<boolean>(true);
-  const [newDiagramTitle, setNewDiagramTitle] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const { closeModal } = useModalContext()
+  const { t } = useTranslation()
+  const [activeTab, setActiveTab] = useState<"scratch" | "template">("scratch")
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>(TemplateType.Adapter)
+  const [isDiagramNameDefault, setIsDiagramNameDefault] = useState<boolean>(true)
+  const [newDiagramTitle, setNewDiagramTitle] = useState<string>("")
+  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   const createModelByTitleAndType = usePersistenceModelStore(
-    (state) => state.createModelByTitleAndType,
-  );
-  const createModel = usePersistenceModelStore((state) => state.createModel);
+    (state) => state.createModelByTitleAndType
+  )
+  const createModel = usePersistenceModelStore((state) => state.createModel)
 
   const getTemplateTitle = (type: TemplateType) => {
-    const meta = TEMPLATE_METAS.find((m) => m.id === type);
-    return meta ? t.templates[meta.titleKey] : type;
-  };
+    const meta = TEMPLATE_METAS.find((m) => m.id === type)
+    return meta ? t.templates[meta.titleKey] : type
+  }
 
   const handleCreateDiagram = () => {
     if (useAuthStore.getState().status !== "authenticated") {
-      closeModal();
-      navigate({ to: "/login", search: { redirect: "/" } });
-      return;
+      closeModal()
+      navigate({ to: "/login", search: { redirect: "/" } })
+      return
     }
-    const newId = createModelByTitleAndType(
-      newDiagramTitle,
-      UMLDiagramType.ClassDiagram,
-    );
-    closeModal();
-    navigate({ to: "/local/$id", params: { id: newId } });
-  };
+    const newId = createModelByTitleAndType(newDiagramTitle, UMLDiagramType.ClassDiagram)
+    closeModal()
+    navigate({ to: "/local/$id", params: { id: newId } })
+  }
 
   const handleDiagramNameChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setNewDiagramTitle(event.target.value);
-    setIsDiagramNameDefault(false);
-  };
+    setNewDiagramTitle(event.target.value)
+    setIsDiagramNameDefault(false)
+  }
 
   const handleTabChange = (tab: "scratch" | "template") => {
-    setActiveTab(tab);
+    setActiveTab(tab)
     if (isDiagramNameDefault) {
-      setNewDiagramTitle(
-        tab === "template" ? getTemplateTitle(selectedTemplate) : "",
-      );
+      setNewDiagramTitle(tab === "template" ? getTemplateTitle(selectedTemplate) : "")
     }
-  };
+  }
 
   const handleTemplateSelect = (template: TemplateType) => {
-    setSelectedTemplate(template);
+    setSelectedTemplate(template)
     if (isDiagramNameDefault) {
-      setNewDiagramTitle(getTemplateTitle(template));
+      setNewDiagramTitle(getTemplateTitle(template))
     }
-  };
+  }
 
   const handleCreateFromTemplate = async () => {
     if (useAuthStore.getState().status !== "authenticated") {
-      closeModal();
-      navigate({ to: "/login", search: { redirect: "/" } });
-      return;
+      closeModal()
+      navigate({ to: "/login", search: { redirect: "/" } })
+      return
     }
-    setError(null);
+    setError(null)
 
     try {
-      const jsonModule = await import(
-        `assets/diagramTemplates/${selectedTemplate}.json`
-      );
-      const jsonData = jsonModule.default;
+      const jsonModule = await import(`assets/diagramTemplates/${selectedTemplate}.json`)
+      const jsonData = jsonModule.default
 
       if (!jsonData) {
-        throw new Error(t.newDiagram.errorTemplateNotFound);
+        throw new Error(t.newDiagram.errorTemplateNotFound)
       }
 
       const templateModel = prepareTemplateModel(jsonData, {
         id: crypto.randomUUID(),
         title: newDiagramTitle || getTemplateTitle(selectedTemplate),
-      });
+      })
 
-      createModel(templateModel);
-      closeModal();
-      navigate({ to: "/local/$id", params: { id: templateModel.id } });
+      createModel(templateModel)
+      closeModal()
+      navigate({ to: "/local/$id", params: { id: templateModel.id } })
     } catch (err: unknown) {
-      log.error("Error creating diagram from template:", err as Error);
+      log.error("Error creating diagram from template:", err as Error)
 
       if (err instanceof Error) {
-        setError(err.message);
+        setError(err.message)
       } else {
-        setError(t.newDiagram.errorUnexpected);
+        setError(t.newDiagram.errorUnexpected)
       }
     }
-  };
+  }
 
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
-      event.preventDefault();
+      event.preventDefault()
       if (activeTab === "scratch") {
-        handleCreateDiagram();
+        handleCreateDiagram()
       } else {
-        void handleCreateFromTemplate();
+        void handleCreateFromTemplate()
       }
     }
-  };
+  }
 
   return (
     <HomeDialogContent>
       <Tabs
         value={activeTab}
-        onValueChange={(value) =>
-          handleTabChange(value as "scratch" | "template")
-        }
+        onValueChange={(value) => handleTabChange(value as "scratch" | "template")}
       >
         <TabsList className="w-full grid grid-cols-2">
           <TabsTrigger value="scratch">{t.newDiagram.tabBlank}</TabsTrigger>
@@ -205,10 +183,7 @@ export const NewDiagramModal = () => {
 
         {/* Scratch Tab: Only Diagram Name field per user requirement */}
         <TabsContent value="scratch" className="mt-4 flex flex-col gap-4">
-          <HomeDialogField
-            label={t.newDiagram.nameLabel}
-            htmlFor="scratch-diagram-title"
-          >
+          <HomeDialogField label={t.newDiagram.nameLabel} htmlFor="scratch-diagram-title">
             <HomeDialogTextInput
               id="scratch-diagram-title"
               value={newDiagramTitle}
@@ -226,10 +201,7 @@ export const NewDiagramModal = () => {
 
         {/* Template Tab: Name field + stylized template card selection */}
         <TabsContent value="template" className="mt-4 flex flex-col gap-4">
-          <HomeDialogField
-            label={t.newDiagram.nameLabel}
-            htmlFor="template-diagram-title"
-          >
+          <HomeDialogField label={t.newDiagram.nameLabel} htmlFor="template-diagram-title">
             <HomeDialogTextInput
               id="template-diagram-title"
               value={newDiagramTitle}
@@ -246,7 +218,7 @@ export const NewDiagramModal = () => {
 
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 max-h-80 overflow-y-auto pr-1">
               {TEMPLATE_METAS.map((item) => {
-                const isSelected = selectedTemplate === item.id;
+                const isSelected = selectedTemplate === item.id
                 return (
                   <button
                     key={item.id}
@@ -257,7 +229,7 @@ export const NewDiagramModal = () => {
                       "group flex flex-col items-start overflow-hidden rounded-xl border p-2 text-left transition-all duration-150 cursor-pointer",
                       isSelected
                         ? "border-(--dodger-blue) bg-(--dodger-blue)/8 ring-1 ring-(--dodger-blue)/50 shadow-xs"
-                        : "border-border/70 bg-card hover:border-border hover:bg-accent/40",
+                        : "border-border/70 bg-card hover:border-border hover:bg-accent/40"
                     )}
                   >
                     <div className="relative h-20 w-full overflow-hidden rounded-lg border border-border/50 bg-(--home-surface-raised) mb-2">
@@ -278,7 +250,7 @@ export const NewDiagramModal = () => {
                       </p>
                     </div>
                   </button>
-                );
+                )
               })}
             </div>
           </div>
@@ -288,20 +260,18 @@ export const NewDiagramModal = () => {
       <HomeDialogActions
         cancelLabel={t.newDiagram.cancel}
         confirmLabel={
-          activeTab === "scratch"
-            ? t.newDiagram.create
-            : t.newDiagram.createFromTemplate
+          activeTab === "scratch" ? t.newDiagram.create : t.newDiagram.createFromTemplate
         }
         onCancel={closeModal}
         onConfirm={() => {
           if (activeTab === "scratch") {
-            handleCreateDiagram();
-            return;
+            handleCreateDiagram()
+            return
           }
 
-          void handleCreateFromTemplate();
+          void handleCreateFromTemplate()
         }}
       />
     </HomeDialogContent>
-  );
-};
+  )
+}

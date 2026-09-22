@@ -22,10 +22,7 @@ function serializeOptions(o: OverlayControlOptions): string {
   })
 }
 
-export function UmlStudioControl({
-  children,
-  ...options
-}: UmlStudioControlProps): ReactNode {
+export function UmlStudioControl({ children, ...options }: UmlStudioControlProps): ReactNode {
   const editor = useUmlStudioEditor()
   const [host] = useState<HTMLDivElement | null>(() =>
     typeof document !== "undefined" ? document.createElement("div") : null
@@ -37,11 +34,11 @@ export function UmlStudioControl({
   })
 
   const sig = serializeOptions(options)
-  const appliedSig = useRef<string | null>(null)
+  const appliedSigRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!editor || !host) return
-    appliedSig.current = sig
+    appliedSigRef.current = sig
     return editor.addControl({
       ...optionsRef.current,
       render: () => <RegionMount el={host} />,
@@ -50,8 +47,8 @@ export function UmlStudioControl({
   }, [editor, host, options.id])
 
   useEffect(() => {
-    if (!editor || !host || appliedSig.current === sig) return
-    appliedSig.current = sig
+    if (!editor || !host || appliedSigRef.current === sig) return
+    appliedSigRef.current = sig
     editor.updateControl(options.id, {
       ...optionsRef.current,
       render: () => <RegionMount el={host} />,

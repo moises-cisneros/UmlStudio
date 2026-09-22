@@ -1,10 +1,10 @@
-import { createContext, useContext, type ReactNode } from "react"
+import { createContext, use, type ReactNode } from "react"
 import type { UmlStudioEditor } from "@/umlstudio-editor"
 
 export const UmlStudioInstanceContext = createContext<UmlStudioEditor | null>(null)
 
 export function useUmlStudioEditor(): UmlStudioEditor | null {
-  return useContext(UmlStudioInstanceContext)
+  return use(UmlStudioInstanceContext)
 }
 
 export function useUmlStudioEditorOrThrow(): UmlStudioEditor {
@@ -24,9 +24,5 @@ export function UmlStudioProvider({
   editor: UmlStudioEditor
   children: ReactNode
 }) {
-  return (
-    <UmlStudioInstanceContext.Provider value={editor}>
-      {children}
-    </UmlStudioInstanceContext.Provider>
-  )
+  return <UmlStudioInstanceContext value={editor}>{children}</UmlStudioInstanceContext>
 }

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react"
 import {
   User,
   ShieldCheck,
@@ -9,17 +9,12 @@ import {
   KeyRound,
   AlertCircle,
   CheckCircle2,
-} from "lucide-react";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useTranslation } from "@/i18n";
-import { Button } from "@umlstudio/ui/components/button";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@umlstudio/ui/components/tabs";
-import { cn } from "@umlstudio/ui/lib/utils";
+} from "lucide-react"
+import { useAuthStore } from "@/stores/useAuthStore"
+import { useTranslation } from "@/i18n"
+import { Button } from "@umlstudio/ui/components/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@umlstudio/ui/components/tabs"
+import { cn } from "@umlstudio/ui/lib/utils"
 
 const PRESENCE_PALETTE = [
   "#3590F3", // Dodger blue
@@ -30,104 +25,89 @@ const PRESENCE_PALETTE = [
   "#EC4899", // Pink
   "#14B8A6", // Teal
   "#F97316", // Orange
-];
+]
 
 interface UserProfileModalProps {
-  onClose?: () => void;
+  onClose?: () => void
 }
 
 export function UserProfileModal({ onClose }: UserProfileModalProps) {
-  const { user, updateProfile, changePassword } = useAuthStore();
-  const { t } = useTranslation();
+  const { user, updateProfile, changePassword } = useAuthStore()
+  const { t } = useTranslation()
 
   // Profile tab state
-  const [name, setName] = useState(user?.name ?? "");
-  const [selectedColor, setSelectedColor] = useState(
-    user?.color ?? PRESENCE_PALETTE[0]!,
-  );
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(
-    null,
-  );
-  const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
+  const [name, setName] = useState(user?.name ?? "")
+  const [selectedColor, setSelectedColor] = useState(user?.color ?? PRESENCE_PALETTE[0]!)
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null)
+  const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null)
 
   // Security tab state
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState<string | null>(
-    null,
-  );
-  const [passwordErrorMsg, setPasswordErrorMsg] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState<string | null>(null)
+  const [passwordErrorMsg, setPasswordErrorMsg] = useState<string | null>(null)
 
   // Password rules validation
-  const hasMinLength = newPassword.length >= 8;
-  const hasLetters = /[A-Za-z]/.test(newPassword);
-  const hasDigits = /[0-9]/.test(newPassword);
-  const hasSymbol = /[^A-Za-z0-9]/.test(newPassword);
-  const isPolicySatisfied =
-    hasMinLength && hasLetters && hasDigits && hasSymbol;
-  const passwordsMatch =
-    newPassword.length > 0 && newPassword === confirmPassword;
+  const hasMinLength = newPassword.length >= 8
+  const hasLetters = /[A-Za-z]/.test(newPassword)
+  const hasDigits = /[0-9]/.test(newPassword)
+  const hasSymbol = /[^A-Za-z0-9]/.test(newPassword)
+  const isPolicySatisfied = hasMinLength && hasLetters && hasDigits && hasSymbol
+  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword
 
   async function handleProfileSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
+    e.preventDefault()
+    if (!name.trim()) return
 
-    setIsUpdatingProfile(true);
-    setProfileSuccessMsg(null);
-    setProfileErrorMsg(null);
+    setIsUpdatingProfile(true)
+    setProfileSuccessMsg(null)
+    setProfileErrorMsg(null)
 
     try {
       await updateProfile({
         name: name.trim(),
         color: selectedColor,
-      });
-      setProfileSuccessMsg(t.profile.profileUpdatedToast);
-      setTimeout(() => setProfileSuccessMsg(null), 4000);
+      })
+      setProfileSuccessMsg(t.profile.profileUpdatedToast)
+      setTimeout(() => setProfileSuccessMsg(null), 4000)
     } catch (err: unknown) {
-      setProfileErrorMsg(
-        err instanceof Error ? err.message : "Failed to update profile",
-      );
+      setProfileErrorMsg(err instanceof Error ? err.message : "Failed to update profile")
     } finally {
-      setIsUpdatingProfile(false);
+      setIsUpdatingProfile(false)
     }
   }
 
   async function handlePasswordSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!currentPassword || !isPolicySatisfied || !passwordsMatch) return;
+    e.preventDefault()
+    if (!currentPassword || !isPolicySatisfied || !passwordsMatch) return
 
-    setIsChangingPassword(true);
-    setPasswordSuccessMsg(null);
-    setPasswordErrorMsg(null);
+    setIsChangingPassword(true)
+    setPasswordSuccessMsg(null)
+    setPasswordErrorMsg(null)
 
     try {
-      await changePassword(currentPassword, newPassword);
-      setPasswordSuccessMsg(t.profile.passwordUpdatedToast);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setTimeout(() => setPasswordSuccessMsg(null), 4000);
+      await changePassword(currentPassword, newPassword)
+      setPasswordSuccessMsg(t.profile.passwordUpdatedToast)
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+      setTimeout(() => setPasswordSuccessMsg(null), 4000)
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to change password";
+      const msg = err instanceof Error ? err.message : "Failed to change password"
       if (msg.includes("Invalid current password")) {
-        setPasswordErrorMsg(t.profile.wrongCurrentPassword);
-      } else if (
-        msg.includes("at least 8") ||
-        msg.includes("letter") ||
-        msg.includes("symbol")
-      ) {
-        setPasswordErrorMsg(t.profile.weakPassword);
+        setPasswordErrorMsg(t.profile.wrongCurrentPassword)
+      } else if (msg.includes("at least 8") || msg.includes("letter") || msg.includes("symbol")) {
+        setPasswordErrorMsg(t.profile.weakPassword)
       } else {
-        setPasswordErrorMsg(msg);
+        setPasswordErrorMsg(msg)
       }
     } finally {
-      setIsChangingPassword(false);
+      setIsChangingPassword(false)
     }
   }
 
@@ -170,9 +150,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
 
             {/* Email Field (Readonly) */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                {t.profile.email}
-              </label>
+              <label className="text-xs font-medium text-muted-foreground">{t.profile.email}</label>
               <input
                 type="email"
                 value={user?.email ?? ""}
@@ -187,9 +165,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
 
             {/* Display Name Field */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">
-                {t.profile.displayName}
-              </label>
+              <label className="text-xs font-medium text-foreground">{t.profile.displayName}</label>
               <input
                 type="text"
                 value={name}
@@ -213,7 +189,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
               </span>
               <div className="flex flex-wrap items-center gap-2.5 pt-1">
                 {PRESENCE_PALETTE.map((color) => {
-                  const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
+                  const isSelected = selectedColor.toLowerCase() === color.toLowerCase()
                   return (
                     <button
                       key={color}
@@ -224,7 +200,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                         "relative size-7 rounded-full transition-transform hover:scale-110 focus:outline-none cursor-pointer shadow-xs",
                         isSelected
                           ? "ring-2 ring-foreground ring-offset-2 ring-offset-background scale-105"
-                          : "opacity-85 hover:opacity-100",
+                          : "opacity-85 hover:opacity-100"
                       )}
                       style={{ backgroundColor: color }}
                     >
@@ -232,7 +208,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                         <Check className="absolute inset-0 m-auto size-3.5 text-white stroke-[2.5]" />
                       )}
                     </button>
-                  );
+                  )
                 })}
               </div>
             </div>
@@ -296,27 +272,17 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  aria-label={
-                    showCurrentPassword
-                      ? t.auth.hidePassword
-                      : t.auth.showPassword
-                  }
+                  aria-label={showCurrentPassword ? t.auth.hidePassword : t.auth.showPassword}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  {showCurrentPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
+                  {showCurrentPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </div>
 
             {/* New Password Field */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">
-                {t.profile.newPassword}
-              </label>
+              <label className="text-xs font-medium text-foreground">{t.profile.newPassword}</label>
               <div className="relative">
                 <input
                   type={showNewPassword ? "text" : "password"}
@@ -329,18 +295,10 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  aria-label={
-                    showNewPassword
-                      ? t.auth.hidePassword
-                      : t.auth.showPassword
-                  }
+                  aria-label={showNewPassword ? t.auth.hidePassword : t.auth.showPassword}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  {showNewPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
+                  {showNewPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
 
@@ -349,15 +307,10 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                 <span
                   className={cn(
                     "flex items-center gap-1 transition-colors",
-                    hasMinLength ? "text-emerald-500 font-medium" : "text-muted-foreground",
+                    hasMinLength ? "text-emerald-500 font-medium" : "text-muted-foreground"
                   )}
                 >
-                  <Check
-                    className={cn(
-                      "size-3",
-                      hasMinLength ? "opacity-100" : "opacity-30",
-                    )}
-                  />
+                  <Check className={cn("size-3", hasMinLength ? "opacity-100" : "opacity-30")} />
                   <span>{t.auth.reqMinLength}</span>
                 </span>
                 <span
@@ -365,29 +318,21 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     "flex items-center gap-1 transition-colors",
                     hasLetters && hasDigits
                       ? "text-emerald-500 font-medium"
-                      : "text-muted-foreground",
+                      : "text-muted-foreground"
                   )}
                 >
                   <Check
-                    className={cn(
-                      "size-3",
-                      hasLetters && hasDigits ? "opacity-100" : "opacity-30",
-                    )}
+                    className={cn("size-3", hasLetters && hasDigits ? "opacity-100" : "opacity-30")}
                   />
                   <span>{t.auth.reqLettersAndDigits}</span>
                 </span>
                 <span
                   className={cn(
                     "flex items-center gap-1 col-span-2 transition-colors",
-                    hasSymbol ? "text-emerald-500 font-medium" : "text-muted-foreground",
+                    hasSymbol ? "text-emerald-500 font-medium" : "text-muted-foreground"
                   )}
                 >
-                  <Check
-                    className={cn(
-                      "size-3",
-                      hasSymbol ? "opacity-100" : "opacity-30",
-                    )}
-                  />
+                  <Check className={cn("size-3", hasSymbol ? "opacity-100" : "opacity-30")} />
                   <span>{t.auth.reqSymbol}</span>
                 </span>
               </div>
@@ -408,7 +353,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                   "h-9 w-full rounded-lg border bg-background px-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-all",
                   confirmPassword && !passwordsMatch
                     ? "border-destructive focus:border-destructive focus:ring-destructive/20"
-                    : "border-border/80 focus:border-(--dodger-blue) focus:ring-(--dodger-blue)/20",
+                    : "border-border/80 focus:border-(--dodger-blue) focus:ring-(--dodger-blue)/20"
                 )}
               />
               {confirmPassword && !passwordsMatch && (
@@ -435,18 +380,13 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                 variant="default"
                 size="sm"
                 disabled={
-                  isChangingPassword ||
-                  !currentPassword ||
-                  !isPolicySatisfied ||
-                  !passwordsMatch
+                  isChangingPassword || !currentPassword || !isPolicySatisfied || !passwordsMatch
                 }
                 className="rounded-xl bg-(--dodger-blue) text-xs font-semibold text-white hover:bg-(--dodger-blue)/90 cursor-pointer shadow-xs"
               >
                 <KeyRound className="size-3.5 mr-1" />
                 <span>
-                  {isChangingPassword
-                    ? t.profile.updatingPassword
-                    : t.profile.changePasswordBtn}
+                  {isChangingPassword ? t.profile.updatingPassword : t.profile.changePasswordBtn}
                 </span>
               </Button>
             </div>
@@ -454,5 +394,5 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }

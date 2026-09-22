@@ -20,13 +20,7 @@ type Placement = {
   verticalAnchor: "top" | "middle" | "bottom"
 }
 
-export const InterfaceLabel: FC<Props> = ({
-  name,
-  width,
-  height,
-  fill,
-  side = "bottom",
-}) => {
+export const InterfaceLabel: FC<Props> = ({ name, width, height, fill, side = "bottom" }) => {
   if (!name) return null
 
   const gap = LAYOUT.DEFAULT_PADDING / 2

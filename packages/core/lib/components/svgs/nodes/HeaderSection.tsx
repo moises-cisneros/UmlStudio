@@ -47,7 +47,7 @@ export const HeaderSection: FC<HeaderSectionProps> = ({
         textDecoration={isUnderlined ? "underline" : "normal"}
         fill={textColor}
       >
-                {showStereotype && stereotype && (
+        {showStereotype && stereotype && (
           <tspan
             x={width / 2}
             dy={`-${STEREOTYPE_HALF_GAP}`}

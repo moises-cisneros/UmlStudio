@@ -1,43 +1,37 @@
-import { lazy, Suspense, useEffect } from "react";
-import {
-  createRootRoute,
-  Outlet,
-  redirect,
-  useRouterState,
-} from "@tanstack/react-router";
-import { AppProviders } from "@/AppProviders";
-import { AppLoadingScreen } from "@/components/AppLoadingScreen";
-import { DeferredToastContainer } from "@/components/DeferredToastContainer";
-import { DiagramFileDropzone } from "@/components/DiagramFileDropzone";
-import { ErrorPage } from "@/pages/ErrorPage";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { resolveAuthGate } from "@/lib/authGate";
-import { ensureVersionStoreBootstrapped } from "@/stores/versionStoreBootstrap";
+import { lazy, Suspense, useEffect } from "react"
+import { createRootRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
+import { AppProviders } from "@/AppProviders"
+import { AppLoadingScreen } from "@/components/AppLoadingScreen"
+import { DeferredToastContainer } from "@/components/DeferredToastContainer"
+import { DiagramFileDropzone } from "@/components/DiagramFileDropzone"
+import { ErrorPage } from "@/pages/ErrorPage"
+import { useAuthStore } from "@/stores/useAuthStore"
+import { resolveAuthGate } from "@/lib/authGate"
+import { ensureVersionStoreBootstrapped } from "@/stores/versionStoreBootstrap"
 
 const EditorChromeHeader = lazy(() =>
   import("@/components/navbar/EditorChromeHeader").then((module) => ({
     default: module.EditorChromeHeader,
-  })),
-);
+  }))
+)
 
 const EditorChromeRightDock = lazy(() =>
   import("@/components/agentic/EditorChromeRightDock").then((module) => ({
     default: module.EditorChromeRightDock,
-  })),
-);
+  }))
+)
 
 function RootLayout() {
   useEffect(() => {
-    ensureVersionStoreBootstrapped();
-  }, []);
+    ensureVersionStoreBootstrapped()
+  }, [])
 
   useEffect(() => {
-    void useAuthStore.getState().loadSession();
-  }, []);
+    void useAuthStore.getState().loadSession()
+  }, [])
 
-  const path = useRouterState({ select: (s) => s.location.pathname });
-  const isEditorRoute =
-    path.startsWith("/local/") || path.startsWith("/shared/");
+  const path = useRouterState({ select: (s) => s.location.pathname })
+  const isEditorRoute = path.startsWith("/local/") || path.startsWith("/shared/")
 
   return (
     <AppProviders>
@@ -66,7 +60,7 @@ function RootLayout() {
       <DiagramFileDropzone />
       <DeferredToastContainer />
     </AppProviders>
-  );
+  )
 }
 
 export const Route = createRootRoute({
@@ -82,7 +76,7 @@ export const Route = createRootRoute({
    */
   beforeLoad: async ({ location }) => {
     try {
-      await useAuthStore.getState().loadSession();
+      await useAuthStore.getState().loadSession()
     } catch {
       // loadSession already falls back to anonymous; gate decides below.
     }
@@ -91,13 +85,13 @@ export const Route = createRootRoute({
       href: location.href,
       status: useAuthStore.getState().status,
       onLine: typeof navigator === "undefined" ? true : navigator.onLine,
-    });
+    })
     if (decision.kind === "redirect") {
       throw redirect({
         to: decision.to,
         search: decision.search,
         replace: true,
-      });
+      })
     }
   },
-});
+})

@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { UMLModel } from "@umlstudio/core";
-import { log } from "@/logger";
-import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
-import { renderThumbnailSvgFromModel } from "@/utils/thumbnailSvg";
-import type { ThumbnailViewportPriority } from "@/hooks/useThumbnailViewportPriority";
-import { dequeueNextDiagram } from "@/hooks/dequeueNextDiagram";
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { UMLModel } from "@umlstudio/core"
+import { log } from "@/logger"
+import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
+import { renderThumbnailSvgFromModel } from "@/utils/thumbnailSvg"
+import type { ThumbnailViewportPriority } from "@/hooks/useThumbnailViewportPriority"
+import { dequeueNextDiagram } from "@/hooks/dequeueNextDiagram"
 
-const THUMBNAIL_WARMUP_DELAY_MS = 0;
+const THUMBNAIL_WARMUP_DELAY_MS = 0
 
 type ThumbnailWarmupDiagram = {
-  id: string;
-  lastModifiedAt: string;
-  model: UMLModel;
-};
+  id: string
+  lastModifiedAt: string
+  model: UMLModel
+}
 
 export const useDiagramThumbnailWarmup = <T extends ThumbnailWarmupDiagram>({
   visibleDiagrams,
@@ -20,216 +20,203 @@ export const useDiagramThumbnailWarmup = <T extends ThumbnailWarmupDiagram>({
   isDiagramEmpty,
   viewportPriority,
 }: {
-  visibleDiagrams: T[];
-  isPending: boolean;
-  isDiagramEmpty: (diagram: T) => boolean;
-  viewportPriority?: ThumbnailViewportPriority;
+  visibleDiagrams: T[]
+  isPending: boolean
+  isDiagramEmpty: (diagram: T) => boolean
+  viewportPriority?: ThumbnailViewportPriority
 }): Record<string, true> => {
-  const [canWarmThumbnails, setCanWarmThumbnails] = useState(false);
-  const [loadingThumbnailIds, setLoadingThumbnailIds] = useState<
-    Record<string, true>
-  >(() => {
-    const persistenceState = usePersistenceModelStore.getState();
-    const initial: Record<string, true> = {};
+  const [canWarmThumbnails, setCanWarmThumbnails] = useState(false)
+  const [loadingThumbnailIds, setLoadingThumbnailIds] = useState<Record<string, true>>(() => {
+    const persistenceState = usePersistenceModelStore.getState()
+    const initial: Record<string, true> = {}
     for (const diagram of visibleDiagrams) {
-      if (isDiagramEmpty(diagram)) continue;
+      if (isDiagramEmpty(diagram)) continue
       const hasCurrentThumbnail =
         Boolean(persistenceState.thumbnails[diagram.id]) &&
-        persistenceState.thumbnailLastModifiedAt[diagram.id] ===
-          diagram.lastModifiedAt;
+        persistenceState.thumbnailLastModifiedAt[diagram.id] === diagram.lastModifiedAt
       if (!hasCurrentThumbnail) {
-        initial[diagram.id] = true;
+        initial[diagram.id] = true
       }
     }
-    return initial;
-  });
+    return initial
+  })
 
-  const queuedThumbnailIdsRef = useRef(new Set<string>());
-  const failedThumbnailByLastModifiedRef = useRef(new Map<string, string>());
-  const thumbnailQueueRef = useRef<ThumbnailWarmupDiagram[]>([]);
-  const thumbnailWorkerActiveRef = useRef(false);
-  const isUnmountedRef = useRef(false);
-  const isDiagramEmptyRef = useRef(isDiagramEmpty);
-  const viewportPriorityRef = useRef(viewportPriority);
+  const queuedThumbnailIdsRef = useRef(new Set<string>())
+  const failedThumbnailByLastModifiedRef = useRef(new Map<string, string>())
+  const thumbnailQueueRef = useRef<ThumbnailWarmupDiagram[]>([])
+  const thumbnailWorkerActiveRef = useRef(false)
+  const isUnmountedRef = useRef(false)
+  const isDiagramEmptyRef = useRef(isDiagramEmpty)
+  const viewportPriorityRef = useRef(viewportPriority)
   /* eslint-disable react-hooks/refs */
-  isDiagramEmptyRef.current = isDiagramEmpty;
-  viewportPriorityRef.current = viewportPriority;
+  isDiagramEmptyRef.current = isDiagramEmpty
+  viewportPriorityRef.current = viewportPriority
 
   const processThumbnailQueue = useCallback(() => {
     if (thumbnailWorkerActiveRef.current || isUnmountedRef.current) {
-      return;
+      return
     }
 
     const markLoading = (id: string, loading: boolean) => {
       setLoadingThumbnailIds((current) => {
         if (loading) {
-          if (current[id]) return current;
-          return { ...current, [id]: true };
+          if (current[id]) return current
+          return { ...current, [id]: true }
         }
 
-        if (!current[id]) return current;
-        const next = { ...current };
-        delete next[id];
-        return next;
-      });
-    };
+        if (!current[id]) return current
+        const next = { ...current }
+        delete next[id]
+        return next
+      })
+    }
 
     const worker = async () => {
-      thumbnailWorkerActiveRef.current = true;
+      thumbnailWorkerActiveRef.current = true
 
       while (thumbnailQueueRef.current.length > 0 && !isUnmountedRef.current) {
         const nextDiagram = dequeueNextDiagram(
           thumbnailQueueRef.current,
-          viewportPriorityRef.current,
-        );
+          viewportPriorityRef.current
+        )
         if (!nextDiagram) {
-          continue;
+          continue
         }
 
-        const id = nextDiagram.id;
-        queuedThumbnailIdsRef.current.delete(id);
+        const id = nextDiagram.id
+        queuedThumbnailIdsRef.current.delete(id)
 
-        const persistenceState = usePersistenceModelStore.getState();
+        const persistenceState = usePersistenceModelStore.getState()
         const hasCurrentThumbnail =
           Boolean(persistenceState.thumbnails[id]) &&
-          persistenceState.thumbnailLastModifiedAt[id] ===
-            nextDiagram.lastModifiedAt;
+          persistenceState.thumbnailLastModifiedAt[id] === nextDiagram.lastModifiedAt
         if (hasCurrentThumbnail) {
-          markLoading(id, false);
-          continue;
+          markLoading(id, false)
+          continue
         }
 
-        markLoading(id, true);
+        markLoading(id, true)
 
         try {
-          const thumbnailSvg = await renderThumbnailSvgFromModel(
-            nextDiagram.model,
-          );
+          const thumbnailSvg = await renderThumbnailSvgFromModel(nextDiagram.model)
           if (isUnmountedRef.current) {
-            markLoading(id, false);
-            break;
+            markLoading(id, false)
+            break
           }
           const latestModelLastModifiedAt =
-            usePersistenceModelStore.getState().models[id]?.lastModifiedAt;
+            usePersistenceModelStore.getState().models[id]?.lastModifiedAt
           if (
             latestModelLastModifiedAt &&
             latestModelLastModifiedAt !== nextDiagram.lastModifiedAt
           ) {
-            markLoading(id, false);
-            continue;
+            markLoading(id, false)
+            continue
           }
           usePersistenceModelStore
             .getState()
-            .setThumbnail(id, thumbnailSvg, nextDiagram.lastModifiedAt);
-          failedThumbnailByLastModifiedRef.current.delete(id);
+            .setThumbnail(id, thumbnailSvg, nextDiagram.lastModifiedAt)
+          failedThumbnailByLastModifiedRef.current.delete(id)
         } catch (error) {
-          failedThumbnailByLastModifiedRef.current.set(
-            id,
-            nextDiagram.lastModifiedAt,
-          );
-          log.error(
-            "Failed to generate home thumbnail preview",
-            error as Error,
-          );
+          failedThumbnailByLastModifiedRef.current.set(id, nextDiagram.lastModifiedAt)
+          log.error("Failed to generate home thumbnail preview", error as Error)
         } finally {
-          markLoading(id, false);
+          markLoading(id, false)
         }
       }
 
-      thumbnailWorkerActiveRef.current = false;
+      thumbnailWorkerActiveRef.current = false
       if (thumbnailQueueRef.current.length > 0 && !isUnmountedRef.current) {
         // eslint-disable-next-line react-hooks/immutability
-        processThumbnailQueue();
+        processThumbnailQueue()
       }
-    };
+    }
 
-    void worker();
-  }, []);
+    void worker()
+  }, [])
 
   useEffect(() => {
-    let enableTimer: number | null = null;
+    let enableTimer: number | null = null
 
     const scheduleEnable = () => {
       enableTimer = window.setTimeout(() => {
         if (!isUnmountedRef.current) {
-          setCanWarmThumbnails(true);
+          setCanWarmThumbnails(true)
         }
-      }, THUMBNAIL_WARMUP_DELAY_MS);
-    };
+      }, THUMBNAIL_WARMUP_DELAY_MS)
+    }
 
     if (document.readyState === "complete") {
-      scheduleEnable();
+      scheduleEnable()
       return () => {
         if (enableTimer !== null) {
-          window.clearTimeout(enableTimer);
+          window.clearTimeout(enableTimer)
         }
-      };
+      }
     }
 
     const handleLoad = () => {
-      scheduleEnable();
-    };
+      scheduleEnable()
+    }
 
-    window.addEventListener("load", handleLoad, { once: true });
+    window.addEventListener("load", handleLoad, { once: true })
     return () => {
-      window.removeEventListener("load", handleLoad);
+      window.removeEventListener("load", handleLoad)
       if (enableTimer !== null) {
-        window.clearTimeout(enableTimer);
+        window.clearTimeout(enableTimer)
       }
-    };
-  }, []);
+    }
+  }, [])
 
   useEffect(() => {
-    isUnmountedRef.current = false;
+    isUnmountedRef.current = false
+    const queuedThumbnailIds = queuedThumbnailIdsRef.current
     return () => {
-      isUnmountedRef.current = true;
-      thumbnailQueueRef.current = [];
-      queuedThumbnailIdsRef.current.clear();
-    };
-  }, []);
+      isUnmountedRef.current = true
+      thumbnailQueueRef.current = []
+      queuedThumbnailIds.clear()
+    }
+  }, [])
 
   useEffect(() => {
     if (!canWarmThumbnails || isPending) {
-      return;
+      return
     }
 
     const prioritized = [...visibleDiagrams].sort((a, b) => {
-      const aIsLocal = (a as { source?: string }).source !== "shared" ? 0 : 1;
-      const bIsLocal = (b as { source?: string }).source !== "shared" ? 0 : 1;
-      return aIsLocal - bIsLocal;
-    });
+      const aIsLocal = (a as { source?: string }).source !== "shared" ? 0 : 1
+      const bIsLocal = (b as { source?: string }).source !== "shared" ? 0 : 1
+      return aIsLocal - bIsLocal
+    })
 
     for (const diagram of prioritized) {
       if (isDiagramEmptyRef.current(diagram)) {
-        continue;
+        continue
       }
 
-      const persistenceState = usePersistenceModelStore.getState();
+      const persistenceState = usePersistenceModelStore.getState()
       const hasCurrentThumbnail =
         Boolean(persistenceState.thumbnails[diagram.id]) &&
-        persistenceState.thumbnailLastModifiedAt[diagram.id] ===
-          diagram.lastModifiedAt;
+        persistenceState.thumbnailLastModifiedAt[diagram.id] === diagram.lastModifiedAt
       if (hasCurrentThumbnail) {
-        continue;
+        continue
       }
 
       if (
         queuedThumbnailIdsRef.current.has(diagram.id) ||
-        failedThumbnailByLastModifiedRef.current.get(diagram.id) ===
-          diagram.lastModifiedAt
+        failedThumbnailByLastModifiedRef.current.get(diagram.id) === diagram.lastModifiedAt
       ) {
-        continue;
+        continue
       }
 
-      queuedThumbnailIdsRef.current.add(diagram.id);
-      thumbnailQueueRef.current.push(diagram);
+      queuedThumbnailIdsRef.current.add(diagram.id)
+      thumbnailQueueRef.current.push(diagram)
       setLoadingThumbnailIds((current) =>
-        current[diagram.id] ? current : { ...current, [diagram.id]: true },
-      );
+        current[diagram.id] ? current : { ...current, [diagram.id]: true }
+      )
     }
 
-    processThumbnailQueue();
-  }, [canWarmThumbnails, isPending, processThumbnailQueue, visibleDiagrams]);
+    processThumbnailQueue()
+  }, [canWarmThumbnails, isPending, processThumbnailQueue, visibleDiagrams])
 
-  return loadingThumbnailIds;
-};
+  return loadingThumbnailIds
+}

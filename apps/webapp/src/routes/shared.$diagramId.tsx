@@ -1,11 +1,11 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { UmlStudioShared } from "@/pages/UmlStudioShared";
-import { VersionRepositoryProvider } from "@/contexts/VersionRepositoryContext";
-import type { DiagramView } from "@/types/ModalTypes";
-import { isDiagramView } from "@/utils/sharedDiagramLinks";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { UmlStudioShared } from "@/pages/UmlStudioShared"
+import { VersionRepositoryProvider } from "@/contexts/VersionRepositoryContext"
+import type { DiagramView } from "@/types/ModalTypes"
+import { isDiagramView } from "@/utils/sharedDiagramLinks"
+import { useAuthStore } from "@/stores/useAuthStore"
 
-type SharedSearch = { view?: DiagramView; version?: string };
+type SharedSearch = { view?: DiagramView; version?: string }
 
 export const Route = createFileRoute("/shared/$diagramId")({
   validateSearch: (search: Record<string, unknown>): SharedSearch => ({
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/shared/$diagramId")({
   }),
   beforeLoad: async ({ location }) => {
     try {
-      await useAuthStore.getState().loadSession();
+      await useAuthStore.getState().loadSession()
     } catch {
       // Ignored; check status below
     }
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/shared/$diagramId")({
         to: "/login",
         search: { redirect: location.pathname },
         replace: true,
-      });
+      })
     }
   },
   component: () => (
@@ -31,4 +31,4 @@ export const Route = createFileRoute("/shared/$diagramId")({
       <UmlStudioShared />
     </VersionRepositoryProvider>
   ),
-});
+})

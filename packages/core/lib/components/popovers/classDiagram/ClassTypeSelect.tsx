@@ -4,12 +4,7 @@ import { ClassStereotype } from "@/types"
 import { useLabels } from "@/i18n/useLabels"
 import { stereotypeLabel } from "@/utils"
 
-export type ClassKind =
-  | "class"
-  | "abstract"
-  | "interface"
-  | "enumeration"
-  | "association"
+export type ClassKind = "class" | "abstract" | "interface" | "enumeration" | "association"
 
 type KindDescriptor = {
   value: ClassKind
@@ -38,16 +33,10 @@ const KINDS: readonly KindDescriptor[] = [
   },
 ]
 
-const KindRow = ({
-  label,
-  keyword,
-  italic,
-}: Omit<KindDescriptor, "label"> & { label: string }) => (
+const KindRow = ({ label, keyword, italic }: Omit<KindDescriptor, "label"> & { label: string }) => (
   <span style={{ alignItems: "baseline", display: "flex", gap: 8 }}>
     {keyword && (
-      <span style={{ fontSize: "0.85em", opacity: 0.6 }}>
-        {stereotypeLabel(keyword)}
-      </span>
+      <span style={{ fontSize: "0.85em", opacity: 0.6 }}>{stereotypeLabel(keyword)}</span>
     )}
     <span style={{ fontStyle: italic ? "italic" : "normal" }}>{label}</span>
   </span>

@@ -1,45 +1,41 @@
-import { useState } from "react";
-import { toast } from "react-toastify";
-import { Button } from "@umlstudio/ui/components/button";
-import { RotateCcw } from "lucide-react";
+import { useState } from "react"
+import { toast } from "react-toastify"
+import { Button } from "@umlstudio/ui/components/button"
+import { RotateCcw } from "lucide-react"
 import {
   AlertDialogCancel,
   AlertDialogDescription,
   AlertDialogFooter,
-} from "@umlstudio/ui/components/alert-dialog";
-import { useModalContext } from "@/contexts";
-import type { PendingVersion } from "@/types";
-import { log } from "@/logger";
-import { useVersioningTranslation } from "./strings";
+} from "@umlstudio/ui/components/alert-dialog"
+import { useModalContext } from "@/contexts"
+import type { PendingVersion } from "@/types"
+import { log } from "@/logger"
+import { useVersioningTranslation } from "./strings"
 
 interface ConfirmRestoreModalProps {
-  version: PendingVersion | null;
-  onConfirm: () => Promise<void> | void;
+  version: PendingVersion | null
+  onConfirm: () => Promise<void> | void
 }
 
-export const ConfirmRestoreModal = ({
-  version,
-  onConfirm,
-}: ConfirmRestoreModalProps) => {
-  const t = useVersioningTranslation();
-  const { closeModal } = useModalContext();
-  const [working, setWorking] = useState(false);
+export const ConfirmRestoreModal = ({ version, onConfirm }: ConfirmRestoreModalProps) => {
+  const t = useVersioningTranslation()
+  const { closeModal } = useModalContext()
+  const [working, setWorking] = useState(false)
 
   const handleConfirm = async () => {
-    setWorking(true);
+    setWorking(true)
     try {
-      await onConfirm();
-      closeModal();
+      await onConfirm()
+      closeModal()
     } catch (err) {
-      log.error("Confirm restore failed", err as Error);
-      toast.error(t.restoreFailed);
+      log.error("Confirm restore failed", err as Error)
+      toast.error(t.restoreFailed)
     } finally {
-      setWorking(false);
+      setWorking(false)
     }
-  };
+  }
 
-  const label =
-    version?.description?.trim() || version?.name?.trim() || "this version";
+  const label = version?.description?.trim() || version?.name?.trim() || "this version"
 
   return (
     <div className="flex flex-col gap-4">
@@ -60,5 +56,5 @@ export const ConfirmRestoreModal = ({
         </Button>
       </AlertDialogFooter>
     </div>
-  );
-};
+  )
+}

@@ -3,15 +3,15 @@ class NoopObserver {
   unobserve() {}
   disconnect() {}
   takeRecords() {
-    return [];
+    return []
   }
 }
 
 if (typeof globalThis.IntersectionObserver === "undefined") {
-  Object.assign(globalThis, { IntersectionObserver: NoopObserver });
+  Object.assign(globalThis, { IntersectionObserver: NoopObserver })
 }
 if (typeof globalThis.ResizeObserver === "undefined") {
-  Object.assign(globalThis, { ResizeObserver: NoopObserver });
+  Object.assign(globalThis, { ResizeObserver: NoopObserver })
 }
 
-export {};
+export {}

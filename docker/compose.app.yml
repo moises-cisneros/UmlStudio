@@ -158,6 +158,46 @@ services:
         max-size: "50m"
         max-file: "5"
 
+  docs:
+    image: "ghcr.io/umlstudio/umlstudio/docs:${IMAGE_TAG:-latest}"
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - umlstudio-network
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=umlstudio-network"
+      - "traefik.http.routers.http-docs.entryPoints=http"
+      - "traefik.http.routers.http-docs.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-docs.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/docs`)"
+      - "traefik.http.routers.http-docs.service=http-docs"
+      - "traefik.http.routers.http-docs.priority=15"
+      - "traefik.http.routers.https-docs.entryPoints=https"
+      - "traefik.http.routers.https-docs.middlewares=secure-headers"
+      - "traefik.http.routers.https-docs.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/docs`)"
+      - "traefik.http.routers.https-docs.service=https-docs"
+      - "traefik.http.routers.https-docs.tls=true"
+      - "traefik.http.routers.https-docs.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-docs.priority=25"
+      - "traefik.http.services.http-docs.loadbalancer.server.port=80"
+      - "traefik.http.services.https-docs.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/docs/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
 networks:
   umlstudio-network:
     name: umlstudio-network

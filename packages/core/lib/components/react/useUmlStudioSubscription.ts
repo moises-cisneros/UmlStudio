@@ -26,10 +26,7 @@ export function useUmlStudioSubscription<T>(
     [editor]
   )
 
-  const read = useCallback(
-    () => (editor ? getSnapshotRef.current(editor) : undefined),
-    [editor]
-  )
+  const read = useCallback(() => (editor ? getSnapshotRef.current(editor) : undefined), [editor])
 
   return useSyncExternalStore(sub, read, read)
 }

@@ -1,8 +1,4 @@
-import {
-  MARKERS,
-  MARKER_CONFIGS,
-  STROKE_COLOR,
-} from "@/constants"
+import { MARKERS, MARKER_CONFIGS, STROKE_COLOR } from "@/constants"
 import {
   getPathEndInfo as getPathEndInfoFromParser,
   getPathStartInfo as getPathStartInfoFromParser,
@@ -21,8 +17,7 @@ export interface InterfaceGeometry {
   radius: number
 }
 
-const isMarkerId = (id: string): id is keyof typeof MARKER_CONFIGS =>
-  id in MARKER_CONFIGS
+const isMarkerId = (id: string): id is keyof typeof MARKER_CONFIGS => id in MARKER_CONFIGS
 
 const THEME_BACKGROUND_COLOR = "var(--umlstudio-background, #ffffff)"
 

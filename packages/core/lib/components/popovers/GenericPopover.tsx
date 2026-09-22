@@ -54,9 +54,7 @@ export const GenericPopover: React.FC<GenericPopoverProps> = ({
   style,
   assessmentNavigation = false,
 }) => {
-  const popoverThemeVars = usePortalThemeVars(
-    anchorEl instanceof Element ? anchorEl : null
-  )
+  const popoverThemeVars = usePortalThemeVars(anchorEl instanceof Element ? anchorEl : null)
   const portalContainer = useUmlStudioPortalContainer()
 
   const { side, align } = toSideAlign(transformOrigin)

@@ -1,30 +1,30 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@umlstudio/ui/components/card";
-import { Badge } from "@umlstudio/ui/components/badge";
-import { LoginForm } from "@/components/auth/LoginForm";
-import { safeRedirectTarget } from "@/components/auth/redirect";
-import { BrandLockup } from "@/components/navbar/BrandLockup";
-import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher";
-import { LanguageSwitcher } from "@/components/navbar/LanguageSwitcher";
-import { useTranslation } from "@/i18n";
-import { Layers, ShieldCheck, Zap, Users } from "lucide-react";
+} from "@umlstudio/ui/components/card"
+import { Badge } from "@umlstudio/ui/components/badge"
+import { LoginForm } from "@/components/auth/LoginForm"
+import { safeRedirectTarget } from "@/components/auth/redirect"
+import { BrandLockup } from "@/components/navbar/BrandLockup"
+import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher"
+import { LanguageSwitcher } from "@/components/navbar/LanguageSwitcher"
+import { useTranslation } from "@/i18n"
+import { Layers, ShieldCheck, Zap, Users } from "lucide-react"
 
 interface LoginPageProps {
-  redirect?: string;
+  redirect?: string
 }
 
 export function LoginPage({ redirect }: LoginPageProps) {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
+  const navigate = useNavigate()
+  const { t } = useTranslation()
 
   function handleSuccess() {
-    void navigate({ to: safeRedirectTarget(redirect) as "/", replace: true });
+    void navigate({ to: safeRedirectTarget(redirect) as "/", replace: true })
   }
 
   return (
@@ -89,9 +89,7 @@ export function LoginPage({ redirect }: LoginPageProps) {
                   <div className="text-[10px] italic text-(--periwinkle)">
                     &laquo;interface&raquo;
                   </div>
-                  <div className="font-bold text-(--dodger-blue)">
-                    AuthManager
-                  </div>
+                  <div className="font-bold text-(--dodger-blue)">AuthManager</div>
                 </div>
                 <div className="border-b border-border-subtle px-3 py-2 space-y-1 text-muted-foreground">
                   <div>
@@ -105,13 +103,11 @@ export function LoginPage({ redirect }: LoginPageProps) {
                 </div>
                 <div className="px-3 py-2 space-y-1 text-muted-foreground">
                   <div>
-                    <span className="font-bold text-emerald-400">+</span>{" "}
-                    authenticate():{" "}
+                    <span className="font-bold text-emerald-400">+</span> authenticate():{" "}
                     <span className="text-foreground">Promise&lt;User&gt;</span>
                   </div>
                   <div>
-                    <span className="font-bold text-emerald-400">+</span>{" "}
-                    collaborate():{" "}
+                    <span className="font-bold text-emerald-400">+</span> collaborate():{" "}
                     <span className="text-foreground">CRDTStream</span>
                   </div>
                 </div>
@@ -146,9 +142,7 @@ export function LoginPage({ redirect }: LoginPageProps) {
                 <CardTitle className="text-xl font-bold tracking-tight">
                   {t.auth.welcomeBack}
                 </CardTitle>
-                <CardDescription className="text-xs">
-                  {t.auth.signInSubtitle}
-                </CardDescription>
+                <CardDescription className="text-xs">{t.auth.signInSubtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <LoginForm redirect={redirect} onSuccess={handleSuccess} />
@@ -160,11 +154,8 @@ export function LoginPage({ redirect }: LoginPageProps) {
 
       {/* Footer */}
       <footer className="border-t border-border-subtle/60 py-3 text-center text-xs text-muted-foreground">
-        <p>
-          UmlStudio &copy; 2026 — Formal Object-Oriented Software Architecture
-          Studio
-        </p>
+        <p>UmlStudio &copy; 2026 — Formal Object-Oriented Software Architecture Studio</p>
       </footer>
     </div>
-  );
+  )
 }

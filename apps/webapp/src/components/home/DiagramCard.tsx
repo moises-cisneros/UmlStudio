@@ -8,7 +8,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type Ref,
-} from "react";
+} from "react"
 import {
   MoreVertical,
   Heart,
@@ -23,8 +23,8 @@ import {
   Trash2,
   UserX,
   Clock,
-} from "lucide-react";
-import type { UMLDiagramType } from "@umlstudio/core";
+} from "lucide-react"
+import type { UMLDiagramType } from "@umlstudio/core"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +36,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@umlstudio/ui/components/dropdown-menu";
+} from "@umlstudio/ui/components/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,131 +46,121 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@umlstudio/ui/components/alert-dialog";
-import { cn } from "@umlstudio/ui/lib/utils";
-import { Skeleton } from "@umlstudio/ui/components/skeleton";
-import { Badge } from "@umlstudio/ui/components/badge";
-import { Button } from "@umlstudio/ui/components/button";
-import {
-  Card,
-  CardFooter,
-  CardHeader,
-} from "@umlstudio/ui/components/card";
-import { Separator } from "@umlstudio/ui/components/separator";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { toast } from "react-toastify";
-import { useModalContext } from "@/contexts";
-import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
-import { useMinuteTick } from "@/hooks/useMinuteTick";
-import { useTranslation } from "@/i18n";
-import { DiagramView } from "@/types";
-import { getDiagramTypeIcon } from "./diagramTypeMeta";
+} from "@umlstudio/ui/components/alert-dialog"
+import { cn } from "@umlstudio/ui/lib/utils"
+import { Skeleton } from "@umlstudio/ui/components/skeleton"
+import { Badge } from "@umlstudio/ui/components/badge"
+import { Button } from "@umlstudio/ui/components/button"
+import { Card, CardFooter, CardHeader } from "@umlstudio/ui/components/card"
+import { Separator } from "@umlstudio/ui/components/separator"
+import { Link, useNavigate } from "@tanstack/react-router"
+import { toast } from "react-toastify"
+import { useModalContext } from "@/contexts"
+import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
+import { useMinuteTick } from "@/hooks/useMinuteTick"
+import { useTranslation } from "@/i18n"
+import { DiagramView } from "@/types"
+import { getDiagramTypeIcon } from "./diagramTypeMeta"
 import {
   MOBILE_MENU_CONTENT_CLASS,
   MOBILE_MENU_SUBCONTENT_CLASS,
-} from "@/components/navbar/islandPrimitives";
+} from "@/components/navbar/islandPrimitives"
 import {
   markSharedDiagramCopied,
   removeSharedDiagramEntry,
   updateSharedDiagramView,
-} from "@/utils/sharedDiagramStorage";
+} from "@/utils/sharedDiagramStorage"
 import {
   SHARED_DIAGRAM_VIEW_OPTIONS,
   DEFAULT_SHARED_DIAGRAM_VIEW,
   sharedDiagramRoute,
   buildSharedDiagramUrl,
   getSharedDiagramViewBadge,
-} from "@/utils/sharedDiagramLinks";
-import { getCachedThumbnailSources } from "@/utils/thumbnailTheme";
-import { cloneModelAsLocalCopy } from "@/utils/saveLocalDiagramCopy";
-import { DiagramApiClient } from "@/services/DiagramApiClient";
-import { log } from "@/logger";
-import { runWhenIdle } from "@/utils/idle";
+} from "@/utils/sharedDiagramLinks"
+import { getCachedThumbnailSources } from "@/utils/thumbnailTheme"
+import { cloneModelAsLocalCopy } from "@/utils/saveLocalDiagramCopy"
+import { DiagramApiClient } from "@/services/DiagramApiClient"
+import { log } from "@/logger"
+import { runWhenIdle } from "@/utils/idle"
 
-export type DiagramSource = "local" | "shared";
+export type DiagramSource = "local" | "shared"
 
 export type RecentDiagram = {
-  id: string;
-  title: string;
-  type: UMLDiagramType;
-  lastModifiedAt: string;
-  favorite: boolean;
-  source?: DiagramSource;
-  createdAt?: string;
-  lastSharedView?: DiagramView;
-};
+  id: string
+  title: string
+  type: UMLDiagramType
+  lastModifiedAt: string
+  favorite: boolean
+  source?: DiagramSource
+  createdAt?: string
+  lastSharedView?: DiagramView
+}
 
-export const formatRelativeLastModified = (
-  lastModifiedAt: string,
-  nowMs: number,
-) => {
-  const parsedDate = new Date(lastModifiedAt);
+export const formatRelativeLastModified = (lastModifiedAt: string, nowMs: number) => {
+  const parsedDate = new Date(lastModifiedAt)
   if (Number.isNaN(parsedDate.getTime())) {
-    return "Unknown date";
+    return "Unknown date"
   }
 
-  const diffMilliseconds = nowMs - parsedDate.getTime();
-  const minuteMs = 60 * 1000;
-  const hourMs = 60 * minuteMs;
-  const dayMs = 24 * hourMs;
+  const diffMilliseconds = nowMs - parsedDate.getTime()
+  const minuteMs = 60 * 1000
+  const hourMs = 60 * minuteMs
+  const dayMs = 24 * hourMs
 
   if (diffMilliseconds < minuteMs) {
-    return "just now";
+    return "just now"
   }
 
   if (diffMilliseconds < hourMs) {
-    const minutes = Math.floor(diffMilliseconds / minuteMs);
-    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    const minutes = Math.floor(diffMilliseconds / minuteMs)
+    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`
   }
 
   if (diffMilliseconds < dayMs) {
-    const hours = Math.floor(diffMilliseconds / hourMs);
-    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    const hours = Math.floor(diffMilliseconds / hourMs)
+    return `${hours} hour${hours === 1 ? "" : "s"} ago`
   }
 
   if (diffMilliseconds < 2 * dayMs) {
-    return "Yesterday";
+    return "Yesterday"
   }
 
   return parsedDate.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  });
-};
+  })
+}
 
 export const getDiagramNav = (diagram: RecentDiagram) => {
-  const source = diagram.source ?? "local";
+  const source = diagram.source ?? "local"
   if (source === "local") {
-    return { to: "/local/$id", params: { id: diagram.id } } as const;
+    return { to: "/local/$id", params: { id: diagram.id } } as const
   }
 
-  return sharedDiagramRoute(
-    diagram.id,
-    diagram.lastSharedView ?? DEFAULT_SHARED_DIAGRAM_VIEW,
-  );
-};
+  return sharedDiagramRoute(diagram.id, diagram.lastSharedView ?? DEFAULT_SHARED_DIAGRAM_VIEW)
+}
 
 export type DiagramActionsMenuViewProps = {
-  diagram: RecentDiagram;
-  isExpired?: boolean;
-  canDelete?: boolean;
-  onOpen: () => void;
-  onRename: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-  onShare: () => void;
-  onCopySharedLink: () => void;
-  onSaveLocalCopy: () => void;
-  onChangeSharedView: (view: DiagramView) => void;
-  onRemoveSharedEntry: () => void;
-  containerClassName?: string;
-  stopPropagation?: boolean;
-};
+  diagram: RecentDiagram
+  isExpired?: boolean
+  canDelete?: boolean
+  onOpen: () => void
+  onRename: () => void
+  onDuplicate: () => void
+  onDelete: () => void
+  onShare: () => void
+  onCopySharedLink: () => void
+  onSaveLocalCopy: () => void
+  onChangeSharedView: (view: DiagramView) => void
+  onRemoveSharedEntry: () => void
+  containerClassName?: string
+  stopPropagation?: boolean
+}
 
-const DEFAULT_MENU_CONTAINER_CLASS = "relative";
+const DEFAULT_MENU_CONTAINER_CLASS = "relative"
 
-type PendingConfirm = "delete" | "remove";
+type PendingConfirm = "delete" | "remove"
 
 export function DiagramActionsMenuView({
   diagram,
@@ -188,24 +178,22 @@ export function DiagramActionsMenuView({
   containerClassName = DEFAULT_MENU_CONTAINER_CLASS,
   stopPropagation = false,
 }: DiagramActionsMenuViewProps) {
-  const { t } = useTranslation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(
-    null,
-  );
+  const { t } = useTranslation()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null)
 
-  const isLocalDiagram = (diagram.source ?? "local") === "local";
-  const sharedView = diagram.lastSharedView ?? DEFAULT_SHARED_DIAGRAM_VIEW;
+  const isLocalDiagram = (diagram.source ?? "local") === "local"
+  const sharedView = diagram.lastSharedView ?? DEFAULT_SHARED_DIAGRAM_VIEW
 
   const runAndClose = (action: () => void) => {
-    action();
-    setIsMenuOpen(false);
-  };
+    action()
+    setIsMenuOpen(false)
+  }
 
   const requestConfirm = (kind: PendingConfirm) => {
-    setIsMenuOpen(false);
-    setPendingConfirm(kind);
-  };
+    setIsMenuOpen(false)
+    setPendingConfirm(kind)
+  }
 
   const confirmCopy = pendingConfirm
     ? pendingConfirm === "delete"
@@ -219,27 +207,26 @@ export function DiagramActionsMenuView({
           description: t.dashboard.confirmRemoveDesc,
           confirmLabel: t.dashboard.confirmRemoveBtn,
         }
-    : null;
+    : null
 
   const stopIfNeeded = (
-    event: ReactMouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>,
+    event: ReactMouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement> | React.SyntheticEvent
   ) => {
     if (stopPropagation) {
-      event.stopPropagation();
+      event.preventDefault()
+      event.stopPropagation()
     }
-  };
+  }
 
   return (
     <div
-      className={containerClassName}
+      className={cn("relative z-30", containerClassName)}
       onClick={stopIfNeeded}
       onMouseDown={stopIfNeeded}
+      onPointerDown={stopIfNeeded}
       onKeyDown={stopIfNeeded}
     >
-      <DropdownMenu
-        open={isMenuOpen}
-        onOpenChange={(open) => setIsMenuOpen(open)}
-      >
+      <DropdownMenu open={isMenuOpen} onOpenChange={(open) => setIsMenuOpen(open)}>
         <DropdownMenuTrigger
           render={
             <Button
@@ -247,8 +234,10 @@ export function DiagramActionsMenuView({
               variant="ghost"
               size="icon-lg"
               aria-label={t.dashboard.diagramActionsAria}
-              className="pointer-events-auto rounded-lg text-muted-foreground transition-all duration-150 hover:bg-accent hover:text-foreground group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 aria-expanded:bg-accent aria-expanded:text-foreground aria-expanded:opacity-100 home-card-control"
+              className="pointer-events-auto relative z-30 rounded-lg text-muted-foreground transition-all duration-150 hover:bg-accent hover:text-foreground group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 aria-expanded:bg-accent aria-expanded:text-foreground aria-expanded:opacity-100 home-card-control"
               onClick={stopIfNeeded}
+              onMouseDown={stopIfNeeded}
+              onPointerDown={stopIfNeeded}
             />
           }
         >
@@ -262,7 +251,7 @@ export function DiagramActionsMenuView({
           sideOffset={8}
           className={cn(
             MOBILE_MENU_CONTENT_CLASS,
-            "w-56 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl backdrop-blur-md",
+            "w-56 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl backdrop-blur-md"
           )}
         >
           {isExpired ? (
@@ -357,15 +346,13 @@ export function DiagramActionsMenuView({
                   aria-label={t.dashboard.actionChangeSharingMode}
                   className={cn(
                     MOBILE_MENU_SUBCONTENT_CLASS,
-                    "w-48 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl backdrop-blur-md",
+                    "w-48 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl backdrop-blur-md"
                   )}
                 >
                   <DropdownMenuRadioGroup
                     value={sharedView}
                     onValueChange={(value) =>
-                      runAndClose(() =>
-                        onChangeSharedView(value as DiagramView),
-                      )
+                      runAndClose(() => onChangeSharedView(value as DiagramView))
                     }
                   >
                     {SHARED_DIAGRAM_VIEW_OPTIONS.map((option) => (
@@ -398,7 +385,7 @@ export function DiagramActionsMenuView({
       <AlertDialog
         open={pendingConfirm !== null}
         onOpenChange={(open) => {
-          if (!open) setPendingConfirm(null);
+          if (!open) setPendingConfirm(null)
         }}
       >
         <AlertDialogContent className="max-w-110 p-6 border border-destructive/20 bg-card shadow-2xl rounded-2xl">
@@ -427,9 +414,9 @@ export function DiagramActionsMenuView({
               className="rounded-xl px-4 py-2 text-sm font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
               onClick={() => {
                 if (pendingConfirm === "delete") {
-                  onDelete();
+                  onDelete()
                 } else if (pendingConfirm === "remove") {
-                  onRemoveSharedEntry();
+                  onRemoveSharedEntry()
                 }
               }}
             >
@@ -440,17 +427,17 @@ export function DiagramActionsMenuView({
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }
 
 type DiagramActionsMenuProps = {
-  diagram: RecentDiagram;
-  containerClassName?: string;
-  stopPropagation?: boolean;
-  isExpired?: boolean;
-  onSharedDiagramRemoved?: (diagramId: string) => void;
-  onSharedDiagramViewChange?: (diagramId: string, view: DiagramView) => void;
-};
+  diagram: RecentDiagram
+  containerClassName?: string
+  stopPropagation?: boolean
+  isExpired?: boolean
+  onSharedDiagramRemoved?: (diagramId: string) => void
+  onSharedDiagramViewChange?: (diagramId: string, view: DiagramView) => void
+}
 
 export const DiagramActionsMenu = ({
   diagram,
@@ -460,49 +447,43 @@ export const DiagramActionsMenu = ({
   onSharedDiagramRemoved,
   onSharedDiagramViewChange,
 }: DiagramActionsMenuProps) => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { openModal } = useModalContext();
-  const deleteModel = usePersistenceModelStore((state) => state.deleteModel);
-  const duplicateModel = usePersistenceModelStore(
-    (state) => state.duplicateModel,
-  );
-  const createModel = usePersistenceModelStore((state) => state.createModel);
-  const currentModelId = usePersistenceModelStore(
-    (state) => state.currentModelId,
-  );
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { openModal } = useModalContext()
+  const deleteModel = usePersistenceModelStore((state) => state.deleteModel)
+  const duplicateModel = usePersistenceModelStore((state) => state.duplicateModel)
+  const createModel = usePersistenceModelStore((state) => state.createModel)
+  const currentModelId = usePersistenceModelStore((state) => state.currentModelId)
 
-  const isLocalDiagram = (diagram.source ?? "local") === "local";
-  const sharedView = diagram.lastSharedView ?? DEFAULT_SHARED_DIAGRAM_VIEW;
-  const isCurrentDiagramInEditor = diagram.id === currentModelId;
+  const isLocalDiagram = (diagram.source ?? "local") === "local"
+  const sharedView = diagram.lastSharedView ?? DEFAULT_SHARED_DIAGRAM_VIEW
+  const isCurrentDiagramInEditor = diagram.id === currentModelId
 
   const copySharedLink = async (view: DiagramView, message: string) => {
     try {
-      await navigator.clipboard.writeText(
-        buildSharedDiagramUrl(diagram.id, view),
-      );
-      markSharedDiagramCopied(diagram.id, view);
-      toast.success(message);
+      await navigator.clipboard.writeText(buildSharedDiagramUrl(diagram.id, view))
+      markSharedDiagramCopied(diagram.id, view)
+      toast.success(message)
     } catch {
-      toast.error(t.dashboard.toastCouldNotCopyLink);
+      toast.error(t.dashboard.toastCouldNotCopyLink)
     }
-  };
+  }
 
   const saveLocalCopy = async () => {
     try {
-      const model = await DiagramApiClient.fetchDiagram(diagram.id);
-      const copy = cloneModelAsLocalCopy(model);
-      createModel(copy);
-      markSharedDiagramCopied(diagram.id, sharedView);
+      const model = await DiagramApiClient.fetchDiagram(diagram.id)
+      const copy = cloneModelAsLocalCopy(model)
+      createModel(copy)
+      markSharedDiagramCopied(diagram.id, sharedView)
       toast.success(t.dashboard.toastSaveLocalCopySuccess, {
         autoClose: 6000,
-      });
-      navigate({ to: "/local/$id", params: { id: copy.id }, replace: true });
+      })
+      navigate({ to: "/local/$id", params: { id: copy.id }, replace: true })
     } catch (err) {
-      log.error("Save a local copy from the gallery failed", err as Error);
-      toast.error(t.dashboard.toastSaveLocalCopyFailed);
+      log.error("Save a local copy from the gallery failed", err as Error)
+      toast.error(t.dashboard.toastSaveLocalCopyFailed)
     }
-  };
+  }
 
   return (
     <DiagramActionsMenuView
@@ -517,14 +498,14 @@ export const DiagramActionsMenu = ({
           diagramId: diagram.id,
           initialTitle: diagram.title,
           source: isLocalDiagram ? "local" : "shared",
-        });
+        })
       }}
       onDuplicate={() => {
-        if (isLocalDiagram) duplicateModel(diagram.id);
+        if (isLocalDiagram) duplicateModel(diagram.id)
       }}
       onDelete={() => {
         if (isLocalDiagram && !isCurrentDiagramInEditor) {
-          deleteModel(diagram.id);
+          deleteModel(diagram.id)
         }
       }}
       onShare={() => {
@@ -532,58 +513,44 @@ export const DiagramActionsMenu = ({
           openModal("SHARE_DASHBOARD", {
             modelId: diagram.id,
             contentOverflow: true,
-          });
+          })
         }
       }}
-      onCopySharedLink={() =>
-        void copySharedLink(sharedView, t.dashboard.toastLinkCopied)
-      }
+      onCopySharedLink={() => void copySharedLink(sharedView, t.dashboard.toastLinkCopied)}
       onSaveLocalCopy={() => void saveLocalCopy()}
       onChangeSharedView={(view) => {
-        updateSharedDiagramView(diagram.id, view);
-        onSharedDiagramViewChange?.(diagram.id, view);
-        toast.success(
-          `${getSharedDiagramViewBadge(view)} ${t.dashboard.toastSharingModeUpdated}`,
-        );
+        updateSharedDiagramView(diagram.id, view)
+        onSharedDiagramViewChange?.(diagram.id, view)
+        toast.success(`${getSharedDiagramViewBadge(view)} ${t.dashboard.toastSharingModeUpdated}`)
       }}
       onRemoveSharedEntry={() => {
-        removeSharedDiagramEntry(diagram.id);
-        onSharedDiagramRemoved?.(diagram.id);
+        removeSharedDiagramEntry(diagram.id)
+        onSharedDiagramRemoved?.(diagram.id)
       }}
     />
-  );
-};
+  )
+}
 
 const PreviewTile = ({ children }: { children: ReactNode }) => {
   return (
     <div className="flex size-20 items-center justify-center rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--home-text-primary)_4%,transparent)] text-muted-foreground">
       {children}
     </div>
-  );
-};
+  )
+}
 
-export type DiagramPreviewState =
-  | "thumbnail"
-  | "loading"
-  | "placeholder"
-  | "expired";
+export type DiagramPreviewState = "thumbnail" | "loading" | "placeholder" | "expired"
 
 type DiagramPreviewProps = {
-  diagram: RecentDiagram;
-  title: string;
-  lightDataUrl: string | null;
-  darkDataUrl: string | null;
-  state: DiagramPreviewState;
-};
+  diagram: RecentDiagram
+  title: string
+  lightDataUrl: string | null
+  darkDataUrl: string | null
+  state: DiagramPreviewState
+}
 
-function DiagramPreview({
-  diagram,
-  title,
-  lightDataUrl,
-  darkDataUrl,
-  state,
-}: DiagramPreviewProps) {
-  const { t } = useTranslation();
+function DiagramPreview({ diagram, title, lightDataUrl, darkDataUrl, state }: DiagramPreviewProps) {
+  const { t } = useTranslation()
   return (
     <div className="flex aspect-16/10 w-full items-center justify-center rounded-xl border border-border/40 bg-muted/20 p-1.5 transition-all duration-300 group-hover:border-(--dodger-blue)/30 group-hover:bg-muted/30">
       {state === "expired" ? (
@@ -593,9 +560,7 @@ function DiagramPreview({
             <p className="text-xs font-semibold text-secondary-foreground">
               {t.dashboard.linkExpired}
             </p>
-            <p className="text-[10px] text-muted-foreground">
-              {t.dashboard.linkExpiredDesc}
-            </p>
+            <p className="text-[10px] text-muted-foreground">{t.dashboard.linkExpiredDesc}</p>
           </div>
         </div>
       ) : state === "thumbnail" ? (
@@ -622,10 +587,10 @@ function DiagramPreview({
         <PreviewTile>{getDiagramTypeIcon(diagram.type, "size-9")}</PreviewTile>
       )}
     </div>
-  );
+  )
 }
 
-type CardTagTone = "type" | "local" | "shared";
+type CardTagTone = "type" | "local" | "shared"
 
 const CARD_TAG_TONE: Record<CardTagTone, { bg: string; text: string }> = {
   type: { bg: "var(--home-tag-type-bg)", text: "var(--home-tag-type-text)" },
@@ -634,40 +599,40 @@ const CARD_TAG_TONE: Record<CardTagTone, { bg: string; text: string }> = {
     bg: "var(--home-tag-shared-bg)",
     text: "var(--home-tag-shared-text)",
   },
-};
+}
 
 function CardTag({ label, tone }: { label: string; tone: CardTagTone }) {
-  const { bg, text } = CARD_TAG_TONE[tone];
+  const { bg, text } = CARD_TAG_TONE[tone]
   return (
     <Badge
       className={cn(
-        "h-auto max-w-[14ch] truncate rounded border-0 px-2 py-0.5 text-xs leading-tight font-semibold",
+        "h-auto max-w-[14ch] truncate rounded border-0 px-2 py-0.5 text-xs leading-tight font-semibold"
       )}
       title={label}
       style={{ background: bg, color: text }}
     >
       {label}
     </Badge>
-  );
+  )
 }
 
 export type DiagramCardThumbnail = {
-  lightDataUrl: string | null;
-  darkDataUrl: string | null;
-};
+  lightDataUrl: string | null
+  darkDataUrl: string | null
+}
 
 export type DiagramCardViewProps = {
-  diagram: RecentDiagram;
-  thumbnail?: DiagramCardThumbnail | null;
-  previewState: DiagramPreviewState;
-  isHighlighted?: boolean;
-  isFavorite?: boolean;
-  onToggleFavorite?: () => void;
-  onOpen?: () => void;
-  actionsMenu?: ReactNode;
-  className?: string;
-  ref?: Ref<HTMLDivElement>;
-};
+  diagram: RecentDiagram
+  thumbnail?: DiagramCardThumbnail | null
+  previewState: DiagramPreviewState
+  isHighlighted?: boolean
+  isFavorite?: boolean
+  onToggleFavorite?: () => void
+  onOpen?: () => void
+  actionsMenu?: ReactNode
+  className?: string
+  ref?: Ref<HTMLDivElement>
+}
 
 export function DiagramCardView({
   diagram,
@@ -681,26 +646,26 @@ export function DiagramCardView({
   className,
   ref,
 }: DiagramCardViewProps) {
-  const { t } = useTranslation();
-  const isExpired = previewState === "expired";
-  const isUntitled = !diagram.title.trim();
-  const title = diagram.title.trim() || t.dashboard.emptyStateTitle;
-  const isLocalDiagram = (diagram.source ?? "local") === "local";
-  const lightDataUrl = thumbnail?.lightDataUrl ?? null;
-  const darkDataUrl = thumbnail?.darkDataUrl ?? null;
+  const { t } = useTranslation()
+  const isExpired = previewState === "expired"
+  const isUntitled = !diagram.title.trim()
+  const title = diagram.title.trim() || t.dashboard.emptyStateTitle
+  const isLocalDiagram = (diagram.source ?? "local") === "local"
+  const lightDataUrl = thumbnail?.lightDataUrl ?? null
+  const darkDataUrl = thumbnail?.darkDataUrl ?? null
 
-  useMinuteTick();
+  useMinuteTick()
   const relativeDate = formatRelativeLastModified(
     diagram.lastModifiedAt,
     // eslint-disable-next-line react-hooks/purity
-    Date.now(),
-  );
+    Date.now()
+  )
   const sourceTypeLabel = isLocalDiagram
     ? t.dashboard.filterSourceLocal
-    : t.dashboard.filterSourceShared;
-  const sharedViewLabel = getSharedDiagramViewBadge(diagram.lastSharedView);
+    : t.dashboard.filterSourceShared
+  const sharedViewLabel = getSharedDiagramViewBadge(diagram.lastSharedView)
 
-  const nav = getDiagramNav(diagram);
+  const nav = getDiagramNav(diagram)
 
   return (
     <Card
@@ -711,24 +676,24 @@ export function DiagramCardView({
         isHighlighted
           ? "animate-[diagram-highlight-pulse_2.4s_ease-out_forwards] bg-accent-hover shadow-[0_0_0_3px_color-mix(in_srgb,var(--home-accent-base)_35%,transparent)]"
           : "hover:bg-accent-hover",
-        className,
+        className
       )}
     >
       <Link
         {...nav}
         onClick={(event: ReactMouseEvent<HTMLAnchorElement>) => {
           if (isExpired) {
-            event.preventDefault();
-            return;
+            event.preventDefault()
+            return
           }
-          onOpen?.();
+          onOpen?.()
         }}
         aria-label={isExpired ? `${title} (expired)` : `Open ${title}`}
         aria-disabled={isExpired}
         tabIndex={isExpired ? -1 : undefined}
         className={cn(
           "flex h-full w-full flex-col rounded-[inherit] text-left outline-none after:absolute after:inset-0 after:z-10 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-          isExpired ? "cursor-default" : "cursor-pointer",
+          isExpired ? "cursor-default" : "cursor-pointer"
         )}
       >
         <CardHeader className="flex w-full flex-col gap-2.5 rounded-none px-4 pt-3.5 pb-2">
@@ -736,10 +701,8 @@ export function DiagramCardView({
             <h3
               className={cn(
                 "min-w-0 flex-1 truncate text-sm font-semibold leading-none tracking-tight",
-                isUntitled
-                  ? "text-muted-foreground italic"
-                  : "text-(--home-text-strong)",
-                isExpired && "opacity-50",
+                isUntitled ? "text-muted-foreground italic" : "text-(--home-text-strong)",
+                isExpired && "opacity-50"
               )}
               title={title}
             >
@@ -752,22 +715,18 @@ export function DiagramCardView({
                   type="button"
                   variant="ghost"
                   size="icon-lg"
-                  aria-label={
-                    isFavorite
-                      ? t.dashboard.removeFavorite
-                      : t.dashboard.addFavorite
-                  }
+                  aria-label={isFavorite ? t.dashboard.removeFavorite : t.dashboard.addFavorite}
                   aria-pressed={isFavorite}
                   className={cn(
                     "pointer-events-auto transition-opacity home-card-control",
                     isFavorite
                       ? "text-rose-500 opacity-100"
-                      : "text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-rose-500",
+                      : "text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-rose-500"
                   )}
                   onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onToggleFavorite();
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onToggleFavorite()
                   }}
                 >
                   <Heart
@@ -796,14 +755,11 @@ export function DiagramCardView({
         <CardFooter
           className={cn(
             "flex w-full items-center justify-between gap-2 rounded-none border-t-0 bg-transparent px-4 pt-2.5 pb-3.5",
-            isExpired && "opacity-50",
+            isExpired && "opacity-50"
           )}
         >
           <div className="flex items-center gap-1.5 min-w-0 truncate text-xs leading-tight font-medium text-muted-foreground">
-            <Clock
-              className="size-3.5 shrink-0 opacity-70"
-              aria-hidden="true"
-            />
+            <Clock className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
             <time
               dateTime={diagram.lastModifiedAt}
               title={new Date(diagram.lastModifiedAt).toLocaleString()}
@@ -814,29 +770,24 @@ export function DiagramCardView({
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
-            <CardTag
-              label={sourceTypeLabel}
-              tone={isLocalDiagram ? "local" : "shared"}
-            />
-            {!isLocalDiagram && (
-              <CardTag label={sharedViewLabel} tone="shared" />
-            )}
+            <CardTag label={sourceTypeLabel} tone={isLocalDiagram ? "local" : "shared"} />
+            {!isLocalDiagram && <CardTag label={sharedViewLabel} tone="shared" />}
           </div>
         </CardFooter>
       </Link>
     </Card>
-  );
+  )
 }
 
 type DiagramCardProps = {
-  diagram: RecentDiagram;
-  previewState: DiagramPreviewState;
-  isHighlighted?: boolean;
-  onToggleFavorite?: (diagram: RecentDiagram) => void;
-  onSharedDiagramRemoved?: (diagramId: string) => void;
-  onSharedDiagramViewChange?: (diagramId: string, view: DiagramView) => void;
-  observeViewport?: (id: string, node: Element | null) => () => void;
-};
+  diagram: RecentDiagram
+  previewState: DiagramPreviewState
+  isHighlighted?: boolean
+  onToggleFavorite?: (diagram: RecentDiagram) => void
+  onSharedDiagramRemoved?: (diagramId: string) => void
+  onSharedDiagramViewChange?: (diagramId: string, view: DiagramView) => void
+  observeViewport?: (id: string, node: Element | null) => () => void
+}
 
 export function DiagramCardComponent({
   diagram,
@@ -847,69 +798,58 @@ export function DiagramCardComponent({
   onSharedDiagramViewChange,
   observeViewport,
 }: DiagramCardProps) {
-  const toggleFavorite = usePersistenceModelStore(
-    (state) => state.toggleFavorite,
-  );
-  const thumbnailSvg = usePersistenceModelStore(
-    (state) => state.thumbnails[diagram.id],
-  );
+  const toggleFavorite = usePersistenceModelStore((state) => state.toggleFavorite)
+  const thumbnailSvg = usePersistenceModelStore((state) => state.thumbnails[diagram.id])
   const thumbnailRevision = usePersistenceModelStore(
-    (state) => state.thumbnailRevisions[diagram.id] ?? 0,
-  );
+    (state) => state.thumbnailRevisions[diagram.id] ?? 0
+  )
 
-  const isExpired = previewState === "expired";
-  const isLocalDiagram = (diagram.source ?? "local") === "local";
-  const canToggleFavorite =
-    !isExpired && (isLocalDiagram || Boolean(onToggleFavorite));
+  const isExpired = previewState === "expired"
+  const isLocalDiagram = (diagram.source ?? "local") === "local"
+  const canToggleFavorite = !isExpired && (isLocalDiagram || Boolean(onToggleFavorite))
 
-  const cardObserveId = `diagram-thumb-${diagram.id}`;
-  const observeCleanupRef = useRef<(() => void) | null>(null);
+  const cardObserveId = `diagram-thumb-${diagram.id}`
+  const observeCleanupRef = useRef<(() => void) | null>(null)
   const cardRef = useCallback(
     (node: HTMLDivElement | null) => {
-      observeCleanupRef.current?.();
-      observeCleanupRef.current = null;
+      observeCleanupRef.current?.()
+      observeCleanupRef.current = null
       if (node && observeViewport) {
-        observeCleanupRef.current = observeViewport(cardObserveId, node);
+        observeCleanupRef.current = observeViewport(cardObserveId, node)
       }
     },
-    [observeViewport, cardObserveId],
-  );
+    [observeViewport, cardObserveId]
+  )
 
-  const thumbnailCacheKey = `${diagram.id}:${thumbnailRevision}`;
+  const thumbnailCacheKey = `${diagram.id}:${thumbnailRevision}`
   const lightDataUrl = useMemo(
-    () =>
-      getCachedThumbnailSources(thumbnailCacheKey, thumbnailSvg)
-        ?.lightDataUrl ?? null,
-    [thumbnailCacheKey, thumbnailSvg],
-  );
-  const [rawDarkDataUrl, setRawDarkDataUrl] = useState<string | null>(null);
+    () => getCachedThumbnailSources(thumbnailCacheKey, thumbnailSvg)?.lightDataUrl ?? null,
+    [thumbnailCacheKey, thumbnailSvg]
+  )
+  const [rawDarkDataUrl, setRawDarkDataUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!thumbnailSvg) {
-      return;
+      return
     }
     return runWhenIdle(() => {
-      const sources = getCachedThumbnailSources(
-        thumbnailCacheKey,
-        thumbnailSvg,
-        {
-          eager: true,
-        },
-      );
+      const sources = getCachedThumbnailSources(thumbnailCacheKey, thumbnailSvg, {
+        eager: true,
+      })
       if (sources) {
-        setRawDarkDataUrl(sources.darkDataUrl);
+        setRawDarkDataUrl(sources.darkDataUrl)
       }
-    });
-  }, [thumbnailCacheKey, thumbnailSvg]);
+    })
+  }, [thumbnailCacheKey, thumbnailSvg])
 
-  const darkDataUrl = thumbnailSvg ? rawDarkDataUrl : null;
+  const darkDataUrl = thumbnailSvg ? rawDarkDataUrl : null
 
   const resolvedPreviewState: DiagramPreviewState =
     previewState === "expired" || previewState === "placeholder"
       ? previewState
       : !lightDataUrl
         ? "loading"
-        : "thumbnail";
+        : "thumbnail"
 
   return (
     <DiagramCardView
@@ -923,9 +863,9 @@ export function DiagramCardComponent({
         canToggleFavorite
           ? () => {
               if (onToggleFavorite) {
-                onToggleFavorite(diagram);
+                onToggleFavorite(diagram)
               } else if (isLocalDiagram) {
-                toggleFavorite(diagram.id);
+                toggleFavorite(diagram.id)
               }
             }
           : undefined
@@ -941,7 +881,7 @@ export function DiagramCardComponent({
         />
       }
     />
-  );
+  )
 }
 
-export const DiagramCard = DiagramCardComponent;
+export const DiagramCard = DiagramCardComponent

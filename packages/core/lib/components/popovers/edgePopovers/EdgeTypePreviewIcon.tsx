@@ -1,8 +1,4 @@
-import {
-  extractMarkerId,
-  getMarkerHalfHeight,
-  InlineMarker,
-} from "@/components/svgs/edges"
+import { extractMarkerId, getMarkerHalfHeight, InlineMarker } from "@/components/svgs/edges"
 import { MARKER_CONFIGS, type MarkerId } from "@/constants"
 import { getEdgeMarkerStyles } from "@/utils/edgeUtils"
 
@@ -48,8 +44,7 @@ const FittedMarker = ({
 }
 
 export const EdgeTypePreviewIcon = ({ edgeType }: { edgeType: string }) => {
-  const { markerEnd, markerStart, strokeDashArray } =
-    getEdgeMarkerStyles(edgeType)
+  const { markerEnd, markerStart, strokeDashArray } = getEdgeMarkerStyles(edgeType)
   const dashed = strokeDashArray !== undefined && strokeDashArray !== "0"
   const endMarkerId = toMarkerId(extractMarkerId(markerEnd))
   const startMarkerId = toMarkerId(extractMarkerId(markerStart))
@@ -76,15 +71,9 @@ export const EdgeTypePreviewIcon = ({ edgeType }: { edgeType: string }) => {
         strokeLinecap="round"
         strokeDasharray={dashed ? "4 3" : undefined}
       />
-      {endMarkerId && (
-        <FittedMarker markerId={endMarkerId} anchorX={END_X} direction={0} />
-      )}
+      {endMarkerId && <FittedMarker markerId={endMarkerId} anchorX={END_X} direction={0} />}
       {startMarkerId && (
-        <FittedMarker
-          markerId={startMarkerId}
-          anchorX={START_X}
-          direction={Math.PI}
-        />
+        <FittedMarker markerId={startMarkerId} anchorX={START_X} direction={Math.PI} />
       )}
     </svg>
   )

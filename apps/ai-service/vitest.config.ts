@@ -1,7 +1,7 @@
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 
-const dir = dirname(fileURLToPath(import.meta.url));
+const dir = dirname(fileURLToPath(import.meta.url))
 
 // Plain-object config (no `vitest/config` import): apps/ai-service is a
 // pnpm-ignored polyglot app, so workspace module resolution is unavailable
@@ -20,4 +20,4 @@ export default {
     setupFiles: [resolve(dir, "../../packages/core/tests/setup.ts")],
     include: ["test/**/*.test.ts"],
   },
-};
+}

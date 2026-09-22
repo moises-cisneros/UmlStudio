@@ -38,8 +38,7 @@ function SelectionToolbarMount({
   const t = useLabels()
   const selected = useStore((s) => {
     const ids: string[] = []
-    for (const node of s.nodeLookup.values())
-      if (node.selected) ids.push(node.id)
+    for (const node of s.nodeLookup.values()) if (node.selected) ids.push(node.id)
     return ids.join("\n")
   })
   const ids = selected ? selected.split("\n") : []
@@ -48,12 +47,7 @@ function SelectionToolbarMount({
   }, [])
 
   return (
-    <NodeToolbar
-      nodeId={ids}
-      isVisible={ids.length > 0}
-      position={position}
-      offset={offset}
-    >
+    <NodeToolbar nodeId={ids} isVisible={ids.length > 0} position={position} offset={offset}>
       <div
         className="nodrag nopan nowheel"
         role={role}

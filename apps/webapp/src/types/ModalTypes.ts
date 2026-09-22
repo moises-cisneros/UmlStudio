@@ -11,11 +11,10 @@ export type ModalName =
   | "USER_PROFILE"
   | "SPRING_BOOT_GEN"
   | "OPENAPI_DOCS"
-  | "PRODUCTIVITY_METRICS";
-
+  | "PRODUCTIVITY_METRICS"
 
 export interface ModalProps {
-  [key: string]: unknown;
+  [key: string]: unknown
 }
 
 export enum DiagramView {

@@ -1,23 +1,19 @@
-import { type FC } from "react";
-import { useEditorContext } from "@/contexts";
-import { useTranslation } from "@/i18n";
+import { type FC } from "react"
+import { useEditorContext } from "@/contexts"
+import { useTranslation } from "@/i18n"
 
 export const ClassInspectorTab: FC = () => {
-  const { editor } = useEditorContext();
-  const { t } = useTranslation();
-  const model = editor?.model;
-  const nodes = model?.nodes ?? [];
+  const { editor } = useEditorContext()
+  const { t } = useTranslation()
+  const model = editor?.model
+  const nodes = model?.nodes ?? []
 
   return (
     <div className="flex h-full flex-col overflow-y-auto pr-1 text-xs">
       <div className="mb-3">
-        <h4 className="font-semibold text-(--home-text-primary)">
-          {t.agent.inspectorTitle}
-        </h4>
+        <h4 className="font-semibold text-(--home-text-primary)">{t.agent.inspectorTitle}</h4>
         <p className="text-[11px] text-secondary-foreground">
-          {nodes.length > 0
-            ? `${nodes.length} element(s)`
-            : t.agent.noSelectionDesc}
+          {nodes.length > 0 ? `${nodes.length} element(s)` : t.agent.noSelectionDesc}
         </p>
       </div>
 
@@ -26,9 +22,9 @@ export const ClassInspectorTab: FC = () => {
           const name =
             typeof node.data?.name === "string" && node.data.name
               ? node.data.name
-              : `Element (${node.type})`;
-          const width = Math.round(node.width || node.measured?.width || 0);
-          const height = Math.round(node.height || node.measured?.height || 0);
+              : `Element (${node.type})`
+          const width = Math.round(node.width || node.measured?.width || 0)
+          const height = Math.round(node.height || node.measured?.height || 0)
 
           return (
             <div
@@ -44,8 +40,7 @@ export const ClassInspectorTab: FC = () => {
 
               <div className="mt-2 space-y-1 font-mono text-[11px] text-secondary-foreground">
                 <div>
-                  X: {Math.round(node.position?.x ?? 0)}, Y:{" "}
-                  {Math.round(node.position?.y ?? 0)}
+                  X: {Math.round(node.position?.x ?? 0)}, Y: {Math.round(node.position?.y ?? 0)}
                 </div>
                 {width > 0 && height > 0 && (
                   <div>
@@ -54,9 +49,9 @@ export const ClassInspectorTab: FC = () => {
                 )}
               </div>
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
-};
+  )
+}

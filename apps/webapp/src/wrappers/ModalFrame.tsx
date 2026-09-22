@@ -1,52 +1,36 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import { createPortal } from "react-dom";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@umlstudio/ui/components/dialog";
-import { cn } from "@umlstudio/ui/lib/utils";
-import { getHomeDialogWidth } from "@/components/modals/HomeDialog";
+import { createContext, use, useEffect, useState, type ReactNode } from "react"
+import { createPortal } from "react-dom"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@umlstudio/ui/components/dialog"
+import { cn } from "@umlstudio/ui/lib/utils"
+import { getHomeDialogWidth } from "@/components/modals/HomeDialog"
 
-export type ModalVariant =
-  | "home-wide"
-  | "home-compact"
-  | "editor-share"
-  | "plain"
-  | "confirm";
+export type ModalVariant = "home-wide" | "home-compact" | "editor-share" | "plain" | "confirm"
 
 type ModalFooterSlot = {
-  element: HTMLElement | null;
-  setHasFooterContent: (has: boolean) => void;
-};
+  element: HTMLElement | null
+  setHasFooterContent: (has: boolean) => void
+}
 
-const ModalFooterSlotContext = createContext<ModalFooterSlot | null>(null);
+const ModalFooterSlotContext = createContext<ModalFooterSlot | null>(null)
 
 export function useModalFooterSlot(): ModalFooterSlot | null {
-  return useContext(ModalFooterSlotContext);
+  return use(ModalFooterSlotContext)
 }
 
 export function ModalFooterPortal({ children }: { children: ReactNode }) {
-  const slot = useModalFooterSlot();
-  const target = slot?.element ?? null;
-  const setHasFooterContent = slot?.setHasFooterContent;
-  const hasContent = children != null && children !== false;
+  const slot = useModalFooterSlot()
+  const target = slot?.element ?? null
+  const setHasFooterContent = slot?.setHasFooterContent
+  const hasContent = children != null && children !== false
 
   useEffect(() => {
-    if (!target || !setHasFooterContent) return;
-    setHasFooterContent(hasContent);
-    return () => setHasFooterContent(false);
-  }, [target, setHasFooterContent, hasContent]);
+    if (!target || !setHasFooterContent) return
+    setHasFooterContent(hasContent)
+    return () => setHasFooterContent(false)
+  }, [target, setHasFooterContent, hasContent])
 
-  if (!target) return <>{children}</>;
-  return createPortal(children, target);
+  if (!target) return <>{children}</>
+  return createPortal(children, target)
 }
 
 export function ModalFrame({
@@ -58,26 +42,25 @@ export function ModalFrame({
   footer,
   children,
 }: {
-  title: string;
-  variant: ModalVariant;
-  contentOverflow?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  beforeBody?: ReactNode;
-  footer?: ReactNode;
-  children: ReactNode;
+  title: string
+  variant: ModalVariant
+  contentOverflow?: boolean
+  onOpenChange?: (open: boolean) => void
+  beforeBody?: ReactNode
+  footer?: ReactNode
+  children: ReactNode
 }) {
-  const isEditorShareDialog = variant === "editor-share";
-  const isConfirmDialog = variant === "confirm";
-  const isHomeDialog =
-    (variant !== "plain" && variant !== "confirm") || contentOverflow;
-  const isWideHomeDialog = variant === "home-wide";
+  const isEditorShareDialog = variant === "editor-share"
+  const isConfirmDialog = variant === "confirm"
+  const isHomeDialog = (variant !== "plain" && variant !== "confirm") || contentOverflow
+  const isWideHomeDialog = variant === "home-wide"
   const insetClamp =
-    "calc(100vw - var(--safe-area-inset-left, 0px) - var(--safe-area-inset-right, 0px) - 24px)";
+    "calc(100vw - var(--safe-area-inset-left, 0px) - var(--safe-area-inset-right, 0px) - 24px)"
 
-  const [footerEl, setFooterEl] = useState<HTMLElement | null>(null);
-  const [hasPortalFooter, setHasPortalFooter] = useState(false);
+  const [footerEl, setFooterEl] = useState<HTMLElement | null>(null)
+  const [hasPortalFooter, setHasPortalFooter] = useState(false)
 
-  const footerFilled = footer != null || hasPortalFooter;
+  const footerFilled = footer != null || hasPortalFooter
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -105,26 +88,23 @@ export function ModalFrame({
         <div
           className={cn(
             "min-h-0 flex-1 p-4",
-            contentOverflow ? "overflow-y-visible" : "overflow-y-auto",
+            contentOverflow ? "overflow-y-visible" : "overflow-y-auto"
           )}
         >
-          <ModalFooterSlotContext.Provider
+          <ModalFooterSlotContext
             value={{
               element: footerEl,
               setHasFooterContent: setHasPortalFooter,
             }}
           >
             {children}
-          </ModalFooterSlotContext.Provider>
+          </ModalFooterSlotContext>
         </div>
 
-        <div
-          ref={setFooterEl}
-          className={cn("shrink-0", footerFilled && "p-4")}
-        >
+        <div ref={setFooterEl} className={cn("shrink-0", footerFilled && "p-4")}>
           {footer}
         </div>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

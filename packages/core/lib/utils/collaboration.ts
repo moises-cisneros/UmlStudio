@@ -1,27 +1,9 @@
 import { COLLAB_CURSOR_PALETTE } from "@/constants"
 import type { CollaborationViewport, DraggingNode } from "@/typings"
 
-const ADJECTIVES = [
-  "Swift",
-  "Bold",
-  "Clever",
-  "Bright",
-  "Calm",
-  "Eager",
-  "Kind",
-  "Noble",
-]
+const ADJECTIVES = ["Swift", "Bold", "Clever", "Bright", "Calm", "Eager", "Kind", "Noble"]
 
-const ANIMALS = [
-  "Falcon",
-  "Otter",
-  "Panda",
-  "Lynx",
-  "Dolphin",
-  "Owl",
-  "Fox",
-  "Crane",
-]
+const ANIMALS = ["Falcon", "Otter", "Panda", "Lynx", "Dolphin", "Owl", "Fox", "Crane"]
 
 export const randomCollabName = (): string => {
   const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]
@@ -40,9 +22,7 @@ export const collabColorFromName = (name: string): string => {
   return COLLAB_CURSOR_PALETTE[index]
 }
 
-export const sanitizeCollaborationViewport = (
-  raw: unknown
-): CollaborationViewport | null => {
+export const sanitizeCollaborationViewport = (raw: unknown): CollaborationViewport | null => {
   if (raw == null || typeof raw !== "object") return null
   const { x, y, zoom } = raw as Record<string, unknown>
   if (
@@ -62,22 +42,15 @@ export const sanitizeDraggingNodes = (raw: unknown): DraggingNode[] | null => {
   for (const entry of raw) {
     if (entry == null || typeof entry !== "object") continue
     const { id, position, width, height } = entry as Record<string, unknown>
-    if (
-      typeof id !== "string" ||
-      position == null ||
-      typeof position !== "object"
-    )
-      continue
+    if (typeof id !== "string" || position == null || typeof position !== "object") continue
     const { x, y } = position as Record<string, unknown>
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue
     const node: DraggingNode = {
       id,
       position: { x: x as number, y: y as number },
     }
-    if (width === null || Number.isFinite(width))
-      node.width = width as number | null
-    if (height === null || Number.isFinite(height))
-      node.height = height as number | null
+    if (width === null || Number.isFinite(width)) node.width = width as number | null
+    if (height === null || Number.isFinite(height)) node.height = height as number | null
     sanitized.push(node)
   }
   return sanitized

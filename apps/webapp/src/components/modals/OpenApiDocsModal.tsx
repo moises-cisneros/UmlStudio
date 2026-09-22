@@ -84,19 +84,66 @@ export const OpenApiDocsModal: React.FC<OpenApiDocsModalProps> = ({
       for (const attr of attributes) {
         if (attr.name.toLowerCase() === "id") continue
         const lowType = attr.type.toLowerCase()
-        if (lowType.includes("int") || lowType.includes("long")) {
-          sampleReqObj[attr.name] = 10
-          sampleResObj[attr.name] = 10
-        } else if (lowType.includes("double") || lowType.includes("float")) {
-          sampleReqObj[attr.name] = 99.5
-          sampleResObj[attr.name] = 99.5
+        const lowName = attr.name.toLowerCase()
+
+        let exVal: unknown
+
+        if (lowType.includes("date")) {
+          exVal = "2026-09-21"
+        } else if (lowType.includes("time")) {
+          exVal = "14:30:00"
+        } else if (lowType.includes("timestamp")) {
+          exVal = "2026-09-21T14:30:00Z"
         } else if (lowType.includes("bool")) {
-          sampleReqObj[attr.name] = true
-          sampleResObj[attr.name] = true
+          exVal = true
+        } else if (lowType.includes("int") || lowType.includes("long")) {
+          if (lowName.includes("edad") || lowName.includes("age")) exVal = 25
+          else if (lowName.includes("stock") || lowName.includes("cantidad")) exVal = 10
+          else exVal = 1
+        } else if (
+          lowType.includes("double") ||
+          lowType.includes("float") ||
+          lowType.includes("decimal")
+        ) {
+          if (
+            lowName.includes("precio") ||
+            lowName.includes("price") ||
+            lowName.includes("monto") ||
+            lowName.includes("saldo") ||
+            lowName.includes("total")
+          ) {
+            exVal = 99.95
+          } else {
+            exVal = 50.0
+          }
         } else {
-          sampleReqObj[attr.name] = `sample_${attr.name}`
-          sampleResObj[attr.name] = `sample_${attr.name}`
+          // Strings
+          if (lowName.includes("email") || lowName.includes("correo")) exVal = "usuario@example.com"
+          else if (
+            lowName.includes("telefono") ||
+            lowName.includes("phone") ||
+            lowName.includes("celular")
+          )
+            exVal = "+59170012345"
+          else if (lowName.includes("nombre") || lowName.includes("name")) exVal = "Juan"
+          else if (lowName.includes("apellido") || lowName.includes("lastname")) exVal = "Perez"
+          else if (lowName.includes("direccion") || lowName.includes("address"))
+            exVal = "Av. Principal 123"
+          else if (lowName.includes("ciudad") || lowName.includes("city")) exVal = "La Paz"
+          else if (lowName.includes("pais") || lowName.includes("country")) exVal = "Bolivia"
+          else if (lowName.includes("codigo") || lowName.includes("code")) exVal = "COD-001"
+          else if (lowName.includes("descripcion") || lowName.includes("description"))
+            exVal = "Descripcion de prueba"
+          else if (lowName.includes("titulo") || lowName.includes("title"))
+            exVal = "Titulo de ejemplo"
+          else if (lowName.includes("usuario") || lowName.includes("username")) exVal = "jperez"
+          else if (lowName.includes("password") || lowName.includes("clave")) exVal = "Password123*"
+          else if (lowName.includes("estado") || lowName.includes("status")) exVal = "ACTIVO"
+          else exVal = `Ejemplo ${attr.name}`
         }
+
+        sampleReqObj[attr.name] = exVal
+        sampleResObj[attr.name] = exVal
       }
 
       const sampleReqJson = JSON.stringify(sampleReqObj, null, 2)
@@ -446,12 +493,12 @@ export const OpenApiDocsModal: React.FC<OpenApiDocsModalProps> = ({
           },
           ...(ep.requestBody
             ? {
-              body: {
-                mode: "raw",
-                raw: ep.requestBody.sample,
-                options: { raw: { language: "json" } },
-              },
-            }
+                body: {
+                  mode: "raw",
+                  raw: ep.requestBody.sample,
+                  options: { raw: { language: "json" } },
+                },
+              }
             : {}),
         },
         response: [],
@@ -712,12 +759,13 @@ export const OpenApiDocsModal: React.FC<OpenApiDocsModalProps> = ({
                                   >
                                     <div className="flex items-center gap-2">
                                       <span
-                                        className={`font-mono font-bold text-[11px] ${r.code.startsWith("2")
+                                        className={`font-mono font-bold text-[11px] ${
+                                          r.code.startsWith("2")
                                             ? "text-emerald-500"
                                             : r.code.startsWith("4")
                                               ? "text-amber-500"
                                               : "text-rose-500"
-                                          }`}
+                                        }`}
                                       >
                                         {r.code}
                                       </span>

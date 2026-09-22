@@ -11,13 +11,4 @@ export const SeparationLine: FC<SeparationLineProps> = ({
   y,
   width,
   strokeColor = "var(--umlstudio-foreground, #000000)",
-}) => (
-  <line
-    x1="0"
-    x2={width}
-    y1={y}
-    y2={y}
-    stroke={strokeColor}
-    strokeWidth={LAYOUT.LINE_WIDTH}
-  />
-)
+}) => <line x1="0" x2={width} y1={y} y2={y} stroke={strokeColor} strokeWidth={LAYOUT.LINE_WIDTH} />

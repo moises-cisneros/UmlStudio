@@ -1,6 +1,7 @@
 import type { UMLModel } from "@umlstudio/core"
 import {
   buildKernelModel,
+  getExecutableExample,
   pluralize,
   toKebabCase,
   toCamelCase,
@@ -19,48 +20,64 @@ import type {
   OpenApiTag,
 } from "./types.js"
 
-/** Maps a Java / UML scalar type to an OpenAPI 3.0 schema. */
+/** Maps a Java / UML scalar type to an OpenAPI 3.0 schema with executable examples. */
 export function mapScalarToOpenApiSchema(
   scalar: KernelScalarColumn,
   enums: Map<string, string[]>
 ): OpenApiSchema {
   if (scalar.enumerated && enums.has(scalar.javaType)) {
+    const enumValues = enums.get(scalar.javaType) ?? []
     return {
       type: "string",
-      enum: enums.get(scalar.javaType),
+      enum: enumValues,
+      example: enumValues[0] ?? "DEFAULT",
       description: `Enumeration ${scalar.javaType}`,
     }
   }
 
   const jt = scalar.javaType.toLowerCase()
 
-  if (jt === "string" || jt === "text" || jt === "char" || jt === "character") {
-    return { type: "string", example: `sample_${scalar.columnName}` }
-  }
   if (jt === "long") {
-    return { type: "integer", format: "int64", example: 1 }
+    const ex = getExecutableExample(scalar.fieldName, scalar.javaType)
+    const num = parseInt(ex, 10)
+    return { type: "integer", format: "int64", example: Number.isNaN(num) ? 1 : num }
   }
   if (jt === "integer" || jt === "int" || jt === "short" || jt === "byte") {
-    return { type: "integer", format: "int32", example: 10 }
+    const ex = getExecutableExample(scalar.fieldName, scalar.javaType)
+    const num = parseInt(ex, 10)
+    return { type: "integer", format: "int32", example: Number.isNaN(num) ? 10 : num }
   }
   if (jt === "double" || jt === "float" || jt === "bigdecimal") {
-    return { type: "number", format: "double", example: 99.95 }
+    const ex = getExecutableExample(scalar.fieldName, scalar.javaType)
+    const num = parseFloat(ex)
+    return { type: "number", format: "double", example: Number.isNaN(num) ? 99.95 : num }
   }
-  if (jt === "boolean") {
+  if (jt === "boolean" || jt === "bool") {
     return { type: "boolean", example: true }
   }
-  if (jt === "localdate" || jt === "date") {
-    return { type: "string", format: "date", example: "2026-01-15" }
+  if (jt === "date" || jt === "localdate") {
+    return {
+      type: "string",
+      format: "date",
+      example: getExecutableExample(scalar.fieldName, scalar.javaType),
+    }
   }
-  if (jt === "localdatetime" || jt === "timestamp") {
+  if (jt === "time" || jt === "localtime") {
+    return {
+      type: "string",
+      format: "time",
+      example: getExecutableExample(scalar.fieldName, scalar.javaType),
+    }
+  }
+  if (jt === "localdatetime" || jt === "datetime" || jt === "timestamp") {
     return {
       type: "string",
       format: "date-time",
-      example: "2026-01-15T12:00:00Z",
+      example: getExecutableExample(scalar.fieldName, scalar.javaType),
     }
   }
 
-  return { type: "string", example: `sample_${scalar.columnName}` }
+  return { type: "string", example: getExecutableExample(scalar.fieldName, scalar.javaType) }
 }
 
 /** Builds the schema for the `{Entity}Request` DTO. */

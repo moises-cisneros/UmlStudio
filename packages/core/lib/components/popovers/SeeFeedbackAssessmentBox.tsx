@@ -18,9 +18,7 @@ export const SeeFeedbackAssessmentBox = ({
   divider?: boolean
 }) => {
   const t = useLabels()
-  const getAssessment = useDiagramStore(
-    useShallow((state) => state.getAssessment)
-  )
+  const getAssessment = useDiagramStore(useShallow((state) => state.getAssessment))
   const assessment = getAssessment(elementId)
 
   return (

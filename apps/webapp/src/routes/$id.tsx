@@ -1,9 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { ErrorPage } from "@/pages/ErrorPage";
-import type { DiagramView } from "@/types/ModalTypes";
-import { isDiagramView } from "@/utils/sharedDiagramLinks";
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { ErrorPage } from "@/pages/ErrorPage"
+import type { DiagramView } from "@/types/ModalTypes"
+import { isDiagramView } from "@/utils/sharedDiagramLinks"
 
-type LegacySearch = { view?: DiagramView; version?: string };
+type LegacySearch = { view?: DiagramView; version?: string }
 
 export const Route = createFileRoute("/$id")({
   validateSearch: (search: Record<string, unknown>): LegacySearch => ({
@@ -17,8 +17,8 @@ export const Route = createFileRoute("/$id")({
         params: { diagramId: params.id },
         search,
         replace: true,
-      });
+      })
     }
   },
   component: ErrorPage,
-});
+})

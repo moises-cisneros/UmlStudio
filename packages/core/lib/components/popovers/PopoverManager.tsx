@@ -1,8 +1,4 @@
-import {
-  useDiagramStore,
-  usePopoverStore,
-  useMetadataStore,
-} from "@/store/context"
+import { useDiagramStore, usePopoverStore, useMetadataStore } from "@/store/context"
 import { UmlStudioMode } from "@/typings"
 import { useShallow } from "zustand/shallow"
 import { hasAssessmentToShow } from "@/utils/assessmentPresence"
@@ -18,11 +14,7 @@ import { useViewportCenter } from "@/hooks"
 import { getPopoverOrigin, getPositionOnCanvas, getQuadrant } from "@/utils"
 import { PopoverProps } from "./types"
 import { GenericPopover } from "./GenericPopover"
-import {
-  EdgeEditPopover,
-  EdgeGiveFeedbackPopover,
-  EdgeSeeFeedbackPopover,
-} from "./edgePopovers"
+import { EdgeEditPopover, EdgeGiveFeedbackPopover, EdgeSeeFeedbackPopover } from "./edgePopovers"
 import { LocationPopover } from "@/types"
 
 type NodePopoverType = "class" | "default"
@@ -80,11 +72,7 @@ interface PopoverManagerProps {
   type: PopoverType
 }
 
-export const PopoverManager = ({
-  elementId,
-  anchorEl,
-  type,
-}: PopoverManagerProps) => {
+export const PopoverManager = ({ elementId, anchorEl, type }: PopoverManagerProps) => {
   const viewportCenter = useViewportCenter()
   const { nodes, getAssessment } = useDiagramStore(
     useShallow((state) => ({
@@ -99,14 +87,13 @@ export const PopoverManager = ({
       readonly: state.readonly,
     }))
   )
-  const { popoverElementId, popupEnabled, setPopOverElementId } =
-    usePopoverStore(
-      useShallow((state) => ({
-        popoverElementId: state.popoverElementId,
-        popupEnabled: state.popupEnabled,
-        setPopOverElementId: state.setPopOverElementId,
-      }))
-    )
+  const { popoverElementId, popupEnabled, setPopOverElementId } = usePopoverStore(
+    useShallow((state) => ({
+      popoverElementId: state.popoverElementId,
+      popupEnabled: state.popupEnabled,
+      setPopOverElementId: state.setPopOverElementId,
+    }))
+  )
 
   if (!anchorEl || !popupEnabled) {
     return null

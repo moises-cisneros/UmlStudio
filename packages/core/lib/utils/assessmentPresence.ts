@@ -1,10 +1,7 @@
 import type { UmlStudioNode, Assessment } from "@/typings"
 
 export function isGraded(assessment: Assessment | undefined): boolean {
-  return (
-    assessment !== undefined &&
-    (assessment.score !== undefined || !!assessment.feedback)
-  )
+  return assessment !== undefined && (assessment.score !== undefined || !!assessment.feedback)
 }
 
 export function assessedIdsFor(
@@ -32,7 +29,5 @@ export function hasAssessmentToShow(
   nodes: readonly Pick<UmlStudioNode, "id" | "data">[],
   getAssessment: (id: string) => Assessment | undefined
 ): boolean {
-  return assessedIdsFor(elementId, nodes).some((id) =>
-    isGraded(getAssessment(id))
-  )
+  return assessedIdsFor(elementId, nodes).some((id) => isGraded(getAssessment(id)))
 }

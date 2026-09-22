@@ -1,8 +1,8 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { LoginPage } from "@/pages/LoginPage";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { LoginPage } from "@/pages/LoginPage"
+import { useAuthStore } from "@/stores/useAuthStore"
 
-type LoginSearch = { redirect?: string };
+type LoginSearch = { redirect?: string }
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
@@ -13,13 +13,13 @@ export const Route = createFileRoute("/login")({
       throw redirect({
         to: (search.redirect ?? "/") as "/",
         replace: true,
-      });
+      })
     }
   },
   component: LoginRouteComponent,
-});
+})
 
 function LoginRouteComponent() {
-  const { redirect: redirectTarget } = Route.useSearch();
-  return <LoginPage redirect={redirectTarget} />;
+  const { redirect: redirectTarget } = Route.useSearch()
+  return <LoginPage redirect={redirectTarget} />
 }

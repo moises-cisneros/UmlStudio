@@ -10,10 +10,7 @@ import {
   type ZoomControlOptions,
 } from "@/chrome/builtins/controls"
 
-export function useControl(
-  make: () => OverlayControlInput,
-  deps: readonly unknown[]
-): void {
+export function useControl(make: () => OverlayControlInput, deps: readonly unknown[]): void {
   const editor = useUmlStudioEditor()
   useEffect(() => {
     if (!editor) return
@@ -29,14 +26,8 @@ export function UmlStudioPalette(props: PaletteControlOptions = {}): null {
   return null
 }
 
-export function UmlStudioZoom({
-  history,
-  ...placement
-}: ZoomControlOptions = {}): null {
-  useControl(
-    () => zoomControl({ history, ...placement }),
-    [history, key(placement)]
-  )
+export function UmlStudioZoom({ history, ...placement }: ZoomControlOptions = {}): null {
+  useControl(() => zoomControl({ history, ...placement }), [history, key(placement)])
   return null
 }
 

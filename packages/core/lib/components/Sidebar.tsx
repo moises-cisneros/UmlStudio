@@ -1,96 +1,80 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { dropElementConfigs, LAYOUT, MOBILE_VIEW_QUERY } from "@/constants";
-import { useMetadataStore, useOverlayStore } from "@/store/context";
-import { useShallow } from "zustand/shallow";
-import { DraggableGhost } from "./DraggableGhost";
-import { UmlStudioMode, UmlStudioView } from "@/typings";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react"
+import { dropElementConfigs, LAYOUT, MOBILE_VIEW_QUERY } from "@/constants"
+import { useMetadataStore, useOverlayStore } from "@/store/context"
+import { useShallow } from "zustand/shallow"
+import { DraggableGhost } from "./DraggableGhost"
+import { UmlStudioMode, UmlStudioView } from "@/typings"
 import {
   COMPACT_PALETTE,
   PALETTE,
   computePaletteLayout,
   previewScaleForCell,
-} from "@/utils/paletteLayout";
+} from "@/utils/paletteLayout"
 
-const labelPreviewTypes = new Set([
-  "sfcTransitionBranch",
-  "petriNetPlace",
-  "petriNetTransition",
-]);
+const labelPreviewTypes = new Set(["sfcTransitionBranch", "petriNetPlace", "petriNetTransition"])
 
 const previewExtraHeight = (type: string) =>
-  labelPreviewTypes.has(type) ? LAYOUT.DEFAULT_ATTRIBUTE_HEIGHT : 0;
+  labelPreviewTypes.has(type) ? LAYOUT.DEFAULT_ATTRIBUTE_HEIGHT : 0
 
-const VIEW_SWITCH_HEIGHT = 64;
-const PALETTE_LAYOUT_SLACK = 4;
+const VIEW_SWITCH_HEIGHT = 64
+const PALETTE_LAYOUT_SLACK = 4
 
 export const Sidebar = () => {
-  const { diagramType, view, setView, availableViews, mode, readonly, labels } =
-    useMetadataStore(
-      useShallow((state) => ({
-        diagramType: state.diagramType,
-        view: state.view,
-        setView: state.setView,
-        availableViews: state.availableViews,
-        mode: state.mode,
-        readonly: state.readonly,
-        labels: state.labels,
-      })),
-    );
-  const showPalette = mode === UmlStudioMode.Modelling && !readonly;
+  const { diagramType, view, setView, availableViews, mode, readonly, labels } = useMetadataStore(
+    useShallow((state) => ({
+      diagramType: state.diagramType,
+      view: state.view,
+      setView: state.setView,
+      availableViews: state.availableViews,
+      mode: state.mode,
+      readonly: state.readonly,
+      labels: state.labels,
+    }))
+  )
+  const showPalette = mode === UmlStudioMode.Modelling && !readonly
   const showInteractiveSelectionView =
-    availableViews.includes(UmlStudioView.Highlight) ||
-    view === UmlStudioView.Highlight;
+    availableViews.includes(UmlStudioView.Highlight) || view === UmlStudioView.Highlight
 
-  const paletteItems = useMemo(
-    () => dropElementConfigs[diagramType],
-    [diagramType],
-  );
+  const paletteItems = useMemo(() => dropElementConfigs[diagramType], [diagramType])
 
   const isRightRail = useOverlayStore(
-    (state) => state.controls["umlstudio:palette"]?.region === "right-rail",
-  );
-  const asideRef = useRef<HTMLElement>(null);
-  const [canvas, setCanvas] = useState({ w: 0, h: 0, compact: false });
+    (state) => state.controls["umlstudio:palette"]?.region === "right-rail"
+  )
+  const asideRef = useRef<HTMLElement>(null)
+  const [canvas, setCanvas] = useState({ w: 0, h: 0, compact: false })
 
   useLayoutEffect(() => {
-    const aside = asideRef.current;
-    const band = aside?.closest(
-      ".umlstudio-overlay-band",
-    ) as HTMLElement | null;
-    const canvasEl = aside?.closest(".umlstudio-canvas") as HTMLElement | null;
-    if (!aside || !band || !canvasEl) return;
-    const mobileQuery = window.matchMedia(MOBILE_VIEW_QUERY);
+    const aside = asideRef.current
+    const band = aside?.closest(".umlstudio-overlay-band") as HTMLElement | null
+    const canvasEl = aside?.closest(".umlstudio-canvas") as HTMLElement | null
+    if (!aside || !band || !canvasEl) return
+    const mobileQuery = window.matchMedia(MOBILE_VIEW_QUERY)
     const measure = () => {
       const gap =
-        parseFloat(
-          getComputedStyle(aside).getPropertyValue("--umlstudio-chrome-gap"),
-        ) || 8;
-      const bandStyle = getComputedStyle(band);
+        parseFloat(getComputedStyle(aside).getPropertyValue("--umlstudio-chrome-gap")) || 8
+      const bandStyle = getComputedStyle(band)
       const verticalPadding =
-        (parseFloat(bandStyle.paddingTop) || 0) +
-        (parseFloat(bandStyle.paddingBottom) || 0);
-      const h = Math.max(0, band.clientHeight - verticalPadding - 2 * gap);
-      const w = canvasEl.getBoundingClientRect().width;
-      const compact = mobileQuery.matches;
+        (parseFloat(bandStyle.paddingTop) || 0) + (parseFloat(bandStyle.paddingBottom) || 0)
+      const h = Math.max(0, band.clientHeight - verticalPadding - 2 * gap)
+      const w = canvasEl.getBoundingClientRect().width
+      const compact = mobileQuery.matches
       setCanvas((prev) =>
-        prev.w === w && prev.h === h && prev.compact === compact
-          ? prev
-          : { w, h, compact },
-      );
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(band);
-    observer.observe(canvasEl);
-    mobileQuery.addEventListener("change", measure);
+        prev.w === w && prev.h === h && prev.compact === compact ? prev : { w, h, compact }
+      )
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(band)
+    observer.observe(canvasEl)
+    mobileQuery.addEventListener("change", measure)
     return () => {
-      observer.disconnect();
-      mobileQuery.removeEventListener("change", measure);
-    };
-  }, []);
+      observer.disconnect()
+      mobileQuery.removeEventListener("change", measure)
+    }
+  }, [])
 
-  const cellCount = paletteItems.length;
-  const chromeHeight = showInteractiveSelectionView ? VIEW_SWITCH_HEIGHT : 0;
+  const cellCount = paletteItems.length
+  const chromeHeight = showInteractiveSelectionView ? VIEW_SWITCH_HEIGHT : 0
   const layout = useMemo(
     () =>
       computePaletteLayout(
@@ -98,14 +82,14 @@ export const Sidebar = () => {
         canvas.w,
         Math.max(0, canvas.h - PALETTE_LAYOUT_SLACK),
         chromeHeight,
-        canvas.compact,
+        canvas.compact
       ),
-    [cellCount, canvas.w, canvas.h, canvas.compact, chromeHeight],
-  );
-  const paletteMetrics = canvas.compact ? COMPACT_PALETTE : PALETTE;
+    [cellCount, canvas.w, canvas.h, canvas.compact, chromeHeight]
+  )
+  const paletteMetrics = canvas.compact ? COMPACT_PALETTE : PALETTE
 
   const previewScale = useMemo(() => {
-    if (layout.cellW <= 0 || layout.cellH <= 0) return 0;
+    if (layout.cellW <= 0 || layout.cellH <= 0) return 0
     return Math.min(
       ...paletteItems.map((config) =>
         previewScaleForCell(
@@ -113,30 +97,23 @@ export const Sidebar = () => {
           config.height + previewExtraHeight(config.type),
           layout.cellW,
           layout.cellH,
-          canvas.compact,
-        ),
-      ),
-    );
-  }, [paletteItems, layout.cellW, layout.cellH, canvas.compact]);
+          canvas.compact
+        )
+      )
+    )
+  }, [paletteItems, layout.cellW, layout.cellH, canvas.compact])
 
   if (!showPalette || paletteItems.length === 0) {
-    return null;
+    return null
   }
 
-  const cellStyle = { width: layout.cellW, height: layout.cellH };
+  const cellStyle = { width: layout.cellW, height: layout.cellH }
 
-  const renderCell = (
-    config: (typeof paletteItems)[number],
-    id: string,
-    keyValue: string,
-  ) => {
-    const extraPreviewHeight = previewExtraHeight(config.type);
+  const renderCell = (config: (typeof paletteItems)[number], id: string, keyValue: string) => {
+    const extraPreviewHeight = previewExtraHeight(config.type)
     return (
       <DraggableGhost key={keyValue} dropElementConfig={config}>
-        <div
-          className="umlstudio-palette__entry prevent-select"
-          style={cellStyle}
-        >
+        <div className="umlstudio-palette__entry prevent-select" style={cellStyle}>
           <div
             data-draggable-preview
             style={{
@@ -155,18 +132,14 @@ export const Sidebar = () => {
           </div>
         </div>
       </DraggableGhost>
-    );
-  };
+    )
+  }
 
   const paletteStyle: React.CSSProperties = {
-    height: canvas.h
-      ? `${canvas.h}px`
-      : "calc(100% - 2 * var(--umlstudio-chrome-gap))",
+    height: canvas.h ? `${canvas.h}px` : "calc(100% - 2 * var(--umlstudio-chrome-gap))",
     minHeight: "480px",
-    ...(isRightRail
-      ? { marginLeft: 0, marginRight: "var(--umlstudio-chrome-edge)" }
-      : null),
-  };
+    ...(isRightRail ? { marginLeft: 0, marginRight: "var(--umlstudio-chrome-edge)" } : null),
+  }
 
   return (
     <aside
@@ -204,9 +177,7 @@ export const Sidebar = () => {
       )}
 
       {view === UmlStudioView.Highlight && (
-        <div className="umlstudio-palette__hint">
-          {labels.paletteHighlightHint}
-        </div>
+        <div className="umlstudio-palette__hint">{labels.paletteHighlightHint}</div>
       )}
 
       {view === UmlStudioView.Modelling && (
@@ -221,11 +192,11 @@ export const Sidebar = () => {
             renderCell(
               config,
               `sidebarElement_${index}`,
-              `${config.type}_${config.defaultData?.name}`,
-            ),
+              `${config.type}_${config.defaultData?.name}`
+            )
           )}
         </div>
       )}
     </aside>
-  );
-};
+  )
+}

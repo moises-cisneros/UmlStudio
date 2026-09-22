@@ -1,9 +1,4 @@
-import {
-  ReactFlowProvider,
-  ReactFlowInstance,
-  ConnectionMode,
-  ReactFlow,
-} from "@xyflow/react"
+import { ReactFlowProvider, ReactFlowInstance, ConnectionMode, ReactFlow } from "@xyflow/react"
 import { useCallback } from "react"
 import {
   CustomBackground,
@@ -42,10 +37,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 import { useKeyboardScope } from "./hooks/useKeyboardScope"
 import { useMultiSelectionMode } from "./hooks/useMultiSelectionMode"
 import { usePaneClicked } from "./hooks/usePaneClicked"
-import {
-  useRemoteDraggingNodes,
-  applyDraggingOverlay,
-} from "./hooks/useRemoteDraggingNodes"
+import { useRemoteDraggingNodes, applyDraggingOverlay } from "./hooks/useRemoteDraggingNodes"
 import { getConnectionLineType } from "./utils/edgeUtils"
 import { applyAssessmentFocus } from "./utils/assessmentFocus"
 import { usePopoverStore } from "@/store/context"
@@ -75,17 +67,16 @@ function App({
   awareness,
   onlyRenderVisibleElements = true,
 }: AppProps) {
-  const { nodes, onNodesChange, edges, onEdgesChange, diagramId, previewMode } =
-    useDiagramStore(
-      useShallow((state) => ({
-        nodes: state.nodes,
-        onNodesChange: state.onNodesChange,
-        edges: state.edges,
-        onEdgesChange: state.onEdgesChange,
-        diagramId: state.diagramId,
-        previewMode: state.previewMode,
-      }))
-    )
+  const { nodes, onNodesChange, edges, onEdgesChange, diagramId, previewMode } = useDiagramStore(
+    useShallow((state) => ({
+      nodes: state.nodes,
+      onNodesChange: state.onNodesChange,
+      edges: state.edges,
+      onEdgesChange: state.onEdgesChange,
+      diagramId: state.diagramId,
+      previewMode: state.previewMode,
+    }))
+  )
 
   const {
     diagramType,
@@ -115,11 +106,8 @@ function App({
     awareness,
     collaboration.enabled && !previewMode
   )
-  const openPopoverElementId = usePopoverStore(
-    (state) => state.popoverElementId
-  )
-  const assessedElementId =
-    mode === UmlStudioMode.Assessment ? openPopoverElementId : null
+  const openPopoverElementId = usePopoverStore((state) => state.popoverElementId)
+  const assessedElementId = mode === UmlStudioMode.Assessment ? openPopoverElementId : null
   const displayNodes = applyAssessmentFocus(
     applyDraggingOverlay(nodes, remoteDraggingNodes),
     assessedElementId
@@ -130,8 +118,7 @@ function App({
   const onNodeDragStop = useNodeDragStop()
   const onNodeDrag = useNodeDrag()
   const onDragOver = useDragOver()
-  const { onConnect, onConnectEnd, onConnectStart, onEdgesDelete } =
-    useConnect()
+  const { onConnect, onConnectEnd, onConnectStart, onEdgesDelete } = useConnect()
   const {
     onBeforeDelete,
     onNodeClick,
@@ -145,11 +132,7 @@ function App({
   const { onPaneClicked } = usePaneClicked()
   const multiSelectionMode = useMultiSelectionMode()
   const routingReady = useEdgeGeometryStore((state) => state.routingReady)
-  const {
-    rootRef,
-    active: keyboardScopeActive,
-    rootHandlers,
-  } = useKeyboardScope(keyboardShortcuts)
+  const { rootRef, active: keyboardScopeActive, rootHandlers } = useKeyboardScope(keyboardShortcuts)
   useKeyboardShortcuts(rootRef)
 
   const handleReactFlowInit = useCallback(
@@ -167,9 +150,7 @@ function App({
         {...rootHandlers}
         className={`umlstudio-editor ${readonly ? "umlstudio-editor--readonly" : ""} ${
           mode === UmlStudioMode.Assessment ? "umlstudio-editor--assessment" : ""
-        } ${
-          connectionGuidanceActive ? "umlstudio-editor--connection-guidance" : ""
-        }`}
+        } ${connectionGuidanceActive ? "umlstudio-editor--connection-guidance" : ""}`}
         style={
           {
             display: "flex",
@@ -193,9 +174,7 @@ function App({
             edgeTypes={diagramEdgeTypes}
             nodes={displayNodes}
             edges={routingReady ? displayEdges : []}
-            onlyRenderVisibleElements={
-              routingReady ? onlyRenderVisibleElements : false
-            }
+            onlyRenderVisibleElements={routingReady ? onlyRenderVisibleElements : false}
             onDragOver={onDragOver}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -242,20 +221,16 @@ function App({
             deleteKeyCode={null}
             disableKeyboardA11y={!keyboardScopeActive}
             selectionKeyCode={keyboardScopeActive ? "Shift" : null}
-            multiSelectionKeyCode={
-              keyboardScopeActive ? ["Shift", "Meta", "Control"] : null
-            }
+            multiSelectionKeyCode={keyboardScopeActive ? ["Shift", "Meta", "Control"] : null}
             panActivationKeyCode={keyboardScopeActive ? "Space" : null}
-            zoomActivationKeyCode={
-              keyboardScopeActive ? ["Meta", "Control"] : null
-            }
+            zoomActivationKeyCode={keyboardScopeActive ? ["Meta", "Control"] : null}
           >
             <CustomBackground />
             <ArcScalePublisher />
             <AlignmentGuides />
             <AssessmentSelectionDebug />
             <EdgeGeometrySolver />
-                        <OverlayLayer />
+            <OverlayLayer />
           </ReactFlow>
           <AssociationClassGuideBanner />
           <ScrollOverlay />

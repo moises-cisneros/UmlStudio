@@ -1,6 +1,6 @@
-import { QueryCache, QueryClient } from "@tanstack/react-query";
-import { ApiError } from "@/services/DiagramApiClient";
-import { log } from "@/logger";
+import { QueryCache, QueryClient } from "@tanstack/react-query"
+import { ApiError } from "@/services/DiagramApiClient"
+import { log } from "@/logger"
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -8,7 +8,7 @@ export const queryClient = new QueryClient({
       log.warn(
         "Query failed",
         JSON.stringify(query.queryKey),
-        error instanceof Error ? error.message : String(error),
+        error instanceof Error ? error.message : String(error)
       ),
   }),
   defaultOptions: {
@@ -16,14 +16,10 @@ export const queryClient = new QueryClient({
       staleTime: 30_000,
       gcTime: 5 * 60_000,
       retry: (failureCount, error) => {
-        if (
-          error instanceof ApiError &&
-          error.status >= 400 &&
-          error.status < 500
-        ) {
-          return false;
+        if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+          return false
         }
-        return failureCount < 2;
+        return failureCount < 2
       },
       refetchOnWindowFocus: false,
     },
@@ -31,4 +27,4 @@ export const queryClient = new QueryClient({
       retry: 0,
     },
   },
-});
+})

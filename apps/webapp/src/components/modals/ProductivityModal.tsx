@@ -1,56 +1,48 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { toast } from "react-toastify";
-import { Button } from "@umlstudio/ui/components/button";
-import { DialogFooter } from "@umlstudio/ui/components/dialog";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@umlstudio/ui/components/tabs";
-import { useEditorContext, useModalContext } from "@/contexts";
-import { useTranslation } from "@/i18n";
-import { HomeDialogContent } from "./HomeDialog";
+import React, { useState, useEffect, useCallback, useMemo } from "react"
+import { toast } from "react-toastify"
+import { Button } from "@umlstudio/ui/components/button"
+import { DialogFooter } from "@umlstudio/ui/components/dialog"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@umlstudio/ui/components/tabs"
+import { useEditorContext, useModalContext } from "@/contexts"
+import { useTranslation } from "@/i18n"
+import { HomeDialogContent } from "./HomeDialog"
 import {
   fetchProductivityReport,
   auditProductivityWithAi,
   exportProductivityAsJson,
   type DiagramProductivityReport,
   type ProductivityAiAuditResponse,
-} from "@/services/productivityService";
+} from "@/services/productivityService"
 
 interface ProductivityModalProps {
-  onClose?: () => void;
-  diagramId?: string;
+  onClose?: () => void
+  diagramId?: string
 }
 
 export const ProductivityModal: React.FC<ProductivityModalProps> = ({
   onClose,
   diagramId: propDiagramId,
 }) => {
-  const { t } = useTranslation();
-  const { editor } = useEditorContext();
-  const { closeModal } = useModalContext();
+  const { t } = useTranslation()
+  const { editor } = useEditorContext()
+  const { closeModal } = useModalContext()
 
-  const activeDiagramId =
-    propDiagramId || editor?.model?.id || "default-diagram";
+  const activeDiagramId = propDiagramId || editor?.model?.id || "default-diagram"
 
-  const [report, setReport] = useState<DiagramProductivityReport | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<string>("bottlenecks");
-  const [aiAudit, setAiAudit] = useState<ProductivityAiAuditResponse | null>(
-    null,
-  );
-  const [loadingAi, setLoadingAi] = useState<boolean>(false);
+  const [report, setReport] = useState<DiagramProductivityReport | null>(null)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [activeTab, setActiveTab] = useState<string>("bottlenecks")
+  const [aiAudit, setAiAudit] = useState<ProductivityAiAuditResponse | null>(null)
+  const [loadingAi, setLoadingAi] = useState<boolean>(false)
 
   const loadMetrics = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const data = await fetchProductivityReport(activeDiagramId);
-      setReport(data);
+      const data = await fetchProductivityReport(activeDiagramId)
+      setReport(data)
     } catch {
       // Fallback local report generation if server endpoint unavailable
-      const now = Date.now();
+      const now = Date.now()
       setReport({
         diagramId: activeDiagramId,
         sessionStartedAt: now - 1800_000,
@@ -77,24 +69,24 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
         },
         fluencyStatus: "green",
         fluencyScore: 95,
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [activeDiagramId]);
+  }, [activeDiagramId])
 
   useEffect(() => {
-    let isMounted = true;
+    let isMounted = true
     fetchProductivityReport(activeDiagramId)
       .then((data) => {
         if (isMounted) {
-          setReport(data);
-          setLoading(false);
+          setReport(data)
+          setLoading(false)
         }
       })
       .catch(() => {
         if (isMounted) {
-          const now = Date.now();
+          const now = Date.now()
           setReport({
             diagramId: activeDiagramId,
             sessionStartedAt: now - 1800_000,
@@ -121,71 +113,71 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
             },
             fluencyStatus: "green",
             fluencyScore: 95,
-          });
-          setLoading(false);
+          })
+          setLoading(false)
         }
-      });
+      })
     return () => {
-      isMounted = false;
-    };
-  }, [activeDiagramId]);
+      isMounted = false
+    }
+  }, [activeDiagramId])
 
   const handleAiAudit = async () => {
-    if (!report) return;
-    setLoadingAi(true);
+    if (!report) return
+    setLoadingAi(true)
     try {
-      const result = await auditProductivityWithAi(report);
-      setAiAudit(result);
-      toast.success("Diagnóstico heurístico generado con éxito");
+      const result = await auditProductivityWithAi(report)
+      setAiAudit(result)
+      toast.success("Diagnóstico heurístico generado con éxito")
     } catch {
-      toast.error("No se pudo contactar al servicio de IA");
+      toast.error("No se pudo contactar al servicio de IA")
     } finally {
-      setLoadingAi(false);
+      setLoadingAi(false)
     }
-  };
+  }
 
   const formatSeconds = (totalSec: number): string => {
-    const mins = Math.floor(totalSec / 60);
-    const secs = totalSec % 60;
+    const mins = Math.floor(totalSec / 60)
+    const secs = totalSec % 60
     if (mins >= 60) {
-      const hours = Math.floor(mins / 60);
-      const remMins = mins % 60;
-      return `${hours}h ${remMins}m`;
+      const hours = Math.floor(mins / 60)
+      const remMins = mins % 60
+      return `${hours}h ${remMins}m`
     }
-    return `${mins}m ${secs}s`;
-  };
+    return `${mins}m ${secs}s`
+  }
 
   const fluencyColor = useMemo(() => {
-    if (!report) return "var(--success, #10b981)";
+    if (!report) return "var(--success, #10b981)"
     switch (report.fluencyStatus) {
       case "green":
-        return "#10b981";
+        return "#10b981"
       case "yellow":
-        return "#f59e0b";
+        return "#f59e0b"
       case "red":
-        return "#ef4444";
+        return "#ef4444"
       default:
-        return "#10b981";
+        return "#10b981"
     }
-  }, [report]);
+  }, [report])
 
   const fluencyLabel = useMemo(() => {
-    if (!report) return "Óptimo";
+    if (!report) return "Óptimo"
     switch (report.fluencyStatus) {
       case "green":
-        return "Flujo Continuo (Verde)";
+        return "Flujo Continuo (Verde)"
       case "yellow":
-        return "Contención Moderada (Amarillo)";
+        return "Contención Moderada (Amarillo)"
       case "red":
-        return "Cuello de Botella Crítico (Rojo)";
+        return "Cuello de Botella Crítico (Rojo)"
       default:
-        return "Normal";
+        return "Normal"
     }
-  }, [report]);
+  }, [report])
 
   const handlePrint = () => {
-    window.print();
-  };
+    window.print()
+  }
 
   return (
     <HomeDialogContent>
@@ -202,8 +194,7 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
                 Estado de Fluidez: {fluencyLabel}
               </div>
               <div className="text-xs text-muted-foreground">
-                Diagrama: {activeDiagramId} • Puntuación:{" "}
-                {report?.fluencyScore ?? 100}/100
+                Diagrama: {activeDiagramId} • Puntuación: {report?.fluencyScore ?? 100}/100
               </div>
             </div>
           </div>
@@ -221,22 +212,13 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
               variant="outline"
               size="sm"
               onClick={() => {
-                if (report)
-                  exportProductivityAsJson(
-                    report,
-                    `productivity-${activeDiagramId}.json`,
-                  );
+                if (report) exportProductivityAsJson(report, `productivity-${activeDiagramId}.json`)
               }}
               disabled={!report}
             >
               Exportar JSON
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrint}
-              disabled={!report}
-            >
+            <Button variant="outline" size="sm" onClick={handlePrint} disabled={!report}>
               Imprimir
             </Button>
           </div>
@@ -245,33 +227,25 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
         {/* KPI Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
-            <div className="text-xs font-medium text-muted-foreground">
-              Tiempo Activo
-            </div>
+            <div className="text-xs font-medium text-muted-foreground">Tiempo Activo</div>
             <div className="text-lg font-bold text-foreground">
               {report ? formatSeconds(report.totalActiveSeconds) : "--"}
             </div>
           </div>
           <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
-            <div className="text-xs font-medium text-muted-foreground">
-              Tiempo Inactivo
-            </div>
+            <div className="text-xs font-medium text-muted-foreground">Tiempo Inactivo</div>
             <div className="text-lg font-bold text-foreground">
               {report ? formatSeconds(report.totalIdleSeconds) : "--"}
             </div>
           </div>
           <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
-            <div className="text-xs font-medium text-muted-foreground">
-              Velocidad de Clases
-            </div>
+            <div className="text-xs font-medium text-muted-foreground">Velocidad de Clases</div>
             <div className="text-lg font-bold text-foreground">
               {report ? `${report.velocity.classesPerHour}/h` : "--"}
             </div>
           </div>
           <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
-            <div className="text-xs font-medium text-muted-foreground">
-              Cadencia Refactor
-            </div>
+            <div className="text-xs font-medium text-muted-foreground">Cadencia Refactor</div>
             <div className="text-lg font-bold text-foreground">
               {report ? `${report.velocity.refactorsPerHour}/h` : "--"}
             </div>
@@ -290,8 +264,8 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
           <TabsContent value="bottlenecks" className="pt-3">
             <div className="space-y-3">
               <div className="text-xs text-muted-foreground">
-                Detección de nodos con bloqueos prolongados o colisiones
-                concurrentes entre colaboradores.
+                Detección de nodos con bloqueos prolongados o colisiones concurrentes entre
+                colaboradores.
               </div>
 
               {report && report.bottlenecks.length > 0 ? (
@@ -327,8 +301,7 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
                 </div>
               ) : (
                 <div className="p-6 text-center rounded-lg border border-dashed border-border bg-muted/20 text-muted-foreground text-sm">
-                  ✓ No se detectaron cuellos de botella ni disputas de locks en
-                  la sesión.
+                  ✓ No se detectaron cuellos de botella ni disputas de locks en la sesión.
                 </div>
               )}
             </div>
@@ -358,12 +331,8 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
                           {c.userName.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-semibold text-sm text-foreground">
-                            {c.userName}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            ID: {c.userId}
-                          </div>
+                          <div className="font-semibold text-sm text-foreground">{c.userName}</div>
+                          <div className="text-xs text-muted-foreground">ID: {c.userId}</div>
                         </div>
                       </div>
                       <div className="text-right text-xs">
@@ -390,8 +359,7 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">
-                  Diagnóstico heurístico por IA y recomendaciones de patrones
-                  GoF.
+                  Diagnóstico heurístico por IA y recomendaciones de patrones GoF.
                 </span>
                 <Button
                   size="sm"
@@ -455,8 +423,8 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
                 </div>
               ) : (
                 <div className="p-6 text-center rounded-lg border border-dashed border-border bg-muted/20 text-muted-foreground text-sm">
-                  Presioná &quot;Analizar con IA&quot; para obtener recomendaciones
-                  heurísticas sobre cuellos de botella y desacoplamiento.
+                  Presioná &quot;Analizar con IA&quot; para obtener recomendaciones heurísticas
+                  sobre cuellos de botella y desacoplamiento.
                 </div>
               )}
             </div>
@@ -468,13 +436,13 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
         <Button
           variant="outline"
           onClick={() => {
-            if (onClose) onClose();
-            else closeModal();
+            if (onClose) onClose()
+            else closeModal()
           }}
         >
           {t.common?.close || "Cerrar"}
         </Button>
       </DialogFooter>
     </HomeDialogContent>
-  );
-};
+  )
+}

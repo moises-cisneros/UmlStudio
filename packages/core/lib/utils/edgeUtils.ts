@@ -55,24 +55,16 @@ export const adjustSourceCoordinates = (
 export const getTargetConnectionPointPadding = (
   markerPadding: number,
   hasResolvedAnchor: boolean
-): number =>
-  hasResolvedAnchor ? markerPadding - EDGES.MARKER_PADDING : markerPadding
+): number => (hasResolvedAnchor ? markerPadding - EDGES.MARKER_PADDING : markerPadding)
 
-export const getEndpointSideFromSegment = (
-  from: IPoint,
-  toward: IPoint
-): Position => {
+export const getEndpointSideFromSegment = (from: IPoint, toward: IPoint): Position => {
   const dx = toward.x - from.x
   const dy = toward.y - from.y
-  if (Math.abs(dx) >= Math.abs(dy))
-    return dx >= 0 ? Position.Right : Position.Left
+  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? Position.Right : Position.Left
   return dy >= 0 ? Position.Bottom : Position.Top
 }
 
-export const roundAnchorPointOutward = (
-  point: XYPosition,
-  position: Position
-): XYPosition => ({
+export const roundAnchorPointOutward = (point: XYPosition, position: Position): XYPosition => ({
   x:
     position === Position.Left
       ? Math.floor(point.x)
@@ -87,11 +79,7 @@ export const roundAnchorPointOutward = (
         : Math.round(point.y),
 })
 
-export const calculateDynamicEdgeLabels = (
-  x: number,
-  y: number,
-  direction: string
-) => {
+export const calculateDynamicEdgeLabels = (x: number, y: number, direction: string) => {
   const offset = 10
   const textOffset = 15
 
@@ -251,9 +239,7 @@ const HANDLE_SNAP_STEP_PX = 5
 const HANDLE_RATIO_START = 0.2
 const HANDLE_RATIO_END = 0.8
 
-export function isFreeformEdgeAnchor(
-  anchor: unknown
-): anchor is FreeformEdgeAnchor {
+export function isFreeformEdgeAnchor(anchor: unknown): anchor is FreeformEdgeAnchor {
   if (!anchor || typeof anchor !== "object") return false
 
   const candidate = anchor as Partial<FreeformEdgeAnchor>
@@ -273,10 +259,7 @@ export function getSideHandleIdForPosition(
   return sideToHandleId[position]
 }
 
-export function getFreeformAnchorFromPoint(
-  point: XYPosition,
-  rect: Rect
-): FreeformEdgeAnchor {
+export function getFreeformAnchorFromPoint(point: XYPosition, rect: Rect): FreeformEdgeAnchor {
   const right = rect.x + rect.width
   const bottom = rect.y + rect.height
 
@@ -414,17 +397,7 @@ const snapToGridStep = (value: number, axisLength: number): number => {
 }
 
 export type AxisHandlePlan = {
-  offsets: [
-    number,
-    number,
-    number,
-    number,
-    number,
-    number,
-    number,
-    number,
-    number,
-  ]
+  offsets: [number, number, number, number, number, number, number, number, number]
   visibleArcCount: 1 | 3 | 5
 }
 
@@ -463,9 +436,7 @@ const findStage1Offsets = (axisLength: number): number[] | null => {
 
   const ideal = [0, 1, 2, 3, 4].map(
     (index) =>
-      axisLength *
-      (HANDLE_RATIO_START +
-        ((HANDLE_RATIO_END - HANDLE_RATIO_START) * index) / 4)
+      axisLength * (HANDLE_RATIO_START + ((HANDLE_RATIO_END - HANDLE_RATIO_START) * index) / 4)
   )
 
   const maxGridUnit = Math.floor(axisLength / HANDLE_SNAP_STEP_PX)
@@ -473,11 +444,7 @@ const findStage1Offsets = (axisLength: number): number[] | null => {
 
   let bestOffsets: number[] | null = null
   let bestScore = Number.POSITIVE_INFINITY
-  for (
-    let stepUnits = 1;
-    stepUnits <= Math.floor(maxGridUnit / 4);
-    stepUnits++
-  ) {
+  for (let stepUnits = 1; stepUnits <= Math.floor(maxGridUnit / 4); stepUnits++) {
     const maxStartUnit = maxGridUnit - 4 * stepUnits
     for (let startUnit = 0; startUnit <= maxStartUnit; startUnit++) {
       const offsets = [0, 1, 2, 3, 4].map(
@@ -504,8 +471,7 @@ const findStage2Offsets = (axisLength: number): number[] | null => {
   if (axisLength <= 0) return null
 
   const positions = [0, 1, 2, 3, 4].map((index) => {
-    const ratio =
-      HANDLE_RATIO_START + ((HANDLE_RATIO_END - HANDLE_RATIO_START) * index) / 4
+    const ratio = HANDLE_RATIO_START + ((HANDLE_RATIO_END - HANDLE_RATIO_START) * index) / 4
     return snapToGridStep(axisLength * ratio, axisLength)
   })
 
@@ -572,10 +538,7 @@ export function reduceVisibleArcCountForZoom(
     if (minAdjacent >= requiredFlowSpacing) return 5
   }
   if (baseVisibleArcCount >= 3) {
-    const minAdjacent = Math.min(
-      offsets[4] - offsets[0],
-      offsets[8] - offsets[4]
-    )
+    const minAdjacent = Math.min(offsets[4] - offsets[0], offsets[8] - offsets[4])
     if (minAdjacent >= requiredFlowSpacing) return 3
   }
   return 1
@@ -606,38 +569,11 @@ export function getDistributedHandleOffsetPercents(
   ]
 }
 
-function getCanonicalHandlePoints(
-  rect: Rect,
-  useFourHandles: boolean
-): RectHandlePoint[] {
-  const xs = getDistributedHandleOffsets(rect.width).map(
-    (offset) => rect.x + offset
-  )
-  const ys = getDistributedHandleOffsets(rect.height).map(
-    (offset) => rect.y + offset
-  )
-  const [
-    xStart,
-    xBetween1,
-    xMidStart,
-    xBetween3,
-    xMiddle,
-    xBetween5,
-    xMidEnd,
-    xBetween7,
-    xEnd,
-  ] = xs
-  const [
-    yStart,
-    yBetween1,
-    yMidStart,
-    yBetween3,
-    yMiddle,
-    yBetween5,
-    yMidEnd,
-    yBetween7,
-    yEnd,
-  ] = ys
+function getCanonicalHandlePoints(rect: Rect, useFourHandles: boolean): RectHandlePoint[] {
+  const xs = getDistributedHandleOffsets(rect.width).map((offset) => rect.x + offset)
+  const ys = getDistributedHandleOffsets(rect.height).map((offset) => rect.y + offset)
+  const [xStart, xBetween1, xMidStart, xBetween3, xMiddle, xBetween5, xMidEnd, xBetween7, xEnd] = xs
+  const [yStart, yBetween1, yMidStart, yBetween3, yMiddle, yBetween5, yMidEnd, yBetween7, yEnd] = ys
 
   const points: RectHandlePoint[] = [
     { label: "top", position: { x: xMiddle, y: yStart }, side: Position.Top },
@@ -935,20 +871,14 @@ export function findLineJumpIntersections(
   const hits: LineJumpHit[] = []
 
   for (const base of baseSegments) {
-    if (
-      preferredOrientation !== "any" &&
-      base.orientation !== preferredOrientation
-    ) {
+    if (preferredOrientation !== "any" && base.orientation !== preferredOrientation) {
       continue
     }
 
     for (const other of otherSegments) {
       if (base.orientation === other.orientation) continue
 
-      if (
-        base.orientation === "horizontal" &&
-        other.orientation === "vertical"
-      ) {
+      if (base.orientation === "horizontal" && other.orientation === "vertical") {
         const x = other.fixed
         const y = base.fixed
         if (
@@ -967,10 +897,7 @@ export function findLineJumpIntersections(
         })
       }
 
-      if (
-        base.orientation === "vertical" &&
-        other.orientation === "horizontal"
-      ) {
+      if (base.orientation === "vertical" && other.orientation === "horizontal") {
         const x = base.fixed
         const y = other.fixed
         if (
@@ -1019,9 +946,7 @@ export function buildPathWithLineJumps(
     const start = points[i]
     const end = points[i + 1]
     const isHorizontal = Math.abs(start.y - end.y) < 1
-    const segmentLength = isHorizontal
-      ? Math.abs(end.x - start.x)
-      : Math.abs(end.y - start.y)
+    const segmentLength = isHorizontal ? Math.abs(end.x - start.x) : Math.abs(end.y - start.y)
 
     const segmentJumps = jumpsBySegment.get(i)
     if (!segmentJumps || segmentJumps.length === 0) {
@@ -1034,8 +959,7 @@ export function buildPathWithLineJumps(
       continue
     }
 
-    const coordKey = (jump: LineJumpHit) =>
-      isHorizontal ? jump.point.x : jump.point.y
+    const coordKey = (jump: LineJumpHit) => (isHorizontal ? jump.point.x : jump.point.y)
     const direction = isHorizontal
       ? Math.sign(end.x - start.x) || 1
       : Math.sign(end.y - start.y) || 1
@@ -1047,12 +971,8 @@ export function buildPathWithLineJumps(
 
     for (const jump of sortedJumps) {
       const coord = coordKey(jump)
-      const min = isHorizontal
-        ? Math.min(start.x, end.x)
-        : Math.min(start.y, end.y)
-      const max = isHorizontal
-        ? Math.max(start.x, end.x)
-        : Math.max(start.y, end.y)
+      const min = isHorizontal ? Math.min(start.x, end.x) : Math.min(start.y, end.y)
+      const max = isHorizontal ? Math.max(start.x, end.x) : Math.max(start.y, end.y)
 
       if (coord < min + margin || coord > max - margin) {
         continue
@@ -1267,24 +1187,15 @@ const getSegmentAxisForPosition = (position: Position): SegmentAxis => {
   }
 }
 
-const getAlternatingAxis = (
-  firstAxis: SegmentAxis,
-  segmentIndex: number
-): SegmentAxis =>
-  segmentIndex % 2 === 0
-    ? firstAxis
-    : firstAxis === "horizontal"
-      ? "vertical"
-      : "horizontal"
+const getAlternatingAxis = (firstAxis: SegmentAxis, segmentIndex: number): SegmentAxis =>
+  segmentIndex % 2 === 0 ? firstAxis : firstAxis === "horizontal" ? "vertical" : "horizontal"
 
 const canConnectWithSingleSegment = (
   sourcePoint: IPoint,
   targetPoint: IPoint,
   axis: SegmentAxis
 ): boolean =>
-  axis === "horizontal"
-    ? sourcePoint.y === targetPoint.y
-    : sourcePoint.x === targetPoint.x
+  axis === "horizontal" ? sourcePoint.y === targetPoint.y : sourcePoint.x === targetPoint.x
 
 function getMinimumOrthogonalSegmentCount(
   sourcePoint: IPoint,
@@ -1293,9 +1204,7 @@ function getMinimumOrthogonalSegmentCount(
   targetAxis: SegmentAxis
 ): number {
   if (sourceAxis !== targetAxis) return 2
-  return canConnectWithSingleSegment(sourcePoint, targetPoint, sourceAxis)
-    ? 1
-    : 3
+  return canConnectWithSingleSegment(sourcePoint, targetPoint, sourceAxis) ? 1 : 3
 }
 
 const getLaneValue = (
@@ -1380,11 +1289,7 @@ const isTargetApproachCompatible = (
   }
 }
 
-const getStubExitCoord = (
-  position: Position,
-  point: IPoint,
-  stubLength: number
-): number => {
+const getStubExitCoord = (position: Position, point: IPoint, stubLength: number): number => {
   switch (position) {
     case Position.Right:
       return point.x + stubLength
@@ -1398,11 +1303,7 @@ const getStubExitCoord = (
   }
 }
 
-const getStubExitPoint = (
-  position: Position,
-  point: IPoint,
-  stubLength: number
-): IPoint => {
+const getStubExitPoint = (position: Position, point: IPoint, stubLength: number): IPoint => {
   switch (position) {
     case Position.Right:
       return { x: point.x + stubLength, y: point.y }
@@ -1443,12 +1344,7 @@ const isStraightFacingShot = (
   sourcePosition: Position,
   targetPosition: Position
 ): boolean => {
-  const gap = getFacingGap(
-    sourcePoint,
-    targetPoint,
-    sourcePosition,
-    targetPosition
-  )
+  const gap = getFacingGap(sourcePoint, targetPoint, sourcePosition, targetPosition)
   if (gap === null || gap <= 0) return false
 
   return getSegmentAxisForPosition(sourcePosition) === "horizontal"
@@ -1462,32 +1358,16 @@ export const getEffectiveStubLength = (
   sourcePosition: Position,
   targetPosition: Position
 ): number => {
-  const gap = getFacingGap(
-    sourcePoint,
-    targetPoint,
-    sourcePosition,
-    targetPosition
-  )
+  const gap = getFacingGap(sourcePoint, targetPoint, sourcePosition, targetPosition)
   if (gap === null || gap <= 0) return EDGES.STUB_LENGTH
 
-  if (
-    isStraightFacingShot(
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
-  ) {
+  if (isStraightFacingShot(sourcePoint, targetPoint, sourcePosition, targetPosition)) {
     return Math.min(EDGES.STUB_LENGTH, gap)
   }
 
-  const halfGapOnGrid =
-    Math.floor(gap / 2 / CANVAS.SNAP_TO_GRID_PX) * CANVAS.SNAP_TO_GRID_PX
+  const halfGapOnGrid = Math.floor(gap / 2 / CANVAS.SNAP_TO_GRID_PX) * CANVAS.SNAP_TO_GRID_PX
 
-  return Math.max(
-    EDGES.MIN_STUB_LENGTH,
-    Math.min(EDGES.STUB_LENGTH, halfGapOnGrid)
-  )
+  return Math.max(EDGES.MIN_STUB_LENGTH, Math.min(EDGES.STUB_LENGTH, halfGapOnGrid))
 }
 
 const toCanvasGrid = (value: number): number =>
@@ -1507,22 +1387,14 @@ const laneClearsEndpoint = (
 
   switch (position) {
     case Position.Right:
-      return axis === "x"
-        ? alongStub(point.x + stubLength, true)
-        : acrossStub(point.y)
+      return axis === "x" ? alongStub(point.x + stubLength, true) : acrossStub(point.y)
     case Position.Left:
-      return axis === "x"
-        ? alongStub(point.x - stubLength, false)
-        : acrossStub(point.y)
+      return axis === "x" ? alongStub(point.x - stubLength, false) : acrossStub(point.y)
     case Position.Bottom:
-      return axis === "y"
-        ? alongStub(point.y + stubLength, true)
-        : acrossStub(point.x)
+      return axis === "y" ? alongStub(point.y + stubLength, true) : acrossStub(point.x)
     case Position.Top:
     default:
-      return axis === "y"
-        ? alongStub(point.y - stubLength, false)
-        : acrossStub(point.x)
+      return axis === "y" ? alongStub(point.y - stubLength, false) : acrossStub(point.x)
   }
 }
 
@@ -1542,8 +1414,7 @@ const snapRouteLanesToGrid = (
   for (let i = 1; i <= lastLane; i++) {
     const start = snapped[i]
     const end = snapped[i + 1]
-    const axis: "x" | "y" | null =
-      start.x === end.x ? "x" : start.y === end.y ? "y" : null
+    const axis: "x" | "y" | null = start.x === end.x ? "x" : start.y === end.y ? "y" : null
     if (!axis) continue
 
     const lane = start[axis]
@@ -1553,22 +1424,9 @@ const snapRouteLanesToGrid = (
       (a, b) => Math.abs(a - lane) - Math.abs(b - lane)
     )
     const fits = (candidate: number): boolean =>
-      (i !== 1 ||
-        laneClearsEndpoint(
-          candidate,
-          axis,
-          sourcePoint,
-          sourcePosition,
-          stubLength
-        )) &&
+      (i !== 1 || laneClearsEndpoint(candidate, axis, sourcePoint, sourcePosition, stubLength)) &&
       (i !== lastLane ||
-        laneClearsEndpoint(
-          candidate,
-          axis,
-          targetPoint,
-          targetPosition,
-          stubLength
-        )) &&
+        laneClearsEndpoint(candidate, axis, targetPoint, targetPosition, stubLength)) &&
       laneKeepsCorner(candidate, axis, sourcePoint, sourcePosition) &&
       laneKeepsCorner(candidate, axis, targetPoint, targetPosition)
 
@@ -1586,8 +1444,7 @@ const laneKeepsCorner = (
   point: IPoint,
   position: Position
 ): boolean => {
-  const stubAxis =
-    getSegmentAxisForPosition(position) === "horizontal" ? "x" : "y"
+  const stubAxis = getSegmentAxisForPosition(position) === "horizontal" ? "x" : "y"
   if (axis === stubAxis) return true
 
   return Math.abs(lane - point[axis]) >= CANVAS.SNAP_TO_GRID_PX
@@ -1606,18 +1463,9 @@ const isRoutableOrthogonalPath = (
   isSourceLaneCompatible(
     sourcePosition,
     sourcePoint,
-    getLaneValue(
-      points,
-      1,
-      getSegmentAxisForPosition(sourcePosition),
-      targetPoint
-    )
+    getLaneValue(points, 1, getSegmentAxisForPosition(sourcePosition), targetPoint)
   ) &&
-  isTargetApproachCompatible(
-    targetPosition,
-    points[points.length - 2],
-    targetPoint
-  )
+  isTargetApproachCompatible(targetPosition, points[points.length - 2], targetPoint)
 
 const pushLanesClearOfStubs = (
   points: IPoint[],
@@ -1631,12 +1479,7 @@ const pushLanesClearOfStubs = (
 
   const result = points.map((point) => ({ ...point }))
   const lastLane = result.length - 3
-  const minStub = getMinimumStubLength(
-    sourcePoint,
-    targetPoint,
-    sourcePosition,
-    targetPosition
-  )
+  const minStub = getMinimumStubLength(sourcePoint, targetPoint, sourcePosition, targetPosition)
   const clearance = EDGES.STUB_LENGTH
 
   const stubs = [
@@ -1659,15 +1502,13 @@ const pushLanesClearOfStubs = (
   for (let i = 1; i <= lastLane; i++) {
     const start = result[i]
     const end = result[i + 1]
-    const lane: "x" | "y" | null =
-      start.x === end.x ? "x" : start.y === end.y ? "y" : null
+    const lane: "x" | "y" | null = start.x === end.x ? "x" : start.y === end.y ? "y" : null
     if (!lane) continue
     const along = lane === "x" ? "y" : "x"
 
     const lines = stubs
       .filter((stub) => {
-        const stubLane =
-          getSegmentAxisForPosition(stub.position) === "horizontal" ? "y" : "x"
+        const stubLane = getSegmentAxisForPosition(stub.position) === "horizontal" ? "y" : "x"
         if (stubLane !== lane) return false
 
         if (stub.adjacentLane === i) return false
@@ -1687,9 +1528,7 @@ const pushLanesClearOfStubs = (
     const flipped =
       previous !== undefined &&
       lines.some(
-        (line) =>
-          previous !== line &&
-          Math.sign(start[lane] - line) !== Math.sign(previous - line)
+        (line) => previous !== line && Math.sign(start[lane] - line) !== Math.sign(previous - line)
       )
     if (!flipped && (isClear(start[lane]) || previous !== undefined)) continue
 
@@ -1700,26 +1539,11 @@ const pushLanesClearOfStubs = (
       .filter(
         (candidate) =>
           isClear(candidate) &&
-          (i !== 1 ||
-            laneClearsEndpoint(
-              candidate,
-              lane,
-              sourcePoint,
-              sourcePosition,
-              minStub
-            )) &&
+          (i !== 1 || laneClearsEndpoint(candidate, lane, sourcePoint, sourcePosition, minStub)) &&
           (i !== lastLane ||
-            laneClearsEndpoint(
-              candidate,
-              lane,
-              targetPoint,
-              targetPosition,
-              minStub
-            ))
+            laneClearsEndpoint(candidate, lane, targetPoint, targetPosition, minStub))
       )
-      .sort(
-        (a, b) => Math.abs(a - reference) - Math.abs(b - reference) || a - b
-      )
+      .sort((a, b) => Math.abs(a - reference) - Math.abs(b - reference) || a - b)
 
     if (candidates.length === 0) continue
 
@@ -1738,21 +1562,14 @@ type RouteScore = [
   order: number,
 ]
 
-const segmentHitsRect = (
-  from: IPoint,
-  to: IPoint,
-  rect: ObstacleRect
-): boolean => {
+const segmentHitsRect = (from: IPoint, to: IPoint, rect: ObstacleRect): boolean => {
   const left = Math.min(from.x, to.x)
   const right = Math.max(from.x, to.x)
   const top = Math.min(from.y, to.y)
   const bottom = Math.max(from.y, to.y)
 
   return (
-    left < rect.x + rect.width &&
-    right > rect.x &&
-    top < rect.y + rect.height &&
-    bottom > rect.y
+    left < rect.x + rect.width && right > rect.x && top < rect.y + rect.height && bottom > rect.y
   )
 }
 
@@ -1789,9 +1606,7 @@ const getRouteScore = (
   const { hard, soft } = countCrossings(points, obstacles)
   let length = 0
   for (let i = 0; i < points.length - 1; i++) {
-    length +=
-      Math.abs(points[i + 1].x - points[i].x) +
-      Math.abs(points[i + 1].y - points[i].y)
+    length += Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y)
   }
 
   return [hard, soft, Math.max(points.length - 2, 0), length, order]
@@ -1871,12 +1686,7 @@ export const routeOrthogonalPath = (
     sourcePosition,
     targetPosition
   )
-  const minStub = getMinimumStubLength(
-    sourcePoint,
-    targetPoint,
-    sourcePosition,
-    targetPosition
-  )
+  const minStub = getMinimumStubLength(sourcePoint, targetPoint, sourcePosition, targetPosition)
 
   const routeWithStub = (offset: number): IPoint[] => {
     const [path] = getSmoothStepPath({
@@ -1909,29 +1719,19 @@ export const routeOrthogonalPath = (
   }
 
   const grid = CANVAS.SNAP_TO_GRID_PX
-  const offsets = [
-    stubLength,
-    stubLength + grid,
-    stubLength - grid,
-    stubLength + 2 * grid,
-  ].filter((offset) => offset >= minStub)
+  const offsets = [stubLength, stubLength + grid, stubLength - grid, stubLength + 2 * grid].filter(
+    (offset) => offset >= minStub
+  )
 
   const candidates: IPoint[][] = offsets.map(routeWithStub)
 
   const cheapRoute = candidates.find((points) =>
-    isRoutableOrthogonalPath(
-      points,
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
+    isRoutableOrthogonalPath(points, sourcePoint, targetPoint, sourcePosition, targetPosition)
   )
 
   const hardObstacles = obstacles.filter((o) => !o.soft)
   const cheapClearOfHard =
-    cheapRoute !== undefined &&
-    countCrossings(cheapRoute, hardObstacles).hard === 0
+    cheapRoute !== undefined && countCrossings(cheapRoute, hardObstacles).hard === 0
   const cheapKeepsClearance =
     cheapRoute !== undefined &&
     !routeRunsTooCloseToBody(
@@ -1943,26 +1743,15 @@ export const routeOrthogonalPath = (
       stubLength
     )
   const cheapClearOfEdges =
-    cheapRoute !== undefined &&
-    !routeConflictsWithNeighborEdges(cheapRoute, neighborEdges)
-  if (
-    cheapRoute &&
-    cheapClearOfHard &&
-    cheapKeepsClearance &&
-    cheapClearOfEdges
-  ) {
+    cheapRoute !== undefined && !routeConflictsWithNeighborEdges(cheapRoute, neighborEdges)
+  if (cheapRoute && cheapClearOfHard && cheapKeepsClearance && cheapClearOfEdges) {
     return cheapRoute
   }
 
   if (hardObstacles.length === 0 && neighborEdges.length === 0) {
     return (
       cheapRoute ??
-      getStubCollisionFallbackPoints(
-        sourcePoint,
-        targetPoint,
-        sourcePosition,
-        targetPosition
-      )
+      getStubCollisionFallbackPoints(sourcePoint, targetPoint, sourcePosition, targetPosition)
     )
   }
 
@@ -1978,50 +1767,26 @@ export const routeOrthogonalPath = (
   )
   if (
     searched &&
-    isRoutableOrthogonalPath(
-      searched,
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
+    isRoutableOrthogonalPath(searched, sourcePoint, targetPoint, sourcePosition, targetPosition)
   ) {
     return searched
   }
 
   for (const lane of getObstacleLanes(obstacles, sourcePosition)) {
     candidates.push(
-      buildBridgeRoute(
-        sourcePoint,
-        targetPoint,
-        sourcePosition,
-        targetPosition,
-        stubLength,
-        lane
-      )
+      buildBridgeRoute(sourcePoint, targetPoint, sourcePosition, targetPosition, stubLength, lane)
     )
   }
 
   candidates.push(
-    getStubCollisionFallbackPoints(
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
+    getStubCollisionFallbackPoints(sourcePoint, targetPoint, sourcePosition, targetPosition)
   )
 
   let best: IPoint[] | null = null
   let bestScore: RouteScore | null = null
   candidates.forEach((points, order) => {
     if (
-      !isRoutableOrthogonalPath(
-        points,
-        sourcePoint,
-        targetPoint,
-        sourcePosition,
-        targetPosition
-      )
+      !isRoutableOrthogonalPath(points, sourcePoint, targetPoint, sourcePosition, targetPosition)
     ) {
       return
     }
@@ -2033,13 +1798,7 @@ export const routeOrthogonalPath = (
   })
 
   return (
-    best ??
-    getStubCollisionFallbackPoints(
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
+    best ?? getStubCollisionFallbackPoints(sourcePoint, targetPoint, sourcePosition, targetPosition)
   )
 }
 
@@ -2055,9 +1814,7 @@ const getDetourLane = (sourceCoord: number, targetCoord: number): number => {
     if (lowest <= highest) {
       const snapped = toCanvasGrid(middle)
       if (snapped >= lowest && snapped <= highest) return snapped
-      return Math.abs(lowest - middle) <= Math.abs(highest - middle)
-        ? lowest
-        : highest
+      return Math.abs(lowest - middle) <= Math.abs(highest - middle) ? lowest : highest
     }
   }
 
@@ -2073,16 +1830,8 @@ const getStubCollisionFallbackPoints = (
   const sharedLaneSnapTolerance = Math.abs(
     EDGES.SOURCE_CONNECTION_POINT_PADDING - EDGES.MARKER_PADDING
   )
-  const sourceStub = getStubExitPoint(
-    sourcePosition,
-    sourcePoint,
-    EDGES.STUB_LENGTH
-  )
-  const targetStub = getStubExitPoint(
-    targetPosition,
-    targetPoint,
-    EDGES.STUB_LENGTH
-  )
+  const sourceStub = getStubExitPoint(sourcePosition, sourcePoint, EDGES.STUB_LENGTH)
+  const targetStub = getStubExitPoint(targetPosition, targetPoint, EDGES.STUB_LENGTH)
   const sourceAxis = getSegmentAxisForPosition(sourcePosition)
 
   if (sourceAxis === "horizontal") {
@@ -2171,13 +1920,9 @@ const hasCollapsingSegments = (result: IPoint[]): boolean => {
     const curr = result[i]
     const next = result[i + 1]
     const horizBack =
-      prev.y === curr.y &&
-      curr.y === next.y &&
-      (curr.x - prev.x) * (next.x - curr.x) < 0
+      prev.y === curr.y && curr.y === next.y && (curr.x - prev.x) * (next.x - curr.x) < 0
     const vertBack =
-      prev.x === curr.x &&
-      curr.x === next.x &&
-      (curr.y - prev.y) * (next.y - curr.y) < 0
+      prev.x === curr.x && curr.x === next.x && (curr.y - prev.y) * (next.y - curr.y) < 0
     if (horizBack || vertBack) return true
   }
   return false
@@ -2190,40 +1935,21 @@ export const stubsWouldOverlap = (
   targetPosition: Position,
   stubLength: number
 ): boolean => {
-  if (
-    isStraightFacingShot(
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
-  ) {
+  if (isStraightFacingShot(sourcePoint, targetPoint, sourcePosition, targetPosition)) {
     return false
   }
 
   if (sourcePosition === Position.Right && targetPosition === Position.Left) {
-    return (
-      sourcePoint.x < targetPoint.x &&
-      sourcePoint.x + stubLength > targetPoint.x - stubLength
-    )
+    return sourcePoint.x < targetPoint.x && sourcePoint.x + stubLength > targetPoint.x - stubLength
   }
   if (sourcePosition === Position.Left && targetPosition === Position.Right) {
-    return (
-      sourcePoint.x > targetPoint.x &&
-      sourcePoint.x - stubLength < targetPoint.x + stubLength
-    )
+    return sourcePoint.x > targetPoint.x && sourcePoint.x - stubLength < targetPoint.x + stubLength
   }
   if (sourcePosition === Position.Bottom && targetPosition === Position.Top) {
-    return (
-      sourcePoint.y < targetPoint.y &&
-      sourcePoint.y + stubLength > targetPoint.y - stubLength
-    )
+    return sourcePoint.y < targetPoint.y && sourcePoint.y + stubLength > targetPoint.y - stubLength
   }
   if (sourcePosition === Position.Top && targetPosition === Position.Bottom) {
-    return (
-      sourcePoint.y > targetPoint.y &&
-      sourcePoint.y - stubLength < targetPoint.y + stubLength
-    )
+    return sourcePoint.y > targetPoint.y && sourcePoint.y - stubLength < targetPoint.y + stubLength
   }
   return false
 }
@@ -2266,22 +1992,14 @@ const getTargetStubLength = (
 
   switch (targetPosition) {
     case Position.Left:
-      return penultimate.y === targetPoint.y
-        ? targetPoint.x - penultimate.x
-        : -Infinity
+      return penultimate.y === targetPoint.y ? targetPoint.x - penultimate.x : -Infinity
     case Position.Right:
-      return penultimate.y === targetPoint.y
-        ? penultimate.x - targetPoint.x
-        : -Infinity
+      return penultimate.y === targetPoint.y ? penultimate.x - targetPoint.x : -Infinity
     case Position.Top:
-      return penultimate.x === targetPoint.x
-        ? targetPoint.y - penultimate.y
-        : -Infinity
+      return penultimate.x === targetPoint.x ? targetPoint.y - penultimate.y : -Infinity
     case Position.Bottom:
     default:
-      return penultimate.x === targetPoint.x
-        ? penultimate.y - targetPoint.y
-        : -Infinity
+      return penultimate.x === targetPoint.x ? penultimate.y - targetPoint.y : -Infinity
   }
 }
 
@@ -2293,12 +2011,7 @@ const getMinimumStubLength = (
 ): number =>
   Math.min(
     EDGES.MIN_STUB_LENGTH,
-    getEffectiveStubLength(
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
+    getEffectiveStubLength(sourcePoint, targetPoint, sourcePosition, targetPosition)
   )
 
 const hasReducedTerminalStub = (
@@ -2308,12 +2021,7 @@ const hasReducedTerminalStub = (
   sourcePosition: Position,
   targetPosition: Position
 ): boolean => {
-  const minStub = getMinimumStubLength(
-    sourcePoint,
-    targetPoint,
-    sourcePosition,
-    targetPosition
-  )
+  const minStub = getMinimumStubLength(sourcePoint, targetPoint, sourcePosition, targetPosition)
 
   return (
     getSourceStubLength(points, sourcePoint, sourcePosition) < minStub ||
@@ -2321,10 +2029,7 @@ const hasReducedTerminalStub = (
   )
 }
 
-const collapseTinyOrthogonalDoglegs = (
-  points: IPoint[],
-  proximityPx: number
-): IPoint[] => {
+const collapseTinyOrthogonalDoglegs = (points: IPoint[], proximityPx: number): IPoint[] => {
   if (points.length < 5) return points
 
   let collapsed = points.map((point) => ({ ...point }))
@@ -2347,11 +2052,7 @@ const collapseTinyOrthogonalDoglegs = (
       if (firstVertical && secondVertical && b.y === c.y) {
         const connectorLength = Math.abs(c.x - b.x)
         const sameDirection = (b.y - a.y) * (d.y - c.y) > 0
-        if (
-          connectorLength > 0 &&
-          connectorLength <= proximityPx &&
-          sameDirection
-        ) {
+        if (connectorLength > 0 && connectorLength <= proximityPx && sameDirection) {
           const lane = i + 3 === collapsed.length - 2 ? c.x : a.x
           collapsed[i] = { ...a, x: lane }
           collapsed[i + 1] = { ...b, x: lane }
@@ -2366,11 +2067,7 @@ const collapseTinyOrthogonalDoglegs = (
       if (firstHorizontal && secondHorizontal && b.x === c.x) {
         const connectorLength = Math.abs(c.y - b.y)
         const sameDirection = (b.x - a.x) * (d.x - c.x) > 0
-        if (
-          connectorLength > 0 &&
-          connectorLength <= proximityPx &&
-          sameDirection
-        ) {
+        if (connectorLength > 0 && connectorLength <= proximityPx && sameDirection) {
           const lane = i + 3 === collapsed.length - 2 ? c.y : a.y
           collapsed[i] = { ...a, y: lane }
           collapsed[i + 1] = { ...b, y: lane }
@@ -2416,13 +2113,7 @@ export function isInvalidOrthogonalEdgeRelease(
   return (
     sanitized.length < 2 ||
     hasDiagonalSegment(sanitized) ||
-    hasReducedTerminalStub(
-      sanitized,
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
+    hasReducedTerminalStub(sanitized, sourcePoint, targetPoint, sourcePosition, targetPosition)
   )
 }
 
@@ -2444,31 +2135,22 @@ export function getBendLaneBounds(
   const lastSegmentIndex = points.length - 2
   if (lastSegmentIndex < 0) return bounds
 
-  const minStub = getMinimumStubLength(
-    sourcePoint,
-    targetPoint,
-    sourcePosition,
-    targetPosition
-  )
+  const minStub = getMinimumStubLength(sourcePoint, targetPoint, sourcePosition, targetPosition)
   const laneAxis = orientation === "V" ? "x" : "y"
 
   const constrainBy = (point: IPoint, position: Position): void => {
     switch (position) {
       case Position.Right:
-        if (laneAxis === "x")
-          bounds.min = Math.max(bounds.min, point.x + minStub)
+        if (laneAxis === "x") bounds.min = Math.max(bounds.min, point.x + minStub)
         break
       case Position.Left:
-        if (laneAxis === "x")
-          bounds.max = Math.min(bounds.max, point.x - minStub)
+        if (laneAxis === "x") bounds.max = Math.min(bounds.max, point.x - minStub)
         break
       case Position.Bottom:
-        if (laneAxis === "y")
-          bounds.min = Math.max(bounds.min, point.y + minStub)
+        if (laneAxis === "y") bounds.min = Math.max(bounds.min, point.y + minStub)
         break
       case Position.Top:
-        if (laneAxis === "y")
-          bounds.max = Math.min(bounds.max, point.y - minStub)
+        if (laneAxis === "y") bounds.max = Math.min(bounds.max, point.y - minStub)
         break
     }
   }
@@ -2494,18 +2176,17 @@ export function getBendLaneBounds(
 const isDegenerateRoute = (sourcePoint: IPoint, targetPoint: IPoint): boolean =>
   sourcePoint.x === targetPoint.x && sourcePoint.y === targetPoint.y
 
-const getDegenerateRoute = (
-  sourcePoint: IPoint,
-  targetPoint: IPoint
-): IPoint[] => [{ ...sourcePoint }, { ...targetPoint }]
+const getDegenerateRoute = (sourcePoint: IPoint, targetPoint: IPoint): IPoint[] => [
+  { ...sourcePoint },
+  { ...targetPoint },
+]
 
 const hasAxisFold = (points: IPoint[]): boolean => {
   for (let i = 1; i < points.length - 1; i++) {
     const a = points[i - 1]
     const b = points[i]
     const c = points[i + 1]
-    const collinear =
-      (a.x === b.x && b.x === c.x) || (a.y === b.y && b.y === c.y)
+    const collinear = (a.x === b.x && b.x === c.x) || (a.y === b.y && b.y === c.y)
     const reverses = (b.x - a.x) * (c.x - b.x) + (b.y - a.y) * (c.y - b.y) < 0
     if (collinear && reverses) return true
   }
@@ -2536,31 +2217,14 @@ export function normalizeOrthogonalEdgePoints(
     EDGES.MIN_STUB_LENGTH
   )
   const fallback = hasStubCollision
-    ? getStubCollisionFallbackPoints(
-        sourcePoint,
-        targetPoint,
-        sourcePosition,
-        targetPosition
-      )
-    : routeOrthogonalPath(
-        sourcePoint,
-        targetPoint,
-        sourcePosition,
-        targetPosition,
-        obstacles
-      )
+    ? getStubCollisionFallbackPoints(sourcePoint, targetPoint, sourcePosition, targetPosition)
+    : routeOrthogonalPath(sourcePoint, targetPoint, sourcePosition, targetPosition, obstacles)
 
   const sanitized = sanitizeReleasedPoints(points, sourcePoint, targetPoint)
   if (
     sanitized.length < 2 ||
     hasDiagonalSegment(sanitized) ||
-    hasReducedTerminalStub(
-      sanitized,
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    ) ||
+    hasReducedTerminalStub(sanitized, sourcePoint, targetPoint, sourcePosition, targetPosition) ||
     hasStubCollision
   ) {
     return fallback
@@ -2577,9 +2241,7 @@ export function normalizeOrthogonalEdgePoints(
 
   const canonical = sanitizeReleasedPoints(normalized, sourcePoint, targetPoint)
 
-  return canonical.length >= 2 && !hasDiagonalSegment(canonical)
-    ? canonical
-    : fallback
+  return canonical.length >= 2 && !hasDiagonalSegment(canonical) ? canonical : fallback
 }
 
 export function resolveOrthogonalEdgeReleasePoints(
@@ -2598,14 +2260,9 @@ export function resolveOrthogonalEdgeReleasePoints(
     targetPosition
   )
 
-  const sanitized = sanitizeReleasedPoints(
-    releasedPoints,
-    sourcePoint,
-    targetPoint
-  )
+  const sanitized = sanitizeReleasedPoints(releasedPoints, sourcePoint, targetPoint)
   const folded = hasAxisFold(sanitized)
-  const pointsToNormalize =
-    invalid && !folded ? lastValidPoints : releasedPoints
+  const pointsToNormalize = invalid && !folded ? lastValidPoints : releasedPoints
 
   return normalizeOrthogonalEdgePoints(
     pointsToNormalize,
@@ -2668,23 +2325,10 @@ export function preserveOrthogonalEdgePoints(
     points[points.length - 1] ?? targetPoint,
     targetPosition
   )
-  const safeSourceStub = getSourceStubLength(
-    safePoints,
-    sourcePoint,
-    sourcePosition
-  )
-  const safeTargetStub = getTargetStubLength(
-    safePoints,
-    targetPoint,
-    targetPosition
-  )
+  const safeSourceStub = getSourceStubLength(safePoints, sourcePoint, sourcePosition)
+  const safeTargetStub = getTargetStubLength(safePoints, targetPoint, targetPosition)
 
-  const facingGap = getFacingGap(
-    sourcePoint,
-    targetPoint,
-    sourcePosition,
-    targetPosition
-  )
+  const facingGap = getFacingGap(sourcePoint, targetPoint, sourcePosition, targetPosition)
   const maxStubLength =
     facingGap !== null && facingGap > 0
       ? Math.max(minStubLength, facingGap - minStubLength)
@@ -2708,12 +2352,7 @@ export function preserveOrthogonalEdgePoints(
       EDGES.MIN_STUB_LENGTH
     )
   ) {
-    return getStubCollisionFallbackPoints(
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
+    return getStubCollisionFallbackPoints(sourcePoint, targetPoint, sourcePosition, targetPosition)
   }
 
   const originalSegmentCount = Math.max(points.length - 1, 1)
@@ -2729,11 +2368,7 @@ export function preserveOrthogonalEdgePoints(
     return safePoints
   }
 
-  let segmentCount = Math.max(
-    originalSegmentCount,
-    safeSegmentCount,
-    minimumSegmentCount
-  )
+  let segmentCount = Math.max(originalSegmentCount, safeSegmentCount, minimumSegmentCount)
   while (getAlternatingAxis(sourceAxis, segmentCount - 1) !== targetAxis) {
     segmentCount += 1
   }
@@ -2752,11 +2387,7 @@ export function preserveOrthogonalEdgePoints(
 
   const srcAxisCoord0 = sourceAxis === "horizontal" ? points[0].x : points[0].y
   const srcAxisCoord1 =
-    points.length > 1
-      ? sourceAxis === "horizontal"
-        ? points[1].x
-        : points[1].y
-      : srcAxisCoord0
+    points.length > 1 ? (sourceAxis === "horizontal" ? points[1].x : points[1].y) : srcAxisCoord0
   const srcStubOffset = Math.abs(srcAxisCoord1 - srcAxisCoord0)
 
   const targetLaneIndex = (() => {
@@ -2767,8 +2398,7 @@ export function preserveOrthogonalEdgePoints(
   })()
 
   const lastIdx = points.length - 1
-  const tgtAxisCoordLast =
-    targetAxis === "horizontal" ? points[lastIdx].x : points[lastIdx].y
+  const tgtAxisCoordLast = targetAxis === "horizontal" ? points[lastIdx].x : points[lastIdx].y
   const tgtAxisCoordAtLane =
     targetLaneIndex < points.length
       ? targetAxis === "horizontal"
@@ -2778,11 +2408,9 @@ export function preserveOrthogonalEdgePoints(
   const tgtStubOffset = Math.abs(tgtAxisCoordLast - tgtAxisCoordAtLane)
 
   const sourceStubIsLocked =
-    isRouterStub(srcStubOffset, previousSourceStub) ||
-    isNodeLockedStub(srcStubOffset)
+    isRouterStub(srcStubOffset, previousSourceStub) || isNodeLockedStub(srcStubOffset)
   const targetStubIsLocked =
-    isRouterStub(tgtStubOffset, previousTargetStub) ||
-    isNodeLockedStub(tgtStubOffset)
+    isRouterStub(tgtStubOffset, previousTargetStub) || isNodeLockedStub(tgtStubOffset)
 
   let sourceStub = isRouterStub(srcStubOffset, previousSourceStub)
     ? safeSourceStub
@@ -2812,11 +2440,7 @@ export function preserveOrthogonalEdgePoints(
 
   const targetOwnsItsOwnLane = targetLaneIndex !== 1 || !sourceStubIsLocked
   if (targetOwnsItsOwnLane && targetStubIsLocked) {
-    laneValues[targetLaneIndex] = getStubExitCoord(
-      targetPosition,
-      targetPoint,
-      targetStub
-    )
+    laneValues[targetLaneIndex] = getStubExitCoord(targetPosition, targetPoint, targetStub)
   }
 
   if (sourceAxis === targetAxis && targetLaneIndex > 1) {
@@ -2826,20 +2450,8 @@ export function preserveOrthogonalEdgePoints(
     const spine = toCanvasGrid((sourceLane + targetLane) / 2)
     if (
       Math.abs(sourceLane - targetLane) <= CANVAS.SNAP_TO_GRID_PX &&
-      laneClearsEndpoint(
-        spine,
-        laneAxis,
-        sourcePoint,
-        sourcePosition,
-        minStubLength
-      ) &&
-      laneClearsEndpoint(
-        spine,
-        laneAxis,
-        targetPoint,
-        targetPosition,
-        minStubLength
-      )
+      laneClearsEndpoint(spine, laneAxis, sourcePoint, sourcePosition, minStubLength) &&
+      laneClearsEndpoint(spine, laneAxis, targetPoint, targetPosition, minStubLength)
     ) {
       laneValues[1] = spine
       laneValues[targetLaneIndex] = spine
@@ -2850,8 +2462,7 @@ export function preserveOrthogonalEdgePoints(
     const perpCoord1 = sourceAxis === "horizontal" ? points[1].y : points[1].x
     const perpCoord2 = sourceAxis === "horizontal" ? points[2].y : points[2].x
     if (Math.abs(perpCoord1 - perpCoord2) <= 1) {
-      laneValues[2] =
-        sourceAxis === "horizontal" ? sourcePoint.y : sourcePoint.x
+      laneValues[2] = sourceAxis === "horizontal" ? sourcePoint.y : sourcePoint.x
     }
   }
 
@@ -2866,35 +2477,15 @@ export function preserveOrthogonalEdgePoints(
 
   if (result.length < 2) return safePoints
 
-  if (
-    !isTargetApproachCompatible(
-      targetPosition,
-      result[result.length - 2],
-      targetPoint
-    )
-  ) {
+  if (!isTargetApproachCompatible(targetPosition, result[result.length - 2], targetPoint)) {
     if (sourceAxis === targetAxis && points.length >= 6) {
-      const stubExitCoord = getStubExitCoord(
-        targetPosition,
-        targetPoint,
-        stubLength
-      )
+      const stubExitCoord = getStubExitCoord(targetPosition, targetPoint, stubLength)
       const stubExitPoint =
         targetAxis === "horizontal"
           ? { x: stubExitCoord, y: targetPoint.y }
           : { x: targetPoint.x, y: stubExitCoord }
-      const withStub = removeDuplicatePoints([
-        ...result.slice(0, -1),
-        stubExitPoint,
-        targetPoint,
-      ])
-      if (
-        isTargetApproachCompatible(
-          targetPosition,
-          withStub[withStub.length - 2],
-          targetPoint
-        )
-      ) {
+      const withStub = removeDuplicatePoints([...result.slice(0, -1), stubExitPoint, targetPoint])
+      if (isTargetApproachCompatible(targetPosition, withStub[withStub.length - 2], targetPoint)) {
         result = withStub
       } else {
         laneValues[targetLaneIndex] = safeLaneValues[targetLaneIndex]
@@ -2920,10 +2511,7 @@ export function preserveOrthogonalEdgePoints(
     }
   }
 
-  result = collapseTinyOrthogonalDoglegs(
-    result,
-    EDGES.ORTHOGONAL_DOGLEG_TOLERANCE_PX
-  )
+  result = collapseTinyOrthogonalDoglegs(result, EDGES.ORTHOGONAL_DOGLEG_TOLERANCE_PX)
 
   if (
     !isSourceLaneCompatible(
@@ -2931,32 +2519,15 @@ export function preserveOrthogonalEdgePoints(
       sourcePoint,
       getLaneValue(result, 1, getAlternatingAxis(sourceAxis, 0), targetPoint)
     ) ||
-    !isTargetApproachCompatible(
-      targetPosition,
-      result[result.length - 2],
-      targetPoint
-    ) ||
+    !isTargetApproachCompatible(targetPosition, result[result.length - 2], targetPoint) ||
     hasCollapsingSegments(result) ||
-    hasReducedTerminalStub(
-      result,
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition
-    )
+    hasReducedTerminalStub(result, sourcePoint, targetPoint, sourcePosition, targetPosition)
   ) {
     return safePoints
   }
 
   return removeRedundantLanes(
-    pushLanesClearOfStubs(
-      result,
-      sourcePoint,
-      targetPoint,
-      sourcePosition,
-      targetPosition,
-      points
-    ),
+    pushLanesClearOfStubs(result, sourcePoint, targetPoint, sourcePosition, targetPosition, points),
     getStubExitPoint(sourcePosition, sourcePoint, stubLength),
     getStubExitPoint(targetPosition, targetPoint, stubLength)
   )
@@ -2994,14 +2565,10 @@ export function getMarkerSegmentPath(
   return `M ${lastX} ${lastY} L ${extendedX} ${extendedY}`
 }
 
-export const getDefaultEdgeType = (
-  _diagramType?: UMLDiagramType
-): DiagramEdgeType => {
+export const getDefaultEdgeType = (_diagramType?: UMLDiagramType): DiagramEdgeType => {
   return "ClassBidirectional"
 }
 
-export function getConnectionLineType(
-  _diagramType?: UMLDiagramType
-): ConnectionLineType {
+export function getConnectionLineType(_diagramType?: UMLDiagramType): ConnectionLineType {
   return ConnectionLineType.Step
 }

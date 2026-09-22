@@ -1,29 +1,28 @@
-import { useDiagramModifiable } from "@/hooks/useDiagramModifiable";
-import { useHandleDelete } from "@/hooks/useHandleDelete";
-import { useIsOnlyThisElementSelected } from "@/hooks/useIsOnlyThisElementSelected";
-import { useSelectionForCopyPaste } from "@/hooks/useSelectionForCopyPaste";
-import { usePopoverStore } from "@/store";
-import { ButtonGroup, IconButton } from "@/components/ui";
-import { useLabels } from "@/i18n/useLabels";
-import { Position, NodeToolbar as ReactFlowNodeToolbar } from "@xyflow/react";
-import { CopyPlus, PencilIcon, Trash2 } from "lucide-react";
-import { FC } from "react";
-import { useShallow } from "zustand/shallow";
+import { useDiagramModifiable } from "@/hooks/useDiagramModifiable"
+import { useHandleDelete } from "@/hooks/useHandleDelete"
+import { useIsOnlyThisElementSelected } from "@/hooks/useIsOnlyThisElementSelected"
+import { useSelectionForCopyPaste } from "@/hooks/useSelectionForCopyPaste"
+import { usePopoverStore } from "@/store"
+import { ButtonGroup, IconButton } from "@/components/ui"
+import { useLabels } from "@/i18n/useLabels"
+import { Position, NodeToolbar as ReactFlowNodeToolbar, useReactFlow } from "@xyflow/react"
+import { CopyPlus, Maximize2, PencilIcon, Trash2 } from "lucide-react"
+import { FC } from "react"
+import { useShallow } from "zustand/shallow"
 
 interface Props {
-  elementId: string;
-  showEdit?: boolean;
+  elementId: string
+  showEdit?: boolean
 }
 export const NodeToolbar: FC<Props> = ({ elementId, showEdit = true }) => {
-  const setPopOverElementId = usePopoverStore(
-    useShallow((state) => state.setPopOverElementId),
-  );
-  const handleDelete = useHandleDelete(elementId);
-  const { duplicateSelectedElements } = useSelectionForCopyPaste();
+  const rf = useReactFlow()
+  const setPopOverElementId = usePopoverStore(useShallow((state) => state.setPopOverElementId))
+  const handleDelete = useHandleDelete(elementId)
+  const { duplicateSelectedElements } = useSelectionForCopyPaste()
 
-  const isDiagramModifiable = useDiagramModifiable();
-  const selected = useIsOnlyThisElementSelected(elementId);
-  const t = useLabels();
+  const isDiagramModifiable = useDiagramModifiable()
+  const selected = useIsOnlyThisElementSelected(elementId)
+  const t = useLabels()
 
   return (
     <ReactFlowNodeToolbar
@@ -44,7 +43,7 @@ export const NodeToolbar: FC<Props> = ({ elementId, showEdit = true }) => {
             ariaLabel={t.editElement}
             tooltip={t.editElement}
             onClick={() => {
-              setPopOverElementId(elementId);
+              setPopOverElementId(elementId)
             }}
           >
             <PencilIcon width={15} height={15} aria-hidden="true" />
@@ -52,24 +51,35 @@ export const NodeToolbar: FC<Props> = ({ elementId, showEdit = true }) => {
         )}
 
         <IconButton
+          ariaLabel={t.fitView ?? "Centrar vista"}
+          tooltip={t.fitView ?? "Centrar vista"}
+          onClick={(event) => {
+            event.stopPropagation()
+            rf.fitView({
+              nodes: [{ id: elementId }],
+              duration: 250,
+              padding: 0.3,
+            })
+          }}
+        >
+          <Maximize2 width={15} height={15} aria-hidden="true" />
+        </IconButton>
+
+        <IconButton
           ariaLabel={t.copyElement ?? "Copy node"}
           tooltip={t.copyElement ?? "Copy node"}
           onClick={(event) => {
-            event.stopPropagation();
-            duplicateSelectedElements();
+            event.stopPropagation()
+            duplicateSelectedElements()
           }}
         >
           <CopyPlus width={15} height={15} aria-hidden="true" />
         </IconButton>
 
-        <IconButton
-          ariaLabel={t.deleteElement}
-          tooltip={t.deleteElement}
-          onClick={handleDelete}
-        >
+        <IconButton ariaLabel={t.deleteElement} tooltip={t.deleteElement} onClick={handleDelete}>
           <Trash2 width={15} height={15} aria-hidden="true" />
         </IconButton>
       </ButtonGroup>
     </ReactFlowNodeToolbar>
-  );
-};
+  )
+}

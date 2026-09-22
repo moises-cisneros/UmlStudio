@@ -1,18 +1,10 @@
 import type { UmlStudioEdge, UMLModel, OrthogonalEdgeData } from "@/typings"
 
 export function hydrateEdgeData(edge: UmlStudioEdge): UmlStudioEdge {
-  const sourceData = (edge.data ?? {}) as OrthogonalEdgeData &
-    Record<string, unknown>
-  const hasComputedSegments = Object.prototype.hasOwnProperty.call(
-    sourceData,
-    "computedSegments"
-  )
+  const sourceData = (edge.data ?? {}) as OrthogonalEdgeData & Record<string, unknown>
+  const hasComputedSegments = Object.prototype.hasOwnProperty.call(sourceData, "computedSegments")
 
-  if (
-    edge.data != null &&
-    Array.isArray(sourceData.points) &&
-    !hasComputedSegments
-  ) {
+  if (edge.data != null && Array.isArray(sourceData.points) && !hasComputedSegments) {
     return edge
   }
 

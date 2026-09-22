@@ -8,10 +8,7 @@ const CONTROL_CHARS = /[\u0000-\u001F\u007F]/
 
 type TaggableData = { tags?: unknown; [key: string]: unknown }
 
-export function normalizeTags(
-  raw: unknown,
-  maxCount = MAX_TAGS_PER_ELEMENT
-): string[] {
+export function normalizeTags(raw: unknown, maxCount = MAX_TAGS_PER_ELEMENT): string[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
   const result: string[] = []
@@ -103,9 +100,7 @@ export function applyElementTags<T extends { id: string; data: object }>(
       if (key === "tags" || !Array.isArray(value)) continue
       const members = value as { id?: string }[]
       if (!members.some((item) => item?.id === id)) continue
-      data[key] = members.map((item) =>
-        item?.id === id ? withTags(item, tags) : item
-      )
+      data[key] = members.map((item) => (item?.id === id ? withTags(item, tags) : item))
       memberChanged = true
     }
     if (!memberChanged) return node

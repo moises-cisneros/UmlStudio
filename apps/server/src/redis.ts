@@ -1,35 +1,34 @@
-import { createClient } from "redis";
-import { gzipSync, gunzipSync } from "node:zlib";
-import { logger } from "./logger.js";
+import { createClient } from "redis"
+import { gzipSync, gunzipSync } from "node:zlib"
+import { logger } from "./logger.js"
 
 // ---------------------------------------------------------------------------
 // Client
 // ---------------------------------------------------------------------------
 
 export function createRedisClient(url: string) {
-  const client = createClient({ url, RESP: 2 });
-  client.on("error", (err) => logger.error({ err }, "redis client error"));
-  return client;
+  const client = createClient({ url, RESP: 2 })
+  client.on("error", (err) => logger.error({ err }, "redis client error"))
+  return client
 }
 
-export type Redis = ReturnType<typeof createRedisClient>;
+export type Redis = ReturnType<typeof createRedisClient>
 
 export const k = {
   diagram: (id: string) => `diagram:{${id}}`,
   diagramMeta: (id: string) => `diagram:{${id}}:meta`,
   versionsIndex: (id: string) => `diagram:{${id}}:versions`,
   versionBody: (id: string, vid: string) => `diagram:{${id}}:version:${vid}`,
-  versionMeta: (id: string, vid: string) =>
-    `diagram:{${id}}:version:${vid}:meta`,
+  versionMeta: (id: string, vid: string) => `diagram:{${id}}:version:${vid}:meta`,
   autoVersionMarker: (id: string) => `diagram:{${id}}:auto-version-marker`,
   authUser: (id: string) => `auth:user:{${id}}`,
   authUserByEmail: (email: string) => `auth:user:email:${email.toLowerCase()}`,
   authRefresh: (jti: string) => `auth:refresh:${jti}`,
   userDiagrams: (userId: string) => `auth:user:{${userId}}:diagrams`,
-};
+}
 
 /** Default refresh-session lifetime: 7 days (open question in design). */
-export const REFRESH_TTL_SECONDS = 7 * 24 * 3600;
+export const REFRESH_TTL_SECONDS = 7 * 24 * 3600
 
 /**
  * Fail-closed signing-secret loader The JWT secret MUST come from
@@ -37,13 +36,11 @@ export const REFRESH_TTL_SECONDS = 7 * 24 * 3600;
  * or blank so the service refuses to boot instead of signing with a weak key.
  */
 export function getJwtSecret(env: NodeJS.ProcessEnv = process.env): string {
-  const secret = env.JWT_SECRET;
+  const secret = env.JWT_SECRET
   if (!secret || secret.trim().length === 0) {
-    throw new Error(
-      "JWT_SECRET is not set. Set JWT_SECRET to a high-entropy value before booting.",
-    );
+    throw new Error("JWT_SECRET is not set. Set JWT_SECRET to a high-entropy value before booting.")
   }
-  return secret;
+  return secret
 }
 
 /** Persists a refresh session: jti -> userId with TTL. */
@@ -51,45 +48,37 @@ export async function saveRefreshSession(
   client: Redis,
   jti: string,
   userId: string,
-  ttlSec: number = REFRESH_TTL_SECONDS,
+  ttlSec: number = REFRESH_TTL_SECONDS
 ): Promise<void> {
-  await client.set(k.authRefresh(jti), userId, { EX: ttlSec });
+  await client.set(k.authRefresh(jti), userId, { EX: ttlSec })
 }
 
 /**
  * Atomically consumes a refresh session (GET + DEL) for rotation. Returns
  * the bound userId, or null when expired, revoked, or never issued.
  */
-export async function consumeRefreshSession(
-  client: Redis,
-  jti: string,
-): Promise<string | null> {
-  const multi = client.multi();
-  multi.get(k.authRefresh(jti));
-  multi.del(k.authRefresh(jti));
-  const replies = (await multi.exec()) as unknown[];
-  const userId = replies[0];
-  return typeof userId === "string" ? userId : null;
+export async function consumeRefreshSession(client: Redis, jti: string): Promise<string | null> {
+  const multi = client.multi()
+  multi.get(k.authRefresh(jti))
+  multi.del(k.authRefresh(jti))
+  const replies = (await multi.exec()) as unknown[]
+  const userId = replies[0]
+  return typeof userId === "string" ? userId : null
 }
 
 /** Revokes a refresh session immediately (logout). Idempotent. */
-export async function revokeRefreshSession(
-  client: Redis,
-  jti: string,
-): Promise<void> {
-  await client.del(k.authRefresh(jti));
+export async function revokeRefreshSession(client: Redis, jti: string): Promise<void> {
+  await client.del(k.authRefresh(jti))
 }
 
 /** Returns gzip-then-base64-encoded JSON as a string. */
 export function gzipJson(value: unknown): string {
-  return gzipSync(Buffer.from(JSON.stringify(value), "utf8")).toString(
-    "base64",
-  );
+  return gzipSync(Buffer.from(JSON.stringify(value), "utf8")).toString("base64")
 }
 
 /** Decompresses a base64-encoded gzipped JSON string back to an object. */
 export function gunzipJson<T>(s: string): T {
-  return JSON.parse(gunzipSync(Buffer.from(s, "base64")).toString("utf8")) as T;
+  return JSON.parse(gunzipSync(Buffer.from(s, "base64")).toString("utf8")) as T
 }
 
 export const COMMIT_VERSION_SOURCE = `#!lua name=umlstudio
@@ -356,7 +345,7 @@ redis.register_function{
   callback = list_versions_before,
   flags = { 'no-writes' }
 }
-`;
+`
 
 /**
  * Load the umlstudio Lua function library at boot. Idempotent — `REPLACE`
@@ -364,34 +353,27 @@ redis.register_function{
  * (required for HEAD storage). Throws if the module is missing or too old.
  */
 export async function bootLoadFunction(client: Redis): Promise<void> {
-  const modules = (await client.sendCommand(["MODULE", "LIST"])) as unknown;
+  const modules = (await client.sendCommand(["MODULE", "LIST"])) as unknown
   if (!Array.isArray(modules)) {
-    throw new Error("Unexpected MODULE LIST response shape");
+    throw new Error("Unexpected MODULE LIST response shape")
   }
   const reJson = modules.find((m: unknown) => {
-    if (!Array.isArray(m)) return false;
-    const nameIndex = m.findIndex((x) => x === "name");
-    return nameIndex >= 0 && m[nameIndex + 1] === "ReJSON";
-  });
+    if (!Array.isArray(m)) return false
+    const nameIndex = m.findIndex((x) => x === "name")
+    return nameIndex >= 0 && m[nameIndex + 1] === "ReJSON"
+  })
   if (!reJson) {
-    throw new Error(
-      "RedisJSON module not loaded. Use redis/redis-stack-server.",
-    );
+    throw new Error("RedisJSON module not loaded. Use redis/redis-stack-server.")
   }
 
   try {
-    await client.sendCommand(["FUNCTION", "DELETE", "apollon"]);
+    await client.sendCommand(["FUNCTION", "DELETE", "apollon"])
   } catch {
     // Ignore error if legacy function does not exist
   }
 
-  await client.sendCommand([
-    "FUNCTION",
-    "LOAD",
-    "REPLACE",
-    COMMIT_VERSION_SOURCE,
-  ]);
-  logger.info({ event: "redis.function.loaded", lib: "umlstudio" });
+  await client.sendCommand(["FUNCTION", "LOAD", "REPLACE", COMMIT_VERSION_SOURCE])
+  logger.info({ event: "redis.function.loaded", lib: "umlstudio" })
 }
 
 /**
@@ -401,10 +383,10 @@ export async function bootLoadFunction(client: Redis): Promise<void> {
 export class RedisAppError extends Error {
   constructor(
     public readonly code: string,
-    message?: string,
+    message?: string
   ) {
-    super(message ?? code);
-    this.name = "RedisAppError";
+    super(message ?? code)
+    this.name = "RedisAppError"
   }
 }
 
@@ -412,22 +394,16 @@ export async function fcall(
   client: Redis,
   fnName: string,
   keys: string[],
-  args: string[],
+  args: string[]
 ): Promise<unknown> {
   try {
-    return await client.sendCommand([
-      "FCALL",
-      fnName,
-      String(keys.length),
-      ...keys,
-      ...args,
-    ]);
+    return await client.sendCommand(["FCALL", fnName, String(keys.length), ...keys, ...args])
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const match = message.match(/(NO_HEAD|NO_VERSION_BODY)/);
+    const message = err instanceof Error ? err.message : String(err)
+    const match = message.match(/(NO_HEAD|NO_VERSION_BODY)/)
     if (match) {
-      throw new RedisAppError(match[1] ?? "FCALL_ERROR", message);
+      throw new RedisAppError(match[1] ?? "FCALL_ERROR", message)
     }
-    throw err;
+    throw err
   }
 }

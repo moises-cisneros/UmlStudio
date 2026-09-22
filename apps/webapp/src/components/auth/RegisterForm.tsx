@@ -1,39 +1,28 @@
-import { useState, useMemo } from "react";
-import { toast } from "react-toastify";
-import {
-  Check,
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  User,
-  ArrowRight,
-  Sparkles,
-} from "lucide-react";
-import { Button } from "@umlstudio/ui/components/button";
-import { Field, FieldError, FieldLabel } from "@umlstudio/ui/components/field";
-import { Input } from "@umlstudio/ui/components/input";
-import { AuthRegisterError, useAuthStore } from "@/stores/useAuthStore";
-import { useTranslation } from "@/i18n";
+import { useState, useMemo } from "react"
+import { toast } from "react-toastify"
+import { Check, Eye, EyeOff, Lock, Mail, User, ArrowRight, Sparkles } from "lucide-react"
+import { Button } from "@umlstudio/ui/components/button"
+import { Field, FieldError, FieldLabel } from "@umlstudio/ui/components/field"
+import { Input } from "@umlstudio/ui/components/input"
+import { AuthRegisterError, useAuthStore } from "@/stores/useAuthStore"
+import { useTranslation } from "@/i18n"
 
 interface RegisterFormProps {
-  redirect?: string;
-  onSuccess: () => void;
+  redirect?: string
+  onSuccess: () => void
 }
 
 export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
-  const { t } = useTranslation();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [duplicate, setDuplicate] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const { t } = useTranslation()
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [duplicate, setDuplicate] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
-  const loginHref = redirect
-    ? `/login?redirect=${encodeURIComponent(redirect)}`
-    : "/login";
+  const loginHref = redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : "/login"
 
   // Password rules validation (OMG UML 2.5 studio policy)
   const passwordRules = useMemo(() => {
@@ -41,41 +30,32 @@ export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
       hasMinLen: password.length >= 8,
       hasLetterAndDigit: /[a-zA-Z]/.test(password) && /\d/.test(password),
       hasSymbol: /[^a-zA-Z0-9]/.test(password),
-    };
-  }, [password]);
+    }
+  }, [password])
 
   async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setSubmitting(true);
-    setFieldErrors({});
-    setDuplicate(false);
+    event.preventDefault()
+    setSubmitting(true)
+    setFieldErrors({})
+    setDuplicate(false)
     try {
-      await useAuthStore
-        .getState()
-        .register(name.trim(), email.trim(), password);
-      onSuccess();
+      await useAuthStore.getState().register(name.trim(), email.trim(), password)
+      onSuccess()
     } catch (err) {
       if (err instanceof AuthRegisterError && err.status === 409) {
-        setDuplicate(true);
-        return;
+        setDuplicate(true)
+        return
       }
-      if (
-        err instanceof AuthRegisterError &&
-        err.status === 400 &&
-        err.fields
-      ) {
-        setFieldErrors(err.fields);
-        const [field, message] = Object.entries(err.fields)[0] ?? [];
-        toast.error(
-          field ? `Invalid ${field}: ${message}` : "Invalid registration data",
-        );
-        return;
+      if (err instanceof AuthRegisterError && err.status === 400 && err.fields) {
+        setFieldErrors(err.fields)
+        const [field, message] = Object.entries(err.fields)[0] ?? []
+        toast.error(field ? `Invalid ${field}: ${message}` : "Invalid registration data")
+        return
       }
-      const message =
-        err instanceof Error ? err.message : t.auth.registrationFailed;
-      toast.error(message);
+      const message = err instanceof Error ? err.message : t.auth.registrationFailed
+      toast.error(message)
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
   }
 
@@ -122,16 +102,11 @@ export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
             className="pl-9 text-sm"
           />
         </div>
-        {fieldErrors.email ? (
-          <FieldError>{fieldErrors.email}</FieldError>
-        ) : null}
+        {fieldErrors.email ? <FieldError>{fieldErrors.email}</FieldError> : null}
       </Field>
 
       <Field>
-        <FieldLabel
-          htmlFor="register-password"
-          className="text-xs font-semibold"
-        >
+        <FieldLabel htmlFor="register-password" className="text-xs font-semibold">
           {t.auth.passwordLabel}
         </FieldLabel>
         <div className="relative">
@@ -153,20 +128,12 @@ export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground focus:outline-none"
-            aria-label={
-              showPassword ? t.auth.hidePassword : t.auth.showPassword
-            }
+            aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
           >
-            {showPassword ? (
-              <EyeOff className="size-4" />
-            ) : (
-              <Eye className="size-4" />
-            )}
+            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
         </div>
-        {fieldErrors.password ? (
-          <FieldError>{fieldErrors.password}</FieldError>
-        ) : null}
+        {fieldErrors.password ? <FieldError>{fieldErrors.password}</FieldError> : null}
 
         {/* Dynamic password requirements badges */}
         {password.length > 0 && (
@@ -224,9 +191,7 @@ export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
         disabled={submitting}
         className="group relative mt-1 flex w-full items-center justify-center gap-2 overflow-hidden bg-(--dodger-blue) font-semibold text-white shadow-md transition-all hover:bg-(--dodger-blue)/90 hover:shadow-lg"
       >
-        <span>
-          {submitting ? t.auth.creatingAccount : t.auth.registerButton}
-        </span>
+        <span>{submitting ? t.auth.creatingAccount : t.auth.registerButton}</span>
         <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
       </Button>
 
@@ -245,5 +210,5 @@ export function RegisterForm({ redirect, onSuccess }: RegisterFormProps) {
         </a>
       </div>
     </form>
-  );
+  )
 }

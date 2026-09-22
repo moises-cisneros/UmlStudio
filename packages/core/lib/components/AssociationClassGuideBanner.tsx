@@ -1,40 +1,36 @@
-import React, { useEffect } from "react";
-import { useShallow } from "zustand/shallow";
-import { useDiagramStore } from "@/store/context";
-import { useLabels } from "@/i18n/useLabels";
-import { X, ArrowRight, AlertCircle, Link } from "lucide-react";
+import React, { useEffect } from "react"
+import { useShallow } from "zustand/shallow"
+import { useDiagramStore } from "@/store/context"
+import { useLabels } from "@/i18n/useLabels"
+import { X, ArrowRight, AlertCircle, Link } from "lucide-react"
 
 export const AssociationClassGuideBanner: React.FC = () => {
-  const t = useLabels();
-  const { associationClassPrompt, setAssociationClassPrompt, nodes } =
-    useDiagramStore(
-      useShallow((state) => ({
-        associationClassPrompt: state.associationClassPrompt,
-        setAssociationClassPrompt: state.setAssociationClassPrompt,
-        nodes: state.nodes,
-      })),
-    );
+  const t = useLabels()
+  const { associationClassPrompt, setAssociationClassPrompt, nodes } = useDiagramStore(
+    useShallow((state) => ({
+      associationClassPrompt: state.associationClassPrompt,
+      setAssociationClassPrompt: state.setAssociationClassPrompt,
+      nodes: state.nodes,
+    }))
+  )
 
   useEffect(() => {
-    if (!associationClassPrompt) return;
+    if (!associationClassPrompt) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setAssociationClassPrompt(null);
+        setAssociationClassPrompt(null)
       }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [associationClassPrompt, setAssociationClassPrompt]);
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [associationClassPrompt, setAssociationClassPrompt])
 
-  if (!associationClassPrompt) return null;
+  if (!associationClassPrompt) return null
 
-  const isError = Boolean(
-    (associationClassPrompt as { error?: boolean }).error,
-  );
-  const fromNodeId = associationClassPrompt.fromNodeId;
-  const fromNode = fromNodeId ? nodes.find((n) => n.id === fromNodeId) : null;
-  const fromName =
-    ((fromNode?.data as Record<string, unknown>)?.name as string) || "Origen";
+  const isError = Boolean((associationClassPrompt as { error?: boolean }).error)
+  const fromNodeId = associationClassPrompt.fromNodeId
+  const fromNode = fromNodeId ? nodes.find((n) => n.id === fromNodeId) : null
+  const fromName = ((fromNode?.data as Record<string, unknown>)?.name as string) || "Origen"
 
   return (
     <div
@@ -55,8 +51,7 @@ export const AssociationClassGuideBanner: React.FC = () => {
         color: "var(--umlstudio-foreground, #f8fafc)",
         border: "1px solid var(--umlstudio-border, #243046)",
         borderRadius: "var(--umlstudio-radius-lg, 8px)",
-        boxShadow:
-          "0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3)",
+        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3)",
         fontSize: "13px",
         fontWeight: 500,
         pointerEvents: "auto",
@@ -89,9 +84,7 @@ export const AssociationClassGuideBanner: React.FC = () => {
       ) : fromNodeId === null ? (
         <>
           <Link size={16} color="#3590f3" />
-          <span>
-            {t.selectFromClass ?? "Step 1: Select source class (From)"}
-          </span>
+          <span>{t.selectFromClass ?? "Step 1: Select source class (From)"}</span>
           <button
             type="button"
             onClick={() => setAssociationClassPrompt(null)}
@@ -141,5 +134,5 @@ export const AssociationClassGuideBanner: React.FC = () => {
         </>
       )}
     </div>
-  );
-};
+  )
+}

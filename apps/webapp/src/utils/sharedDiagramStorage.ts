@@ -1,68 +1,62 @@
-import { DiagramView } from "@/types";
-import {
-  DEFAULT_SHARED_DIAGRAM_VIEW,
-  normalizeSharedDiagramView,
-} from "@/utils/sharedDiagramLinks";
+import { DiagramView } from "@/types"
+import { DEFAULT_SHARED_DIAGRAM_VIEW, normalizeSharedDiagramView } from "@/utils/sharedDiagramLinks"
 
-const SHARED_DIAGRAM_STORE_KEY = "sharedDiagramStore";
-const SHARED_DIAGRAM_EXPIRY_GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
+const SHARED_DIAGRAM_STORE_KEY = "sharedDiagramStore"
+const SHARED_DIAGRAM_EXPIRY_GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000
 
 export type SharedDiagramEntry = {
-  id: string;
-  sharedAt: string;
-  favorite: boolean;
-  lastSharedView: DiagramView;
-  sourceModelId?: string;
-  lastCopiedAt?: string;
-  expiredAt?: string;
-};
+  id: string
+  sharedAt: string
+  favorite: boolean
+  lastSharedView: DiagramView
+  sourceModelId?: string
+  lastCopiedAt?: string
+  expiredAt?: string
+}
 
 type SharedDiagramStore = {
-  entries: SharedDiagramEntry[];
-};
+  entries: SharedDiagramEntry[]
+}
 
 const isIsoDateString = (value: unknown): value is string => {
   if (typeof value !== "string") {
-    return false;
+    return false
   }
 
-  return !Number.isNaN(new Date(value).getTime());
-};
+  return !Number.isNaN(new Date(value).getTime())
+}
 
 const readStore = (): SharedDiagramStore => {
   if (typeof window === "undefined") {
-    return { entries: [] };
+    return { entries: [] }
   }
 
   try {
-    const raw = window.localStorage.getItem(SHARED_DIAGRAM_STORE_KEY);
+    const raw = window.localStorage.getItem(SHARED_DIAGRAM_STORE_KEY)
     if (!raw) {
-      return { entries: [] };
+      return { entries: [] }
     }
 
-    const parsed = JSON.parse(raw) as Partial<SharedDiagramStore>;
+    const parsed = JSON.parse(raw) as Partial<SharedDiagramStore>
     if (!Array.isArray(parsed.entries)) {
-      return { entries: [] };
+      return { entries: [] }
     }
 
-    const rawEntries = parsed.entries as unknown[];
+    const rawEntries = parsed.entries as unknown[]
     const entries = rawEntries.filter(
       (
-        entry,
+        entry
       ): entry is Partial<SharedDiagramEntry> & {
-        id: string;
-        sharedAt: string;
+        id: string
+        sharedAt: string
       } => {
         if (!entry || typeof entry !== "object") {
-          return false;
+          return false
         }
-        const candidate = entry as Partial<SharedDiagramEntry>;
-        return (
-          typeof candidate.id === "string" &&
-          typeof candidate.sharedAt === "string"
-        );
-      },
-    );
+        const candidate = entry as Partial<SharedDiagramEntry>
+        return typeof candidate.id === "string" && typeof candidate.sharedAt === "string"
+      }
+    )
 
     return {
       entries: entries.map((entry) => ({
@@ -70,74 +64,59 @@ const readStore = (): SharedDiagramStore => {
         sharedAt: entry.sharedAt,
         favorite: Boolean((entry as Partial<SharedDiagramEntry>).favorite),
         lastSharedView: normalizeSharedDiagramView(entry.lastSharedView),
-        sourceModelId:
-          typeof entry.sourceModelId === "string"
-            ? entry.sourceModelId
-            : undefined,
-        lastCopiedAt:
-          typeof entry.lastCopiedAt === "string"
-            ? entry.lastCopiedAt
-            : undefined,
-        expiredAt: isIsoDateString(entry.expiredAt)
-          ? entry.expiredAt
-          : undefined,
+        sourceModelId: typeof entry.sourceModelId === "string" ? entry.sourceModelId : undefined,
+        lastCopiedAt: typeof entry.lastCopiedAt === "string" ? entry.lastCopiedAt : undefined,
+        expiredAt: isIsoDateString(entry.expiredAt) ? entry.expiredAt : undefined,
       })),
-    };
+    }
   } catch {
-    return { entries: [] };
+    return { entries: [] }
   }
-};
+}
 
-const SHARED_DIAGRAM_CHANGE_EVENT = "shared-diagram-store-change";
+const SHARED_DIAGRAM_CHANGE_EVENT = "shared-diagram-store-change"
 
 const writeStore = (store: SharedDiagramStore) => {
   if (typeof window === "undefined") {
-    return;
+    return
   }
 
-  window.localStorage.setItem(SHARED_DIAGRAM_STORE_KEY, JSON.stringify(store));
-  window.dispatchEvent(new Event(SHARED_DIAGRAM_CHANGE_EVENT));
-};
+  window.localStorage.setItem(SHARED_DIAGRAM_STORE_KEY, JSON.stringify(store))
+  window.dispatchEvent(new Event(SHARED_DIAGRAM_CHANGE_EVENT))
+}
 
-export const subscribeToSharedDiagramChange = (
-  listener: () => void,
-): (() => void) => {
+export const subscribeToSharedDiagramChange = (listener: () => void): (() => void) => {
   if (typeof window === "undefined") {
-    return () => {};
+    return () => {}
   }
 
-  window.addEventListener(SHARED_DIAGRAM_CHANGE_EVENT, listener);
+  window.addEventListener(SHARED_DIAGRAM_CHANGE_EVENT, listener)
   return () => {
-    window.removeEventListener(SHARED_DIAGRAM_CHANGE_EVENT, listener);
-  };
-};
+    window.removeEventListener(SHARED_DIAGRAM_CHANGE_EVENT, listener)
+  }
+}
 
-export const getSharedDiagramEntries = (): SharedDiagramEntry[] =>
-  readStore().entries;
+export const getSharedDiagramEntries = (): SharedDiagramEntry[] => readStore().entries
 
 type AddSharedDiagramEntryOptions = {
-  lastSharedView?: DiagramView;
-  sourceModelId?: string;
-  lastCopiedAt?: string;
-};
+  lastSharedView?: DiagramView
+  sourceModelId?: string
+  lastCopiedAt?: string
+}
 
 export const addSharedDiagramEntry = (
   diagramId: string,
-  options: AddSharedDiagramEntryOptions = {},
+  options: AddSharedDiagramEntryOptions = {}
 ) => {
-  const normalizedId = diagramId.trim();
+  const normalizedId = diagramId.trim()
   if (!normalizedId) {
-    return;
+    return
   }
 
-  const currentStore = readStore();
-  const now = new Date().toISOString();
-  const existingEntry = currentStore.entries.find(
-    (entry) => entry.id === normalizedId,
-  );
-  const remainingEntries = currentStore.entries.filter(
-    (entry) => entry.id !== normalizedId,
-  );
+  const currentStore = readStore()
+  const now = new Date().toISOString()
+  const existingEntry = currentStore.entries.find((entry) => entry.id === normalizedId)
+  const remainingEntries = currentStore.entries.filter((entry) => entry.id !== normalizedId)
 
   writeStore({
     entries: [
@@ -146,37 +125,35 @@ export const addSharedDiagramEntry = (
         sharedAt: now,
         favorite: existingEntry?.favorite ?? false,
         lastSharedView:
-          options.lastSharedView ??
-          existingEntry?.lastSharedView ??
-          DEFAULT_SHARED_DIAGRAM_VIEW,
+          options.lastSharedView ?? existingEntry?.lastSharedView ?? DEFAULT_SHARED_DIAGRAM_VIEW,
         sourceModelId: options.sourceModelId ?? existingEntry?.sourceModelId,
         lastCopiedAt: options.lastCopiedAt ?? existingEntry?.lastCopiedAt,
         expiredAt: undefined,
       },
       ...remainingEntries,
     ],
-  });
-};
+  })
+}
 
 export const removeSharedDiagramEntry = (diagramId: string) => {
-  const normalizedId = diagramId.trim();
+  const normalizedId = diagramId.trim()
   if (!normalizedId) {
-    return;
+    return
   }
 
-  const currentStore = readStore();
+  const currentStore = readStore()
   writeStore({
     entries: currentStore.entries.filter((entry) => entry.id !== normalizedId),
-  });
-};
+  })
+}
 
 export const toggleSharedDiagramFavorite = (diagramId: string) => {
-  const normalizedId = diagramId.trim();
+  const normalizedId = diagramId.trim()
   if (!normalizedId) {
-    return;
+    return
   }
 
-  const currentStore = readStore();
+  const currentStore = readStore()
   writeStore({
     entries: currentStore.entries.map((entry) =>
       entry.id === normalizedId
@@ -184,21 +161,18 @@ export const toggleSharedDiagramFavorite = (diagramId: string) => {
             ...entry,
             favorite: !entry.favorite,
           }
-        : entry,
+        : entry
     ),
-  });
-};
+  })
+}
 
-export const updateSharedDiagramView = (
-  diagramId: string,
-  view: DiagramView,
-) => {
-  const normalizedId = diagramId.trim();
+export const updateSharedDiagramView = (diagramId: string, view: DiagramView) => {
+  const normalizedId = diagramId.trim()
   if (!normalizedId) {
-    return;
+    return
   }
 
-  const currentStore = readStore();
+  const currentStore = readStore()
   writeStore({
     entries: currentStore.entries.map((entry) =>
       entry.id === normalizedId
@@ -206,22 +180,19 @@ export const updateSharedDiagramView = (
             ...entry,
             lastSharedView: view,
           }
-        : entry,
+        : entry
     ),
-  });
-};
+  })
+}
 
-export const markSharedDiagramCopied = (
-  diagramId: string,
-  view?: DiagramView,
-) => {
-  const normalizedId = diagramId.trim();
+export const markSharedDiagramCopied = (diagramId: string, view?: DiagramView) => {
+  const normalizedId = diagramId.trim()
   if (!normalizedId) {
-    return;
+    return
   }
 
-  const currentStore = readStore();
-  const now = new Date().toISOString();
+  const currentStore = readStore()
+  const now = new Date().toISOString()
   writeStore({
     entries: currentStore.entries.map((entry) =>
       entry.id === normalizedId
@@ -231,26 +202,26 @@ export const markSharedDiagramCopied = (
             lastCopiedAt: now,
             expiredAt: undefined,
           }
-        : entry,
+        : entry
     ),
-  });
-};
+  })
+}
 
 export const markSharedDiagramExpired = (
   diagramId: string,
-  expiredAt = new Date().toISOString(),
+  expiredAt = new Date().toISOString()
 ) => {
-  const normalizedId = diagramId.trim();
+  const normalizedId = diagramId.trim()
   if (!normalizedId) {
-    return;
+    return
   }
 
-  const currentStore = readStore();
+  const currentStore = readStore()
   const hasChanged = currentStore.entries.some(
-    (entry) => entry.id === normalizedId && !entry.expiredAt,
-  );
+    (entry) => entry.id === normalizedId && !entry.expiredAt
+  )
   if (!hasChanged) {
-    return;
+    return
   }
 
   writeStore({
@@ -260,23 +231,23 @@ export const markSharedDiagramExpired = (
             ...entry,
             expiredAt: entry.expiredAt ?? expiredAt,
           }
-        : entry,
+        : entry
     ),
-  });
-};
+  })
+}
 
 export const clearSharedDiagramExpiredState = (diagramId: string) => {
-  const normalizedId = diagramId.trim();
+  const normalizedId = diagramId.trim()
   if (!normalizedId) {
-    return;
+    return
   }
 
-  const currentStore = readStore();
+  const currentStore = readStore()
   const hasChanged = currentStore.entries.some(
-    (entry) => entry.id === normalizedId && Boolean(entry.expiredAt),
-  );
+    (entry) => entry.id === normalizedId && Boolean(entry.expiredAt)
+  )
   if (!hasChanged) {
-    return;
+    return
   }
 
   writeStore({
@@ -286,27 +257,25 @@ export const clearSharedDiagramExpiredState = (diagramId: string) => {
             ...entry,
             expiredAt: undefined,
           }
-        : entry,
+        : entry
     ),
-  });
-};
+  })
+}
 
-export const pruneExpiredSharedDiagrams = (
-  now = new Date(),
-): SharedDiagramEntry[] => {
-  const currentStore = readStore();
-  const cutoffTime = now.getTime() - SHARED_DIAGRAM_EXPIRY_GRACE_PERIOD_MS;
+export const pruneExpiredSharedDiagrams = (now = new Date()): SharedDiagramEntry[] => {
+  const currentStore = readStore()
+  const cutoffTime = now.getTime() - SHARED_DIAGRAM_EXPIRY_GRACE_PERIOD_MS
   const entries = currentStore.entries.filter((entry) => {
     if (!entry.expiredAt) {
-      return true;
+      return true
     }
 
-    return new Date(entry.expiredAt).getTime() >= cutoffTime;
-  });
+    return new Date(entry.expiredAt).getTime() >= cutoffTime
+  })
 
   if (entries.length !== currentStore.entries.length) {
-    writeStore({ entries });
+    writeStore({ entries })
   }
 
-  return entries;
-};
+  return entries
+}

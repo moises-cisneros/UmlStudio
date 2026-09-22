@@ -1,43 +1,28 @@
-import type { FC } from "react";
-import { X, Heart, ArrowUpDown, Layers, RotateCcw } from "lucide-react";
-import { Button } from "@umlstudio/ui/components/button";
-import { useTranslation } from "@/i18n";
-import type { HomeChrome, RefinementKind } from "./useHomeChrome";
+import type { FC } from "react"
+import { X, Heart, ArrowUpDown, Layers, RotateCcw } from "lucide-react"
+import { Button } from "@umlstudio/ui/components/button"
+import { useTranslation } from "@/i18n"
+import type { HomeChrome, RefinementKind } from "./useHomeChrome"
 
 const getRefinementIcon = (kind: RefinementKind) => {
   switch (kind) {
     case "favorites":
-      return (
-        <Heart
-          className="size-3.5 fill-rose-500 text-rose-500 shrink-0"
-          aria-hidden="true"
-        />
-      );
+      return <Heart className="size-3.5 fill-rose-500 text-rose-500 shrink-0" aria-hidden="true" />
     case "source":
-      return (
-        <Layers
-          className="size-3.5 text-(--dodger-blue) shrink-0"
-          aria-hidden="true"
-        />
-      );
+      return <Layers className="size-3.5 text-(--dodger-blue) shrink-0" aria-hidden="true" />
     case "sort":
-      return (
-        <ArrowUpDown
-          className="size-3.5 text-muted-foreground shrink-0"
-          aria-hidden="true"
-        />
-      );
+      return <ArrowUpDown className="size-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
     default:
-      return null;
+      return null
   }
-};
+}
 
 export const HomeRefinementChips: FC<{ chrome: HomeChrome }> = ({ chrome }) => {
-  const { activeRefinements, resetAll } = chrome;
-  const { t } = useTranslation();
+  const { activeRefinements, resetAll } = chrome
+  const { t } = useTranslation()
 
   if (activeRefinements.length === 0) {
-    return null;
+    return null
   }
 
   return (
@@ -79,5 +64,5 @@ export const HomeRefinementChips: FC<{ chrome: HomeChrome }> = ({ chrome }) => {
         <span>{t.dashboard.filterClearAll}</span>
       </Button>
     </div>
-  );
-};
+  )
+}

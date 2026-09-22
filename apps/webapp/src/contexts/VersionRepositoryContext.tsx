@@ -1,24 +1,20 @@
-import { createContext, use, type ReactNode } from "react";
-import type { RepositoryKind } from "@/services/versionRepository";
+import { createContext, use, type ReactNode } from "react"
+import type { RepositoryKind } from "@/services/versionRepository"
 
-const VersionRepositoryContext = createContext<RepositoryKind | null>(null);
+const VersionRepositoryContext = createContext<RepositoryKind | null>(null)
 
 export const VersionRepositoryProvider = ({
   kind,
   children,
 }: {
-  kind: RepositoryKind;
-  children: ReactNode;
-}) => (
-  <VersionRepositoryContext value={kind}>{children}</VersionRepositoryContext>
-);
+  kind: RepositoryKind
+  children: ReactNode
+}) => <VersionRepositoryContext value={kind}>{children}</VersionRepositoryContext>
 
 export function useVersionRepositoryKind(): RepositoryKind {
-  const kind = use(VersionRepositoryContext);
+  const kind = use(VersionRepositoryContext)
   if (!kind) {
-    throw new Error(
-      "useVersionRepositoryKind must be used within a VersionRepositoryProvider",
-    );
+    throw new Error("useVersionRepositoryKind must be used within a VersionRepositoryProvider")
   }
-  return kind;
+  return kind
 }

@@ -9,19 +9,13 @@ export interface ClipboardData {
   edges: Edge[]
 }
 
-export const getAllDescendants = (
-  nodeIds: string[],
-  allNodes: Node[]
-): Node[] => {
+export const getAllDescendants = (nodeIds: string[], allNodes: Node[]): Node[] => {
   const descendants: Node[] = []
   const visited = new Set<string>()
 
   const findChildren = (parentIds: string[]) => {
     const children = allNodes.filter(
-      (node) =>
-        node.parentId &&
-        parentIds.includes(node.parentId) &&
-        !visited.has(node.id)
+      (node) => node.parentId && parentIds.includes(node.parentId) && !visited.has(node.id)
     )
 
     children.forEach((child) => visited.add(child.id))
@@ -36,13 +30,8 @@ export const getAllDescendants = (
   return descendants
 }
 
-export const getAllNodesToInclude = (
-  selectedElementIds: string[],
-  allNodes: Node[]
-) => {
-  const selectedNodes = allNodes.filter((node) =>
-    selectedElementIds.includes(node.id)
-  )
+export const getAllNodesToInclude = (selectedElementIds: string[], allNodes: Node[]) => {
+  const selectedNodes = allNodes.filter((node) => selectedElementIds.includes(node.id))
   const descendants = getAllDescendants(selectedElementIds, allNodes)
   return [...selectedNodes, ...descendants]
 }
@@ -55,8 +44,7 @@ export const getRelevantEdges = (
   const nodeIds = new Set(copiedNodeIds)
   return allEdges.filter(
     (edge) =>
-      selectedElementIds.includes(edge.id) ||
-      (nodeIds.has(edge.source) && nodeIds.has(edge.target))
+      selectedElementIds.includes(edge.id) || (nodeIds.has(edge.source) && nodeIds.has(edge.target))
   )
 }
 
@@ -65,19 +53,12 @@ export const getEdgesToRemove = (
   expandedNodeIds: string[],
   allEdges: Edge[]
 ) => {
-  const selectedEdges = allEdges.filter((edge) =>
-    selectedElementIds.includes(edge.id)
-  )
+  const selectedEdges = allEdges.filter((edge) => selectedElementIds.includes(edge.id))
   const connectedEdges = allEdges.filter(
-    (edge) =>
-      expandedNodeIds.includes(edge.source) ||
-      expandedNodeIds.includes(edge.target)
+    (edge) => expandedNodeIds.includes(edge.source) || expandedNodeIds.includes(edge.target)
   )
 
-  return new Set([
-    ...selectedEdges.map((e) => e.id),
-    ...connectedEdges.map((e) => e.id),
-  ])
+  return new Set([...selectedEdges.map((e) => e.id), ...connectedEdges.map((e) => e.id)])
 }
 
 export const createClipboardData = (
@@ -87,11 +68,7 @@ export const createClipboardData = (
 ): ClipboardData => {
   const allNodesToCopy = getAllNodesToInclude(selectedElementIds, allNodes)
   const allNodeIds = allNodesToCopy.map((node) => node.id)
-  const allRelevantEdges = getRelevantEdges(
-    selectedElementIds,
-    allNodeIds,
-    allEdges
-  )
+  const allRelevantEdges = getRelevantEdges(selectedElementIds, allNodeIds, allEdges)
 
   return { nodes: allNodesToCopy, edges: allRelevantEdges }
 }

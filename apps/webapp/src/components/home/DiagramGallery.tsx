@@ -1,19 +1,12 @@
-import {
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import type { UMLDiagramType, UMLModel } from "@umlstudio/core";
-import { Button } from "@umlstudio/ui/components/button";
-import { DiagramGallerySkeleton } from "@/components/home/DiagramGallerySkeleton";
-import { DiagramView } from "@/types";
-import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore";
-import { useDiagramThumbnailWarmup } from "@/hooks/useDiagramThumbnailWarmup";
-import { useThumbnailViewportPriority } from "@/hooks/useThumbnailViewportPriority";
-import { DiagramApiClient } from "@/services/DiagramApiClient";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
+import type { UMLDiagramType, UMLModel } from "@umlstudio/core"
+import { Button } from "@umlstudio/ui/components/button"
+import { DiagramGallerySkeleton } from "@/components/home/DiagramGallerySkeleton"
+import { DiagramView } from "@/types"
+import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
+import { useDiagramThumbnailWarmup } from "@/hooks/useDiagramThumbnailWarmup"
+import { useThumbnailViewportPriority } from "@/hooks/useThumbnailViewportPriority"
+import { DiagramApiClient } from "@/services/DiagramApiClient"
 import {
   clearSharedDiagramExpiredState,
   getSharedDiagramEntries,
@@ -21,74 +14,64 @@ import {
   removeSharedDiagramEntry,
   subscribeToSharedDiagramChange,
   toggleSharedDiagramFavorite,
-} from "@/utils/sharedDiagramStorage";
-import {
-  DiagramCard,
-  type DiagramSource,
-  type RecentDiagram,
-} from "./DiagramCard";
-import { DiagramListItem } from "./DiagramListItem";
-import type { HomeChrome } from "./useHomeChrome";
+} from "@/utils/sharedDiagramStorage"
+import { DiagramCard, type DiagramSource, type RecentDiagram } from "./DiagramCard"
+import { DiagramListItem } from "./DiagramListItem"
+import type { HomeChrome } from "./useHomeChrome"
 
-const normalize = (value: string) => value.trim().toLowerCase();
-const INITIAL_VISIBLE_COUNT = 9;
-const LOAD_MORE_STEP = 9;
+const normalize = (value: string) => value.trim().toLowerCase()
+const INITIAL_VISIBLE_COUNT = 9
+const LOAD_MORE_STEP = 9
 
-type DiagramSourceFilter = "all" | DiagramSource;
+type DiagramSourceFilter = "all" | DiagramSource
 
 type GalleryDiagram = RecentDiagram & {
-  model: UMLModel;
-  source: DiagramSource;
-  createdAt: string;
-  isExpired?: boolean;
-  expiredAt?: string;
-};
+  model: UMLModel
+  source: DiagramSource
+  createdAt: string
+  isExpired?: boolean
+  expiredAt?: string
+}
 
 const isDiagramEmpty = (diagram: GalleryDiagram) =>
-  diagram.model.nodes.length === 0 && diagram.model.edges.length === 0;
+  diagram.model.nodes.length === 0 && diagram.model.edges.length === 0
 
 const sortByLastModifiedDesc = (a: GalleryDiagram, b: GalleryDiagram) =>
-  new Date(b.lastModifiedAt).getTime() - new Date(a.lastModifiedAt).getTime();
+  new Date(b.lastModifiedAt).getTime() - new Date(a.lastModifiedAt).getTime()
 
 const parseDate = (value: string) => {
-  const parsedDate = new Date(value);
-  const timestamp = parsedDate.getTime();
-  return Number.isNaN(timestamp) ? null : parsedDate;
-};
+  const parsedDate = new Date(value)
+  const timestamp = parsedDate.getTime()
+  return Number.isNaN(timestamp) ? null : parsedDate
+}
 
 const toDateMs = (value: string) => {
-  const parsedDate = parseDate(value);
-  return parsedDate ? parsedDate.getTime() : null;
-};
+  const parsedDate = parseDate(value)
+  return parsedDate ? parsedDate.getTime() : null
+}
 
-const getDiagramSortValue = (
-  diagram: GalleryDiagram,
-  sortBy: HomeChrome["sort"]["field"],
-) => {
+const getDiagramSortValue = (diagram: GalleryDiagram, sortBy: HomeChrome["sort"]["field"]) => {
   if (sortBy === "dateCreated") {
-    return toDateMs(diagram.createdAt) ?? Number.NEGATIVE_INFINITY;
+    return toDateMs(diagram.createdAt) ?? Number.NEGATIVE_INFINITY
   }
 
   if (sortBy === "lastModified") {
-    return toDateMs(diagram.lastModifiedAt) ?? Number.NEGATIVE_INFINITY;
+    return toDateMs(diagram.lastModifiedAt) ?? Number.NEGATIVE_INFINITY
   }
 
-  return normalize(diagram.title);
-};
+  return normalize(diagram.title)
+}
 
-const compareExpiredLast = (
-  firstDiagram: GalleryDiagram,
-  secondDiagram: GalleryDiagram,
-) => {
-  const firstExpired = Boolean(firstDiagram.isExpired);
-  const secondExpired = Boolean(secondDiagram.isExpired);
+const compareExpiredLast = (firstDiagram: GalleryDiagram, secondDiagram: GalleryDiagram) => {
+  const firstExpired = Boolean(firstDiagram.isExpired)
+  const secondExpired = Boolean(secondDiagram.isExpired)
 
   if (firstExpired === secondExpired) {
-    return 0;
+    return 0
   }
 
-  return firstExpired ? 1 : -1;
-};
+  return firstExpired ? 1 : -1
+}
 
 const EmptyStateIllustration = () => (
   <svg
@@ -107,58 +90,20 @@ const EmptyStateIllustration = () => (
       strokeWidth="4"
       strokeDasharray="8 8"
     />
-    <rect
-      x="42"
-      y="52"
-      width="46"
-      height="32"
-      rx="4"
-      stroke="currentColor"
-      strokeWidth="3"
-    />
-    <rect
-      x="96"
-      y="52"
-      width="42"
-      height="14"
-      rx="4"
-      fill="currentColor"
-      fillOpacity="0.25"
-    />
-    <rect
-      x="96"
-      y="74"
-      width="30"
-      height="10"
-      rx="4"
-      fill="currentColor"
-      fillOpacity="0.2"
-    />
-    <line
-      x1="42"
-      y1="103"
-      x2="138"
-      y2="103"
-      stroke="currentColor"
-      strokeWidth="3"
-    />
-    <line
-      x1="42"
-      y1="118"
-      x2="120"
-      y2="118"
-      stroke="currentColor"
-      strokeWidth="3"
-    />
+    <rect x="42" y="52" width="46" height="32" rx="4" stroke="currentColor" strokeWidth="3" />
+    <rect x="96" y="52" width="42" height="14" rx="4" fill="currentColor" fillOpacity="0.25" />
+    <rect x="96" y="74" width="30" height="10" rx="4" fill="currentColor" fillOpacity="0.2" />
+    <line x1="42" y1="103" x2="138" y2="103" stroke="currentColor" strokeWidth="3" />
+    <line x1="42" y1="118" x2="120" y2="118" stroke="currentColor" strokeWidth="3" />
   </svg>
-);
+)
 
 type DiagramGalleryProps = {
-  chrome: HomeChrome;
-  highlightSharedDiagramId?: string | null;
-  onCountChange?: (count: number) => void;
-  onTypeOptionsChange?: (types: readonly UMLDiagramType[]) => void;
-};
+  chrome: HomeChrome
+  highlightSharedDiagramId?: string | null
+  onCountChange?: (count: number) => void
+  onTypeOptionsChange?: (types: readonly UMLDiagramType[]) => void
+}
 
 export const DiagramGallery = ({
   chrome,
@@ -166,36 +111,31 @@ export const DiagramGallery = ({
   onCountChange,
   onTypeOptionsChange,
 }: DiagramGalleryProps) => {
-  const models = usePersistenceModelStore((state) => state.models);
-  const toggleFavorite = usePersistenceModelStore(
-    (state) => state.toggleFavorite,
-  );
+  const models = usePersistenceModelStore((state) => state.models)
+  const toggleFavorite = usePersistenceModelStore((state) => state.toggleFavorite)
 
-  const searchTerm = chrome.searchTerm;
-  const selectedDiagramType = chrome.type;
-  const sortBy = chrome.sort.field;
-  const sortOrder = chrome.sort.order;
-  const diagramSource = chrome.source as DiagramSourceFilter;
-  const showFavoritesOnly = chrome.favoritesOnly;
+  const searchTerm = chrome.searchTerm
+  const selectedDiagramType = chrome.type
+  const sortBy = chrome.sort.field
+  const sortOrder = chrome.sort.order
+  const diagramSource = chrome.source as DiagramSourceFilter
+  const showFavoritesOnly = chrome.favoritesOnly
 
-  const [sharedDiagrams, setSharedDiagrams] = useState<GalleryDiagram[]>([]);
+  const [sharedDiagrams, setSharedDiagrams] = useState<GalleryDiagram[]>([])
   const [sharedDiagramsStatus, setSharedDiagramsStatus] = useState<
     "idle" | "loading" | "done" | "error"
-  >("idle");
-  const [sharedReloadKey, setSharedReloadKey] = useState(0);
-  const hasLoadedSharedRef = useRef(false);
-  const sharedEntrySignatureRef = useRef<string | null>(null);
+  >("idle")
+  const [sharedReloadKey, setSharedReloadKey] = useState(0)
+  const hasLoadedSharedRef = useRef(false)
+  const sharedEntrySignatureRef = useRef<string | null>(null)
   const isSharedPending =
     diagramSource === "shared" &&
-    (sharedDiagramsStatus === "idle" || sharedDiagramsStatus === "loading");
-  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
-  const [highlightedDiagramId, setHighlightedDiagramId] = useState<
-    string | null
-  >(null);
-  const [prevVisibleCount, setPrevVisibleCount] = useState(
-    INITIAL_VISIBLE_COUNT,
-  );
-  const sentinelRef = useRef<HTMLDivElement>(null);
+    (sharedDiagramsStatus === "idle" || sharedDiagramsStatus === "loading")
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT)
+  const [prevVisibleCount, setPrevVisibleCount] = useState(INITIAL_VISIBLE_COUNT)
+  const [prevClampedCount, setPrevClampedCount] = useState(INITIAL_VISIBLE_COUNT)
+  const [highlightedDiagramId, setHighlightedDiagramId] = useState<string | null>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const localDiagrams = useMemo<GalleryDiagram[]>(() => {
     return Object.entries(models)
@@ -207,66 +147,62 @@ export const DiagramGallery = ({
         favorite: persistentModelEntity.favorite ?? false,
         model: persistentModelEntity.model,
         source: "local" as const,
-        createdAt:
-          persistentModelEntity.createdAt ??
-          persistentModelEntity.lastModifiedAt,
+        createdAt: persistentModelEntity.createdAt ?? persistentModelEntity.lastModifiedAt,
       }))
-      .sort(sortByLastModifiedDesc);
-  }, [models]);
+      .sort(sortByLastModifiedDesc)
+  }, [models])
 
   useEffect(() => {
     const computeSignature = () =>
       getSharedDiagramEntries()
         .map((entry) => entry.id)
-        .join("|");
+        .join("|")
 
-    sharedEntrySignatureRef.current ??= computeSignature();
+    sharedEntrySignatureRef.current ??= computeSignature()
 
     return subscribeToSharedDiagramChange(() => {
-      const nextSignature = computeSignature();
+      const nextSignature = computeSignature()
       if (nextSignature === sharedEntrySignatureRef.current) {
-        return;
+        return
       }
-      sharedEntrySignatureRef.current = nextSignature;
-      setSharedReloadKey((current) => current + 1);
-    });
-  }, []);
+      sharedEntrySignatureRef.current = nextSignature
+      setSharedReloadKey((current) => current + 1)
+    })
+  }, [])
 
   useEffect(() => {
     if (diagramSource !== "shared" && diagramSource !== "all") {
-      return;
+      return
     }
 
-    let isSubscribed = true;
+    let isSubscribed = true
 
     const loadSharedDiagrams = async () => {
-      const entries = getSharedDiagramEntries();
+      const entries = getSharedDiagramEntries()
 
       if (entries.length === 0) {
         if (isSubscribed) {
-          setSharedDiagrams([]);
-          setSharedDiagramsStatus("done");
-          hasLoadedSharedRef.current = true;
+          setSharedDiagrams([])
+          setSharedDiagramsStatus("done")
+          hasLoadedSharedRef.current = true
         }
-        return;
+        return
       }
 
       if (isSubscribed && !hasLoadedSharedRef.current) {
-        setSharedDiagramsStatus("loading");
+        setSharedDiagramsStatus("loading")
       }
 
-      const diagramsById = new Map<string, GalleryDiagram>();
-      let networkErrorCount = 0;
+      const diagramsById = new Map<string, GalleryDiagram>()
+      let networkErrorCount = 0
 
       await Promise.all(
         entries.map(async (entry) => {
           try {
-            const storedDiagram = await DiagramApiClient.fetchStoredDiagram(
-              entry.id,
-            );
+            const storedDiagram = await DiagramApiClient.fetchStoredDiagram(entry.id)
             if (!storedDiagram) {
-              const expiredAt = entry.expiredAt ?? new Date().toISOString();
-              markSharedDiagramExpired(entry.id, expiredAt);
+              const expiredAt = entry.expiredAt ?? new Date().toISOString()
+              markSharedDiagramExpired(entry.id, expiredAt)
               diagramsById.set(entry.id, {
                 id: entry.id,
                 title: "Expired diagram",
@@ -279,270 +215,243 @@ export const DiagramGallery = ({
                 lastSharedView: entry.lastSharedView,
                 isExpired: true,
                 expiredAt,
-              });
-              return;
+              })
+              return
             }
 
             if (entry.expiredAt) {
-              clearSharedDiagramExpiredState(entry.id);
+              clearSharedDiagramExpiredState(entry.id)
             }
             diagramsById.set(entry.id, {
               id: storedDiagram.id,
               title: storedDiagram.title,
               type: storedDiagram.type,
-              lastModifiedAt:
-                storedDiagram.updatedAt ||
-                storedDiagram.createdAt ||
-                entry.sharedAt,
+              lastModifiedAt: storedDiagram.updatedAt || storedDiagram.createdAt || entry.sharedAt,
               favorite: entry.favorite ?? false,
               source: "shared",
               model: storedDiagram,
               createdAt: storedDiagram.createdAt || entry.sharedAt,
               lastSharedView: entry.lastSharedView,
               expiredAt: undefined,
-            });
+            })
           } catch {
-            networkErrorCount++;
+            networkErrorCount++
           }
-        }),
-      );
+        })
+      )
 
       const orderedSharedDiagrams = entries
         .map((entry) => diagramsById.get(entry.id))
         .filter((diagram): diagram is GalleryDiagram => Boolean(diagram))
         .sort((firstDiagram, secondDiagram) => {
-          const expiredComparison = compareExpiredLast(
-            firstDiagram,
-            secondDiagram,
-          );
+          const expiredComparison = compareExpiredLast(firstDiagram, secondDiagram)
           if (expiredComparison !== 0) {
-            return expiredComparison;
+            return expiredComparison
           }
 
-          return sortByLastModifiedDesc(firstDiagram, secondDiagram);
-        });
+          return sortByLastModifiedDesc(firstDiagram, secondDiagram)
+        })
 
       if (isSubscribed) {
-        setSharedDiagrams(orderedSharedDiagrams);
+        setSharedDiagrams(orderedSharedDiagrams)
         setSharedDiagramsStatus(
-          networkErrorCount > 0 && orderedSharedDiagrams.length === 0
-            ? "error"
-            : "done",
-        );
-        hasLoadedSharedRef.current = true;
+          networkErrorCount > 0 && orderedSharedDiagrams.length === 0 ? "error" : "done"
+        )
+        hasLoadedSharedRef.current = true
       }
-    };
+    }
 
-    void loadSharedDiagrams();
+    void loadSharedDiagrams()
 
     return () => {
-      isSubscribed = false;
-    };
-  }, [diagramSource, sharedReloadKey]);
+      isSubscribed = false
+    }
+  }, [diagramSource, sharedReloadKey])
 
   const allDiagrams = useMemo<GalleryDiagram[]>(() => {
     if (diagramSource === "local") {
-      return localDiagrams;
+      return localDiagrams
     }
 
     if (diagramSource === "shared") {
-      return sharedDiagrams;
+      return sharedDiagrams
     }
 
-    return [...localDiagrams, ...sharedDiagrams].sort(sortByLastModifiedDesc);
-  }, [diagramSource, localDiagrams, sharedDiagrams]);
+    return [...localDiagrams, ...sharedDiagrams].sort(sortByLastModifiedDesc)
+  }, [diagramSource, localDiagrams, sharedDiagrams])
 
   const diagramTypeOptions = useMemo(
     () => Array.from(new Set(allDiagrams.map((diagram) => diagram.type))),
-    [allDiagrams],
-  );
+    [allDiagrams]
+  )
 
   useEffect(() => {
-    onTypeOptionsChange?.(diagramTypeOptions);
-  }, [diagramTypeOptions, onTypeOptionsChange]);
+    onTypeOptionsChange?.(diagramTypeOptions)
+  }, [diagramTypeOptions, onTypeOptionsChange])
 
   const filteredDiagrams = useMemo(() => {
-    const normalizedSearchTerm = normalize(searchTerm);
+    const normalizedSearchTerm = normalize(searchTerm)
     const sortedDiagrams = allDiagrams
       .filter((diagram) => {
         const matchesSearch =
           normalizedSearchTerm.length === 0 ||
-          normalize(diagram.title).includes(normalizedSearchTerm);
-        const matchesType =
-          selectedDiagramType === "all" || diagram.type === selectedDiagramType;
-        const matchesFavorite = !showFavoritesOnly || diagram.favorite;
+          normalize(diagram.title).includes(normalizedSearchTerm)
+        const matchesType = selectedDiagramType === "all" || diagram.type === selectedDiagramType
+        const matchesFavorite = !showFavoritesOnly || diagram.favorite
 
-        return matchesSearch && matchesType && matchesFavorite;
+        return matchesSearch && matchesType && matchesFavorite
       })
       .sort((firstDiagram, secondDiagram) => {
-        const expiredComparison = compareExpiredLast(
-          firstDiagram,
-          secondDiagram,
-        );
+        const expiredComparison = compareExpiredLast(firstDiagram, secondDiagram)
         if (expiredComparison !== 0) {
-          return expiredComparison;
+          return expiredComparison
         }
 
         if (sortBy === "alphabetical") {
-          const titleComparison = String(
-            getDiagramSortValue(firstDiagram, sortBy),
-          ).localeCompare(String(getDiagramSortValue(secondDiagram, sortBy)));
-          return sortOrder === "oldest" ? titleComparison : -titleComparison;
+          const titleComparison = String(getDiagramSortValue(firstDiagram, sortBy)).localeCompare(
+            String(getDiagramSortValue(secondDiagram, sortBy))
+          )
+          return sortOrder === "oldest" ? titleComparison : -titleComparison
         }
 
-        const firstValue = Number(getDiagramSortValue(firstDiagram, sortBy));
-        const secondValue = Number(getDiagramSortValue(secondDiagram, sortBy));
-        const chronologicalComparison = firstValue - secondValue;
-        return sortOrder === "oldest"
-          ? chronologicalComparison
-          : -chronologicalComparison;
-      });
+        const firstValue = Number(getDiagramSortValue(firstDiagram, sortBy))
+        const secondValue = Number(getDiagramSortValue(secondDiagram, sortBy))
+        const chronologicalComparison = firstValue - secondValue
+        return sortOrder === "oldest" ? chronologicalComparison : -chronologicalComparison
+      })
 
-    return sortedDiagrams;
-  }, [
-    allDiagrams,
-    searchTerm,
-    selectedDiagramType,
-    showFavoritesOnly,
-    sortBy,
-    sortOrder,
-  ]);
+    return sortedDiagrams
+  }, [allDiagrams, searchTerm, selectedDiagramType, showFavoritesOnly, sortBy, sortOrder])
 
   useEffect(() => {
-    onCountChange?.(filteredDiagrams.length);
-  }, [filteredDiagrams.length, onCountChange]);
+    onCountChange?.(filteredDiagrams.length)
+  }, [filteredDiagrams.length, onCountChange])
 
-  const deferredFilteredDiagrams = useDeferredValue(filteredDiagrams);
-  const isPending = deferredFilteredDiagrams !== filteredDiagrams;
+  const deferredFilteredDiagrams = useDeferredValue(filteredDiagrams)
+  const isPending = deferredFilteredDiagrams !== filteredDiagrams
 
-  useEffect(() => {
-    setVisibleCount(INITIAL_VISIBLE_COUNT);
-  }, [
-    searchTerm,
-    selectedDiagramType,
-    showFavoritesOnly,
-    sortBy,
-    sortOrder,
-    diagramSource,
-  ]);
+  const filterKey = `${searchTerm}|${selectedDiagramType}|${showFavoritesOnly}|${sortBy}|${sortOrder}|${diagramSource}`
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey)
+    setVisibleCount(INITIAL_VISIBLE_COUNT)
+    setPrevVisibleCount(INITIAL_VISIBLE_COUNT)
+    setPrevClampedCount(INITIAL_VISIBLE_COUNT)
+  }
+
+  const [prevHighlightId, setPrevHighlightId] = useState(highlightSharedDiagramId)
+  if (highlightSharedDiagramId !== prevHighlightId) {
+    setPrevHighlightId(highlightSharedDiagramId)
+    setHighlightedDiagramId(highlightSharedDiagramId)
+  }
 
   const clampedVisibleCount = Math.min(
     Math.max(visibleCount, INITIAL_VISIBLE_COUNT),
-    Math.max(deferredFilteredDiagrams.length, INITIAL_VISIBLE_COUNT),
-  );
-  const visibleDiagrams = deferredFilteredDiagrams.slice(
-    0,
-    clampedVisibleCount,
-  );
-  const hasMoreDiagrams = deferredFilteredDiagrams.length > clampedVisibleCount;
+    Math.max(deferredFilteredDiagrams.length, INITIAL_VISIBLE_COUNT)
+  )
+
+  if (clampedVisibleCount !== prevClampedCount) {
+    setPrevVisibleCount(prevClampedCount)
+    setPrevClampedCount(clampedVisibleCount)
+  }
+
+  const visibleDiagrams = deferredFilteredDiagrams.slice(0, clampedVisibleCount)
+  const hasMoreDiagrams = deferredFilteredDiagrams.length > clampedVisibleCount
+
+  const isAllDiagramSource = diagramSource === "all"
 
   useEffect(() => {
-    setPrevVisibleCount(clampedVisibleCount);
-  }, [clampedVisibleCount]);
+    if (!highlightSharedDiagramId) return
+    chrome.setSource("shared")
+    const timer = window.setTimeout(() => setHighlightedDiagramId(null), 2400)
+    return () => window.clearTimeout(timer)
+  }, [highlightSharedDiagramId, chrome])
 
-  const isAllDiagramSource = diagramSource === "all";
-
-  useEffect(() => {
-    if (!highlightSharedDiagramId) return;
-    chrome.setSource("shared");
-    setHighlightedDiagramId(highlightSharedDiagramId);
-    const timer = window.setTimeout(() => setHighlightedDiagramId(null), 2400);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highlightSharedDiagramId]);
-
-  const thumbnailViewportPriority = useThumbnailViewportPriority();
+  const thumbnailViewportPriority = useThumbnailViewportPriority()
   const loadingThumbnailIds = useDiagramThumbnailWarmup({
     visibleDiagrams,
     isPending,
     isDiagramEmpty,
     viewportPriority: thumbnailViewportPriority,
-  });
+  })
 
   const handleToggleDiagramFavorite = useCallback(
     (diagram: RecentDiagram) => {
       if ((diagram.source ?? "local") === "local") {
-        toggleFavorite(diagram.id);
-        return;
+        toggleFavorite(diagram.id)
+        return
       }
 
-      toggleSharedDiagramFavorite(diagram.id);
+      toggleSharedDiagramFavorite(diagram.id)
       setSharedDiagrams((currentDiagrams) =>
         currentDiagrams.map((currentDiagram) =>
           currentDiagram.id === diagram.id
             ? { ...currentDiagram, favorite: !currentDiagram.favorite }
-            : currentDiagram,
-        ),
-      );
+            : currentDiagram
+        )
+      )
     },
-    [toggleFavorite],
-  );
+    [toggleFavorite]
+  )
 
   const handleRemoveSharedDiagram = useCallback((diagramId: string) => {
     setSharedDiagrams((currentDiagrams) =>
-      currentDiagrams.filter((diagram) => diagram.id !== diagramId),
-    );
-    removeSharedDiagramEntry(diagramId);
+      currentDiagrams.filter((diagram) => diagram.id !== diagramId)
+    )
+    removeSharedDiagramEntry(diagramId)
     sharedEntrySignatureRef.current = getSharedDiagramEntries()
       .map((entry) => entry.id)
-      .join("|");
-  }, []);
+      .join("|")
+  }, [])
 
-  const handleSharedDiagramViewChange = useCallback(
-    (diagramId: string, view: DiagramView) => {
-      setSharedDiagrams((currentDiagrams) =>
-        currentDiagrams.map((diagram) =>
-          diagram.id === diagramId
-            ? { ...diagram, lastSharedView: view }
-            : diagram,
-        ),
-      );
-    },
-    [],
-  );
+  const handleSharedDiagramViewChange = useCallback((diagramId: string, view: DiagramView) => {
+    setSharedDiagrams((currentDiagrams) =>
+      currentDiagrams.map((diagram) =>
+        diagram.id === diagramId ? { ...diagram, lastSharedView: view } : diagram
+      )
+    )
+  }, [])
 
   useEffect(() => {
     if (!hasMoreDiagrams || isPending) {
-      return;
+      return
     }
 
-    const target = sentinelRef.current;
+    const target = sentinelRef.current
     if (!target) {
-      return;
+      return
     }
 
-    const scrollRoot = target.closest(".home-page-scrollbar");
+    const scrollRoot = target.closest(".home-page-scrollbar")
     const observer = new IntersectionObserver(
       (entries) => {
-        const [entry] = entries;
+        const [entry] = entries
         if (!entry?.isIntersecting) {
-          return;
+          return
         }
 
         setVisibleCount((current) =>
-          Math.min(current + LOAD_MORE_STEP, deferredFilteredDiagrams.length),
-        );
+          Math.min(current + LOAD_MORE_STEP, deferredFilteredDiagrams.length)
+        )
       },
       {
         root: scrollRoot,
         rootMargin: "280px 0px",
         threshold: 0.01,
-      },
-    );
+      }
+    )
 
-    observer.observe(target);
+    observer.observe(target)
     return () => {
-      observer.disconnect();
-    };
-  }, [deferredFilteredDiagrams.length, hasMoreDiagrams, isPending]);
+      observer.disconnect()
+    }
+  }, [deferredFilteredDiagrams.length, hasMoreDiagrams, isPending])
 
   return (
     <div className="w-full transition-colors duration-200">
       <div className="space-y-6">
         {isSharedPending ? (
-          <DiagramGallerySkeleton
-            count={Math.max(getSharedDiagramEntries().length, 1)}
-          />
+          <DiagramGallerySkeleton count={Math.max(getSharedDiagramEntries().length, 1)} />
         ) : allDiagrams.length === 0 ? (
           <div className="flex min-h-[480px] flex-col items-center justify-center gap-6 text-center transition-colors duration-200">
             <EmptyStateIllustration />
@@ -565,29 +474,23 @@ export const DiagramGallery = ({
                   )
                 ) : (
                   <>
-                    Use{" "}
-                    <strong className="text-foreground">
-                      &quot;New diagram&quot;
-                    </strong>{" "}
-                    to create a diagram, or{" "}
-                    <strong className="text-foreground">
-                      &quot;Import&quot;
-                    </strong>{" "}
-                    to add an existing one.
+                    Use <strong className="text-foreground">&quot;New diagram&quot;</strong> to
+                    create a diagram, or{" "}
+                    <strong className="text-foreground">&quot;Import&quot;</strong> to add an
+                    existing one.
                   </>
                 )}
               </p>
-              {diagramSource === "shared" &&
-                sharedDiagramsStatus === "error" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => setSharedReloadKey((current) => current + 1)}
-                  >
-                    Try again
-                  </Button>
-                )}
+              {diagramSource === "shared" && sharedDiagramsStatus === "error" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setSharedReloadKey((current) => current + 1)}
+                >
+                  Try again
+                </Button>
+              )}
             </div>
           </div>
         ) : (
@@ -601,11 +504,7 @@ export const DiagramGallery = ({
                   {visibleDiagrams.map((diagram, index) => (
                     <div
                       key={diagram.id}
-                      className={
-                        index >= prevVisibleCount
-                          ? "gallery-card-enter"
-                          : undefined
-                      }
+                      className={index >= prevVisibleCount ? "gallery-card-enter" : undefined}
                     >
                       <DiagramListItem
                         diagram={diagram}
@@ -622,9 +521,7 @@ export const DiagramGallery = ({
                         isHighlighted={diagram.id === highlightedDiagramId}
                         onToggleFavorite={handleToggleDiagramFavorite}
                         onSharedDiagramRemoved={handleRemoveSharedDiagram}
-                        onSharedDiagramViewChange={
-                          handleSharedDiagramViewChange
-                        }
+                        onSharedDiagramViewChange={handleSharedDiagramViewChange}
                         observeViewport={thumbnailViewportPriority.observe}
                       />
                     </div>
@@ -638,11 +535,7 @@ export const DiagramGallery = ({
                   {visibleDiagrams.map((diagram, index) => (
                     <div
                       key={diagram.id}
-                      className={
-                        index >= prevVisibleCount
-                          ? "gallery-card-enter"
-                          : undefined
-                      }
+                      className={index >= prevVisibleCount ? "gallery-card-enter" : undefined}
                     >
                       <DiagramCard
                         diagram={diagram}
@@ -658,9 +551,7 @@ export const DiagramGallery = ({
                         isHighlighted={diagram.id === highlightedDiagramId}
                         onToggleFavorite={handleToggleDiagramFavorite}
                         onSharedDiagramRemoved={handleRemoveSharedDiagram}
-                        onSharedDiagramViewChange={
-                          handleSharedDiagramViewChange
-                        }
+                        onSharedDiagramViewChange={handleSharedDiagramViewChange}
                         observeViewport={thumbnailViewportPriority.observe}
                       />
                     </div>
@@ -677,12 +568,7 @@ export const DiagramGallery = ({
                   <p className="max-w-xs text-center text-sm text-muted-foreground">
                     No diagrams match your search and filters.
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={chrome.resetAll}
-                  >
+                  <Button variant="outline" size="sm" className="mt-2" onClick={chrome.resetAll}>
                     Clear filters
                   </Button>
                 </div>
@@ -690,15 +576,11 @@ export const DiagramGallery = ({
             )}
 
             {filteredDiagrams.length > 0 && (
-              <div
-                ref={sentinelRef}
-                aria-hidden="true"
-                className="h-0.5 w-full"
-              />
+              <div ref={sentinelRef} aria-hidden="true" className="h-0.5 w-full" />
             )}
           </>
         )}
       </div>
     </div>
-  );
-};
+  )
+}

@@ -11,11 +11,7 @@ import {
 import { CANVAS } from "@/constants"
 import { pointsToSvgPath, type IPoint } from "@/edges/Connection"
 import { useEdgeRoutingContext } from "@/hooks/useEdgeRoutingContext"
-import {
-  useDiagramStore,
-  useEdgeGeometryStore,
-  useMetadataStore,
-} from "@/store/context"
+import { useDiagramStore, useEdgeGeometryStore, useMetadataStore } from "@/store/context"
 import { useFreeformDropTarget } from "@/hooks/useFreeformDropTarget"
 import {
   getDefaultEdgeType,
@@ -58,14 +54,7 @@ const getConnectionPreviewPath = (
   }
 
   return pointsToSvgPath(
-    routeOrthogonalPath(
-      from,
-      to,
-      fromPosition,
-      toPosition,
-      obstacles,
-      neighborEdges
-    )
+    routeOrthogonalPath(from, to, fromPosition, toPosition, obstacles, neighborEdges)
   )
 }
 
@@ -94,23 +83,16 @@ export const ConnectionPreviewLine = ({
   const connectionMode = useStore((state) => state.connectionMode)
   const diagramType = useMetadataStore((state) => state.diagramType)
   const previewEdgeType = getDefaultEdgeType(diagramType)
-  const previewEnableStraightPath =
-    STRAIGHT_PATH_STEP_EDGE_TYPES.has(previewEdgeType)
-  const setPendingConnectionEdge = useMetadataStore(
-    (state) => state.setPendingConnectionEdge
-  )
-  const pendingConnectionId = useMetadataStore(
-    (state) => state.pendingConnectionId
-  )
+  const previewEnableStraightPath = STRAIGHT_PATH_STEP_EDGE_TYPES.has(previewEdgeType)
+  const setPendingConnectionEdge = useMetadataStore((state) => state.setPendingConnectionEdge)
+  const pendingConnectionId = useMetadataStore((state) => state.pendingConnectionId)
   const pendingEdgeId = pendingConnectionId ?? PENDING_CONNECTION_FALLBACK_ID
   const pendingSolvedRoute = useEdgeGeometryStore(
-    (state) =>
-      state.previewById[pendingEdgeId] ?? state.geometryById[pendingEdgeId]
+    (state) => state.previewById[pendingEdgeId] ?? state.geometryById[pendingEdgeId]
   )
 
   const newConnection = useMemo(() => {
-    const snap = (v: number) =>
-      Math.round(v / CANVAS.SNAP_TO_GRID_PX) * CANVAS.SNAP_TO_GRID_PX
+    const snap = (v: number) => Math.round(v / CANVAS.SNAP_TO_GRID_PX) * CANVAS.SNAP_TO_GRID_PX
     const pointer: XYPosition = { x: snap(toX), y: snap(toY) }
 
     const hasNativeTarget =
@@ -118,13 +100,9 @@ export const ConnectionPreviewLine = ({
       nativeTargetId !== undefined &&
       nativeTargetId !== fromNodeId &&
       nativeTargetPosition !== undefined
-    const target = hasNativeTarget
-      ? null
-      : resolveDropTarget(pointer, fromNodeId)
+    const target = hasNativeTarget ? null : resolveDropTarget(pointer, fromNodeId)
     const hit = target && target.id !== fromNodeId ? target : null
-    const anchor = hit
-      ? getEdgeAnchorFromPoint(hit.type, pointer, hit.rect)
-      : null
+    const anchor = hit ? getEdgeAnchorFromPoint(hit.type, pointer, hit.rect) : null
 
     const freeformTarget =
       hit && anchor
@@ -135,17 +113,12 @@ export const ConnectionPreviewLine = ({
           }
         : null
 
-    const draggedFar =
-      Math.hypot(toX - fromX, toY - fromY) >= GHOST_MIN_DRAG_DISTANCE_PX
+    const draggedFar = Math.hypot(toX - fromX, toY - fromY) >= GHOST_MIN_DRAG_DISTANCE_PX
 
     return {
       from: { x: fromX, y: fromY },
-      to: hasNativeTarget
-        ? { x: toX, y: toY }
-        : (freeformTarget?.point ?? pointer),
-      toPosition: hasNativeTarget
-        ? nativeTargetPosition
-        : (freeformTarget?.position ?? toPosition),
+      to: hasNativeTarget ? { x: toX, y: toY } : (freeformTarget?.point ?? pointer),
+      toPosition: hasNativeTarget ? nativeTargetPosition : (freeformTarget?.position ?? toPosition),
       targetId: hasNativeTarget ? nativeTargetId : freeformTarget?.id,
       targetHandle: hasNativeTarget
         ? nativeTargetHandleId
@@ -170,9 +143,7 @@ export const ConnectionPreviewLine = ({
     nativeTargetPosition,
   ])
 
-  const pinnedTargetAnchor = newConnection.targetId
-    ? newConnection.targetAnchor
-    : null
+  const pinnedTargetAnchor = newConnection.targetId ? newConnection.targetAnchor : null
   const previewSourceHandle = fromHandle?.id ?? undefined
   const previewTargetHandle = newConnection.targetHandle
   const pendingEdge = useMemo<Edge | null>(() => {
@@ -184,9 +155,7 @@ export const ConnectionPreviewLine = ({
       sourceHandle: previewSourceHandle,
       targetHandle: previewTargetHandle,
       type: previewEdgeType,
-      data: pinnedTargetAnchor
-        ? { points: [], targetAnchor: pinnedTargetAnchor }
-        : { points: [] },
+      data: pinnedTargetAnchor ? { points: [], targetAnchor: pinnedTargetAnchor } : { points: [] },
     }
   }, [
     fromNodeId,
@@ -270,8 +239,7 @@ export const ConnectionPreviewLine = ({
     pendingSolvedRoute,
   ])
 
-  const stroke =
-    connectionLineStyle?.stroke ?? "var(--umlstudio-primary, #3590f3)"
+  const stroke = connectionLineStyle?.stroke ?? "var(--umlstudio-primary, #3590f3)"
 
   return (
     <>

@@ -1,53 +1,47 @@
-import { createMiddleware } from "hono/factory";
-import type { Context } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import type { AppEnv } from "../env.js";
+import { createMiddleware } from "hono/factory"
+import type { Context } from "hono"
+import { getCookie, setCookie } from "hono/cookie"
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto"
+import type { AppEnv } from "../env.js"
 
-const COOKIE_PREFIX = "umlstudio_owner_";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 180;
-const NONCE_BYTES = 16;
+const COOKIE_PREFIX = "umlstudio_owner_"
+const MAX_AGE_SECONDS = 60 * 60 * 24 * 180
+const NONCE_BYTES = 16
 
 interface OwnerCookieOptions {
-  secret: string;
+  secret: string
 }
 
 function sign(diagramId: string, nonce: string, secret: string): string {
-  return createHmac("sha256", secret)
-    .update(`${diagramId}|${nonce}`)
-    .digest("hex");
+  return createHmac("sha256", secret).update(`${diagramId}|${nonce}`).digest("hex")
 }
 
 function tokenFor(diagramId: string, secret: string): string {
-  const nonce = randomBytes(NONCE_BYTES).toString("hex");
-  const sig = sign(diagramId, nonce, secret);
-  return `${nonce}.${sig}`;
+  const nonce = randomBytes(NONCE_BYTES).toString("hex")
+  const sig = sign(diagramId, nonce, secret)
+  return `${nonce}.${sig}`
 }
 
-function verify(
-  diagramId: string,
-  token: string | undefined,
-  secret: string,
-): boolean {
-  if (!token) return false;
-  const parts = token.split(".");
-  if (parts.length !== 2) return false;
-  const [nonce, sig] = parts;
-  if (!nonce || !sig) return false;
-  const expected = sign(diagramId, nonce, secret);
-  if (sig.length !== expected.length) return false;
+function verify(diagramId: string, token: string | undefined, secret: string): boolean {
+  if (!token) return false
+  const parts = token.split(".")
+  if (parts.length !== 2) return false
+  const [nonce, sig] = parts
+  if (!nonce || !sig) return false
+  const expected = sign(diagramId, nonce, secret)
+  if (sig.length !== expected.length) return false
   try {
-    return timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+    return timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
   } catch {
-    return false;
+    return false
   }
 }
 
-const DIAGRAM_ID_RE = /^\/api\/diagrams\/([A-Za-z0-9_-]+)(?:\/|$)/;
+const DIAGRAM_ID_RE = /^\/api\/diagrams\/([A-Za-z0-9_-]+)(?:\/|$)/
 
 function readDiagramIdFromPath(path: string): string | undefined {
-  const match = DIAGRAM_ID_RE.exec(path);
-  return match ? match[1] : undefined;
+  const match = DIAGRAM_ID_RE.exec(path)
+  return match ? match[1] : undefined
 }
 
 /**
@@ -59,18 +53,18 @@ function readDiagramIdFromPath(path: string): string | undefined {
  */
 export function ownerReader({ secret }: OwnerCookieOptions) {
   return createMiddleware<AppEnv>(async (c, next) => {
-    const diagramId = readDiagramIdFromPath(c.req.path);
+    const diagramId = readDiagramIdFromPath(c.req.path)
     if (!diagramId) {
-      c.set("isOwner", false);
-      await next();
-      return;
+      c.set("isOwner", false)
+      await next()
+      return
     }
-    const token = getCookie(c, `${COOKIE_PREFIX}${diagramId}`);
-    const ok = verify(diagramId, token, secret);
-    c.set("isOwner", ok);
-    c.header("x-owner-match", ok ? "true" : "false");
-    await next();
-  });
+    const token = getCookie(c, `${COOKIE_PREFIX}${diagramId}`)
+    const ok = verify(diagramId, token, secret)
+    c.set("isOwner", ok)
+    c.header("x-owner-match", ok ? "true" : "false")
+    await next()
+  })
 }
 
 /**
@@ -81,17 +75,13 @@ export function ownerReader({ secret }: OwnerCookieOptions) {
  * HTTP (defence-in-depth alongside SameSite=Lax). Disabled in dev so local
  * `http://localhost` flows work without a TLS proxy.
  */
-export function setOwnerCookie(
-  c: Context<AppEnv>,
-  diagramId: string,
-  secret: string,
-): void {
-  const value = tokenFor(diagramId, secret);
+export function setOwnerCookie(c: Context<AppEnv>, diagramId: string, secret: string): void {
+  const value = tokenFor(diagramId, secret)
   setCookie(c, `${COOKIE_PREFIX}${diagramId}`, value, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "Lax",
     path: "/",
     maxAge: MAX_AGE_SECONDS,
-  });
+  })
 }

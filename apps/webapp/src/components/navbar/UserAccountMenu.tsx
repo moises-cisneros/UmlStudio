@@ -1,28 +1,28 @@
-import { useState } from "react";
-import { useNavigate, Link } from "@tanstack/react-router";
-import { LogOut, User } from "lucide-react";
+import { useState } from "react"
+import { useNavigate, Link } from "@tanstack/react-router"
+import { LogOut, User } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@umlstudio/ui/components/dropdown-menu";
-import { Button } from "@umlstudio/ui/components/button";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useTranslation } from "@/i18n";
-import { useModalContext } from "@/contexts";
+} from "@umlstudio/ui/components/dropdown-menu"
+import { Button } from "@umlstudio/ui/components/button"
+import { useAuthStore } from "@/stores/useAuthStore"
+import { useTranslation } from "@/i18n"
+import { useModalContext } from "@/contexts"
 
 interface UserAccountMenuProps {
-  variant?: "navbar" | "home";
+  variant?: "navbar" | "home"
 }
 
 export function UserAccountMenu({ variant = "navbar" }: UserAccountMenuProps) {
-  const { user, status, logout } = useAuthStore();
-  const { t } = useTranslation();
-  const { openModal } = useModalContext();
-  const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
+  const { user, status, logout } = useAuthStore()
+  const { t } = useTranslation()
+  const { openModal } = useModalContext()
+  const navigate = useNavigate()
+  const [isOpen, setIsOpen] = useState(false)
 
   if (status !== "authenticated" || !user) {
     return (
@@ -46,7 +46,7 @@ export function UserAccountMenu({ variant = "navbar" }: UserAccountMenuProps) {
           </Button>
         </Link>
       </div>
-    );
+    )
   }
 
   const initials = user.name
@@ -57,14 +57,14 @@ export function UserAccountMenu({ variant = "navbar" }: UserAccountMenuProps) {
         .slice(0, 2)
         .join("")
         .toUpperCase()
-    : "U";
+    : "U"
 
-  const userColor = user.color || "#3590F3";
+  const userColor = user.color || "#3590F3"
 
   async function handleLogout() {
-    setIsOpen(false);
-    await logout();
-    void navigate({ to: "/login", replace: true });
+    setIsOpen(false)
+    await logout()
+    void navigate({ to: "/login", replace: true })
   }
 
   return (
@@ -107,9 +107,7 @@ export function UserAccountMenu({ variant = "navbar" }: UserAccountMenuProps) {
             <span className="truncate text-xs font-semibold text-popover-foreground">
               {user.name}
             </span>
-            <span className="truncate text-[11px] text-muted-foreground">
-              {user.email}
-            </span>
+            <span className="truncate text-[11px] text-muted-foreground">{user.email}</span>
           </div>
         </div>
 
@@ -117,8 +115,8 @@ export function UserAccountMenu({ variant = "navbar" }: UserAccountMenuProps) {
 
         <DropdownMenuItem
           onClick={() => {
-            setIsOpen(false);
-            openModal("USER_PROFILE");
+            setIsOpen(false)
+            openModal("USER_PROFILE")
           }}
           className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-popover-foreground hover:bg-muted/70 focus:bg-muted/70"
         >
@@ -135,5 +133,5 @@ export function UserAccountMenu({ variant = "navbar" }: UserAccountMenuProps) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

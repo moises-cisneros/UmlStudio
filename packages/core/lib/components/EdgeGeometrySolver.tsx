@@ -63,9 +63,7 @@ import type { IPoint } from "@/edges/Connection"
 
 export const EdgeGeometrySolver = () => {
   const nodes = useStore((s) => s.nodes)
-  const nodeLookup = useStore(
-    (s) => s.nodeLookup as unknown as Map<string, InternalNode>
-  )
+  const nodeLookup = useStore((s) => s.nodeLookup as unknown as Map<string, InternalNode>)
   const connectionMode = useStore((s) => s.connectionMode)
   const nodesInitialized = useNodesInitialized()
   const visibleHandleBoundsInitialized = useStore((state) => {
@@ -77,17 +75,13 @@ export const EdgeGeometrySolver = () => {
     }
     return hasVisibleNodes
   })
-  const { edges, visibleDiagramNodeCount, nodeInteractionActive } =
-    useDiagramStore(
-      useShallow((state) => ({
-        edges: state.edges,
-        visibleDiagramNodeCount: state.nodes.filter((node) => !node.hidden)
-          .length,
-        nodeInteractionActive: state.nodes.some(
-          (node) => node.dragging || node.resizing
-        ),
-      }))
-    )
+  const { edges, visibleDiagramNodeCount, nodeInteractionActive } = useDiagramStore(
+    useShallow((state) => ({
+      edges: state.edges,
+      visibleDiagramNodeCount: state.nodes.filter((node) => !node.hidden).length,
+      nodeInteractionActive: state.nodes.some((node) => node.dragging || node.resizing),
+    }))
+  )
   const setAllGeometry = useEdgeGeometryStore((s) => s.setAllGeometry)
   const setPreviewGeometry = useEdgeGeometryStore((s) => s.setPreviewGeometry)
   const routingEpoch = useEdgeGeometryStore((s) => s.routingEpoch)
@@ -101,9 +95,7 @@ export const EdgeGeometrySolver = () => {
   const workerDisabledRef = useRef(false)
   const workerControllerRef = useRef<EdgeGeometryWorkerController | null>(null)
   const workerHasSubmittedRef = useRef(false)
-  const scheduledWorkerSubmitRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  )
+  const scheduledWorkerSubmitRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const submitLatestWorkerSnapshotRef = useRef<(() => void) | null>(null)
   const latestSolverInputRef = useRef<SolverInput | null>(null)
   const latestNodeGeometryRef = useRef<EdgeGeometryNodeSnapshot | null>(null)
@@ -113,10 +105,7 @@ export const EdgeGeometrySolver = () => {
   const lastWorkerDispatchAtRef = useRef(0)
   const workerRoundTripRef = useRef<number | null>(null)
   const workerRequestTimingRef = useRef(
-    new Map<
-      number,
-      { dispatchedAt: number; snapshotAt: number; snapshotRevision: number }
-    >()
+    new Map<number, { dispatchedAt: number; snapshotAt: number; snapshotRevision: number }>()
   )
   const interactionActiveRef = useRef(false)
   const interactionStartedAtRef = useRef<number | null>(null)
@@ -124,22 +113,14 @@ export const EdgeGeometrySolver = () => {
   const releaseStartedAtRef = useRef<number | null>(null)
   const settledNodeGeometryRef = useRef<EdgeGeometryNodeSnapshot | null>(null)
   const provisionalRoutesRef = useRef<Record<string, IPoint[]> | null>(null)
-  const provisionalNodeGeometryRef = useRef<EdgeGeometryNodeSnapshot | null>(
-    null
-  )
-  const provisionalDecisionRef = useRef<ProvisionalRouteDecisionState>(
-    new Map()
-  )
-  const submittedNodeGeometryRef = useRef<
-    Map<number, EdgeGeometryNodeSnapshot>
-  >(new Map())
+  const provisionalNodeGeometryRef = useRef<EdgeGeometryNodeSnapshot | null>(null)
+  const provisionalDecisionRef = useRef<ProvisionalRouteDecisionState>(new Map())
+  const submittedNodeGeometryRef = useRef<Map<number, EdgeGeometryNodeSnapshot>>(new Map())
   const settlementAnimationFrameRef = useRef<number | null>(null)
   const settlementAnimationTokenRef = useRef(0)
   const settledRoutesRef = useRef<Record<string, IPoint[]>>({})
   const activeEdgeGestureRef = useRef<ActiveEdgeGeometryGesture | null>(null)
-  const releasedEdgePreviewRef = useRef<ReleasedEdgeGeometryPreview | null>(
-    null
-  )
+  const releasedEdgePreviewRef = useRef<ReleasedEdgeGeometryPreview | null>(null)
 
   const nodeGeometryKey = useStore(
     useShallow((s) => {
@@ -154,9 +135,7 @@ export const EdgeGeometrySolver = () => {
                 `${handle.id ?? ""},${handle.position},${handle.x},${handle.y},${handle.width},${handle.height}`
             )
             .join(";") ?? "-"
-        const hbSig = hb
-          ? `s:${handlesSig(hb.source)}|t:${handlesSig(hb.target)}`
-          : "nohb"
+        const hbSig = hb ? `s:${handlesSig(hb.source)}|t:${handlesSig(hb.target)}` : "nohb"
         sig.push(
           `${n.id}|${p.x},${p.y}|${n.measured?.width ?? n.width},${n.measured?.height ?? n.height}|${hbSig}|${n.hidden ? 1 : 0}`
         )
@@ -203,9 +182,7 @@ export const EdgeGeometrySolver = () => {
     )
       return
 
-    const solverEdges = pendingConnectionEdge
-      ? [...edges, pendingConnectionEdge]
-      : edges
+    const solverEdges = pendingConnectionEdge ? [...edges, pendingConnectionEdge] : edges
     const input: SolverInput = {
       nodes,
       nodeLookup,
@@ -225,9 +202,7 @@ export const EdgeGeometrySolver = () => {
       if (!activeGesture || activeGesture.edgeId !== liveEdgeOverride.edgeId) {
         activeEdgeGestureRef.current = {
           edgeId: liveEdgeOverride.edgeId,
-          originalEdge: edges.find(
-            (edge) => edge.id === liveEdgeOverride.edgeId
-          ),
+          originalEdge: edges.find((edge) => edge.id === liveEdgeOverride.edgeId),
           latestPoints: liveEdgeOverride.points,
         }
       } else {
@@ -245,9 +220,7 @@ export const EdgeGeometrySolver = () => {
       activeEdgeGestureRef.current = null
     }
     const interacting =
-      nodeInteractionActive ||
-      liveEdgeOverride !== null ||
-      pendingConnectionEdge !== null
+      nodeInteractionActive || liveEdgeOverride !== null || pendingConnectionEdge !== null
     const interactionChangedAt = performance.now()
     if (!interactionActiveRef.current && interacting) {
       interactionStartedAtRef.current = interactionChangedAt
@@ -259,33 +232,20 @@ export const EdgeGeometrySolver = () => {
 
     const solveSynchronously = (solveInput: SolverInput) => {
       const startedAt =
-        import.meta.env.DEV || import.meta.env.VITE_E2E === "true"
-          ? performance.now()
-          : 0
+        import.meta.env.DEV || import.meta.env.VITE_E2E === "true" ? performance.now() : 0
       const { routeById } = computeAllEdgeGeometry({
         ...solveInput,
         solveCache: solveCacheRef.current,
       })
       if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
         recordSolve(performance.now() - startedAt)
-      const acceptedNodeGeometry = snapshotEdgeGeometryNodes(
-        solveInput.nodeLookup
-      )
-      if (
-        !setAllGeometry(
-          routeById,
-          routingEpoch,
-          acceptedNodeGeometry,
-          undefined
-        )
-      )
-        return
+      const acceptedNodeGeometry = snapshotEdgeGeometryNodes(solveInput.nodeLookup)
+      if (!setAllGeometry(routeById, routingEpoch, acceptedNodeGeometry, undefined)) return
       releasedEdgePreviewRef.current = null
       provisionalRoutesRef.current = null
       provisionalNodeGeometryRef.current = null
       provisionalDecisionRef.current.clear()
-      settledRoutesRef.current =
-        geometryStore?.getState().geometryById ?? routeById
+      settledRoutesRef.current = geometryStore?.getState().geometryById ?? routeById
       settledNodeGeometryRef.current = acceptedNodeGeometry
       submittedNodeGeometryRef.current.clear()
       workerRequestTimingRef.current.clear()
@@ -307,9 +267,7 @@ export const EdgeGeometrySolver = () => {
         (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") &&
         !workerDisabledRef.current
       )
-        recordWorkerSyncDecision(
-          hasRunInitialSolveRef.current ? "small" : "initial"
-        )
+        recordWorkerSyncDecision(hasRunInitialSolveRef.current ? "small" : "initial")
       workerControllerRef.current?.invalidate()
       solveSynchronously(input)
       hasRunInitialSolveRef.current = true
@@ -330,12 +288,7 @@ export const EdgeGeometrySolver = () => {
       const latestNodes = latestNodeGeometryRef.current
       if (!latestInput || !latestNodes) return
       const pendingGeometry = baseNodes
-        ? projectRoutesWhileSolving(
-            baseRoutes,
-            latestInput.edges,
-            baseNodes,
-            latestNodes
-          )
+        ? projectRoutesWhileSolving(baseRoutes, latestInput.edges, baseNodes, latestNodes)
         : baseRoutes
       const currentOverride = latestInput.liveOverride
       const releasedEdgePreview = releasedEdgePreviewRef.current
@@ -345,8 +298,7 @@ export const EdgeGeometrySolver = () => {
               ...pendingGeometry,
               [currentOverride.edgeId]:
                 currentOverride.strategy === "predicted"
-                  ? (pendingGeometry[currentOverride.edgeId] ??
-                    currentOverride.points)
+                  ? (pendingGeometry[currentOverride.edgeId] ?? currentOverride.points)
                   : currentOverride.points,
             }
           : releasedEdgePreview
@@ -417,8 +369,7 @@ export const EdgeGeometrySolver = () => {
     let controller = workerControllerRef.current
     if (!controller) {
       if (typeof Worker === "undefined") {
-        if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-          recordWorkerFallback()
+        if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") recordWorkerFallback()
         workerDisabledRef.current = true
         solveSynchronously(input)
         return
@@ -437,30 +388,20 @@ export const EdgeGeometrySolver = () => {
           onResult: (result) => {
             const { receivedAt, snapshotRevision } = observeWorkerResult(result)
             if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") {
-              if (snapshotRevision !== undefined)
-                recordWorkerRevision("accepted", snapshotRevision)
+              if (snapshotRevision !== undefined) recordWorkerRevision("accepted", snapshotRevision)
               recordWorkerSolve()
             }
             const releaseStartedAt = releaseStartedAtRef.current
-            if (releaseStartedAt !== null)
-              recordWorkerReleaseExact(receivedAt - releaseStartedAt)
-            const acceptedNodeGeometry = submittedNodeGeometryRef.current.get(
-              result.revision
-            )
+            if (releaseStartedAt !== null) recordWorkerReleaseExact(receivedAt - releaseStartedAt)
+            const acceptedNodeGeometry = submittedNodeGeometryRef.current.get(result.revision)
             const geometryState = geometryStore?.getState()
             const prefersReducedMotion =
               typeof matchMedia === "function" &&
               matchMedia("(prefers-reduced-motion: reduce)").matches
             const settlement = prefersReducedMotion
               ? {}
-              : prepareEdgeGeometrySettlement(
-                  geometryState?.previewById ?? {},
-                  result.routeById
-                )
-            const initialSettlementPreview = interpolateEdgeGeometrySettlement(
-              settlement,
-              0
-            )
+              : prepareEdgeGeometrySettlement(geometryState?.previewById ?? {}, result.routeById)
+            const initialSettlementPreview = interpolateEdgeGeometrySettlement(settlement, 0)
             if (
               !setAllGeometry(
                 result.routeById,
@@ -475,10 +416,8 @@ export const EdgeGeometrySolver = () => {
             provisionalRoutesRef.current = null
             provisionalNodeGeometryRef.current = null
             provisionalDecisionRef.current.clear()
-            settledRoutesRef.current =
-              geometryStore?.getState().geometryById ?? result.routeById
-            settledNodeGeometryRef.current =
-              acceptedNodeGeometry ?? settledNodeGeometryRef.current
+            settledRoutesRef.current = geometryStore?.getState().geometryById ?? result.routeById
+            settledNodeGeometryRef.current = acceptedNodeGeometry ?? settledNodeGeometryRef.current
             submittedNodeGeometryRef.current.clear()
             const transitionIds = Object.keys(settlement)
             if (transitionIds.length === 0) {
@@ -494,10 +433,7 @@ export const EdgeGeometrySolver = () => {
             const startedAt = performance.now()
             const animateSettlement = (now: number) => {
               if (animationToken !== settlementAnimationTokenRef.current) return
-              const progress = Math.min(
-                1,
-                (now - startedAt) / EDGE_GEOMETRY_SETTLEMENT_DURATION_MS
-              )
+              const progress = Math.min(1, (now - startedAt) / EDGE_GEOMETRY_SETTLEMENT_DURATION_MS)
               if (progress >= 1) {
                 settlementAnimationFrameRef.current = null
                 geometryStore?.getState().clearPreviewGeometry()
@@ -508,20 +444,14 @@ export const EdgeGeometrySolver = () => {
                 }
                 return
               }
-              setPreviewGeometry(
-                interpolateEdgeGeometrySettlement(settlement, progress)
-              )
-              settlementAnimationFrameRef.current =
-                requestAnimationFrame(animateSettlement)
+              setPreviewGeometry(interpolateEdgeGeometrySettlement(settlement, progress))
+              settlementAnimationFrameRef.current = requestAnimationFrame(animateSettlement)
             }
-            settlementAnimationFrameRef.current =
-              requestAnimationFrame(animateSettlement)
+            settlementAnimationFrameRef.current = requestAnimationFrame(animateSettlement)
           },
           onProvisionalResult: (result) => {
             observeWorkerResult(result)
-            const submittedNodeGeometry = submittedNodeGeometryRef.current.get(
-              result.revision
-            )
+            const submittedNodeGeometry = submittedNodeGeometryRef.current.get(result.revision)
             submittedNodeGeometryRef.current.delete(result.revision)
             if (!submittedNodeGeometry) return
             const latestInput = latestSolverInputRef.current
@@ -534,9 +464,7 @@ export const EdgeGeometrySolver = () => {
               latestNodes
             )
             const stabilization = stabilizeProvisionalRoutes({
-              displayedById:
-                geometryStore?.getState().previewById ??
-                settledRoutesRef.current,
+              displayedById: geometryStore?.getState().previewById ?? settledRoutesRef.current,
               candidateById: candidateAtPointer,
               edges: latestInput.edges,
               nodes: latestNodes,
@@ -572,8 +500,7 @@ export const EdgeGeometrySolver = () => {
         workerControllerRef.current = controller
         workerHasSubmittedRef.current = false
       } catch {
-        if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-          recordWorkerFallback()
+        if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") recordWorkerFallback()
         workerDisabledRef.current = true
         solveSynchronously(input)
         return
@@ -591,17 +518,10 @@ export const EdgeGeometrySolver = () => {
       const cadence = interactionActiveRef.current
         ? getEdgeGeometryWorkerCadence(workerRoundTripRef.current)
         : 0
-      const delay = Math.max(
-        0,
-        lastWorkerDispatchAtRef.current + cadence - performance.now()
-      )
+      const delay = Math.max(0, lastWorkerDispatchAtRef.current + cadence - performance.now())
       scheduledWorkerSubmitRef.current = setTimeout(() => {
         scheduledWorkerSubmitRef.current = null
-        if (
-          workerDisabledRef.current ||
-          !latestSnapshotDirtyRef.current ||
-          !controller.isIdle()
-        )
+        if (workerDisabledRef.current || !latestSnapshotDirtyRef.current || !controller.isIdle())
           return
         const latestInput = latestSolverInputRef.current
         const latestNodeGeometry = latestNodeGeometryRef.current
@@ -616,8 +536,7 @@ export const EdgeGeometrySolver = () => {
           : serializeEdgeSolveCache(solveCacheRef.current)
         const serializedAt = performance.now()
         latestSnapshotDirtyRef.current = false
-        if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-          recordWorkerAttempt()
+        if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") recordWorkerAttempt()
         const dispatchedAt = performance.now()
         const revision = controller.submit(serialized, initialCache)
         const postedAt = performance.now()
@@ -638,10 +557,7 @@ export const EdgeGeometrySolver = () => {
         }
         submittedNodeGeometryRef.current.set(revision, latestNodeGeometry)
         if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-          recordWorkerDispatch(
-            serializedAt - serializeStartedAt,
-            postedAt - dispatchedAt
-          )
+          recordWorkerDispatch(serializedAt - serializeStartedAt, postedAt - dispatchedAt)
       }, delay)
     }
     submitLatestWorkerSnapshotRef.current = scheduleLatestSnapshot

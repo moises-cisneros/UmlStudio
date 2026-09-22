@@ -10,8 +10,14 @@
         "type": "class",
         "width": 180,
         "height": 120,
-        "position": { "x": 80, "y": 120 },
-        "measured": { "width": 180, "height": 120 },
+        "position": {
+          "x": 80,
+          "y": 120
+        },
+        "measured": {
+          "width": 180,
+          "height": 120
+        },
         "data": {
           "name": "Customer",
           "stereotype": "<<class>>",
@@ -24,8 +30,14 @@
         "type": "class",
         "width": 180,
         "height": 120,
-        "position": { "x": 400, "y": 120 },
-        "measured": { "width": 180, "height": 120 },
+        "position": {
+          "x": 400,
+          "y": 120
+        },
+        "measured": {
+          "width": 180,
+          "height": 120
+        },
         "data": {
           "name": "Order",
           "stereotype": "<<class>>",
@@ -44,14 +56,23 @@
         "targetHandle": "left",
         "data": {
           "points": [
-            { "x": 260, "y": 180 },
-            { "x": 400, "y": 180 }
+            {
+              "x": 260,
+              "y": 180
+            },
+            {
+              "x": 400,
+              "y": 180
+            }
           ]
         }
       }
     ],
     "assessments": {},
-    "interactive": { "elements": {}, "relationships": {} }
+    "interactive": {
+      "elements": {},
+      "relationships": {}
+    }
   },
   "confidence": {
     "node-customer": 0.93,

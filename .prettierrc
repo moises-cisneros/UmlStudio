@@ -7,5 +7,67 @@
   "printWidth": 100,
   "bracketSpacing": true,
   "arrowParens": "always",
-  "endOfLine": "lf"
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": [
+        "*.java"
+      ],
+      "options": {
+        "tabWidth": 4,
+        "printWidth": 120,
+        "useTabs": false
+      }
+    },
+    {
+      "files": [
+        "*.py"
+      ],
+      "options": {
+        "tabWidth": 4,
+        "printWidth": 88,
+        "useTabs": false
+      }
+    },
+    {
+      "files": [
+        "*.dart"
+      ],
+      "options": {
+        "tabWidth": 2,
+        "printWidth": 80,
+        "useTabs": false
+      }
+    },
+    {
+      "files": [
+        "*.sql"
+      ],
+      "options": {
+        "tabWidth": 2,
+        "useTabs": false
+      }
+    },
+    {
+      "files": [
+        "*.md",
+        "*.mdx"
+      ],
+      "options": {
+        "tabWidth": 2,
+        "printWidth": 100,
+        "proseWrap": "preserve"
+      }
+    },
+    {
+      "files": [
+        "*.json",
+        "*.yml",
+        "*.yaml"
+      ],
+      "options": {
+        "tabWidth": 2
+      }
+    }
+  ]
 }

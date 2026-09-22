@@ -1,44 +1,44 @@
-import { useCallback, useMemo, useState } from "react";
-import type { UMLDiagramType } from "@umlstudio/core";
+import { useCallback, useMemo, useState } from "react"
+import type { UMLDiagramType } from "@umlstudio/core"
 
-export type HomeSource = "all" | "local" | "shared";
+export type HomeSource = "all" | "local" | "shared"
 
-export type HomeTypeFilter = "all" | UMLDiagramType;
+export type HomeTypeFilter = "all" | UMLDiagramType
 
-export type HomeSortField = "alphabetical" | "dateCreated" | "lastModified";
+export type HomeSortField = "alphabetical" | "dateCreated" | "lastModified"
 
-export type HomeSortOrder = "oldest" | "newest";
+export type HomeSortOrder = "oldest" | "newest"
 
 export type HomeSort = {
-  field: HomeSortField;
-  order: HomeSortOrder;
-};
+  field: HomeSortField
+  order: HomeSortOrder
+}
 
 export const DEFAULT_HOME_SORT: HomeSort = {
   field: "lastModified",
   order: "newest",
-};
+}
 
-import { useTranslation } from "@/i18n";
-import type { TranslationDictionary } from "@/i18n/types";
+import { useTranslation } from "@/i18n"
+import type { TranslationDictionary } from "@/i18n/types"
 
 export const getHomeSourceOptions = (t: TranslationDictionary) =>
   [
     { value: "all", label: t.dashboard.filterSourceAll },
     { value: "local", label: t.dashboard.filterSourceLocal },
     { value: "shared", label: t.dashboard.filterSourceShared },
-  ] as const;
+  ] as const
 
 export const getHomeSortFieldOptions = (t: TranslationDictionary) =>
   [
     { value: "alphabetical", label: t.dashboard.filterSortAlphabetical },
     { value: "dateCreated", label: t.dashboard.filterSortDateCreated },
     { value: "lastModified", label: t.dashboard.filterSortLastModified },
-  ] as const;
+  ] as const
 
 export const getHomeSortOrderOptions = (
   field: HomeSortField,
-  t: TranslationDictionary,
+  t: TranslationDictionary
 ): readonly { value: HomeSortOrder; label: string }[] =>
   field === "alphabetical"
     ? [
@@ -48,128 +48,121 @@ export const getHomeSortOrderOptions = (
     : [
         { value: "newest", label: t.dashboard.filterOrderNewest },
         { value: "oldest", label: t.dashboard.filterOrderOldest },
-      ];
+      ]
 
 const sourceLabel = (source: HomeSource, t: TranslationDictionary) =>
-  getHomeSourceOptions(t).find((option) => option.value === source)?.label ??
-  source;
+  getHomeSourceOptions(t).find((option) => option.value === source)?.label ?? source
 
 const sortFieldLabel = (field: HomeSortField, t: TranslationDictionary) =>
-  getHomeSortFieldOptions(t).find((option) => option.value === field)?.label ??
-  field;
+  getHomeSortFieldOptions(t).find((option) => option.value === field)?.label ?? field
 
 const sortOrderLabel = (sort: HomeSort, t: TranslationDictionary) =>
-  getHomeSortOrderOptions(sort.field, t).find(
-    (option) => option.value === sort.order,
-  )?.label ?? sort.order;
+  getHomeSortOrderOptions(sort.field, t).find((option) => option.value === sort.order)?.label ??
+  sort.order
 
-export type RefinementKind = "favorites" | "source" | "type" | "sort";
+export type RefinementKind = "favorites" | "source" | "type" | "sort"
 
 export type ActiveRefinement = {
-  key: RefinementKind;
-  label: string;
-  clear: () => void;
-};
+  key: RefinementKind
+  label: string
+  clear: () => void
+}
 
-export type HomeViewMode = "list" | "cards";
+export type HomeViewMode = "list" | "cards"
 
-export const HOME_VIEW_MODE_STORAGE_KEY = "umlstudio-home-view-mode";
+export const HOME_VIEW_MODE_STORAGE_KEY = "umlstudio-home-view-mode"
 
 export type HomeChrome = {
-  searchTerm: string;
-  setSearchTerm: (value: string) => void;
+  searchTerm: string
+  setSearchTerm: (value: string) => void
 
-  favoritesOnly: boolean;
-  setFavoritesOnly: (value: boolean) => void;
-  toggleFavoritesOnly: () => void;
+  favoritesOnly: boolean
+  setFavoritesOnly: (value: boolean) => void
+  toggleFavoritesOnly: () => void
 
-  source: HomeSource;
-  setSource: (value: HomeSource) => void;
+  source: HomeSource
+  setSource: (value: HomeSource) => void
 
-  type: HomeTypeFilter;
-  setType: (value: HomeTypeFilter) => void;
+  type: HomeTypeFilter
+  setType: (value: HomeTypeFilter) => void
 
-  sort: HomeSort;
-  setSort: (value: HomeSort) => void;
-  setSortField: (field: HomeSortField) => void;
-  setSortOrder: (order: HomeSortOrder) => void;
+  sort: HomeSort
+  setSort: (value: HomeSort) => void
+  setSortField: (field: HomeSortField) => void
+  setSortOrder: (order: HomeSortOrder) => void
 
-  viewMode: HomeViewMode;
-  setViewMode: (mode: HomeViewMode) => void;
+  viewMode: HomeViewMode
+  setViewMode: (mode: HomeViewMode) => void
 
-  resetAll: () => void;
+  resetAll: () => void
 
-  activeRefinements: ActiveRefinement[];
+  activeRefinements: ActiveRefinement[]
 
-  refineCount: number;
-};
+  refineCount: number
+}
 
 const isDefaultSort = (sort: HomeSort) =>
-  sort.field === DEFAULT_HOME_SORT.field &&
-  sort.order === DEFAULT_HOME_SORT.order;
+  sort.field === DEFAULT_HOME_SORT.field && sort.order === DEFAULT_HOME_SORT.order
 
 export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
-  const { t } = useTranslation();
-  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [source, setSource] = useState<HomeSource>("all");
-  const [type, setType] = useState<HomeTypeFilter>("all");
-  const [sort, setSort] = useState<HomeSort>(DEFAULT_HOME_SORT);
+  const { t } = useTranslation()
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm)
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [source, setSource] = useState<HomeSource>("all")
+  const [type, setType] = useState<HomeTypeFilter>("all")
+  const [sort, setSort] = useState<HomeSort>(DEFAULT_HOME_SORT)
   const [viewMode, setViewMode] = useState<HomeViewMode>(() => {
     if (typeof window !== "undefined") {
       try {
-        const saved = window.localStorage.getItem(HOME_VIEW_MODE_STORAGE_KEY);
-        if (saved === "cards" || saved === "list") return saved;
+        const saved = window.localStorage.getItem(HOME_VIEW_MODE_STORAGE_KEY)
+        if (saved === "cards" || saved === "list") return saved
       } catch {
         // ignore localStorage access issues
       }
     }
-    return "list";
-  });
+    return "list"
+  })
 
   const handleSetViewMode = useCallback((mode: HomeViewMode) => {
-    setViewMode(mode);
+    setViewMode(mode)
     if (typeof window !== "undefined") {
       try {
-        window.localStorage.setItem(HOME_VIEW_MODE_STORAGE_KEY, mode);
+        window.localStorage.setItem(HOME_VIEW_MODE_STORAGE_KEY, mode)
       } catch {
         // ignore
       }
     }
-  }, []);
+  }, [])
 
-  const toggleFavoritesOnly = useCallback(
-    () => setFavoritesOnly((current) => !current),
-    [],
-  );
+  const toggleFavoritesOnly = useCallback(() => setFavoritesOnly((current) => !current), [])
 
   const setSortField = useCallback(
     (field: HomeSortField) => setSort((current) => ({ ...current, field })),
-    [],
-  );
+    []
+  )
 
   const setSortOrder = useCallback(
     (order: HomeSortOrder) => setSort((current) => ({ ...current, order })),
-    [],
-  );
+    []
+  )
 
   const resetAll = useCallback(() => {
-    setSearchTerm("");
-    setFavoritesOnly(false);
-    setSource("all");
-    setType("all");
-    setSort(DEFAULT_HOME_SORT);
-  }, []);
+    setSearchTerm("")
+    setFavoritesOnly(false)
+    setSource("all")
+    setType("all")
+    setSort(DEFAULT_HOME_SORT)
+  }, [])
 
   const activeRefinements = useMemo<ActiveRefinement[]>(() => {
-    const chips: ActiveRefinement[] = [];
+    const chips: ActiveRefinement[] = []
 
     if (favoritesOnly) {
       chips.push({
         key: "favorites",
         label: t.dashboard.filterFavoritesOnly,
         clear: () => setFavoritesOnly(false),
-      });
+      })
     }
 
     if (source !== "all") {
@@ -177,7 +170,7 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
         key: "source",
         label: `${t.dashboard.filterSource}: ${sourceLabel(source, t)}`,
         clear: () => setSource("all"),
-      });
+      })
     }
 
     if (!isDefaultSort(sort)) {
@@ -185,18 +178,16 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
         key: "sort",
         label: `${t.dashboard.filterSortBy}: ${sortFieldLabel(sort.field, t)} (${sortOrderLabel(sort, t)})`,
         clear: () => setSort(DEFAULT_HOME_SORT),
-      });
+      })
     }
 
-    return chips;
-  }, [favoritesOnly, source, sort, t]);
+    return chips
+  }, [favoritesOnly, source, sort, t])
 
   const refineCount = useMemo(
-    () =>
-      (source !== "all" ? 1 : 0) +
-      (isDefaultSort(sort) ? 0 : 1),
-    [source, sort],
-  );
+    () => (source !== "all" ? 1 : 0) + (isDefaultSort(sort) ? 0 : 1),
+    [source, sort]
+  )
 
   return {
     searchTerm,
@@ -217,5 +208,5 @@ export function useHomeChrome(initialSearchTerm = ""): HomeChrome {
     resetAll,
     activeRefinements,
     refineCount,
-  };
+  }
 }

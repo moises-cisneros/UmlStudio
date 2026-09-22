@@ -18,10 +18,7 @@ export const HeaderSwitchElement: React.FC<Props> = ({
   const displayLabel = stereotypeValue?.trim() || stereotypeLabel
   const buttonLabel = `\u00ab${displayLabel}\u00bb`
   const accessibleLabel = t.stereotypeToggleLabel(displayLabel)
-  const tooltipLabel = t.stereotypeToggleTooltip(
-    isComponentHeaderShown,
-    displayLabel
-  )
+  const tooltipLabel = t.stereotypeToggleTooltip(isComponentHeaderShown, displayLabel)
 
   return (
     <Tooltip title={tooltipLabel}>

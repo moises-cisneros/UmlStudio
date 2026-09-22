@@ -1,7 +1,4 @@
-export const canDropIntoParent = (
-  childType: string,
-  parentType: string
-): boolean => {
+export const canDropIntoParent = (childType: string, parentType: string): boolean => {
   if (parentType === "package") {
     return childType === "class" || childType === "package"
   }

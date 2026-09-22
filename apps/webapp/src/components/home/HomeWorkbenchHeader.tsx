@@ -1,27 +1,27 @@
-import type { FC } from "react";
-import { Search, FolderInput, Plus } from "lucide-react";
-import { Button } from "@umlstudio/ui/components/button";
-import { BrandLockup } from "@/components/navbar/BrandLockup";
-import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher";
-import { LanguageSwitcher } from "@/components/navbar/LanguageSwitcher";
-import { UserAccountMenu } from "@/components/navbar/UserAccountMenu";
-import { useTranslation } from "@/i18n";
-import { HomeHelpMenu } from "./HomeHelpMenu";
-import type { HomeChrome } from "./useHomeChrome";
+import type { FC } from "react"
+import { Search, FolderInput, Plus } from "lucide-react"
+import { Button } from "@umlstudio/ui/components/button"
+import { BrandLockup } from "@/components/navbar/BrandLockup"
+import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher"
+import { LanguageSwitcher } from "@/components/navbar/LanguageSwitcher"
+import { UserAccountMenu } from "@/components/navbar/UserAccountMenu"
+import { useTranslation } from "@/i18n"
+import { HomeHelpMenu } from "./HomeHelpMenu"
+import type { HomeChrome } from "./useHomeChrome"
 
 export type HomeWorkbenchHeaderProps = {
-  chrome: HomeChrome;
-  onNewDiagram?: () => void;
-  onImportJson?: () => void;
-};
+  chrome: HomeChrome
+  onNewDiagram?: () => void
+  onImportJson?: () => void
+}
 
 export const HomeWorkbenchHeader: FC<HomeWorkbenchHeaderProps> = ({
   chrome,
   onNewDiagram,
   onImportJson,
 }) => {
-  const { searchTerm, setSearchTerm } = chrome;
-  const { t } = useTranslation();
+  const { searchTerm, setSearchTerm } = chrome
+  const { t } = useTranslation()
 
   return (
     <div className="sticky top-0 z-20 flex flex-col gap-2.5 border-b border-border-subtle bg-surface px-4 py-2.5 pt-0 md:px-6">
@@ -81,5 +81,5 @@ export const HomeWorkbenchHeader: FC<HomeWorkbenchHeaderProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

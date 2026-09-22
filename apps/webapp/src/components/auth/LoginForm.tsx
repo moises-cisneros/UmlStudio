@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { toast } from "react-toastify";
-import { Eye, EyeOff, Lock, Mail, ArrowRight, Sparkles } from "lucide-react";
-import { Button } from "@umlstudio/ui/components/button";
-import { Field, FieldError, FieldLabel } from "@umlstudio/ui/components/field";
-import { Input } from "@umlstudio/ui/components/input";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useTranslation } from "@/i18n";
+import { useState } from "react"
+import { toast } from "react-toastify"
+import { Eye, EyeOff, Lock, Mail, ArrowRight, Sparkles } from "lucide-react"
+import { Button } from "@umlstudio/ui/components/button"
+import { Field, FieldError, FieldLabel } from "@umlstudio/ui/components/field"
+import { Input } from "@umlstudio/ui/components/input"
+import { useAuthStore } from "@/stores/useAuthStore"
+import { useTranslation } from "@/i18n"
 
 interface LoginFormProps {
-  redirect?: string;
-  onSuccess: () => void;
+  redirect?: string
+  onSuccess: () => void
 }
 
 const DEMO_ACCOUNTS = [
@@ -31,41 +31,38 @@ const DEMO_ACCOUNTS = [
     password: "UmlStudio#2026",
     roleKey: "reviewer" as const,
   },
-];
+]
 
 export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
-  const { t } = useTranslation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { t } = useTranslation()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  const registerHref = redirect
-    ? `/register?redirect=${encodeURIComponent(redirect)}`
-    : "/register";
+  const registerHref = redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : "/register"
 
   async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError(null);
+    event.preventDefault()
+    setSubmitting(true)
+    setError(null)
     try {
-      await useAuthStore.getState().login(email.trim(), password);
-      onSuccess();
+      await useAuthStore.getState().login(email.trim(), password)
+      onSuccess()
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : t.auth.invalidCredentials;
-      setError(message);
-      toast.error(message);
+      const message = err instanceof Error ? err.message : t.auth.invalidCredentials
+      setError(message)
+      toast.error(message)
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
   }
 
   function handleQuickFill(demo: (typeof DEMO_ACCOUNTS)[number]) {
-    setEmail(demo.email);
-    setPassword(demo.password);
-    setError(null);
+    setEmail(demo.email)
+    setPassword(demo.password)
+    setError(null)
   }
 
   return (
@@ -78,7 +75,7 @@ export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
         </div>
         <div className="flex flex-wrap gap-1.5">
           {DEMO_ACCOUNTS.map((demo) => {
-            const roleLabel = t.auth[demo.roleKey];
+            const roleLabel = t.auth[demo.roleKey]
             return (
               <button
                 key={demo.email}
@@ -87,14 +84,12 @@ export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
                 className="group flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-all hover:border-(--dodger-blue) hover:bg-(--dodger-blue)/10"
                 title={`${demo.label} (${roleLabel}): ${demo.email}`}
               >
-                <span className="font-semibold text-(--dodger-blue)">
-                  {demo.label}
-                </span>
+                <span className="font-semibold text-(--dodger-blue)">{demo.label}</span>
                 <span className="text-[11px] text-muted-foreground group-hover:text-foreground">
                   ({roleLabel})
                 </span>
               </button>
-            );
+            )
           })}
         </div>
       </div>
@@ -122,10 +117,7 @@ export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
 
       <Field>
         <div className="flex items-center justify-between">
-          <FieldLabel
-            htmlFor="login-password"
-            className="text-xs font-semibold"
-          >
+          <FieldLabel htmlFor="login-password" className="text-xs font-semibold">
             {t.auth.passwordLabel}
           </FieldLabel>
         </div>
@@ -147,15 +139,9 @@ export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground focus:outline-none"
-            aria-label={
-              showPassword ? t.auth.hidePassword : t.auth.showPassword
-            }
+            aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
           >
-            {showPassword ? (
-              <EyeOff className="size-4" />
-            ) : (
-              <Eye className="size-4" />
-            )}
+            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
         </div>
       </Field>
@@ -185,5 +171,5 @@ export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
         </a>
       </div>
     </form>
-  );
+  )
 }

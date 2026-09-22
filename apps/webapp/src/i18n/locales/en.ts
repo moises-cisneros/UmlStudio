@@ -349,6 +349,8 @@ export const en: TranslationDictionary = {
       "Shortcuts are ignored while editing text in a field — except saving as JSON, which always works.",
     or: "or",
     close: "Close",
+    openFullDocs: "View full documentation",
+    viewAllShortcuts: "View all shortcuts",
   },
   profile: {
     title: "Profile & Security",
