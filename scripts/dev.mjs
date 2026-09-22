@@ -13,6 +13,7 @@ const DEFAULT_PORTS = {
   codegen: 8002,
   aiService: 8001,
   mcpServer: 8003,
+  docs: 3001,
 }
 
 const repoRoot = process.cwd()
@@ -24,6 +25,7 @@ const PREFIX_COLORS = {
   codegen: "\u001B[36m",
   ai: "\u001B[32m",
   mcp: "\u001B[31m",
+  docs: "\u001B[36m",
 }
 const PREFIX_RESET = "\u001B[39m"
 
@@ -52,6 +54,7 @@ function getPreferredPorts() {
     codegen: readPort("UMLSTUDIO_CODEGEN_PORT", DEFAULT_PORTS.codegen),
     aiService: readPort("UMLSTUDIO_AI_PORT", DEFAULT_PORTS.aiService),
     mcpServer: readPort("UMLSTUDIO_MCP_PORT", DEFAULT_PORTS.mcpServer),
+    docs: readPort("UMLSTUDIO_DOCS_PORT", DEFAULT_PORTS.docs),
   }
 }
 
@@ -110,11 +113,7 @@ function pingRedis(host, port, timeoutMs = 500) {
   })
 }
 
-async function findAvailablePort(
-  startPort,
-  host = "127.0.0.1",
-  reserved = new Set()
-) {
+async function findAvailablePort(startPort, host = "127.0.0.1", reserved = new Set()) {
   let port = startPort
 
   while (true) {
@@ -252,24 +251,16 @@ async function resolveRedisEndpoint(preferredRedisPort, reservedPorts) {
     }
   }
 
-  const redisPort = await findAvailablePort(
-    preferredRedisPort,
-    "127.0.0.1",
-    reservedPorts
-  )
+  const redisPort = await findAvailablePort(preferredRedisPort, "127.0.0.1", reservedPorts)
 
   console.log(`[dev] Starting Redis via Docker on 127.0.0.1:${redisPort}`)
 
-  await runCommand(
-    "docker",
-    ["compose", "-f", "docker/compose.local.db.yml", "up", "-d"],
-    {
-      env: {
-        ...process.env,
-        REDIS_PORT: String(redisPort),
-      },
-    }
-  )
+  await runCommand("docker", ["compose", "-f", "docker/compose.local.db.yml", "up", "-d"], {
+    env: {
+      ...process.env,
+      REDIS_PORT: String(redisPort),
+    },
+  })
 
   await waitForRedis("127.0.0.1", redisPort)
 
@@ -295,9 +286,7 @@ function prefixOutput(name, stream) {
       }
 
       const newlineLength =
-        buffer[newlineIndex] === "\r" && buffer[newlineIndex + 1] === "\n"
-          ? 2
-          : 1
+        buffer[newlineIndex] === "\r" && buffer[newlineIndex + 1] === "\n" ? 2 : 1
       const line = buffer.slice(0, newlineIndex)
 
       console.log(`${colorPrefix(name)} ${line}`)
@@ -332,10 +321,9 @@ function resolveManagedSpawnCommand(command, args) {
   }
 
   const comspec = process.env.ComSpec || process.env.COMSPEC || "cmd.exe"
-  const commandLine = [
-    quoteWindowsCmdArgument(command),
-    ...args.map(quoteWindowsCmdArgument),
-  ].join(" ")
+  const commandLine = [quoteWindowsCmdArgument(command), ...args.map(quoteWindowsCmdArgument)].join(
+    " "
+  )
 
   return {
     command: comspec,
@@ -421,18 +409,14 @@ function waitForClose(child, timeoutMs) {
 async function stopManagedProcesses(children) {
   await Promise.all(children.map((child) => killProcessTree(child, "SIGTERM")))
 
-  const results = await Promise.all(
-    children.map((child) => waitForClose(child, SHUTDOWN_GRACE_MS))
-  )
+  const results = await Promise.all(children.map((child) => waitForClose(child, SHUTDOWN_GRACE_MS)))
 
   const stubbornChildren = children.filter((_, index) => !results[index])
   if (stubbornChildren.length === 0) {
     return
   }
 
-  await Promise.all(
-    stubbornChildren.map((child) => killProcessTree(child, "SIGKILL"))
-  )
+  await Promise.all(stubbornChildren.map((child) => killProcessTree(child, "SIGKILL")))
   await Promise.all(stubbornChildren.map((child) => waitForClose(child, 1_000)))
 }
 
@@ -441,11 +425,7 @@ async function main() {
 
   const preferredPorts = getPreferredPorts()
   const reservedPorts = new Set()
-  const serverPort = await findAvailablePort(
-    preferredPorts.server,
-    "127.0.0.1",
-    reservedPorts
-  )
+  const serverPort = await findAvailablePort(preferredPorts.server, "127.0.0.1", reservedPorts)
   reservedPorts.add(serverPort)
 
   const websocketPort = await findAvailablePort(
@@ -455,33 +435,20 @@ async function main() {
   )
   reservedPorts.add(websocketPort)
 
-  const webappPort = await findAvailablePort(
-    preferredPorts.webapp,
-    "127.0.0.1",
-    reservedPorts
-  )
+  const webappPort = await findAvailablePort(preferredPorts.webapp, "127.0.0.1", reservedPorts)
   reservedPorts.add(webappPort)
 
-  const codegenPort = await findAvailablePort(
-    preferredPorts.codegen,
-    "127.0.0.1",
-    reservedPorts
-  )
+  const codegenPort = await findAvailablePort(preferredPorts.codegen, "127.0.0.1", reservedPorts)
   reservedPorts.add(codegenPort)
 
-  const aiPort = await findAvailablePort(
-    preferredPorts.aiService,
-    "127.0.0.1",
-    reservedPorts
-  )
+  const aiPort = await findAvailablePort(preferredPorts.aiService, "127.0.0.1", reservedPorts)
   reservedPorts.add(aiPort)
 
-  const mcpPort = await findAvailablePort(
-    preferredPorts.mcpServer,
-    "127.0.0.1",
-    reservedPorts
-  )
+  const mcpPort = await findAvailablePort(preferredPorts.mcpServer, "127.0.0.1", reservedPorts)
   reservedPorts.add(mcpPort)
+
+  const docsPort = await findAvailablePort(preferredPorts.docs, "127.0.0.1", reservedPorts)
+  reservedPorts.add(docsPort)
 
   const redis = await resolveRedisEndpoint(preferredPorts.redis, reservedPorts)
 
@@ -492,6 +459,7 @@ async function main() {
   console.log(`[dev]   codegen:   http://127.0.0.1:${codegenPort}`)
   console.log(`[dev]   ai:        http://127.0.0.1:${aiPort}`)
   console.log(`[dev]   mcp:       http://127.0.0.1:${mcpPort}`)
+  console.log(`[dev]   docs:      http://127.0.0.1:${docsPort}`)
   console.log(`[dev]   redis:     ${redis.url} (${redis.source})`)
 
   const sharedEnv = {
@@ -502,6 +470,7 @@ async function main() {
     UMLSTUDIO_CODEGEN_PORT: String(codegenPort),
     UMLSTUDIO_AI_PORT: String(aiPort),
     UMLSTUDIO_MCP_PORT: String(mcpPort),
+    UMLSTUDIO_DOCS_PORT: String(docsPort),
   }
 
   const coloredEnv = {
@@ -536,9 +505,7 @@ async function main() {
         PORT: String(serverPort),
         WS_PORT: String(websocketPort),
         REDIS_URL: redis.url,
-        JWT_SECRET:
-          process.env.JWT_SECRET ||
-          "umlstudio-development-jwt-secret-min-32-chars-2026!",
+        JWT_SECRET: process.env.JWT_SECRET || "umlstudio-development-jwt-secret-min-32-chars-2026!",
       },
     }),
     spawnManagedProcess({
@@ -561,7 +528,16 @@ async function main() {
     spawnManagedProcess({
       name: "ai",
       command: "python",
-      args: ["-m", "uvicorn", "src.main:app", "--host", "127.0.0.1", "--port", String(aiPort)],
+      args: [
+        "-m",
+        "uvicorn",
+        "src.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        String(aiPort),
+        "--reload",
+      ],
       cwd: path.join(repoRoot, "apps/ai-service"),
       env: {
         ...coloredEnv,
@@ -578,6 +554,13 @@ async function main() {
         ...coloredEnv,
         MCP_PORT: String(mcpPort),
       },
+    }),
+    spawnManagedProcess({
+      name: "docs",
+      command: commandBinary("apps/docs", "docusaurus"),
+      args: ["start", "--port", String(docsPort), "--host", "127.0.0.1", "--no-open"],
+      cwd: path.join(repoRoot, "apps/docs"),
+      env: coloredEnv,
     }),
   ]
 
@@ -625,12 +608,8 @@ async function main() {
         }
 
         const reason =
-          signal !== null
-            ? `signal ${signal}`
-            : `exit code ${code === null ? "unknown" : code}`
-        console.error(
-          `[dev] Stopping development stack because a process exited with ${reason}.`
-        )
+          signal !== null ? `signal ${signal}` : `exit code ${code === null ? "unknown" : code}`
+        console.error(`[dev] Stopping development stack because a process exited with ${reason}.`)
 
         shutdown(code === 0 ? 1 : (code ?? 1)).catch((error) => {
           console.error("[dev] Failed to stop cleanly after child exit:", error)

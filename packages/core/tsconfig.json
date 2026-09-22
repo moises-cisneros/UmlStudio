@@ -2,11 +2,7 @@
   "compilerOptions": {
     "target": "ES2023",
     "useDefineForClassFields": true,
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     "rootDir": "./lib",
@@ -18,28 +14,17 @@
     "noEmit": true,
     "stripInternal": true,
     "jsx": "react-jsx",
-    "types": [
-      "vite/client"
-    ],
+    "types": ["vite/client"],
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": [
-        "./lib/*"
-      ],
-      "@fonts/*": [
-        "../../assets/fonts/*"
-      ]
+      "@/*": ["./lib/*"],
+      "@fonts/*": ["../../assets/fonts/*"]
     }
   },
-  "include": [
-    "lib/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["lib/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

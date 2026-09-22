@@ -1,26 +1,26 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import Ajv, { type ValidateFunction } from "ajv";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import type { UMLModel, UmlStudioNode, UmlStudioEdge } from "../../lib/typings";
-import { UMLDiagramType } from "../../lib/types/DiagramType";
-import { DiagramNodeTypeRecord, DiagramEdgeTypeRecord } from "../../lib/modelElementTypes";
-import { getEdgeMarkerStyles } from "../../lib/utils/edgeUtils";
-import { MARKER_CONFIGS } from "../../lib/constants";
+import { describe, it, expect, beforeAll } from "vitest"
+import Ajv, { type ValidateFunction } from "ajv"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
+import type { UMLModel, UmlStudioNode, UmlStudioEdge } from "../../lib/typings"
+import { UMLDiagramType } from "../../lib/types/DiagramType"
+import { DiagramNodeTypeRecord, DiagramEdgeTypeRecord } from "../../lib/modelElementTypes"
+import { getEdgeMarkerStyles } from "../../lib/utils/edgeUtils"
+import { MARKER_CONFIGS } from "../../lib/constants"
 
 describe("INT-CU01: Case of Use CU-01 UML Class Diagram Modeling Integration", () => {
-  let ajv: Ajv;
-  let validateModel: ValidateFunction;
-  let schema: Record<string, unknown>;
+  let ajv: Ajv
+  let validateModel: ValidateFunction
+  let schema: Record<string, unknown>
 
   beforeAll(() => {
-    const schemaPath = resolve(__dirname, "../../schema/uml-model-4.schema.json");
-    const rawSchema = readFileSync(schemaPath, "utf-8");
-    schema = JSON.parse(rawSchema);
+    const schemaPath = resolve(__dirname, "../../schema/uml-model-4.schema.json")
+    const rawSchema = readFileSync(schemaPath, "utf-8")
+    schema = JSON.parse(rawSchema)
 
-    ajv = new Ajv({ allowUnionTypes: true, strict: false });
-    validateModel = ajv.compile(schema);
-  });
+    ajv = new Ajv({ allowUnionTypes: true, strict: false })
+    validateModel = ajv.compile(schema)
+  })
 
   it("programmatically constructs a valid UML 2.5 Class model with 2 classes and orthogonal composition", () => {
     // 1. Arrange: Create Department Class Node with Attributes & Operations
@@ -42,7 +42,7 @@ describe("INT-CU01: Case of Use CU-01 UML Class Diagram Modeling Integration", (
           { id: "op-dept-2", name: "+ addEmployee(emp: Employee): void" },
         ],
       },
-    };
+    }
 
     // 2. Arrange: Create Employee Class Node with Attributes & Operations
     const employeeNode: UmlStudioNode = {
@@ -58,11 +58,9 @@ describe("INT-CU01: Case of Use CU-01 UML Class Diagram Modeling Integration", (
           { id: "attr-emp-1", name: "+ id: string" },
           { id: "attr-emp-2", name: "+ fullName: string" },
         ],
-        methods: [
-          { id: "op-emp-1", name: "+ getDetails(): string" },
-        ],
+        methods: [{ id: "op-emp-1", name: "+ getDetails(): string" }],
       },
-    };
+    }
 
     // 3. Arrange: Create Orthogonal Composition Relationship from Department to Employee
     const compositionEdge: UmlStudioEdge = {
@@ -80,7 +78,7 @@ describe("INT-CU01: Case of Use CU-01 UML Class Diagram Modeling Integration", (
           { x: 450, y: 210 },
         ],
       },
-    };
+    }
 
     // 4. Arrange: Assemble Complete UMLModel
     const umlModel: UMLModel = {
@@ -111,40 +109,40 @@ describe("INT-CU01: Case of Use CU-01 UML Class Diagram Modeling Integration", (
           "edge-dept-emp-comp": true,
         },
       },
-    };
+    }
 
     // 5. Act & Assert: Strict Metamodel Schema Validation
-    const isValid = validateModel(umlModel);
-    expect(isValid, JSON.stringify(validateModel.errors)).toBe(true);
-    expect(validateModel.errors).toBeNull();
+    const isValid = validateModel(umlModel)
+    expect(isValid, JSON.stringify(validateModel.errors)).toBe(true)
+    expect(validateModel.errors).toBeNull()
 
     // 6. Assert: Node and Edge Structure Integrity
-    expect(umlModel.nodes).toHaveLength(2);
-    expect(umlModel.edges).toHaveLength(1);
-    expect(umlModel.type).toBe("ClassDiagram");
+    expect(umlModel.nodes).toHaveLength(2)
+    expect(umlModel.edges).toHaveLength(1)
+    expect(umlModel.type).toBe("ClassDiagram")
 
-    const dept = umlModel.nodes.find((n: UmlStudioNode) => n.id === "node-department");
-    expect(dept?.data.name).toBe("Department");
-    expect((dept?.data.attributes as unknown[])).toHaveLength(2);
-    expect((dept?.data.methods as unknown[])).toHaveLength(2);
+    const dept = umlModel.nodes.find((n: UmlStudioNode) => n.id === "node-department")
+    expect(dept?.data.name).toBe("Department")
+    expect(dept?.data.attributes as unknown[]).toHaveLength(2)
+    expect(dept?.data.methods as unknown[]).toHaveLength(2)
 
-    const edge = umlModel.edges[0];
-    expect(edge.type).toBe("ClassComposition");
-    expect(edge.data.points).toHaveLength(4);
-  });
+    const edge = umlModel.edges[0]
+    expect(edge.type).toBe("ClassComposition")
+    expect(edge.data.points).toHaveLength(4)
+  })
 
   it("verifies SVG export marker resolution contains the filled black diamond for composition", () => {
     // 1. Verify marker resolution for ClassComposition edge type
-    const markerConfig = getEdgeMarkerStyles("ClassComposition");
+    const markerConfig = getEdgeMarkerStyles("ClassComposition")
 
     // Must resolve to the black-rhombus SVG marker
-    expect(markerConfig.markerEnd).toBe("url(#black-rhombus)");
-    expect(markerConfig.strokeDashArray).toBe("0"); // Solid line for composition
+    expect(markerConfig.markerEnd).toBe("url(#black-rhombus)")
+    expect(markerConfig.strokeDashArray).toBe("0") // Solid line for composition
 
     // 2. Verify black-rhombus geometry definition is filled (black diamond)
-    const rhombusConfig = MARKER_CONFIGS["black-rhombus"];
-    expect(rhombusConfig).toBeDefined();
-    expect(rhombusConfig.filled).toBe(true);
+    const rhombusConfig = MARKER_CONFIGS["black-rhombus"]
+    expect(rhombusConfig).toBeDefined()
+    expect(rhombusConfig.filled).toBe(true)
 
     // 3. Verify SVG representation contains the black-rhombus marker definition
     const mockSvgWithMarkers = `
@@ -156,12 +154,12 @@ describe("INT-CU01: Case of Use CU-01 UML Class Diagram Modeling Integration", (
         </defs>
         <path d="M 320 220 L 385 220 L 385 210 L 450 210" marker-end="url(#black-rhombus)" stroke="#000000" stroke-width="1.5" />
       </svg>
-    `;
+    `
 
-    expect(mockSvgWithMarkers).toContain('id="black-rhombus"');
-    expect(mockSvgWithMarkers).toContain('marker-end="url(#black-rhombus)"');
-    expect(mockSvgWithMarkers).toContain('fill="#000000"');
-  });
+    expect(mockSvgWithMarkers).toContain('id="black-rhombus"')
+    expect(mockSvgWithMarkers).toContain('marker-end="url(#black-rhombus)"')
+    expect(mockSvgWithMarkers).toContain('fill="#000000"')
+  })
 
   it("enforces UML Domain Guard: rejects non-UML diagrams and invalid node types", () => {
     // 1. Invalid diagram type (e.g. UseCaseDiagram, ActivityDiagram) must fail schema validation
@@ -173,9 +171,9 @@ describe("INT-CU01: Case of Use CU-01 UML Class Diagram Modeling Integration", (
       nodes: [],
       edges: [],
       assessments: {},
-    };
+    }
 
-    expect(validateModel(nonUmlDiagram)).toBe(false);
+    expect(validateModel(nonUmlDiagram)).toBe(false)
 
     // 2. Invalid node type (e.g. bpmnTask, stateNode) must fail schema validation
     const invalidNodeModel = {
@@ -196,8 +194,8 @@ describe("INT-CU01: Case of Use CU-01 UML Class Diagram Modeling Integration", (
       ],
       edges: [],
       assessments: {},
-    };
+    }
 
-    expect(validateModel(invalidNodeModel)).toBe(false);
-  });
-});
+    expect(validateModel(invalidNodeModel)).toBe(false)
+  })
+})
