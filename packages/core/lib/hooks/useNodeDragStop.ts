@@ -59,9 +59,7 @@ export const useNodeDragStop = () => {
         })
 
         const parentNode = intersectionsWithDroppedLocation.length
-          ? intersectionsWithDroppedLocation[
-              intersectionsWithDroppedLocation.length - 1
-            ]
+          ? intersectionsWithDroppedLocation[intersectionsWithDroppedLocation.length - 1]
           : null
 
         if (!parentNode) {
@@ -78,8 +76,7 @@ export const useNodeDragStop = () => {
           return
         }
 
-        const isThisNewParent =
-          parentNode && parentNode?.id !== draggedNode.parentId
+        const isThisNewParent = parentNode && parentNode?.id !== draggedNode.parentId
 
         if (isThisNewParent) {
           const updatedNode: Node = {
@@ -97,9 +94,7 @@ export const useNodeDragStop = () => {
           const updatedNodesList = sortNodesTopologically(
             resizeAllParents(
               updatedNode,
-              updatedNodes.map((n) =>
-                n.id === updatedNode.id ? updatedNode : n
-              )
+              updatedNodes.map((n) => (n.id === updatedNode.id ? updatedNode : n))
             )
           )
 
@@ -112,9 +107,7 @@ export const useNodeDragStop = () => {
           const updatedNodesList = sortNodesTopologically(
             resizeAllParents(
               draggedNode,
-              updatedNodes.map((n) =>
-                n.id === draggedNode.id ? { ...draggedNode } : n
-              )
+              updatedNodes.map((n) => (n.id === draggedNode.id ? { ...draggedNode } : n))
             )
           )
           setNodes(updatedNodesList)

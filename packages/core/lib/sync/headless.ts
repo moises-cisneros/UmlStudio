@@ -24,8 +24,7 @@ export function createHeadlessSync(ydoc: Y.Doc = new Y.Doc()): {
     getInitialState: () => ({}) as DiagramStore,
   }
   const metadataStore: StoreApi<MetadataStore> = {
-    getState: () =>
-      ({ updateMetaDataFromYjs: noop }) as unknown as MetadataStore,
+    getState: () => ({ updateMetaDataFromYjs: noop }) as unknown as MetadataStore,
     setState: noop,
     subscribe: () => noop,
     getInitialState: () => ({}) as MetadataStore,

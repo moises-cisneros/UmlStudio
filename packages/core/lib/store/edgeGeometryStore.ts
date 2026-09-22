@@ -29,10 +29,7 @@ const samePoints = (a: IPoint[], b: IPoint[]): boolean =>
   (a.length === b.length &&
     a.every((point, index) => point.x === b[index].x && point.y === b[index].y))
 
-const sameNodeGeometry = (
-  a: EdgeGeometryNodeSnapshot,
-  b: EdgeGeometryNodeSnapshot
-): boolean => {
+const sameNodeGeometry = (a: EdgeGeometryNodeSnapshot, b: EdgeGeometryNodeSnapshot): boolean => {
   if (a === b) return true
   if (a.size !== b.size) return false
   for (const [id, rect] of a) {
@@ -51,9 +48,7 @@ const sameNodeGeometry = (
   return true
 }
 
-export const createEdgeGeometryStore = (): UseBoundStore<
-  StoreApi<EdgeGeometryStore>
-> => {
+export const createEdgeGeometryStore = (): UseBoundStore<StoreApi<EdgeGeometryStore>> => {
   const settledWaiters = new Set<{
     afterGeneration: number | undefined
     resolve: () => void
@@ -84,12 +79,7 @@ export const createEdgeGeometryStore = (): UseBoundStore<
           routingEpoch: 0,
           routingReady: false,
 
-          setAllGeometry: (
-            routeById,
-            routingEpoch,
-            nodeGeometry,
-            settlementPreview
-          ) => {
+          setAllGeometry: (routeById, routingEpoch, nodeGeometry, settlementPreview) => {
             const state = get()
             if (routingEpoch !== state.routingEpoch) return false
             const previous = state.geometryById
@@ -111,21 +101,16 @@ export const createEdgeGeometryStore = (): UseBoundStore<
               }
             }
             const nextPreview: Record<string, IPoint[]> = {}
-            for (const [id, candidate] of Object.entries(
-              settlementPreview ?? {}
-            )) {
+            for (const [id, candidate] of Object.entries(settlementPreview ?? {})) {
               if (!routeById[id]) continue
               const prior = state.previewById[id]
-              nextPreview[id] =
-                prior && samePoints(prior, candidate) ? prior : candidate
+              nextPreview[id] = prior && samePoints(prior, candidate) ? prior : candidate
             }
             const previousPreviewIds = Object.keys(state.previewById)
             const nextPreviewIds = Object.keys(nextPreview)
             const previewChanged =
               previousPreviewIds.length !== nextPreviewIds.length ||
-              nextPreviewIds.some(
-                (id) => state.previewById[id] !== nextPreview[id]
-              )
+              nextPreviewIds.some((id) => state.previewById[id] !== nextPreview[id])
             const nodeGeometryChanged =
               nodeGeometry !== undefined &&
               !sameNodeGeometry(state.settledNodeGeometry, nodeGeometry)
@@ -133,9 +118,7 @@ export const createEdgeGeometryStore = (): UseBoundStore<
               {
                 geometryById: geometryChanged ? next : previous,
                 previewById: previewChanged ? nextPreview : state.previewById,
-                settledNodeGeometry: nodeGeometryChanged
-                  ? nodeGeometry
-                  : state.settledNodeGeometry,
+                settledNodeGeometry: nodeGeometryChanged ? nodeGeometry : state.settledNodeGeometry,
                 acceptedGeneration: state.acceptedGeneration + 1,
                 routingReady: true,
               },
@@ -201,13 +184,10 @@ export const createEdgeGeometryStore = (): UseBoundStore<
             const state = get()
             if (
               !state.isSolving &&
-              (afterGeneration === undefined ||
-                state.acceptedGeneration > afterGeneration)
+              (afterGeneration === undefined || state.acceptedGeneration > afterGeneration)
             )
               return Promise.resolve()
-            return new Promise<void>((resolve) =>
-              settledWaiters.add({ afterGeneration, resolve })
-            )
+            return new Promise<void>((resolve) => settledWaiters.add({ afterGeneration, resolve }))
           },
         }
       }),

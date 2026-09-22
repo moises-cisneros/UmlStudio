@@ -3,11 +3,7 @@ import { useShallow } from "zustand/shallow"
 import { EDGES } from "@/constants"
 import { useEdgeGeometryStore } from "@/store/context"
 import { IPoint, pointsToSvgPath } from "../edges/Connection"
-import {
-  LineJumpHit,
-  buildPathWithLineJumps,
-  computeLineJumpsForEdge,
-} from "@/utils/edgeUtils"
+import { LineJumpHit, buildPathWithLineJumps, computeLineJumpsForEdge } from "@/utils/edgeUtils"
 import {
   createDisplayedRouteEntriesSelector,
   polylineBounds,
@@ -26,9 +22,7 @@ export function useEdgeLineJumps(
   )
   const selectedRouteEntries = useEdgeGeometryStore(
     useShallow((state) =>
-      enabled && id
-        ? selectIntersectingRoutes(state.geometryById, state.previewById)
-        : []
+      enabled && id ? selectIntersectingRoutes(state.geometryById, state.previewById) : []
     )
   )
 
@@ -52,9 +46,7 @@ export function buildEdgePath(
 ): string {
   const seen = new Set<string>()
   const uniqueJumps = lineJumps.filter((jump) => {
-    const key = `${jump.segmentIndex}:${Math.round(jump.point.x)}:${Math.round(
-      jump.point.y
-    )}`
+    const key = `${jump.segmentIndex}:${Math.round(jump.point.x)}:${Math.round(jump.point.y)}`
     if (seen.has(key)) return false
     seen.add(key)
     return true
@@ -74,9 +66,7 @@ export function buildEdgePath(
           0,
           Math.min(
             length,
-            ((labelGap.center.x - start.x) * dx +
-              (labelGap.center.y - start.y) * dy) /
-              length
+            ((labelGap.center.x - start.x) * dx + (labelGap.center.y - start.y) * dy) / length
           )
         )
         const halfSize = Math.min(
@@ -99,8 +89,7 @@ export function buildEdgePath(
           y: center.y + ny * halfSize,
         }
         const progress = (jump: LineJumpHit): number =>
-          ((jump.point.x - start.x) * dx + (jump.point.y - start.y) * dy) /
-          length
+          ((jump.point.x - start.x) * dx + (jump.point.y - start.y) * dy) / length
         const gapStartDistance = centerDistance - halfSize
         const gapEndDistance = centerDistance + halfSize
         const beforeJumps: LineJumpHit[] = []
@@ -116,8 +105,7 @@ export function buildEdgePath(
           } else {
             const distance = progress(jump)
             if (distance < gapStartDistance) beforeJumps.push(jump)
-            else if (distance > gapEndDistance)
-              afterJumps.push({ ...jump, segmentIndex: 0 })
+            else if (distance > gapEndDistance) afterJumps.push({ ...jump, segmentIndex: 0 })
           }
         }
         const beforePoints = [...points.slice(0, segmentIndex + 1), gapStart]

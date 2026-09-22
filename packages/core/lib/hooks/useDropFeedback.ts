@@ -8,10 +8,7 @@ interface Props {
   elementType?: string
 }
 
-export const useDropFeedback = ({
-  elementId,
-  elementType = "default",
-}: Props) => {
+export const useDropFeedback = ({ elementId, elementType = "default" }: Props) => {
   const { setAssessments } = useDiagramStore(
     useShallow((state) => ({
       setAssessments: state.setAssessments,
@@ -39,7 +36,7 @@ export const useDropFeedback = ({
         [elementId]: newAssessment,
       }))
     },
-    [elementId, elementType]
+    [elementId, elementType, setAssessments]
   )
 
   return handleDrop

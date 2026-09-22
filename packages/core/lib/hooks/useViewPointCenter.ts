@@ -13,18 +13,12 @@ export const useViewportCenter = (): XYPosition => {
       y: (viewPort.y * -1) / viewPort.zoom,
     }
 
-    const canvasElement = window.document.getElementById(
-      `react-flow-library-${diagramId}`
-    )
+    const canvasElement = window.document.getElementById(`react-flow-library-${diagramId}`)
     const center = {
-      x:
-        pointOfViewportLeftTop.x +
-        (canvasElement?.clientWidth || 0) / 2 / viewPort.zoom,
-      y:
-        pointOfViewportLeftTop.y +
-        (canvasElement?.clientHeight || 0) / 2 / viewPort.zoom,
+      x: pointOfViewportLeftTop.x + (canvasElement?.clientWidth || 0) / 2 / viewPort.zoom,
+      y: pointOfViewportLeftTop.y + (canvasElement?.clientHeight || 0) / 2 / viewPort.zoom,
     }
 
     return center
-  }, [viewPort])
+  }, [viewPort, diagramId])
 }

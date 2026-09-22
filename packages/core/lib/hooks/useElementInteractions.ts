@@ -108,8 +108,8 @@ export const useElementInteractions = () => {
             name: "AssociationClass",
             stereotype: ClassStereotype.Association,
             isAssociationClass: true,
-            attributes: [{ id: generateUUID(), name: "+ attribute: Type" }],
-            methods: [{ id: generateUUID(), name: "+ method()" }],
+            attributes: [],
+            methods: [],
           },
           selected: true,
         }
@@ -124,10 +124,7 @@ export const useElementInteractions = () => {
           },
         }
 
-        setNodes((prev) => [
-          ...prev.map((n) => ({ ...n, selected: false })),
-          intermediateNode,
-        ])
+        setNodes((prev) => [...prev.map((n) => ({ ...n, selected: false })), intermediateNode])
         setEdges((prev) => [...prev, assocEdge])
         setSelectedElementsId([intermediateNodeId])
         setAssociationClassPrompt(null)
@@ -135,8 +132,7 @@ export const useElementInteractions = () => {
       }
 
       if (!canOpenAssessmentPopover) return
-      if (readonly && !hasAssessmentToShow(node.id, [node], getAssessment))
-        return
+      if (readonly && !hasAssessmentToShow(node.id, [node], getAssessment)) return
       setPopOverElementId(node.id)
     },
     [
@@ -167,18 +163,10 @@ export const useElementInteractions = () => {
       event.preventDefault()
       if (!isDiagramModifiable && !canOpenAssessmentPopover) return
       setSelectedElementsId([node.id])
-      setNodes((nodes) =>
-        nodes.map((n) => ({ ...n, selected: n.id === node.id }))
-      )
+      setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === node.id })))
       setEdges((edges) => edges.map((e) => ({ ...e, selected: false })))
     },
-    [
-      canOpenAssessmentPopover,
-      isDiagramModifiable,
-      setEdges,
-      setNodes,
-      setSelectedElementsId,
-    ]
+    [canOpenAssessmentPopover, isDiagramModifiable, setEdges, setNodes, setSelectedElementsId]
   )
 
   const onEdgeContextMenu: EdgeMouseHandler<Edge> = useCallback(
@@ -187,25 +175,14 @@ export const useElementInteractions = () => {
       if (!isDiagramModifiable && !canOpenAssessmentPopover) return
       setSelectedElementsId([edge.id])
       setNodes((nodes) => nodes.map((n) => ({ ...n, selected: false })))
-      setEdges((edges) =>
-        edges.map((e) => ({ ...e, selected: e.id === edge.id }))
-      )
+      setEdges((edges) => edges.map((e) => ({ ...e, selected: e.id === edge.id })))
     },
-    [
-      canOpenAssessmentPopover,
-      isDiagramModifiable,
-      setEdges,
-      setNodes,
-      setSelectedElementsId,
-    ]
+    [canOpenAssessmentPopover, isDiagramModifiable, setEdges, setNodes, setSelectedElementsId]
   )
 
-  const onPaneContextMenu = useCallback(
-    (event: MouseEvent | React.MouseEvent) => {
-      event.preventDefault()
-    },
-    []
-  )
+  const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
+    event.preventDefault()
+  }, [])
 
   return {
     onBeforeDelete,

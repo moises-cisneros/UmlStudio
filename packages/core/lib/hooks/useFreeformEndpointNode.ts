@@ -38,10 +38,7 @@ export function useFreeformEndpointNode() {
 
         const distance = distanceToRect(flowPoint, rect)
 
-        if (
-          distance <= FREEFORM_ENDPOINT_SNAP_RADIUS_PX &&
-          (!best || distance < best.distance)
-        ) {
+        if (distance <= FREEFORM_ENDPOINT_SNAP_RADIUS_PX && (!best || distance < best.distance)) {
           best = { node, rect, distance }
         }
       }

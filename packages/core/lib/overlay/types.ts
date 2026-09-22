@@ -48,9 +48,7 @@ export const REGION_EDGE: Partial<Record<OverlayRegion, OverlaySide>> = {
 export type Insets = Record<OverlaySide, number>
 export const ZERO_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 }
 
-export type InsetContribution =
-  | "auto"
-  | Partial<Record<OverlaySide, number | "auto">>
+export type InsetContribution = "auto" | Partial<Record<OverlaySide, number | "auto">>
 
 export interface OverlayControlOptions {
   id: string

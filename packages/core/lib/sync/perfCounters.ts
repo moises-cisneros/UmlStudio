@@ -117,13 +117,10 @@ export const perfCounters: PerfCounters =
     : (undefined as unknown as PerfCounters)
 
 export const getPerfCounters = (): PerfCounters | undefined =>
-  import.meta.env.DEV || import.meta.env.VITE_E2E === "true"
-    ? perfCounters
-    : undefined
+  import.meta.env.DEV || import.meta.env.VITE_E2E === "true" ? perfCounters : undefined
 
 export const recordStoreNodeWrite = () => {
-  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-    perfCounters.storeNodeWrites++
+  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") perfCounters.storeNodeWrites++
 }
 
 export const recordSolve = (ms: number): void => {
@@ -135,18 +132,15 @@ export const recordSolve = (ms: number): void => {
 }
 
 export const recordWorkerSolve = (): void => {
-  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-    perfCounters.workerSolveCount++
+  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") perfCounters.workerSolveCount++
 }
 
 export const recordWorkerAttempt = (): void => {
-  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-    perfCounters.workerAttemptCount++
+  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") perfCounters.workerAttemptCount++
 }
 
 export const recordWorkerFallback = (): void => {
-  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-    perfCounters.workerFallbackCount++
+  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") perfCounters.workerFallbackCount++
 }
 
 export const recordWorkerSyncDecision = (reason: "initial" | "small"): void => {
@@ -156,15 +150,9 @@ export const recordWorkerSyncDecision = (reason: "initial" | "small"): void => {
   }
 }
 
-export const recordWorkerDispatch = (
-  serializeMs: number,
-  postMessageMs: number
-): void => {
+export const recordWorkerDispatch = (serializeMs: number, postMessageMs: number): void => {
   if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") {
-    perfCounters.workerSerializeMaxMs = Math.max(
-      perfCounters.workerSerializeMaxMs,
-      serializeMs
-    )
+    perfCounters.workerSerializeMaxMs = Math.max(perfCounters.workerSerializeMaxMs, serializeMs)
     perfCounters.workerPostMessageMaxMs = Math.max(
       perfCounters.workerPostMessageMaxMs,
       postMessageMs
@@ -172,16 +160,10 @@ export const recordWorkerDispatch = (
   }
 }
 
-export const recordWorkerResponse = (
-  roundTripMs: number,
-  snapshotAgeMs: number
-): void => {
+export const recordWorkerResponse = (roundTripMs: number, snapshotAgeMs: number): void => {
   if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") {
     perfCounters.workerResponseCount++
-    perfCounters.workerRoundTripMaxMs = Math.max(
-      perfCounters.workerRoundTripMaxMs,
-      roundTripMs
-    )
+    perfCounters.workerRoundTripMaxMs = Math.max(perfCounters.workerRoundTripMaxMs, roundTripMs)
     perfCounters.workerDispatchDelayMaxMs = Math.max(
       perfCounters.workerDispatchDelayMaxMs,
       snapshotAgeMs - roundTripMs
@@ -195,10 +177,7 @@ export const recordWorkerResponse = (
 
 export const recordWorkerReleaseExact = (elapsedMs: number): void => {
   if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-    perfCounters.workerReleaseExactMaxMs = Math.max(
-      perfCounters.workerReleaseExactMaxMs,
-      elapsedMs
-    )
+    perfCounters.workerReleaseExactMaxMs = Math.max(perfCounters.workerReleaseExactMaxMs, elapsedMs)
 }
 
 export const recordWorkerReleaseSettled = (elapsedMs: number): void => {
@@ -221,10 +200,7 @@ export const recordWorkerHolisticPreview = (
         firstDelayMs
       )
     if (gapMs !== null)
-      perfCounters.workerPreviewGapMaxMs = Math.max(
-        perfCounters.workerPreviewGapMaxMs,
-        gapMs
-      )
+      perfCounters.workerPreviewGapMaxMs = Math.max(perfCounters.workerPreviewGapMaxMs, gapMs)
   }
 }
 
@@ -234,8 +210,7 @@ export const recordWorkerRevision = (
 ): void => {
   if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") {
     if (kind === "input") perfCounters.workerLatestInputRevision = revision
-    else if (kind === "dispatch")
-      perfCounters.workerLastDispatchedRevision = revision
+    else if (kind === "dispatch") perfCounters.workerLastDispatchedRevision = revision
     else perfCounters.workerLastAcceptedRevision = revision
   }
 }
@@ -257,8 +232,7 @@ export const recordPreviewDecisionStabilization = ({
 }
 
 export const recordEdgeRender = (): void => {
-  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-    perfCounters.edgeRenderCount++
+  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") perfCounters.edgeRenderCount++
 }
 
 export const getRoutingPerfCounters = (): RoutingPerfCounters | undefined =>
@@ -302,8 +276,7 @@ export const diffRoutingPerfCounters = (
     routerHeuristicEvaluations:
       after.routerHeuristicEvaluations - before.routerHeuristicEvaluations,
     routerHeapPushes: after.routerHeapPushes - before.routerHeapPushes,
-    routerIncumbentBounds:
-      after.routerIncumbentBounds - before.routerIncumbentBounds,
+    routerIncumbentBounds: after.routerIncumbentBounds - before.routerIncumbentBounds,
     routerBoundPrunes: after.routerBoundPrunes - before.routerBoundPrunes,
     routerMaxCells: after.routerMaxCells,
     routeScorePairs: after.routeScorePairs - before.routeScorePairs,
@@ -312,9 +285,7 @@ export const diffRoutingPerfCounters = (
   }
 }
 
-export const mergeRoutingPerfCounters = (
-  delta: RoutingPerfCounters | undefined
-): void => {
+export const mergeRoutingPerfCounters = (delta: RoutingPerfCounters | undefined): void => {
   if ((import.meta.env.DEV || import.meta.env.VITE_E2E === "true") && delta) {
     perfCounters.routerSearches += delta.routerSearches
     perfCounters.routerExpansions += delta.routerExpansions
@@ -335,10 +306,7 @@ export const mergeRoutingPerfCounters = (
     perfCounters.routerHeapPushes += delta.routerHeapPushes
     perfCounters.routerIncumbentBounds += delta.routerIncumbentBounds
     perfCounters.routerBoundPrunes += delta.routerBoundPrunes
-    perfCounters.routerMaxCells = Math.max(
-      perfCounters.routerMaxCells,
-      delta.routerMaxCells
-    )
+    perfCounters.routerMaxCells = Math.max(perfCounters.routerMaxCells, delta.routerMaxCells)
     perfCounters.routeScorePairs += delta.routeScorePairs
     perfCounters.routeScoreMs += delta.routeScoreMs
     perfCounters.routeScoreRuns += delta.routeScoreRuns
@@ -365,8 +333,7 @@ export const recordRouterSearch = (
     }
     if (abandoned) perfCounters.routerAbandoned++
     perfCounters.routerSearchMs += elapsedMs
-    if (elapsedMs > perfCounters.routerSearchMaxMs)
-      perfCounters.routerSearchMaxMs = elapsedMs
+    if (elapsedMs > perfCounters.routerSearchMaxMs) perfCounters.routerSearchMaxMs = elapsedMs
     perfCounters.routerSetupMs += setupMs
     perfCounters.routerLoopMs += Math.max(0, elapsedMs - setupMs)
     perfCounters.routerStepPricings += stepPricings
@@ -379,8 +346,7 @@ export const recordRouterSearch = (
 }
 
 export const recordRouteScorePair = (): void => {
-  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true")
-    perfCounters.routeScorePairs++
+  if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") perfCounters.routeScorePairs++
 }
 
 export const recordRouteScoreRun = (elapsedMs: number): void => {

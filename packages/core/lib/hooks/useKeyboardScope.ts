@@ -18,9 +18,7 @@ export function useKeyboardScope(enabled: boolean) {
   const onPointerLeave = (event: PointerEvent<HTMLDivElement>) => {
     const focused = event.currentTarget.ownerDocument.activeElement
     if (!pointerOwnsFocusRef.current) {
-      setActive(
-        focused instanceof Node && event.currentTarget.contains(focused)
-      )
+      setActive(focused instanceof Node && event.currentTarget.contains(focused))
       return
     }
 

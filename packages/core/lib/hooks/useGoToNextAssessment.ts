@@ -28,9 +28,7 @@ export const useAssessmentNavigation = (elementId: string) => {
   const selectMultipleElements = useAssessmentSelectionStore(
     useShallow((state) => state.selectMultipleElements)
   )
-  const setPopOverElementId = usePopoverStore(
-    useShallow((state) => state.setPopOverElementId)
-  )
+  const setPopOverElementId = usePopoverStore(useShallow((state) => state.setPopOverElementId))
   const { diagramMode, readonly } = useMetadataStore(
     useShallow((state) => ({
       diagramMode: state.mode,
@@ -56,11 +54,7 @@ export const useAssessmentNavigation = (elementId: string) => {
     const nextIndex = (currentIndex + offset + total) % total
     const nextElement = elements[nextIndex]
 
-    const center = getAssessmentElementCenter(
-      nextElement,
-      nodes,
-      edgeGeometryStore.getState()
-    )
+    const center = getAssessmentElementCenter(nextElement, nodes, edgeGeometryStore.getState())
     if (center) {
       setCenter(center.x, center.y, {
         duration: 220,

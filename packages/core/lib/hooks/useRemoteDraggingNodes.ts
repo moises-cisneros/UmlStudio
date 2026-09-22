@@ -5,10 +5,7 @@ import type { CollaborationState, DraggingNode } from "@/typings"
 
 export type RemoteDraggingOverlay = Map<string, DraggingNode>
 
-const sameOverlay = (
-  a: RemoteDraggingOverlay,
-  b: RemoteDraggingOverlay
-): boolean => {
+const sameOverlay = (a: RemoteDraggingOverlay, b: RemoteDraggingOverlay): boolean => {
   if (a.size !== b.size) return false
   for (const [id, node] of a) {
     const other = b.get(id)
@@ -39,6 +36,8 @@ const buildOverlay = (
   return overlay
 }
 
+const EMPTY_OVERLAY: RemoteDraggingOverlay = new Map()
+
 export const useRemoteDraggingNodes = (
   awareness: CollaborationAwarenessApi,
   active: boolean
@@ -47,7 +46,6 @@ export const useRemoteDraggingNodes = (
 
   useEffect(() => {
     if (!active) {
-      setOverlay((prev) => (prev.size === 0 ? prev : new Map()))
       return
     }
 
@@ -58,16 +56,17 @@ export const useRemoteDraggingNodes = (
     }
 
     rebuild(awareness.getAwarenessStates())
-    return awareness.subscribeToAwarenessChanges(rebuild)
+    const unsubscribe = awareness.subscribeToAwarenessChanges(rebuild)
+    return () => {
+      unsubscribe()
+      setOverlay((prev) => (prev.size === 0 ? prev : new Map()))
+    }
   }, [awareness, active])
 
-  return overlay
+  return active ? overlay : EMPTY_OVERLAY
 }
 
-export const applyDraggingOverlay = (
-  nodes: Node[],
-  overlay: RemoteDraggingOverlay
-): Node[] => {
+export const applyDraggingOverlay = (nodes: Node[], overlay: RemoteDraggingOverlay): Node[] => {
   if (overlay.size === 0) return nodes
   return nodes.map((node) => {
     const dragged = overlay.get(node.id)

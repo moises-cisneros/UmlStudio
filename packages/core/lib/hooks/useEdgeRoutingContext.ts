@@ -4,10 +4,7 @@ import { EDGES } from "@/constants"
 import type { IPoint } from "@/edges/Connection"
 import { useDiagramStore, useEdgeGeometryStore } from "@/store/context"
 import type { ObstacleRect } from "@/utils/geometry/obstacles"
-import {
-  getEdgeObstacles,
-  getContainerBorderPolylines,
-} from "@/utils/geometry/obstacles"
+import { getEdgeObstacles, getContainerBorderPolylines } from "@/utils/geometry/obstacles"
 import { selectRouteEntriesIntersectingRect } from "@/utils/geometry/edgeGeometrySubscriptions"
 import { useStableValue } from "./useStableValue"
 
@@ -74,8 +71,8 @@ export const useEdgeRoutingContext = ({
       const other = byId.get(otherId)
       if (!self || !other) return false
 
-      const sharedNodes = ([other.source, other.target] as string[]).filter(
-        (n) => [sourceId, targetId].includes(n)
+      const sharedNodes = ([other.source, other.target] as string[]).filter((n) =>
+        [sourceId, targetId].includes(n)
       ).length
       if (sharedNodes !== 1) return false
 
@@ -89,23 +86,13 @@ export const useEdgeRoutingContext = ({
       ] as const
 
       return ends.some(([node, handle]) =>
-        otherEnds.some(
-          ([otherNode, otherHandle]) =>
-            node === otherNode && handle === otherHandle
-        )
+        otherEnds.some(([otherNode, otherHandle]) => node === otherNode && handle === otherHandle)
       )
     }
   }, [edges, selfId, sourceId, targetId])
 
   const obstacles = useMemo(
-    () =>
-      getEdgeObstacles(
-        nodes,
-        sourceId,
-        targetId,
-        { x: sx, y: sy },
-        { x: tx, y: ty }
-      ),
+    () => getEdgeObstacles(nodes, sourceId, targetId, { x: sx, y: sy }, { x: tx, y: ty }),
     [nodes, sourceId, targetId, sx, sy, tx, ty]
   )
 
@@ -139,18 +126,7 @@ export const useEdgeRoutingContext = ({
 
     neighbors.push(...borders)
     return neighbors
-  }, [
-    geometryById,
-    selfId,
-    nodes,
-    sourceId,
-    targetId,
-    sx,
-    sy,
-    tx,
-    ty,
-    isSibling,
-  ])
+  }, [geometryById, selfId, nodes, sourceId, targetId, sx, sy, tx, ty, isSibling])
 
   const stableObstacles = useStableValue(obstacles, obstaclesEqual)
   const stableNeighbors = useStableValue(neighborEdges, polylinesEqual)

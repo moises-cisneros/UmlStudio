@@ -49,10 +49,7 @@ export type MetadataStore = {
   setLabels: (labels: ResolvedUmlStudioLabels) => void
   setTagConfig: (tagConfig: TagConfig) => void
   setScrollEnabled: (scrollEnabled: boolean) => void
-  startConnectionGuidance: (
-    sourceNodeId: string | null,
-    sourceHandleId: string | null
-  ) => void
+  startConnectionGuidance: (sourceNodeId: string | null, sourceHandleId: string | null) => void
   stopConnectionGuidance: () => void
   setLiveEdgeOverride: (override: LiveEdgeOverride | null) => void
   updateDiagramTitle: (diagramTitle: string) => void
@@ -152,9 +149,7 @@ export const createMetadataStore = (
           set(
             {
               diagramTitle: getDiagramMetadata(ydoc).get("diagramTitle") || "",
-              diagramType: parseDiagramType(
-                getDiagramMetadata(ydoc).get("diagramType")
-              ),
+              diagramType: parseDiagramType(getDiagramMetadata(ydoc).get("diagramType")),
             },
             undefined,
             "updateMetaDataFromYjs"
@@ -251,11 +246,7 @@ export const createMetadataStore = (
         },
 
         setPendingConnectionEdge: (edge) => {
-          set(
-            { pendingConnectionEdge: edge },
-            undefined,
-            "setPendingConnectionEdge"
-          )
+          set({ pendingConnectionEdge: edge }, undefined, "setPendingConnectionEdge")
         },
 
         setPendingConnectionId: (id) => {

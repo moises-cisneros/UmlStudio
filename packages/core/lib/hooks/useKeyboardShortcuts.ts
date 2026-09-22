@@ -1,28 +1,20 @@
 import { useEffect, useRef, type RefObject } from "react"
 import { useReactFlow } from "@xyflow/react"
-import {
-  useDiagramStore,
-  useMetadataStore,
-  useOverlayStore,
-} from "@/store/context"
+import { useDiagramStore, useMetadataStore, useOverlayStore } from "@/store/context"
 import { useShallow } from "zustand/shallow"
 import { useSelectionForCopyPaste } from "./useSelectionForCopyPaste"
 import { useDiagramModifiable } from "./useDiagramModifiable"
 import { insetAwareFitView } from "@/overlay/fitView"
 import { handleShortcutKeydown, type KeyboardShortcutDeps } from "@/keyboard"
 
-export const useKeyboardShortcuts = (
-  editorRootRef: RefObject<HTMLElement | null>
-) => {
+export const useKeyboardShortcuts = (editorRootRef: RefObject<HTMLElement | null>) => {
   const pasteCountRef = useRef(0)
   const pasteChainRef = useRef<Promise<unknown>>(Promise.resolve())
 
   const { undo, redo } = useDiagramStore(
     useShallow((state) => ({ undo: state.undo, redo: state.redo }))
   )
-  const setMultiSelectionMode = useMetadataStore(
-    (state) => state.setMultiSelectionMode
-  )
+  const setMultiSelectionMode = useMetadataStore((state) => state.setMultiSelectionMode)
   const isDiagramModifiable = useDiagramModifiable()
   const enabled = useMetadataStore((state) => state.keyboardShortcuts)
   const rf = useReactFlow()
@@ -50,8 +42,7 @@ export const useKeyboardShortcuts = (
       delete: () => {
         const selectedNodes = rf.getNodes().filter((node) => node.selected)
         const selectedEdges = rf.getEdges().filter((edge) => edge.selected)
-        if (selectedNodes.length === 0 && selectedEdges.length === 0)
-          return false
+        if (selectedNodes.length === 0 && selectedEdges.length === 0) return false
         editorRootRef.current?.focus({ preventScroll: true })
         void rf.deleteElements({
           nodes: selectedNodes,
@@ -101,9 +92,7 @@ export const useKeyboardShortcuts = (
           rf,
           insets,
           safeArea,
-          framed.size > 0
-            ? { nodes: [...framed].map((id) => ({ id })) }
-            : undefined
+          framed.size > 0 ? { nodes: [...framed].map((id) => ({ id })) } : undefined
         )
       },
     },

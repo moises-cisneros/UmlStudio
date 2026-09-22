@@ -15,16 +15,9 @@ import {
   CollaboratorInfo,
   DraggingNode,
 } from "@/typings"
-import {
-  sanitizeCollaborationViewport,
-  sanitizeDraggingNodes,
-} from "@/utils/collaboration"
+import { sanitizeCollaborationViewport, sanitizeDraggingNodes } from "@/utils/collaboration"
 import { Edge, Node } from "@xyflow/react"
-import {
-  applyAwarenessUpdate,
-  Awareness,
-  encodeAwarenessUpdate,
-} from "y-protocols/awareness"
+import { applyAwarenessUpdate, Awareness, encodeAwarenessUpdate } from "y-protocols/awareness"
 import * as Y from "yjs"
 import { StoreApi } from "zustand"
 
@@ -56,9 +49,7 @@ export class YjsSync {
     this.awareness = new Awareness(this.ydoc)
     this.stopYjsObserver = this.startYjsObserver()
 
-    this.diagramStore
-      .getState()
-      .setDraggingNodesPublisher(this.setLocalAwarenessDraggingNodes)
+    this.diagramStore.getState().setDraggingNodesPublisher(this.setLocalAwarenessDraggingNodes)
   }
 
   public stopSync() {
@@ -76,9 +67,7 @@ export class YjsSync {
 
     const localState = this.awareness.getLocalState()
     if (localState) {
-      const awarenessUpdate = encodeAwarenessUpdate(this.awareness, [
-        this.awareness.clientID,
-      ])
+      const awarenessUpdate = encodeAwarenessUpdate(this.awareness, [this.awareness.clientID])
       this.sendFramedMessage(MessageType.AwarenessUpdate, awarenessUpdate)
     }
   }
@@ -87,15 +76,11 @@ export class YjsSync {
     this.awareness.setLocalStateField("user", user)
   }
 
-  public setLocalAwarenessCursor = (
-    cursor: { x: number; y: number } | null
-  ) => {
+  public setLocalAwarenessCursor = (cursor: { x: number; y: number } | null) => {
     this.awareness.setLocalStateField("cursor", cursor)
   }
 
-  public setLocalAwarenessViewport = (
-    viewport: CollaborationViewport | null
-  ) => {
+  public setLocalAwarenessViewport = (viewport: CollaborationViewport | null) => {
     this.awareness.setLocalStateField("viewport", viewport)
   }
 
@@ -103,15 +88,11 @@ export class YjsSync {
     this.awareness.setLocalStateField("followingClientId", followingClientId)
   }
 
-  public setLocalAwarenessSelectedElement = (
-    selectedElementId: string | null
-  ) => {
+  public setLocalAwarenessSelectedElement = (selectedElementId: string | null) => {
     this.awareness.setLocalStateField("selectedElementId", selectedElementId)
   }
 
-  public setLocalAwarenessDraggingNodes = (
-    draggingNodes: DraggingNode[] | null
-  ) => {
+  public setLocalAwarenessDraggingNodes = (draggingNodes: DraggingNode[] | null) => {
     this.awareness.setLocalStateField("draggingNodes", draggingNodes)
   }
 
@@ -130,8 +111,7 @@ export class YjsSync {
     }
   }
 
-  public getAwarenessStates = (): Map<number, CollaborationState> =>
-    this.getTypedStates()
+  public getAwarenessStates = (): Map<number, CollaborationState> => this.getTypedStates()
 
   public getCollaborators = (): CollaboratorInfo[] => {
     const states = this.getTypedStates()
@@ -177,11 +157,7 @@ export class YjsSync {
       removed: number[]
     }) => {
       const currentSignature = this.computeParticipantSignature()
-      if (
-        added.length === 0 &&
-        removed.length === 0 &&
-        currentSignature === previousSignature
-      ) {
+      if (added.length === 0 && removed.length === 0 && currentSignature === previousSignature) {
         return
       }
       previousSignature = currentSignature
@@ -215,10 +191,7 @@ export class YjsSync {
     if (obj.draggingNodes != null) {
       state.draggingNodes = sanitizeDraggingNodes(obj.draggingNodes)
     }
-    if (
-      obj.followingClientId != null &&
-      typeof obj.followingClientId !== "number"
-    ) {
+    if (obj.followingClientId != null && typeof obj.followingClientId !== "number") {
       state.followingClientId = null
     }
     return state
@@ -240,19 +213,14 @@ export class YjsSync {
     for (const [clientId, state] of states.entries()) {
       const user = state.user
       if (user) {
-        parts.push(
-          `${clientId}:${user.id ?? ""}:${user.name}:${user.color}:${user.imageUrl ?? ""}`
-        )
+        parts.push(`${clientId}:${user.id ?? ""}:${user.name}:${user.color}:${user.imageUrl ?? ""}`)
       }
     }
     parts.sort()
     return parts.join("|")
   }
 
-  private sendFramedMessage = (
-    messageType: MessageType,
-    payload: Uint8Array
-  ) => {
+  private sendFramedMessage = (messageType: MessageType, payload: Uint8Array) => {
     if (!this.sendBroadcastMessage) {
       return
     }
@@ -291,13 +259,9 @@ export class YjsSync {
   }
 
   private startYjsObserver = () => {
-    const previewSuppressed = () =>
-      this.diagramStore.getState().previewMode === true
+    const previewSuppressed = () => this.diagramStore.getState().previewMode === true
 
-    const nodesChangeObserver = (
-      _event: Y.YMapEvent<Node>,
-      transaction: Y.Transaction
-    ) => {
+    const nodesChangeObserver = (_event: Y.YMapEvent<Node>, transaction: Y.Transaction) => {
       if (
         transaction.origin !== STORE_ORIGIN &&
         !this.isUndoRedoTransaction(transaction) &&
@@ -307,10 +271,7 @@ export class YjsSync {
       }
     }
 
-    const edgesObserver = (
-      _event: Y.YMapEvent<Edge>,
-      transaction: Y.Transaction
-    ) => {
+    const edgesObserver = (_event: Y.YMapEvent<Edge>, transaction: Y.Transaction) => {
       if (
         transaction.origin !== STORE_ORIGIN &&
         !this.isUndoRedoTransaction(transaction) &&
@@ -320,10 +281,7 @@ export class YjsSync {
       }
     }
 
-    const metadataObserver = (
-      _event: Y.YMapEvent<string>,
-      transaction: Y.Transaction
-    ) => {
+    const metadataObserver = (_event: Y.YMapEvent<string>, transaction: Y.Transaction) => {
       if (
         transaction.origin !== STORE_ORIGIN &&
         !this.isUndoRedoTransaction(transaction) &&
@@ -333,10 +291,7 @@ export class YjsSync {
       }
     }
 
-    const assessmentObserver = (
-      _event: Y.YMapEvent<Assessment>,
-      transaction: Y.Transaction
-    ) => {
+    const assessmentObserver = (_event: Y.YMapEvent<Assessment>, transaction: Y.Transaction) => {
       if (
         transaction.origin !== STORE_ORIGIN &&
         !this.isUndoRedoTransaction(transaction) &&
@@ -354,8 +309,7 @@ export class YjsSync {
     ) => {
       if (
         this.sendBroadcastMessage &&
-        (transaction.origin === STORE_ORIGIN ||
-          this.isUndoRedoTransaction(transaction))
+        (transaction.origin === STORE_ORIGIN || this.isUndoRedoTransaction(transaction))
       ) {
         this.sendFramedMessage(MessageType.YjsUpdate, update)
       }
@@ -389,10 +343,7 @@ export class YjsSync {
         return
       }
 
-      const awarenessUpdate = encodeAwarenessUpdate(
-        this.awareness,
-        changedClients
-      )
+      const awarenessUpdate = encodeAwarenessUpdate(this.awareness, changedClients)
       this.sendFramedMessage(MessageType.AwarenessUpdate, awarenessUpdate)
     }
 
@@ -419,8 +370,7 @@ export class YjsSync {
   }
 
   static uint8ToBase64(uint8: Uint8Array): string {
-    const toBase64 = (uint8 as Uint8Array & { toBase64?: () => string })
-      .toBase64
+    const toBase64 = (uint8 as Uint8Array & { toBase64?: () => string }).toBase64
     if (typeof toBase64 === "function") {
       return toBase64.call(uint8)
     }

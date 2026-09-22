@@ -39,9 +39,7 @@ export function useFreeformDropTarget() {
           : []
       })
       const best = pickNearestConnectable(candidates, point)
-      return best
-        ? { id: best.node.id, type: best.node.type, rect: best.rect }
-        : null
+      return best ? { id: best.node.id, type: best.node.type, rect: best.rect } : null
     },
     [getIntersectingNodes, getInternalNode]
   )

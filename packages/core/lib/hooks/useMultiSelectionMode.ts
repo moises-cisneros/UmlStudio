@@ -3,9 +3,7 @@ import { useStoreApi } from "@xyflow/react"
 import { useMetadataStore } from "@/store/context"
 
 export const useMultiSelectionMode = (): boolean => {
-  const multiSelectionMode = useMetadataStore(
-    (state) => state.multiSelectionMode
-  )
+  const multiSelectionMode = useMetadataStore((state) => state.multiSelectionMode)
   const store = useStoreApi()
 
   useEffect(() => {
