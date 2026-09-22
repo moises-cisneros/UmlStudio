@@ -9,17 +9,16 @@
  * exporters share a single source of truth and cannot drift apart.
  */
 
-export type UmlVisibilitySymbol = "+" | "-" | "#" | "~";
+export type UmlVisibilitySymbol = "+" | "-" | "#" | "~"
 
-export type UmlVisibility = "public" | "private" | "protected" | "package";
+export type UmlVisibility = "public" | "private" | "protected" | "package"
 
-const ATTRIBUTE_PATTERN =
-  /^\s*([+\-#~])?\s*([a-zA-Z0-9_$]+)(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/;
+const ATTRIBUTE_PATTERN = /^\s*([+\-#~])?\s*([a-zA-Z0-9_$]+)(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/
 
 const METHOD_PATTERN =
-  /^\s*([+\-#~])?\s*([a-zA-Z0-9_$]+)\s*(?:\((.*?)\))?(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/;
+  /^\s*([+\-#~])?\s*([a-zA-Z0-9_$]+)\s*(?:\((.*?)\))?(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/
 
-const PARAMETER_PATTERN = /^([a-zA-Z0-9_$]+)(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/;
+const PARAMETER_PATTERN = /^([a-zA-Z0-9_$]+)(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/
 
 /**
  * Maps a UML visibility symbol to its OMG UML 2.5 visibility kind.
@@ -28,26 +27,26 @@ const PARAMETER_PATTERN = /^([a-zA-Z0-9_$]+)(?:\s*:\s*([a-zA-Z0-9_$<>,. ]+))?/;
 export function mapVisibilitySymbol(symbol?: string): UmlVisibility {
   switch (symbol) {
     case "-":
-      return "private";
+      return "private"
     case "#":
-      return "protected";
+      return "protected"
     case "~":
-      return "package";
+      return "package"
     case "+":
     default:
-      return "public";
+      return "public"
   }
 }
 
 export interface ParsedUmlAttribute {
   /** Raw visibility symbol as written (`+`, `-`, `#`, `~` or undefined). */
-  visibilitySymbol?: string;
+  visibilitySymbol?: string
   /** Resolved OMG UML 2.5 visibility kind. */
-  visibility: UmlVisibility;
+  visibility: UmlVisibility
   /** Member name without visibility prefix or type suffix. */
-  name: string;
+  name: string
   /** Declared UML type, if present. */
-  type?: string;
+  type?: string
 }
 
 /**
@@ -56,28 +55,28 @@ export interface ParsedUmlAttribute {
  */
 export function parseUmlAttribute(raw: string): ParsedUmlAttribute | null {
   if (!raw || !raw.trim()) {
-    return null;
+    return null
   }
-  const match = raw.match(ATTRIBUTE_PATTERN);
-  const name = match?.[2] ?? "";
+  const match = raw.match(ATTRIBUTE_PATTERN)
+  const name = match?.[2] ?? ""
   if (!name) {
-    return null;
+    return null
   }
-  const visibilitySymbol = match?.[1];
-  const type = match?.[3]?.trim() || undefined;
+  const visibilitySymbol = match?.[1]
+  const type = match?.[3]?.trim() || undefined
   return {
     visibilitySymbol,
     visibility: mapVisibilitySymbol(visibilitySymbol),
     name,
     type,
-  };
+  }
 }
 
 export interface ParsedUmlParameter {
   /** Parameter name. Falls back to `param_<index>` for empty tokens. */
-  name: string;
+  name: string
   /** Declared UML type, if present. */
-  type?: string;
+  type?: string
 }
 
 /**
@@ -86,28 +85,28 @@ export interface ParsedUmlParameter {
  */
 export function splitUmlParameters(paramsRaw: string): ParsedUmlParameter[] {
   if (!paramsRaw || !paramsRaw.trim()) {
-    return [];
+    return []
   }
   return paramsRaw.split(",").map((token, index) => {
-    const match = token.trim().match(PARAMETER_PATTERN);
+    const match = token.trim().match(PARAMETER_PATTERN)
     return {
       name: match?.[1] || `param_${index}`,
       type: match?.[2]?.trim() || undefined,
-    };
-  });
+    }
+  })
 }
 
 export interface ParsedUmlMethod {
   /** Raw visibility symbol as written (`+`, `-`, `#`, `~` or undefined). */
-  visibilitySymbol?: string;
+  visibilitySymbol?: string
   /** Resolved OMG UML 2.5 visibility kind. */
-  visibility: UmlVisibility;
+  visibility: UmlVisibility
   /** Operation name without visibility prefix, params, or return type. */
-  name: string;
+  name: string
   /** Ordered input parameters. */
-  params: ParsedUmlParameter[];
+  params: ParsedUmlParameter[]
   /** Declared return type, if present. */
-  returnType?: string;
+  returnType?: string
 }
 
 /**
@@ -116,21 +115,21 @@ export interface ParsedUmlMethod {
  */
 export function parseUmlMethod(raw: string): ParsedUmlMethod | null {
   if (!raw || !raw.trim()) {
-    return null;
+    return null
   }
-  const match = raw.match(METHOD_PATTERN);
-  const name = match?.[2] ?? "";
+  const match = raw.match(METHOD_PATTERN)
+  const name = match?.[2] ?? ""
   if (!name) {
-    return null;
+    return null
   }
-  const visibilitySymbol = match?.[1];
-  const params = splitUmlParameters(match?.[3] ?? "");
-  const returnType = match?.[4]?.trim() || undefined;
+  const visibilitySymbol = match?.[1]
+  const params = splitUmlParameters(match?.[3] ?? "")
+  const returnType = match?.[4]?.trim() || undefined
   return {
     visibilitySymbol,
     visibility: mapVisibilitySymbol(visibilitySymbol),
     name,
     params,
     returnType,
-  };
+  }
 }

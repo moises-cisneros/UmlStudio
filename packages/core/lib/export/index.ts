@@ -1,17 +1,18 @@
-export { svgToPng, computeAppliedScale } from "./svgToPng";
-export type { SvgToPngOptions, SvgToPngResult } from "./svgToPng";
-export { exportToSpringBoot } from "./springBootExport";
+export { svgToPng, computeAppliedScale } from "./svgToPng"
+export type { SvgToPngOptions, SvgToPngResult } from "./svgToPng"
+export { exportToSpringBoot } from "./springBootExport"
 export type {
   SpringBootExportOptions,
   SpringBootGeneratedFile,
   SpringBootExportResult,
-} from "./springBootExport";
+} from "./springBootExport"
 export {
   buildKernelModel,
   emitControllerFile,
   emitEntityFile,
   emitEnumFile,
   emitInterfaceFile,
+  emitOpenApiConfigFile,
   emitRepositoryFile,
   emitRequestDtoFile,
   emitResponseDtoFile,
@@ -19,6 +20,7 @@ export {
   emitServiceImplFile,
   EmptyModelError,
   exportSpringBootFull,
+  getExecutableExample,
   mapUmlTypeToJava,
   NonClassDiagramError,
   pluralize,
@@ -26,7 +28,7 @@ export {
   toKebabCase,
   toPascalCase,
   toSnakeCase,
-} from "./springBootExport";
+} from "./springBootExport"
 export type {
   JavaTypeMapping,
   KernelEntity,
@@ -42,27 +44,27 @@ export type {
   SpringBootFullExportResult,
   SpringBootFullExportSummary,
   SpringBootInheritanceStrategy,
-} from "./springBootExport";
+} from "./springBootExport"
 export {
   mapVisibilitySymbol,
   parseUmlAttribute,
   parseUmlMethod,
   splitUmlParameters,
-} from "./umlMemberGrammar";
+} from "./umlMemberGrammar"
 export type {
   ParsedUmlAttribute,
   ParsedUmlMethod,
   ParsedUmlParameter,
   UmlVisibility,
   UmlVisibilitySymbol,
-} from "./umlMemberGrammar";
-export { exportToXmi } from "./xmiExport";
-export type { XmiExportOptions, XmiExportResult } from "./xmiExport";
-export { RasterTooLargeError } from "./exportErrors";
+} from "./umlMemberGrammar"
+export { exportToXmi } from "./xmiExport"
+export type { XmiExportOptions, XmiExportResult } from "./xmiExport"
+export { RasterTooLargeError } from "./exportErrors"
 export {
   generateMavenScaffold,
   emitPomXml,
   emitApplicationEntryPoint,
   emitApplicationTests,
-} from "./mavenScaffold";
-export type { MavenScaffoldOptions } from "./mavenScaffold";
+} from "./mavenScaffold"
+export type { MavenScaffoldOptions } from "./mavenScaffold"
