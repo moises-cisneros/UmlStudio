@@ -4,7 +4,7 @@ import { UMLDiagramType } from "@umlstudio/core"
 import { useNavigate } from "@tanstack/react-router"
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
 import { useAuthStore } from "@/stores/useAuthStore"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@umlstudio/ui/components/tabs"
+import { Tabs, TabsContent } from "@umlstudio/ui/components/tabs"
 import { log } from "@/logger"
 import { prepareTemplateModel } from "@/utils/templateModels"
 import { useTranslation } from "@/i18n"
@@ -174,11 +174,6 @@ export const NewDiagramModal = () => {
         value={activeTab}
         onValueChange={(value) => handleTabChange(value as "scratch" | "template")}
       >
-        <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="scratch">{t.newDiagram.tabBlank}</TabsTrigger>
-          <TabsTrigger value="template">{t.newDiagram.tabTemplate}</TabsTrigger>
-        </TabsList>
-
         {error && <HomeDialogNotice>{error}</HomeDialogNotice>}
 
         {/* Scratch Tab: Only Diagram Name field per user requirement */}
