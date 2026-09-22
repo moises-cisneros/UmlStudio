@@ -41,11 +41,7 @@ export const createAssessmentSelectionStore = (): UseBoundStore<
         ...initialAssessmentSelectionState,
 
         setAssessmentSelectionMode: (isActive: boolean) => {
-          set(
-            { isAssessmentSelectionMode: isActive },
-            undefined,
-            "setAssessmentSelectionMode"
-          )
+          set({ isAssessmentSelectionMode: isActive }, undefined, "setAssessmentSelectionMode")
           if (!isActive) {
             set(
               { selectedElementIds: [], highlightedElementId: null },
@@ -60,11 +56,7 @@ export const createAssessmentSelectionStore = (): UseBoundStore<
         },
 
         selectMultipleElements: (elementIds: string[]) => {
-          set(
-            { selectedElementIds: elementIds },
-            undefined,
-            "selectMultipleElements"
-          )
+          set({ selectedElementIds: elementIds }, undefined, "selectMultipleElements")
         },
 
         clearSelection: () => {
@@ -72,19 +64,11 @@ export const createAssessmentSelectionStore = (): UseBoundStore<
         },
 
         setHighlightedElement: (elementId: string | null) => {
-          set(
-            { highlightedElementId: elementId },
-            undefined,
-            "setHighlightedElement"
-          )
+          set({ highlightedElementId: elementId }, undefined, "setHighlightedElement")
         },
 
         setElementHighlights: (highlights: Record<string, string>) => {
-          set(
-            { highlightedElements: highlights },
-            undefined,
-            "setElementHighlights"
-          )
+          set({ highlightedElements: highlights }, undefined, "setElementHighlights")
         },
 
         isElementSelected: (elementId: string) => {

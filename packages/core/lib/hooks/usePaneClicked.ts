@@ -1,8 +1,4 @@
-import {
-  useAssessmentSelectionStore,
-  useDiagramStore,
-  useMetadataStore,
-} from "@/store"
+import { useAssessmentSelectionStore, useDiagramStore, useMetadataStore } from "@/store"
 import { useShallow } from "zustand/shallow"
 import { UmlStudioMode } from "@/typings"
 import { useCallback, useEffect } from "react"
@@ -35,21 +31,17 @@ export const usePaneClicked = () => {
     }))
   )
 
-  const {
-    isAssessmentSelectionMode,
-    setAssessmentSelectionMode,
-    clearSelection,
-  } = useAssessmentSelectionStore(
-    useShallow((state) => ({
-      isAssessmentSelectionMode: state.isAssessmentSelectionMode,
-      setAssessmentSelectionMode: state.setAssessmentSelectionMode,
-      clearSelection: state.clearSelection,
-    }))
-  )
+  const { isAssessmentSelectionMode, setAssessmentSelectionMode, clearSelection } =
+    useAssessmentSelectionStore(
+      useShallow((state) => ({
+        isAssessmentSelectionMode: state.isAssessmentSelectionMode,
+        setAssessmentSelectionMode: state.setAssessmentSelectionMode,
+        clearSelection: state.clearSelection,
+      }))
+    )
 
   useEffect(() => {
-    const shouldEnableAssessmentMode =
-      mode === UmlStudioMode.Assessment && readonly
+    const shouldEnableAssessmentMode = mode === UmlStudioMode.Assessment && readonly
     if (shouldEnableAssessmentMode !== isAssessmentSelectionMode) {
       setAssessmentSelectionMode(shouldEnableAssessmentMode)
     }

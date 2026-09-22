@@ -6,278 +6,242 @@ import {
   OnConnectStart,
   OnConnectStartParams,
   OnEdgesDelete,
-} from "@xyflow/react";
-import { useCallback, useRef } from "react";
+} from "@xyflow/react"
+import { useCallback, useRef } from "react"
 import {
   generateUUID,
   getDefaultEdgeType,
   getSideHandleIdForPosition,
   type FreeformEdgeAnchor,
-} from "@/utils";
-import {
-  dropAnchorIsAimed,
-  getEdgeAnchorFromPoint,
-} from "@/utils/connectionModes";
-import { HandleId } from "@/nodes/wrappers";
-import { useDiagramStore, useMetadataStore } from "@/store/context";
-import { useFreeformDropTarget } from "./useFreeformDropTarget";
-import { useShallow } from "zustand/shallow";
+} from "@/utils"
+import { dropAnchorIsAimed, getEdgeAnchorFromPoint } from "@/utils/connectionModes"
+import { HandleId } from "@/nodes/wrappers"
+import { useDiagramStore, useMetadataStore } from "@/store/context"
+import { useFreeformDropTarget } from "./useFreeformDropTarget"
+import { useShallow } from "zustand/shallow"
 
 const withEndpointAnchor = (
   data: Edge["data"],
   endpoint: "source" | "target",
-  anchor: FreeformEdgeAnchor | null,
+  anchor: FreeformEdgeAnchor | null
 ): Edge["data"] => {
-  const nextData = { ...((data ?? {}) as Record<string, unknown>) };
-  const key = endpoint === "source" ? "sourceAnchor" : "targetAnchor";
+  const nextData = { ...((data ?? {}) as Record<string, unknown>) }
+  const key = endpoint === "source" ? "sourceAnchor" : "targetAnchor"
 
   if (anchor) {
-    nextData[key] = anchor;
+    nextData[key] = anchor
   } else {
-    delete nextData[key];
+    delete nextData[key]
   }
 
   if (!Array.isArray(nextData.points)) {
-    nextData.points = [];
+    nextData.points = []
   }
 
-  return nextData;
-};
+  return nextData
+}
 
-let handleSlotBySideCache: Record<string, Record<string, number>> | null = null;
+let handleSlotBySideCache: Record<string, Record<string, number>> | null = null
 const handleSlotBySide = (): Record<string, Record<string, number>> => {
-  if (handleSlotBySideCache) return handleSlotBySideCache;
-  const bySide: Record<string, Record<string, number>> = {};
-  const nextSlot: Record<string, number> = {};
+  if (handleSlotBySideCache) return handleSlotBySideCache
+  const bySide: Record<string, Record<string, number>> = {}
+  const nextSlot: Record<string, number> = {}
   for (const handleId of Object.values(HandleId)) {
-    const side = handleId.split("-")[0];
-    bySide[side] ??= {};
-    nextSlot[side] ??= 0;
-    bySide[side][handleId] = nextSlot[side]++;
+    const side = handleId.split("-")[0]
+    bySide[side] ??= {}
+    nextSlot[side] ??= 0
+    bySide[side][handleId] = nextSlot[side]++
   }
-  handleSlotBySideCache = bySide;
-  return bySide;
-};
+  handleSlotBySideCache = bySide
+  return bySide
+}
 
-const getHandleSideAndSlot = (
-  handleId?: string | null,
-): { side: string; slot: number } | null => {
-  if (!handleId) return null;
+const getHandleSideAndSlot = (handleId?: string | null): { side: string; slot: number } | null => {
+  if (!handleId) return null
 
   for (const [side, slots] of Object.entries(handleSlotBySide())) {
-    const slot = slots[handleId];
-    if (slot != null) return { side, slot };
+    const slot = slots[handleId]
+    if (slot != null) return { side, slot }
   }
 
-  return null;
-};
+  return null
+}
 
 const isSameNodeSameHandleArea = (
   source: string | null,
   target: string | null,
   sourceHandle?: string | null,
-  targetHandle?: string | null,
+  targetHandle?: string | null
 ): boolean => {
-  if (!source || source !== target) return false;
+  if (!source || source !== target) return false
 
-  const sourceHandlePosition = getHandleSideAndSlot(sourceHandle);
-  const targetHandlePosition = getHandleSideAndSlot(targetHandle);
+  const sourceHandlePosition = getHandleSideAndSlot(sourceHandle)
+  const targetHandlePosition = getHandleSideAndSlot(targetHandle)
 
   if (!sourceHandlePosition || !targetHandlePosition) {
-    return sourceHandle === targetHandle;
+    return sourceHandle === targetHandle
   }
 
   return (
     sourceHandlePosition.side === targetHandlePosition.side &&
     Math.abs(sourceHandlePosition.slot - targetHandlePosition.slot) <= 1
-  );
-};
+  )
+}
 
 export const useConnect = () => {
-  const startEdge = useRef<Edge | null>(null);
-  const connectionStartParams = useRef<OnConnectStartParams | null>(null);
-  const { screenToFlowPosition, getIntersectingNodes } = useReactFlow();
-  const resolveDropTarget = useFreeformDropTarget();
+  const startEdgeRef = useRef<Edge | null>(null)
+  const connectionStartParamsRef = useRef<OnConnectStartParams | null>(null)
+  const { screenToFlowPosition, getIntersectingNodes } = useReactFlow()
+  const resolveDropTarget = useFreeformDropTarget()
   const { setEdges, addEdge, edges } = useDiagramStore(
     useShallow((state) => ({
       setEdges: state.setEdges,
       addEdge: state.addEdge,
       edges: state.edges,
-    })),
-  );
+    }))
+  )
 
-  const diagramType = useMetadataStore(
-    useShallow((state) => state.diagramType),
-  );
+  const diagramType = useMetadataStore(useShallow((state) => state.diagramType))
   const { startConnectionGuidance, stopConnectionGuidance } = useMetadataStore(
     useShallow((state) => ({
       startConnectionGuidance: state.startConnectionGuidance,
       stopConnectionGuidance: state.stopConnectionGuidance,
-    })),
-  );
-  const setPendingConnectionEdge = useMetadataStore(
-    (state) => state.setPendingConnectionEdge,
-  );
-  const setPendingConnectionId = useMetadataStore(
-    (state) => state.setPendingConnectionId,
-  );
-  const pendingConnectionId = useRef<string | null>(null);
+    }))
+  )
+  const setPendingConnectionEdge = useMetadataStore((state) => state.setPendingConnectionEdge)
+  const setPendingConnectionId = useMetadataStore((state) => state.setPendingConnectionId)
+  const pendingConnectionIdRef = useRef<string | null>(null)
 
-  const defaultEdgeType = getDefaultEdgeType(diagramType);
+  const defaultEdgeType = getDefaultEdgeType(diagramType)
 
   const getDropPosition = useCallback(
     (event: MouseEvent | TouchEvent) => {
-      const { clientX, clientY } =
-        "changedTouches" in event ? event.changedTouches[0] : event;
-      return screenToFlowPosition({ x: clientX, y: clientY });
+      const { clientX, clientY } = "changedTouches" in event ? event.changedTouches[0] : event
+      return screenToFlowPosition({ x: clientX, y: clientY })
     },
-    [screenToFlowPosition],
-  );
+    [screenToFlowPosition]
+  )
 
   const onConnectStart: OnConnectStart = (event, params) => {
-    connectionStartParams.current = params;
-    startEdge.current = null;
-    pendingConnectionId.current = generateUUID();
-    setPendingConnectionId(pendingConnectionId.current);
-    startConnectionGuidance(params.nodeId ?? null, params.handleId ?? null);
-    const dropPosition = getDropPosition(event);
+    connectionStartParamsRef.current = params
+    startEdgeRef.current = null
+    pendingConnectionIdRef.current = generateUUID()
+    setPendingConnectionId(pendingConnectionIdRef.current)
+    startConnectionGuidance(params.nodeId ?? null, params.handleId ?? null)
+    const dropPosition = getDropPosition(event)
 
     const intersectingNodes = getIntersectingNodes({
       x: dropPosition.x - 60,
       y: dropPosition.y - 60,
       width: 120,
       height: 120,
-    });
-    const intersectingNodesIds = intersectingNodes.map((node) => node.id);
+    })
+    const intersectingNodesIds = intersectingNodes.map((node) => node.id)
 
     const existingEdges = [
       ...edges.filter(
         (edge) =>
           edge.source === params.nodeId &&
           edge.sourceHandle === params.handleId &&
-          intersectingNodesIds.includes(edge.target),
+          intersectingNodesIds.includes(edge.target)
       ),
       ...edges.filter(
         (edge) =>
           edge.target === params.nodeId &&
           edge.targetHandle === params.handleId &&
-          intersectingNodesIds.includes(edge.source),
+          intersectingNodesIds.includes(edge.source)
       ),
-    ];
+    ]
 
     if (existingEdges.length > 0) {
-      startEdge.current = existingEdges[existingEdges.length - 1];
+      startEdgeRef.current = existingEdges[existingEdges.length - 1]
     }
-  };
+  }
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setPendingConnectionEdge(null);
+      setPendingConnectionEdge(null)
       if (
         isSameNodeSameHandleArea(
           connection.source,
           connection.target,
           connection.sourceHandle,
-          connection.targetHandle,
+          connection.targetHandle
         )
       ) {
-        return;
+        return
       }
 
       const newEdge: Edge = {
         ...connection,
-        id: pendingConnectionId.current ?? generateUUID(),
+        id: pendingConnectionIdRef.current ?? generateUUID(),
         type: defaultEdgeType,
         selected: false,
-      };
+      }
 
-      addEdge(newEdge);
+      addEdge(newEdge)
     },
-    [addEdge, defaultEdgeType, setPendingConnectionEdge],
-  );
+    [addEdge, defaultEdgeType, setPendingConnectionEdge]
+  )
 
   const onConnectEnd: OnConnectEnd = useCallback(
     (event, connectionState) => {
       try {
         if (!connectionState.isValid) {
-          const dropPosition = getDropPosition(event);
-          const nodeOnTop = resolveDropTarget(
-            dropPosition,
-            connectionState.fromNode?.id,
-          );
-          if (!nodeOnTop) return;
+          const dropPosition = getDropPosition(event)
+          const nodeOnTop = resolveDropTarget(dropPosition, connectionState.fromNode?.id)
+          if (!nodeOnTop) return
 
-          const targetRect = nodeOnTop.rect;
-          const targetAnchor = getEdgeAnchorFromPoint(
-            nodeOnTop.type,
-            dropPosition,
-            targetRect,
-          );
-          if (!targetAnchor) return;
-          const targetHandle = getSideHandleIdForPosition(targetAnchor.side);
+          const targetRect = nodeOnTop.rect
+          const targetAnchor = getEdgeAnchorFromPoint(nodeOnTop.type, dropPosition, targetRect)
+          if (!targetAnchor) return
+          const targetHandle = getSideHandleIdForPosition(targetAnchor.side)
 
-          if (startEdge.current) {
-            const updatedEdge = edges.find(
-              (edge) => edge.id === startEdge.current?.id,
-            );
+          if (startEdgeRef.current) {
+            const updatedEdge = edges.find((edge) => edge.id === startEdgeRef.current?.id)
 
-            if (!updatedEdge) return;
+            if (!updatedEdge) return
             const newEdge =
-              connectionStartParams.current?.handleType === "source"
+              connectionStartParamsRef.current?.handleType === "source"
                 ? {
                     ...updatedEdge,
                     target: nodeOnTop.id,
                     targetHandle,
-                    data: withEndpointAnchor(
-                      updatedEdge.data,
-                      "target",
-                      targetAnchor,
-                    ),
+                    data: withEndpointAnchor(updatedEdge.data, "target", targetAnchor),
                   }
                 : {
                     ...updatedEdge,
                     source: nodeOnTop.id,
                     sourceHandle: targetHandle,
-                    data: withEndpointAnchor(
-                      updatedEdge.data,
-                      "source",
-                      targetAnchor,
-                    ),
-                  };
+                    data: withEndpointAnchor(updatedEdge.data, "source", targetAnchor),
+                  }
 
             if (
               isSameNodeSameHandleArea(
                 newEdge.source,
                 newEdge.target,
                 newEdge.sourceHandle,
-                newEdge.targetHandle,
+                newEdge.targetHandle
               )
             ) {
-              return;
+              return
             }
 
-            setEdges((eds) =>
-              eds.map((edge) => (edge.id === newEdge.id ? newEdge : edge)),
-            );
+            setEdges((eds) => eds.map((edge) => (edge.id === newEdge.id ? newEdge : edge)))
           } else {
-            const sourceNodeId = connectionState.fromNode!.id;
-            const sourceHandleId = connectionState.fromHandle?.id;
+            const sourceNodeId = connectionState.fromNode!.id
+            const sourceHandleId = connectionState.fromHandle?.id
 
             if (
-              isSameNodeSameHandleArea(
-                sourceNodeId,
-                nodeOnTop.id,
-                sourceHandleId,
-                targetHandle,
-              )
+              isSameNodeSameHandleArea(sourceNodeId, nodeOnTop.id, sourceHandleId, targetHandle)
             ) {
-              return;
+              return
             }
 
-            const pinned = dropAnchorIsAimed(nodeOnTop.type);
+            const pinned = dropAnchorIsAimed(nodeOnTop.type)
             setEdges((eds) =>
               eds.concat({
-                id: pendingConnectionId.current ?? generateUUID(),
+                id: pendingConnectionIdRef.current ?? generateUUID(),
                 source: sourceNodeId,
                 target: nodeOnTop.id,
                 type: defaultEdgeType,
@@ -286,17 +250,17 @@ export const useConnect = () => {
                 data: pinned
                   ? withEndpointAnchor(undefined, "target", targetAnchor)
                   : { points: [] },
-              }),
-            );
+              })
+            )
           }
         }
       } finally {
-        startEdge.current = null;
-        connectionStartParams.current = null;
-        stopConnectionGuidance();
-        setPendingConnectionEdge(null);
-        setPendingConnectionId(null);
-        pendingConnectionId.current = null;
+        startEdgeRef.current = null
+        connectionStartParamsRef.current = null
+        stopConnectionGuidance()
+        setPendingConnectionEdge(null)
+        setPendingConnectionId(null)
+        pendingConnectionIdRef.current = null
       }
     },
     [
@@ -308,14 +272,14 @@ export const useConnect = () => {
       stopConnectionGuidance,
       setPendingConnectionEdge,
       setPendingConnectionId,
-    ],
-  );
+    ]
+  )
 
   const onEdgesDelete: OnEdgesDelete = useCallback(() => {
-    startEdge.current = null;
-    connectionStartParams.current = null;
-    stopConnectionGuidance();
-  }, [stopConnectionGuidance]);
+    startEdgeRef.current = null
+    connectionStartParamsRef.current = null
+    stopConnectionGuidance()
+  }, [stopConnectionGuidance])
 
-  return { onConnect, onConnectEnd, onConnectStart, onEdgesDelete };
-};
+  return { onConnect, onConnectEnd, onConnectStart, onEdgesDelete }
+}

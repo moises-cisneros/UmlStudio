@@ -26,14 +26,5 @@ export function useInterfaceLabelSide(
       badgeTopRight: opts?.badgeTopRight,
       geometry: rect ? { rect, routeById: geometryById } : undefined,
     })
-  }, [
-    edges,
-    id,
-    opts?.badgeTopRight,
-    rectX,
-    rectY,
-    rectWidth,
-    rectHeight,
-    geometryById,
-  ])
+  }, [edges, id, opts?.badgeTopRight, rectX, rectY, rectWidth, rectHeight, geometryById])
 }

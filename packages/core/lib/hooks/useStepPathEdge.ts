@@ -1,30 +1,9 @@
-import {
-  useCallback,
-  useMemo,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react"
-import {
-  Position,
-  useReactFlow,
-  useStore,
-  type Edge,
-  type Node,
-} from "@xyflow/react"
+import { useCallback, useMemo, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { Position, useReactFlow, useStore, type Edge, type Node } from "@xyflow/react"
 import { EDGES, INTERFACE } from "@/constants"
-import {
-  adjustSourceCoordinates,
-  adjustTargetCoordinates,
-  getPositionOnCanvas,
-} from "@/utils"
+import { adjustSourceCoordinates, adjustTargetCoordinates, getPositionOnCanvas } from "@/utils"
 import { IPoint, tryFindStraightPath } from "../edges/Connection"
-import {
-  useDiagramStore,
-  useMetadataStore,
-  useEdgeGeometryStore,
-} from "@/store/context"
+import { useDiagramStore, useMetadataStore, useEdgeGeometryStore } from "@/store/context"
 import { useShallow } from "zustand/shallow"
 import {
   getEdgeMarkerStyles,
@@ -137,10 +116,7 @@ const arePointsEqual = (a: IPoint[], b: IPoint[]): boolean =>
 const isInterfaceNodeType = (nodeType?: string): boolean =>
   nodeType === "componentInterface" || nodeType === "deploymentInterface"
 
-const getInterfaceMarkerGeometry = (
-  nodeType: string | undefined,
-  rect: Rect | null
-) =>
+const getInterfaceMarkerGeometry = (nodeType: string | undefined, rect: Rect | null) =>
   rect && isInterfaceNodeType(nodeType)
     ? {
         radius: rect.width / 2,
@@ -176,27 +152,22 @@ export const useStepPathEdge = ({
   const activePointerTeardownRef = useRef<(() => void) | null>(null)
 
   const isDiagramModifiable = useDiagramModifiable()
-  const setLiveEdgeOverride = useMetadataStore(
-    (state) => state.setLiveEdgeOverride
-  )
+  const setLiveEdgeOverride = useMetadataStore((state) => state.setLiveEdgeOverride)
   const centralRoute = useEdgeGeometryStore(
     (state) => state.previewById[id] ?? state.geometryById[id]
   )
-  const { getIntersectingNodes, getNode, getNodes, screenToFlowPosition } =
-    useReactFlow()
+  const { getIntersectingNodes, getNode, getNodes, screenToFlowPosition } = useReactFlow()
 
   const [draggingHandle, setDraggingHandle] = useState<BendHandle | null>(null)
-  const [dragPreviewPoints, setDragPreviewPoints] = useState<IPoint[] | null>(
-    null
-  )
+  const [dragPreviewPoints, setDragPreviewPoints] = useState<IPoint[] | null>(null)
   const [dragPreviewPositions, setDragPreviewPositions] = useState<{
     sourcePosition: Position
     targetPosition: Position
   } | null>(null)
-  const [endpointPreviewCommit, setEndpointPreviewCommit] =
-    useState<EndpointDragCommit | null>(null)
-  const [isTargetEndpointDetached, setIsTargetEndpointDetached] =
-    useState(false)
+  const [endpointPreviewCommit, setEndpointPreviewCommit] = useState<EndpointDragCommit | null>(
+    null
+  )
+  const [isTargetEndpointDetached, setIsTargetEndpointDetached] = useState(false)
 
   useEffect(
     () => () => {
@@ -227,16 +198,12 @@ export const useStepPathEdge = ({
       return {
         sourceNodePositionX: storeSourcePosition?.x,
         sourceNodePositionY: storeSourcePosition?.y,
-        sourceNodeWidth:
-          storeSourceNode?.width ?? storeSourceNode?.measured?.width,
-        sourceNodeHeight:
-          storeSourceNode?.height ?? storeSourceNode?.measured?.height,
+        sourceNodeWidth: storeSourceNode?.width ?? storeSourceNode?.measured?.width,
+        sourceNodeHeight: storeSourceNode?.height ?? storeSourceNode?.measured?.height,
         targetNodePositionX: storeTargetPosition?.x,
         targetNodePositionY: storeTargetPosition?.y,
-        targetNodeWidth:
-          storeTargetNode?.width ?? storeTargetNode?.measured?.width,
-        targetNodeHeight:
-          storeTargetNode?.height ?? storeTargetNode?.measured?.height,
+        targetNodeWidth: storeTargetNode?.width ?? storeTargetNode?.measured?.width,
+        targetNodeHeight: storeTargetNode?.height ?? storeTargetNode?.measured?.height,
       }
     })
   )
@@ -252,12 +219,7 @@ export const useStepPathEdge = ({
   } = endpointNodeGeometry ?? {}
 
   const edgeMarkerStyles = getEdgeMarkerStyles(type)
-  const {
-    markerPadding,
-    markerStart,
-    strokeDashArray,
-    offset = 0,
-  } = edgeMarkerStyles
+  const { markerPadding, markerStart, strokeDashArray, offset = 0 } = edgeMarkerStyles
   const markerEnd =
     isTargetEndpointDetached && detachedTargetMarkerType
       ? getEdgeMarkerStyles(detachedTargetMarkerType).markerEnd
@@ -271,10 +233,8 @@ export const useStepPathEdge = ({
     getNodes,
     shouldSubscribeToNodeGeometry
   ) as Node[]
-  const sourceNode =
-    allNodes.find((node) => node.id === source) ?? getNode(source)
-  const targetNode =
-    allNodes.find((node) => node.id === target) ?? getNode(target)
+  const sourceNode = allNodes.find((node) => node.id === source) ?? getNode(source)
+  const targetNode = allNodes.find((node) => node.id === target) ?? getNode(target)
 
   const sourceAbsolutePosition = useMemo(() => {
     if (sourceNode) return getPositionOnCanvas(sourceNode, allNodes)
@@ -342,10 +302,7 @@ export const useStepPathEdge = ({
       targetNodeHeight,
     ]
   )
-  const committedTargetInterfaceGeometry = getInterfaceMarkerGeometry(
-    targetNode?.type,
-    targetRect
-  )
+  const committedTargetInterfaceGeometry = getInterfaceMarkerGeometry(targetNode?.type, targetRect)
   const resolvedSourceAnchor = useMemo(
     () =>
       sourceRect && isFreeformEdgeAnchor(sourceAnchor)
@@ -365,10 +322,8 @@ export const useStepPathEdge = ({
   const sourceY = resolvedSourceAnchor?.point.y ?? reactFlowSourceY
   const targetX = resolvedTargetAnchor?.point.x ?? reactFlowTargetX
   const targetY = resolvedTargetAnchor?.point.y ?? reactFlowTargetY
-  const baseSourcePosition =
-    resolvedSourceAnchor?.position ?? reactFlowSourcePosition
-  const baseTargetPosition =
-    resolvedTargetAnchor?.position ?? reactFlowTargetPosition
+  const baseSourcePosition = resolvedSourceAnchor?.position ?? reactFlowSourcePosition
+  const baseTargetPosition = resolvedTargetAnchor?.position ?? reactFlowTargetPosition
   const sourceConnectionPointPadding = resolvedSourceAnchor
     ? 0
     : EDGES.SOURCE_CONNECTION_POINT_PADDING
@@ -401,8 +356,7 @@ export const useStepPathEdge = ({
     sourceConnectionPointPadding
   )
 
-  const routeEndpoints =
-    centralRoute && centralRoute.length >= 2 ? centralRoute : null
+  const routeEndpoints = centralRoute && centralRoute.length >= 2 ? centralRoute : null
   const sourcePosition = routeEndpoints
     ? getEndpointSideFromSegment(routeEndpoints[0], routeEndpoints[1])
     : baseSourcePosition
@@ -424,8 +378,7 @@ export const useStepPathEdge = ({
   const hasStoredManualPoints = Boolean(data?.points && data.points.length > 0)
   const hasLocalManualPoints = customPoints.length > 0
   const hasManualPoints = hasStoredManualPoints
-  const shouldPreferComputedPath =
-    (centralRoute?.length ?? 0) === 2 && !hasManualPoints
+  const shouldPreferComputedPath = (centralRoute?.length ?? 0) === 2 && !hasManualPoints
 
   const centralFallback = useMemo<IPoint[]>(
     () => [
@@ -456,8 +409,7 @@ export const useStepPathEdge = ({
       centralRoute.length >= 2 &&
       (centralRoute[0].x !== baseAdjustedSource.sourceX ||
         centralRoute[0].y !== baseAdjustedSource.sourceY ||
-        centralRoute[centralRoute.length - 1].x !==
-          baseAdjustedTarget.targetX ||
+        centralRoute[centralRoute.length - 1].x !== baseAdjustedTarget.targetX ||
         centralRoute[centralRoute.length - 1].y !== baseAdjustedTarget.targetY)
     )
       return
@@ -471,9 +423,7 @@ export const useStepPathEdge = ({
       if (hasStoredManualPoints) {
         setEdges((edges) =>
           edges.map((edge) =>
-            edge.id === id
-              ? { ...edge, data: { ...edge.data, points: [] } }
-              : edge
+            edge.id === id ? { ...edge, data: { ...edge.data, points: [] } } : edge
           )
         )
       }
@@ -482,8 +432,7 @@ export const useStepPathEdge = ({
 
     if (!hasManualPoints) return
 
-    const storedPoints =
-      data?.points && data.points.length > 0 ? data.points : customPoints
+    const storedPoints = data?.points && data.points.length > 0 ? data.points : customPoints
 
     const pointsToStore = normalizeOrthogonalEdgePoints(
       activePoints,
@@ -538,8 +487,7 @@ export const useStepPathEdge = ({
   ])
 
   const predictedCommit = endpointPreviewCommit
-  const isPredictedEndpointPreview =
-    dragPreviewPoints !== null && predictedCommit !== null
+  const isPredictedEndpointPreview = dragPreviewPoints !== null && predictedCommit !== null
   const centralPreviewMatchesCommit =
     isPredictedEndpointPreview &&
     centralRoute !== undefined &&
@@ -547,17 +495,13 @@ export const useStepPathEdge = ({
     (predictedCommit.endpoint === "source"
       ? centralRoute[0].x === predictedCommit.sourceEndpoint.x &&
         centralRoute[0].y === predictedCommit.sourceEndpoint.y
-      : centralRoute[centralRoute.length - 1].x ===
-          predictedCommit.targetEndpoint.x &&
-        centralRoute[centralRoute.length - 1].y ===
-          predictedCommit.targetEndpoint.y)
+      : centralRoute[centralRoute.length - 1].x === predictedCommit.targetEndpoint.x &&
+        centralRoute[centralRoute.length - 1].y === predictedCommit.targetEndpoint.y)
   const renderPoints = centralPreviewMatchesCommit
     ? centralRoute
     : (dragPreviewPoints ?? activePoints)
-  const renderSourcePosition =
-    dragPreviewPositions?.sourcePosition ?? sourcePosition
-  const renderTargetPosition =
-    dragPreviewPositions?.targetPosition ?? targetPosition
+  const renderSourcePosition = dragPreviewPositions?.sourcePosition ?? sourcePosition
+  const renderTargetPosition = dragPreviewPositions?.targetPosition ?? targetPosition
   const targetInterfaceGeometry =
     endpointPreviewCommit?.endpoint === "target"
       ? (getInterfaceMarkerGeometry(
@@ -636,11 +580,7 @@ export const useStepPathEdge = ({
       y: (edgeBounds.minY + edgeBounds.maxY) / 2,
     }
     const radius =
-      Math.max(
-        edgeBounds.maxX - edgeBounds.minX,
-        edgeBounds.maxY - edgeBounds.minY
-      ) /
-        2 +
+      Math.max(edgeBounds.maxX - edgeBounds.minX, edgeBounds.maxY - edgeBounds.minY) / 2 +
       LABEL_REACH
     return {
       center,
@@ -690,8 +630,7 @@ export const useStepPathEdge = ({
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent, handle: BendHandle) => {
-      if (!allowMidpointDragging || !event.isPrimary || event.button !== 0)
-        return
+      if (!allowMidpointDragging || !event.isPrimary || event.button !== 0) return
 
       event.preventDefault()
       event.stopPropagation()
@@ -761,10 +700,7 @@ export const useStepPathEdge = ({
         const grid = EDGES.BEND_SNAP_GRID_PX
         const toLane = (value: number, origin: number): number =>
           Math.min(
-            Math.max(
-              origin + Math.round((value - origin) / grid) * grid,
-              laneBounds.min
-            ),
+            Math.max(origin + Math.round((value - origin) / grid) * grid, laneBounds.min),
             laneBounds.max
           )
 
@@ -772,14 +708,10 @@ export const useStepPathEdge = ({
           activeHandle.orientation === "H"
             ? {
                 x: 0,
-                y:
-                  toLane(rawY, activeHandle.position.y) -
-                  activeHandle.position.y,
+                y: toLane(rawY, activeHandle.position.y) - activeHandle.position.y,
               }
             : {
-                x:
-                  toLane(rawX, activeHandle.position.x) -
-                  activeHandle.position.x,
+                x: toLane(rawX, activeHandle.position.x) - activeHandle.position.x,
                 y: 0,
               }
 
@@ -846,10 +778,7 @@ export const useStepPathEdge = ({
         if (e.pointerId !== pointerId) return
         setDragPreviewPoints(null)
 
-        const pathChanged = !arePointsEqual(
-          finalPointsRef.current,
-          dragPointsRef.current
-        )
+        const pathChanged = !arePointsEqual(finalPointsRef.current, dragPointsRef.current)
 
         if (pathChanged) {
           const sourcePoint = {
@@ -963,10 +892,7 @@ export const useStepPathEdge = ({
         dragBaseline[dragBaseline.length - 1] = currentTargetEndpoint
       }
 
-      const resolveDragCommit = (
-        clientX: number,
-        clientY: number
-      ): EndpointDragCommit | null => {
+      const resolveDragCommit = (clientX: number, clientY: number): EndpointDragCommit | null => {
         const flowPoint = screenToFlowPosition({ x: clientX, y: clientY })
         const intersectingNodes = getIntersectingNodes({
           x: flowPoint.x - FREEFORM_ENDPOINT_SNAP_RADIUS_PX,
@@ -979,8 +905,7 @@ export const useStepPathEdge = ({
           return rect ? [{ node, type: node.type, rect }] : []
         })
         const snapTarget =
-          pickNearestConnectable(candidates, flowPoint) ??
-          findFreeformEndpointNode(flowPoint)
+          pickNearestConnectable(candidates, flowPoint) ?? findFreeformEndpointNode(flowPoint)
 
         if (!snapTarget) return null
 
@@ -1004,10 +929,7 @@ export const useStepPathEdge = ({
             y: movingEndpoint.sourceY,
           }
         } else {
-          const targetPreviewPadding = getTargetConnectionPointPadding(
-            padding,
-            true
-          )
+          const targetPreviewPadding = getTargetConnectionPointPadding(padding, true)
           const movingEndpoint = adjustTargetCoordinates(
             resolvedAnchor.point.x,
             resolvedAnchor.point.y,
@@ -1019,14 +941,10 @@ export const useStepPathEdge = ({
             y: movingEndpoint.targetY,
           }
         }
-        const nextSourcePosition =
-          endpoint === "source" ? resolvedAnchor.position : sourcePosition
-        const nextTargetPosition =
-          endpoint === "target" ? resolvedAnchor.position : targetPosition
-        const nextSourceRect =
-          endpoint === "source" ? rect : (sourceRect ?? rect)
-        const nextTargetRect =
-          endpoint === "target" ? rect : (targetRect ?? rect)
+        const nextSourcePosition = endpoint === "source" ? resolvedAnchor.position : sourcePosition
+        const nextTargetPosition = endpoint === "target" ? resolvedAnchor.position : targetPosition
+        const nextSourceRect = endpoint === "source" ? rect : (sourceRect ?? rect)
+        const nextTargetRect = endpoint === "target" ? rect : (targetRect ?? rect)
         const directPoints = tryFindStraightPath(
           {
             position: { x: nextSourceRect.x, y: nextSourceRect.y },
@@ -1100,9 +1018,7 @@ export const useStepPathEdge = ({
           sourceRect: nextSourceRect,
           targetRect: nextTargetRect,
           committedPoints,
-          points: hasManualPoints
-            ? committedPoints
-            : (directPoints ?? committedPoints),
+          points: hasManualPoints ? committedPoints : (directPoints ?? committedPoints),
           predictedEdge,
         }
       }
@@ -1124,9 +1040,7 @@ export const useStepPathEdge = ({
         const flowPoint = screenToFlowPosition({ x: e.clientX, y: e.clientY })
         const movingIsSource = endpoint === "source"
         setIsTargetEndpointDetached(!movingIsSource)
-        const fixedPoint = movingIsSource
-          ? currentTargetEndpoint
-          : currentSourceEndpoint
+        const fixedPoint = movingIsSource ? currentTargetEndpoint : currentSourceEndpoint
         const dx = flowPoint.x - fixedPoint.x
         const dy = flowPoint.y - fixedPoint.y
         const movingPosition =
@@ -1137,12 +1051,8 @@ export const useStepPathEdge = ({
             : dy >= 0
               ? Position.Top
               : Position.Bottom
-        const previewSourcePosition = movingIsSource
-          ? movingPosition
-          : sourcePosition
-        const previewTargetPosition = movingIsSource
-          ? targetPosition
-          : movingPosition
+        const previewSourcePosition = movingIsSource ? movingPosition : sourcePosition
+        const previewTargetPosition = movingIsSource ? targetPosition : movingPosition
         setDragPreviewPoints(
           preserveOrthogonalEdgePoints(
             dragBaseline,
@@ -1191,9 +1101,7 @@ export const useStepPathEdge = ({
         restoreWithoutCommit(commit === null)
 
         if (commit) {
-          const normalizedPoints = hasManualPoints
-            ? commit.committedPoints
-            : null
+          const normalizedPoints = hasManualPoints ? commit.committedPoints : null
 
           if (normalizedPoints) {
             setCustomPoints(normalizedPoints)
@@ -1281,10 +1189,7 @@ export const useStepPathEdge = ({
     y: targetY,
   }
 
-  const toolbarPosition = computeToolbarPosition(
-    pathMiddlePosition,
-    isMiddlePathHorizontal
-  )
+  const toolbarPosition = computeToolbarPosition(pathMiddlePosition, isMiddlePathHorizontal)
 
   const edgeData: StepPathEdgeData = {
     activePoints,

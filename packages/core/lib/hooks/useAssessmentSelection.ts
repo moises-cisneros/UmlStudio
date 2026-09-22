@@ -1,25 +1,18 @@
-import {
-  useAssessmentSelectionStore,
-  useDiagramStore,
-  useMetadataStore,
-} from "@/store"
+import { useAssessmentSelectionStore, useDiagramStore, useMetadataStore } from "@/store"
 import { useShallow } from "zustand/shallow"
 import { UmlStudioMode } from "@/typings"
 import { Node } from "@xyflow/react"
 import { useMemo } from "react"
 
 export const useAssessmentSelection = (elementId: string) => {
-  const {
-    isAssessmentSelectionMode,
-    highlightedElementId,
-    selectedElementIds,
-  } = useAssessmentSelectionStore(
-    useShallow((state) => ({
-      isAssessmentSelectionMode: state.isAssessmentSelectionMode,
-      highlightedElementId: state.highlightedElementId,
-      selectedElementIds: state.selectedElementIds,
-    }))
-  )
+  const { isAssessmentSelectionMode, highlightedElementId, selectedElementIds } =
+    useAssessmentSelectionStore(
+      useShallow((state) => ({
+        isAssessmentSelectionMode: state.isAssessmentSelectionMode,
+        highlightedElementId: state.highlightedElementId,
+        selectedElementIds: state.selectedElementIds,
+      }))
+    )
 
   const { selectElement, setHighlightedElement, selectMultipleElements } =
     useAssessmentSelectionStore(
@@ -66,23 +59,11 @@ export const useAssessmentSelection = (elementId: string) => {
 
     const nestedIds: string[] = []
 
-    if (
-      node.data &&
-      "attributes" in node.data &&
-      Array.isArray(node.data.attributes)
-    ) {
-      nestedIds.push(
-        ...node.data.attributes.map((attr: { id: string }) => attr.id)
-      )
+    if (node.data && "attributes" in node.data && Array.isArray(node.data.attributes)) {
+      nestedIds.push(...node.data.attributes.map((attr: { id: string }) => attr.id))
     }
-    if (
-      node.data &&
-      "methods" in node.data &&
-      Array.isArray(node.data.methods)
-    ) {
-      nestedIds.push(
-        ...node.data.methods.map((method: { id: string }) => method.id)
-      )
+    if (node.data && "methods" in node.data && Array.isArray(node.data.methods)) {
+      nestedIds.push(...node.data.methods.map((method: { id: string }) => method.id))
     }
 
     const childNodes = getAllChildNodes(nodeId)
@@ -123,8 +104,7 @@ export const useAssessmentSelection = (elementId: string) => {
 
   const isSelected = selectedElementIds.includes(elementId)
   const isHighlighted = highlightedElementId === elementId
-  const showAssessmentInteraction =
-    isReadonlyAssessmentMode && isAssessmentSelectionMode
+  const showAssessmentInteraction = isReadonlyAssessmentMode && isAssessmentSelectionMode
 
   return {
     isSelected,

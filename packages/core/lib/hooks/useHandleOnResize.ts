@@ -13,20 +13,13 @@ export const useHandleOnResize = (parentId?: string) => {
         while (tractParentId) {
           const parent = getNode(tractParentId)
 
-          if (
-            parent &&
-            parent.width! < params.width + params.x + cumulativedParantsOffsetsX
-          ) {
+          if (parent && parent.width! < params.width + params.x + cumulativedParantsOffsetsX) {
             updateNode(tractParentId, {
               width: params.width + params.x + cumulativedParantsOffsetsX,
             })
             cumulativedParantsOffsetsX += parent.position.x
           }
-          if (
-            parent &&
-            parent.height! <
-              params.height + params.y + cumulativedParantsOffsetsY
-          ) {
+          if (parent && parent.height! < params.height + params.y + cumulativedParantsOffsetsY) {
             updateNode(tractParentId, {
               height: params.height + params.y + cumulativedParantsOffsetsY,
             })

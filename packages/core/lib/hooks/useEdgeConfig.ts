@@ -1,5 +1,5 @@
 import { edgeConfig, DiagramEdgeType } from "@/edges/types"
 
-export const useEdgeConfig = (edgeType: DiagramEdgeType) => {
+export const getEdgeConfig = (edgeType: DiagramEdgeType) => {
   return edgeConfig[edgeType]
 }

@@ -3,8 +3,7 @@ import { ZERO_INSETS, type Insets, type OverlaySide } from "./types"
 
 const GUTTER = 16
 
-const anySide = (i: Insets): boolean =>
-  !!(i.top || i.right || i.bottom || i.left)
+const anySide = (i: Insets): boolean => !!(i.top || i.right || i.bottom || i.left)
 
 export function insetAwareFitView(
   rf: Pick<ReactFlowInstance, "fitView">,

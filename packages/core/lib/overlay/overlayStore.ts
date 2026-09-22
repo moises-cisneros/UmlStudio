@@ -9,12 +9,7 @@ import {
   ZERO_INSETS,
 } from "./types"
 
-const BANDS = new Set<OverlayRegion>([
-  "header",
-  "footer",
-  "left-rail",
-  "right-rail",
-])
+const BANDS = new Set<OverlayRegion>(["header", "footer", "left-rail", "right-rail"])
 
 function controlContribution(
   control: OverlayControl,
@@ -51,10 +46,7 @@ export function computeInsets(
       if (!edge) continue
       const lane = control.lane ?? 0
       const perLane = (laneMax[edge] ??= new Map())
-      perLane.set(
-        lane,
-        Math.max(perLane.get(lane) ?? 0, contribution[edge] ?? 0)
-      )
+      perLane.set(lane, Math.max(perLane.get(lane) ?? 0, contribution[edge] ?? 0))
       continue
     }
     for (const side of Object.keys(contribution) as OverlaySide[]) {
@@ -70,10 +62,7 @@ export function computeInsets(
 }
 
 const insetsEqual = (a: Insets, b: Insets): boolean =>
-  a.top === b.top &&
-  a.right === b.right &&
-  a.bottom === b.bottom &&
-  a.left === b.left
+  a.top === b.top && a.right === b.right && a.bottom === b.bottom && a.left === b.left
 
 const measuredEqual = (
   a: Partial<Record<OverlaySide, number>> | undefined,

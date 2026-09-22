@@ -12,23 +12,17 @@ import {
 } from "@/utils/copyPasteUtils"
 
 export const useSelectionForCopyPaste = () => {
-  const {
-    nodes,
-    edges,
-    selectedElementIds,
-    setSelectedElementsId,
-    setNodes,
-    setEdges,
-  } = useDiagramStore(
-    useShallow((state) => ({
-      nodes: state.nodes,
-      edges: state.edges,
-      selectedElementIds: state.selectedElementIds,
-      setSelectedElementsId: state.setSelectedElementsId,
-      setNodes: state.setNodes,
-      setEdges: state.setEdges,
-    }))
-  )
+  const { nodes, edges, selectedElementIds, setSelectedElementsId, setNodes, setEdges } =
+    useDiagramStore(
+      useShallow((state) => ({
+        nodes: state.nodes,
+        edges: state.edges,
+        selectedElementIds: state.selectedElementIds,
+        setSelectedElementsId: state.setSelectedElementsId,
+        setNodes: state.setNodes,
+        setEdges: state.setEdges,
+      }))
+    )
   const storeApi = useDiagramStoreApi()
 
   const hasSelectedElements = useCallback(() => {
@@ -36,10 +30,7 @@ export const useSelectionForCopyPaste = () => {
   }, [selectedElementIds])
 
   const selectAll = useCallback(() => {
-    const allElementIds = [
-      ...nodes.map((node) => node.id),
-      ...edges.map((edge) => edge.id),
-    ]
+    const allElementIds = [...nodes.map((node) => node.id), ...edges.map((edge) => edge.id)]
 
     setSelectedElementsId(allElementIds)
     setNodes(nodes.map((node) => ({ ...node, selected: true })))
@@ -75,10 +66,7 @@ export const useSelectionForCopyPaste = () => {
 
   const insertClipboardData = useCallback(
     (clipboardData: ClipboardData, offsetMultiplier: number) => {
-      const materialized = materializeClipboardData(
-        clipboardData,
-        offsetMultiplier
-      )
+      const materialized = materializeClipboardData(clipboardData, offsetMultiplier)
 
       const { nodes: currentNodes, edges: currentEdges } = storeApi.getState()
 
@@ -147,11 +135,7 @@ export const useSelectionForCopyPaste = () => {
       return false
     }
 
-    const clipboardData = createClipboardData(
-      currentSelection,
-      currentNodes,
-      currentEdges
-    )
+    const clipboardData = createClipboardData(currentSelection, currentNodes, currentEdges)
     insertClipboardData(clipboardData, 1)
 
     return true
@@ -178,15 +162,9 @@ export const useSelectionForCopyPaste = () => {
 
     const allNodesToCut = getAllNodesToInclude(selectedElementIds, nodes)
     const expandedNodeIds = allNodesToCut.map((node) => node.id)
-    const edgeIdsToRemove = getEdgesToRemove(
-      selectedElementIds,
-      expandedNodeIds,
-      edges
-    )
+    const edgeIdsToRemove = getEdgesToRemove(selectedElementIds, expandedNodeIds, edges)
 
-    const remainingNodes = nodes.filter(
-      (node) => !expandedNodeIds.includes(node.id)
-    )
+    const remainingNodes = nodes.filter((node) => !expandedNodeIds.includes(node.id))
     const remainingEdges = edges.filter((edge) => !edgeIdsToRemove.has(edge.id))
 
     setNodes(remainingNodes)
@@ -194,14 +172,7 @@ export const useSelectionForCopyPaste = () => {
     setSelectedElementsId([])
 
     return true
-  }, [
-    selectedElementIds,
-    nodes,
-    edges,
-    setNodes,
-    setEdges,
-    setSelectedElementsId,
-  ])
+  }, [selectedElementIds, nodes, edges, setNodes, setEdges, setSelectedElementsId])
 
   return {
     hasSelectedElements,
