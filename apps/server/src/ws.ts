@@ -26,15 +26,16 @@ interface ExtendedWebSocket extends WebSocket {
   userId?: string
 }
 
-interface RelayServer {
+export interface RelayServer {
   publishControl: (diagramId: string, control: ControlEvent) => void
   close: () => Promise<void>
   roomCount: () => number
 }
 
-interface StartOptions {
-  port: number
+export interface StartOptions {
+  port?: number
   host?: string
+  server?: WebSocket.ServerOptions["server"]
   maxSocketsPerRoom?: number
   verifyToken?: (token: string) => Promise<string>
 }
@@ -53,12 +54,17 @@ interface ExtendedWebSocketWithAlive extends ExtendedWebSocket {
 
 export function startRelayServer(opts: StartOptions): RelayServer {
   const maxSocketsPerRoom = opts.maxSocketsPerRoom ?? DEFAULT_MAX_SOCKETS_PER_ROOM
-  const wss = new WebSocketServer({
-    port: opts.port,
-    host: opts.host,
+  const wssOptions: WebSocket.ServerOptions = {
     maxPayload: MAX_PAYLOAD_BYTES,
     perMessageDeflate: false,
-  })
+  }
+  if (opts.server) {
+    wssOptions.server = opts.server
+  } else {
+    wssOptions.port = opts.port ?? 4444
+    wssOptions.host = opts.host
+  }
+  const wss = new WebSocketServer(wssOptions)
   const rooms: Map<string, Set<ExtendedWebSocket>> = new Map()
   const roomAwarenessStates: Map<string, RoomAwarenessState> = new Map()
   const awarenessClientIdsBySocket = new WeakMap<ExtendedWebSocket, Set<number>>()

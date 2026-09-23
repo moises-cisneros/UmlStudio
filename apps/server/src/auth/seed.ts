@@ -10,6 +10,12 @@ export interface SeedUser {
 
 export const DEFAULT_SEEDED_USERS: readonly SeedUser[] = [
   {
+    name: "Moises Cisneros",
+    email: "moises@umlstudio.com",
+    password: "UmlStudio#2026",
+    role: "Lead Architect & Owner",
+  },
+  {
     name: "Lead Modeler",
     email: "admin@umlstudio.com",
     password: "UmlStudio#2026",
