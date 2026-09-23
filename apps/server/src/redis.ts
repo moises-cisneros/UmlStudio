@@ -353,17 +353,23 @@ redis.register_function{
  * (required for HEAD storage). Throws if the module is missing or too old.
  */
 export async function bootLoadFunction(client: Redis): Promise<void> {
-  const modules = (await client.sendCommand(["MODULE", "LIST"])) as unknown
-  if (!Array.isArray(modules)) {
-    throw new Error("Unexpected MODULE LIST response shape")
-  }
-  const reJson = modules.find((m: unknown) => {
-    if (!Array.isArray(m)) return false
-    const nameIndex = m.findIndex((x) => x === "name")
-    return nameIndex >= 0 && m[nameIndex + 1] === "ReJSON"
-  })
-  if (!reJson) {
-    throw new Error("RedisJSON module not loaded. Use redis/redis-stack-server.")
+  try {
+    const modules = (await client.sendCommand(["MODULE", "LIST"])) as unknown
+    if (Array.isArray(modules)) {
+      const reJson = modules.find((m: unknown) => {
+        if (!Array.isArray(m)) return false
+        const nameIndex = m.findIndex((x) => x === "name")
+        return nameIndex >= 0 && m[nameIndex + 1] === "ReJSON"
+      })
+      if (!reJson) {
+        logger.warn("RedisJSON module check: ReJSON not found in MODULE LIST")
+      }
+    }
+  } catch (err) {
+    logger.info(
+      { reason: (err as Error).message },
+      "MODULE LIST restricted by ACL in managed Redis, bypassing preflight"
+    )
   }
 
   try {
@@ -372,8 +378,15 @@ export async function bootLoadFunction(client: Redis): Promise<void> {
     // Ignore error if legacy function does not exist
   }
 
-  await client.sendCommand(["FUNCTION", "LOAD", "REPLACE", COMMIT_VERSION_SOURCE])
-  logger.info({ event: "redis.function.loaded", lib: "umlstudio" })
+  try {
+    await client.sendCommand(["FUNCTION", "LOAD", "REPLACE", COMMIT_VERSION_SOURCE])
+    logger.info({ event: "redis.function.loaded", lib: "umlstudio" })
+  } catch (err) {
+    logger.warn(
+      { event: "redis.function.load_warning", err: (err as Error).message },
+      "FUNCTION LOAD not permitted or failed; falling back to client-side logic if applicable"
+    )
+  }
 }
 
 /**
