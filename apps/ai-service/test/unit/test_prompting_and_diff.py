@@ -610,6 +610,128 @@ class TestPromptingAndDiff(unittest.TestCase):
         self.assertEqual(diff.modify.elements[0].id, "Usuario")
         self.assertEqual(diff.modify.elements[0].changes.removeAttributes, ["nombre"])
 
+    def test_modify_relationship_multiplicity_by_class_names(self):
+        current_model = {
+            "nodes": [
+                {"id": "node-a", "data": {"name": "A"}},
+                {"id": "node-b", "data": {"name": "B"}},
+            ],
+            "edges": [
+                {"id": "edge-ab", "type": "ClassBidirectional", "source": "node-a", "target": "node-b"}
+            ],
+        }
+        raw_diff = {
+            "add": {"elements": [], "relationships": []},
+            "modify": {
+                "elements": [],
+                "relationships": [
+                    {"source": "A", "target": "B", "changes": {"targetMultiplicity": "1..*"}}
+                ],
+            },
+            "remove": {"elementIds": [], "relationshipIds": []},
+        }
+        diff = parse_and_validate_diff_payload(
+            raw_diff,
+            user_prompt="Cambia la multiplicidad a 1..* de la relación entre la clase A y la clase B",
+            current_model=current_model,
+        )
+        self.assertIsNotNone(diff.modify)
+        self.assertIsNotNone(diff.modify.relationships)
+        self.assertEqual(len(diff.modify.relationships), 1)
+        rel_mod = diff.modify.relationships[0]
+        self.assertEqual(rel_mod.source, "A")
+        self.assertEqual(rel_mod.target, "B")
+        self.assertEqual(rel_mod.changes.targetMultiplicity, "1..*")
+        # Classes must stay untouched: no element mods, no removals
+        self.assertTrue(not diff.modify.elements)
+        self.assertIsNone(diff.remove)
+
+    def test_modify_relationship_type_change_and_role(self):
+        current_model = {
+            "nodes": [
+                {"id": "node-a", "data": {"name": "A"}},
+                {"id": "node-b", "data": {"name": "B"}},
+            ],
+            "edges": [
+                {"id": "edge-ab", "type": "ClassDependency", "source": "node-a", "target": "node-b"}
+            ],
+        }
+        raw_diff = {
+            "modify": {
+                "relationships": [
+                    {
+                        "source": "A",
+                        "target": "B",
+                        "changes": {"type": "ClassInheritance", "targetRole": "empleado"},
+                    }
+                ]
+            }
+        }
+        diff = parse_and_validate_diff_payload(
+            raw_diff,
+            user_prompt="Pasa la relación entre A y B de dependencia a herencia",
+            current_model=current_model,
+        )
+        self.assertIsNotNone(diff.modify)
+        rel_mod = diff.modify.relationships[0]
+        self.assertEqual(rel_mod.changes.type, "ClassInheritance")
+        self.assertEqual(rel_mod.changes.targetRole, "empleado")
+
+    def test_modify_relationship_tool_call_with_spanish_type_alias(self):
+        current_model = {
+            "nodes": [
+                {"id": "node-a", "data": {"name": "A"}},
+                {"id": "node-b", "data": {"name": "B"}},
+            ]
+        }
+        tool_calls = [
+            {
+                "name": "modify_relationship",
+                "arguments": {"source": "A", "target": "B", "type": "herencia"},
+            }
+        ]
+        diff = parse_and_validate_diff_payload(tool_calls, current_model=current_model)
+        self.assertIsNotNone(diff.modify)
+        self.assertEqual(diff.modify.relationships[0].changes.type, "ClassInheritance")
+
+    def test_modify_relationship_rejects_invalid_multiplicity(self):
+        current_model = {
+            "nodes": [
+                {"id": "node-a", "data": {"name": "A"}},
+                {"id": "node-b", "data": {"name": "B"}},
+            ]
+        }
+        raw_diff = {
+            "modify": {
+                "relationships": [
+                    {"source": "A", "target": "B", "changes": {"targetMultiplicity": "muchos"}}
+                ]
+            }
+        }
+        diff = parse_and_validate_diff_payload(raw_diff, current_model=current_model)
+        self.assertTrue(diff.modify is None or not diff.modify.relationships)
+
+    def test_serialize_model_context_resolves_edge_names_and_ends(self):
+        model = {
+            "nodes": [
+                {"id": "node-a", "data": {"name": "A"}},
+                {"id": "node-b", "data": {"name": "B"}},
+            ],
+            "edges": [
+                {
+                    "id": "edge-ab",
+                    "type": "ClassBidirectional",
+                    "source": "node-a",
+                    "target": "node-b",
+                    "data": {"targetMultiplicity": "1..*", "targetRole": "empleado"},
+                }
+            ],
+        }
+        serialized = serialize_model_context(model)
+        self.assertIn("de 'A' hacia 'B'", serialized)
+        self.assertIn("1..*", serialized)
+        self.assertIn("empleado", serialized)
+
 
 if __name__ == "__main__":
     unittest.main()

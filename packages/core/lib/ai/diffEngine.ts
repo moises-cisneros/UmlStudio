@@ -12,6 +12,7 @@ import type {
   ModelDiffValidationResult,
   DiffElementAdd,
   DiffRelationshipAdd,
+  DiffRelationshipModify,
 } from "./types"
 
 const VALID_NODE_TYPES = new Set([
@@ -174,6 +175,65 @@ export function validateDiff(diff: unknown): ModelDiffValidationResult {
     }
   }
 
+  if (d.modify?.relationships) {
+    if (!Array.isArray(d.modify.relationships)) {
+      errors.push("modify.relationships must be an array")
+    } else {
+      d.modify.relationships.forEach((mod, index) => {
+        const hasId = typeof mod.id === "string" && mod.id.trim().length > 0
+        const hasEndpoints =
+          typeof mod.source === "string" &&
+          mod.source.trim().length > 0 &&
+          typeof mod.target === "string" &&
+          mod.target.trim().length > 0
+        if (!hasId && !hasEndpoints) {
+          errors.push(`modify.relationships[${index}] requires an id or both source and target`)
+        }
+        if (!mod.changes || typeof mod.changes !== "object") {
+          errors.push(`modify.relationships[${index}].changes must be an object`)
+        } else {
+          const ch = mod.changes as Record<string, unknown>
+          const rawType = ch.type as string | undefined
+          if (rawType !== undefined) {
+            const mappedType =
+              typeof rawType === "string"
+                ? (EDGE_TYPE_MAP[rawType.toLowerCase()] ?? rawType)
+                : undefined
+            if (
+              !mappedType ||
+              !Object.values(DiagramEdgeTypeRecord).includes(mappedType as DiagramEdgeType)
+            ) {
+              errors.push(
+                `modify.relationships[${index}].type '${rawType}' is invalid. Allowed: ${Array.from(
+                  Object.values(DiagramEdgeTypeRecord)
+                ).join(", ")}`
+              )
+            } else {
+              ;(mod.changes as DiffRelationshipModify["changes"]).type =
+                mappedType as DiagramEdgeType
+            }
+          }
+          for (const key of [
+            "name",
+            "sourceHandle",
+            "targetHandle",
+            "sourceRole",
+            "targetRole",
+            "sourceMultiplicity",
+            "targetMultiplicity",
+          ] as const) {
+            const val = ch[key]
+            if (val === null || (typeof val === "string" && !val.trim())) {
+              delete ch[key]
+            } else if (val !== undefined && typeof val !== "string") {
+              errors.push(`modify.relationships[${index}].changes.${key} must be a string`)
+            }
+          }
+        }
+      })
+    }
+  }
+
   if (d.remove) {
     const rawRem = d.remove as Record<string, unknown>
     if (rawRem.element_ids && !d.remove.elementIds) {
@@ -292,6 +352,49 @@ export function findTargetNode(nodes: UmlStudioNode[], query: string): UmlStudio
   if (trimmed.length >= 8) {
     const byIdSub = nodes.find((n) => n.id.toLowerCase().includes(lowerQuery))
     if (byIdSub) return byIdSub
+  }
+
+  return undefined
+}
+
+/**
+ * Robust edge finder that resolves relationship targets by exact edge ID,
+ * "Source -> Target" patterns, or endpoint class names (either direction).
+ */
+export function findTargetEdge(
+  edges: UmlStudioEdge[],
+  nodes: UmlStudioNode[],
+  query?: string,
+  source?: string,
+  target?: string
+): UmlStudioEdge | undefined {
+  const resolvePair = (a: string, b: string): UmlStudioEdge | undefined => {
+    const aNode = findTargetNode(nodes, a)
+    const bNode = findTargetNode(nodes, b)
+    if (!aNode || !bNode) return undefined
+    return edges.find(
+      (e) =>
+        (e.source === aNode.id && e.target === bNode.id) ||
+        (e.source === bNode.id && e.target === aNode.id)
+    )
+  }
+
+  if (typeof source === "string" && source.trim() && typeof target === "string" && target.trim()) {
+    const byEndpoints = resolvePair(source.trim(), target.trim())
+    if (byEndpoints) return byEndpoints
+  }
+
+  if (!query || typeof query !== "string") return undefined
+  const trimmed = query.trim()
+  if (!trimmed) return undefined
+
+  const byId = edges.find((e) => e.id === trimmed)
+  if (byId) return byId
+
+  const arrowParts = trimmed.split(/\s*->\s*|\s+→\s+/)
+  if (arrowParts.length === 2 && arrowParts[0].trim() && arrowParts[1].trim()) {
+    const byPattern = resolvePair(arrowParts[0].trim(), arrowParts[1].trim())
+    if (byPattern) return byPattern
   }
 
   return undefined
@@ -757,6 +860,15 @@ export function applyDiff(currentModel: UMLModel, diff: ModelDiff): UMLModel {
             { x: tx, y: ty },
           ],
           ...(assocNode ? { associationClassNodeId: assocNode.id } : {}),
+          ...(rel.name?.trim() ? { label: rel.name.trim() } : {}),
+          ...(rel.sourceRole?.trim() ? { sourceRole: rel.sourceRole.trim() } : {}),
+          ...(rel.targetRole?.trim() ? { targetRole: rel.targetRole.trim() } : {}),
+          ...(rel.sourceMultiplicity?.trim()
+            ? { sourceMultiplicity: rel.sourceMultiplicity.trim() }
+            : {}),
+          ...(rel.targetMultiplicity?.trim()
+            ? { targetMultiplicity: rel.targetMultiplicity.trim() }
+            : {}),
         },
       }
 
@@ -984,6 +1096,39 @@ export function applyDiff(currentModel: UMLModel, diff: ModelDiff): UMLModel {
             targetNode.measured.height = finalClampedHeight
           }
         }
+      }
+    })
+  }
+
+  // 4. Process Relationship Modifications (type changes, roles, multiplicities)
+  if (diff.modify?.relationships) {
+    diff.modify.relationships.forEach((mod) => {
+      const targetEdge = findTargetEdge(edges, nodes, mod.id, mod.source, mod.target)
+      if (!targetEdge) return
+      const ch = mod.changes
+      if (ch.type) {
+        targetEdge.type = ch.type
+      }
+      if (typeof ch.name === "string" && ch.name.trim()) {
+        targetEdge.data.label = ch.name.trim()
+      }
+      if (typeof ch.sourceHandle === "string" && ch.sourceHandle.trim()) {
+        targetEdge.sourceHandle = ch.sourceHandle.trim()
+      }
+      if (typeof ch.targetHandle === "string" && ch.targetHandle.trim()) {
+        targetEdge.targetHandle = ch.targetHandle.trim()
+      }
+      if (typeof ch.sourceRole === "string") {
+        targetEdge.data.sourceRole = ch.sourceRole.trim()
+      }
+      if (typeof ch.targetRole === "string") {
+        targetEdge.data.targetRole = ch.targetRole.trim()
+      }
+      if (typeof ch.sourceMultiplicity === "string") {
+        targetEdge.data.sourceMultiplicity = ch.sourceMultiplicity.trim()
+      }
+      if (typeof ch.targetMultiplicity === "string") {
+        targetEdge.data.targetMultiplicity = ch.targetMultiplicity.trim()
       }
     })
   }

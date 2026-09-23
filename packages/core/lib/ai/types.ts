@@ -33,6 +33,10 @@ export interface DiffRelationshipAdd {
   name?: string
   associationClass?: string
   intermediateClass?: string
+  sourceRole?: string
+  targetRole?: string
+  sourceMultiplicity?: string
+  targetMultiplicity?: string
 }
 
 export interface DiffElementModify {
@@ -48,6 +52,24 @@ export interface DiffElementModify {
   }
 }
 
+export interface DiffRelationshipModify {
+  /** Edge ID, or "Source -> Target" / endpoint names when the ID is unknown. */
+  id?: string
+  /** Fallback endpoint resolution by class name when id is absent. */
+  source?: string
+  target?: string
+  changes: {
+    type?: DiagramEdgeType
+    name?: string
+    sourceHandle?: string
+    targetHandle?: string
+    sourceRole?: string
+    targetRole?: string
+    sourceMultiplicity?: string
+    targetMultiplicity?: string
+  }
+}
+
 export interface ModelDiff {
   add?: {
     elements?: DiffElementAdd[]
@@ -55,6 +77,7 @@ export interface ModelDiff {
   }
   modify?: {
     elements?: DiffElementModify[]
+    relationships?: DiffRelationshipModify[]
   }
   remove?: {
     elementIds?: string[]

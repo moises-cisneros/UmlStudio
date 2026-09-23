@@ -74,7 +74,7 @@ export {
   type UmlStudioSelectionToolbarProps,
 } from "./components/react/UmlStudioSelectionToolbar"
 
-export { validateDiff, applyDiff } from "./ai/diffEngine"
+export { validateDiff, applyDiff, findTargetNode, findTargetEdge } from "./ai/diffEngine"
 export { MockAIAdapter } from "./ai/adapters/mockAdapter"
 export type {
   AIAdapter,
@@ -83,6 +83,7 @@ export type {
   DiffElementAdd,
   DiffElementModify,
   DiffRelationshipAdd,
+  DiffRelationshipModify,
   DiffAttribute,
   DiffMethod,
 } from "./ai/types"

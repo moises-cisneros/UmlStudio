@@ -20,6 +20,8 @@ from ..models.uml import (
     DiffRelationshipAdd,
     DiffElementModify,
     DiffElementModifyChanges,
+    DiffRelationshipModify,
+    DiffRelationshipModifyChanges,
     DiffAttribute,
     DiffMethod,
 )
@@ -139,12 +141,30 @@ def serialize_model_context(model: Dict[str, Any]) -> str:
 
     if edges:
         lines.append("\n=== RELACIONES EXISTENTES ===")
+        node_names = {}
+        for node in nodes:
+            data = node.get("data", {})
+            if node.get("id") and data.get("name"):
+                node_names[node.get("id")] = data.get("name")
         for edge in edges:
             edge_id = edge.get("id", "")
             edge_type = edge.get("type", "ClassBidirectional")
-            source = edge.get("source", "")
-            target = edge.get("target", "")
-            lines.append(f"- Relación ID: '{edge_id}': {edge_type} de '{source}' hacia '{target}'")
+            raw_source = edge.get("source", "")
+            raw_target = edge.get("target", "")
+            source = node_names.get(raw_source, raw_source)
+            target = node_names.get(raw_target, raw_target)
+            data = edge.get("data", {}) or {}
+            ends = []
+            src_mult = data.get("sourceMultiplicity") or data.get("multiplicityA") or ""
+            tgt_mult = data.get("targetMultiplicity") or data.get("multiplicityB") or ""
+            src_role = data.get("sourceRole") or data.get("roleA") or ""
+            tgt_role = data.get("targetRole") or data.get("roleB") or ""
+            if src_mult or src_role:
+                ends.append(f"origen [{src_role or '?'}: {src_mult or '?'}]")
+            if tgt_mult or tgt_role:
+                ends.append(f"destino [{tgt_role or '?'}: {tgt_mult or '?'}]")
+            ends_str = f" ({'; '.join(ends)})" if ends else ""
+            lines.append(f"- Relación ID: '{edge_id}': {edge_type} de '{source}' hacia '{target}'{ends_str}")
 
     return "\n".join(lines)
 
@@ -217,6 +237,14 @@ PROTOCOLO DE RAZONAMIENTO Y MODIFICACIÓN ESTRUCTURAL:
    - Los ejemplos canónicos a continuación son EXCLUSIVAMENTE para ilustrar la sintaxis técnica del ModelDiff y herramientas.
    - ¡QUEDA TERMINANTEMENTE PROHIBIDO copiar nombres de clases ('Context', 'Strategy', 'Usuario', 'Venta', 'Cliente') o estructuras de los ejemplos si el usuario no los mencionó explícitamente en su consulta!
    - Infiere los nombres y tipos directamente del lenguaje del usuario. NUNCA emitas las palabras 'name', 'type', 'visibility' como atributos.
+
+8. MODIFICACIÓN DE RELACIONES EXISTENTES (roles, multiplicidades, cambio de tipo):
+   - Si el usuario pide cambiar la multiplicidad, el rol o el tipo de una relación que YA EXISTE (ej. "cambia la multiplicidad a 1..* de la relación entre A y B", "pasa la relación de dependencia a herencia entre A y B"):
+     * NUNCA la recrees en "add.relationships" ni borres ni toques las clases. Usa "modify.relationships" (o la herramienta 'modify_relationship').
+     * Identifica la relación por los nombres de las clases de sus extremos ("source": "A", "target": "B") o por su ID si figura en "RELACIONES EXISTENTES".
+     * "sourceMultiplicity"/"sourceRole" describen el extremo origen; "targetMultiplicity"/"targetRole" el extremo destino. Si el usuario da un solo valor de multiplicidad sin indicar extremo, colócalo en "targetMultiplicity".
+     * Para cambiar el tipo usa "changes": {{"type": "<nuevo tipo>"}} con los 7 tipos válidos de la regla 3 (ej. "ClassDependency" a "ClassInheritance").
+     * Formato de multiplicidad UML: "1", "0..1", "1..*", "0..*" o "*".
 
 EJEMPLOS CANÓNICOS (SÓLO DE REFERENCIA SINTÁCTICA, NO COPIAR NOMBRES):
 
@@ -328,6 +356,47 @@ Salida:
         "id": "Cuenta",
         "changes": {{
           "removeAttributes": ["saldo"]
+        }}
+      }}
+    ]
+  }},
+  "remove": {{ "elementIds": [], "relationshipIds": [] }}
+}}
+
+EJEMPLO 6 (Cambiar multiplicidad de una relación existente):
+Usuario: "Cambia la multiplicidad a 1..* de la relación entre la clase A y la clase B"
+Salida:
+{{
+  "add": {{ "elements": [], "relationships": [] }},
+  "modify": {{
+    "elements": [],
+    "relationships": [
+      {{
+        "source": "A",
+        "target": "B",
+        "changes": {{
+          "targetMultiplicity": "1..*"
+        }}
+      }}
+    ]
+  }},
+  "remove": {{ "elementIds": [], "relationshipIds": [] }}
+}}
+
+EJEMPLO 7 (Cambiar tipo de relación existente y rol de extremo):
+Usuario: "Pasa la relación entre A y B de dependencia a herencia y ponle rol empleado en el destino"
+Salida:
+{{
+  "add": {{ "elements": [], "relationships": [] }},
+  "modify": {{
+    "elements": [],
+    "relationships": [
+      {{
+        "source": "A",
+        "target": "B",
+        "changes": {{
+          "type": "ClassInheritance",
+          "targetRole": "empleado"
         }}
       }}
     ]
@@ -449,6 +518,40 @@ UML_DIFF_TOOL_SCHEMA = {
                                 },
                             },
                             "required": ["id", "changes"],
+                        },
+                    },
+                    "relationships": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "source": {"type": "string"},
+                                "target": {"type": "string"},
+                                "changes": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ClassInheritance",
+                                                "ClassRealization",
+                                                "ClassAggregation",
+                                                "ClassComposition",
+                                                "ClassDependency",
+                                                "ClassBidirectional",
+                                                "ClassUnidirectional",
+                                            ],
+                                        },
+                                        "name": {"type": "string"},
+                                        "sourceRole": {"type": "string"},
+                                        "targetRole": {"type": "string"},
+                                        "sourceMultiplicity": {"type": "string"},
+                                        "targetMultiplicity": {"type": "string"},
+                                    },
+                                },
+                            },
+                            "required": ["changes"],
                         },
                     },
                 },
@@ -651,6 +754,39 @@ UML_ATOMIC_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "modify_relationship",
+            "description": "Modifica una relación EXISTENTE entre dos clases sin recrearla: cambia su tipo (ej. de dependencia a herencia), sus multiplicidades o sus roles de extremo. NUNCA usar para crear relaciones nuevas.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "source": {"type": "string", "description": "Nombre de la clase origen de la relación existente."},
+                    "target": {"type": "string", "description": "Nombre de la clase destino de la relación existente."},
+                    "relationship_id": {"type": "string", "description": "ID de la relación (alternativa a source/target si figura en el contexto)."},
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "ClassInheritance",
+                            "ClassRealization",
+                            "ClassAggregation",
+                            "ClassComposition",
+                            "ClassDependency",
+                            "ClassBidirectional",
+                            "ClassUnidirectional",
+                        ],
+                        "description": "Nuevo tipo de relación OMG UML 2.5 (solo si el usuario pidió cambiar el tipo).",
+                    },
+                    "sourceRole": {"type": "string", "description": "Nuevo rol del extremo origen."},
+                    "targetRole": {"type": "string", "description": "Nuevo rol del extremo destino."},
+                    "sourceMultiplicity": {"type": "string", "description": "Nueva multiplicidad del extremo origen (1, 0..1, 1..*, 0..*, *)."},
+                    "targetMultiplicity": {"type": "string", "description": "Nueva multiplicidad del extremo destino (1, 0..1, 1..*, 0..*, *)."},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "remove_elements",
             "description": "Elimina una o más clases completas del diagrama UML. ADVERTENCIA CRÍTICA: USAR ÚNICAMENTE cuando el usuario pide explícitamente BORRAR LA CLASE ENTERA (ej. 'elimina la clase Usuario'). NUNCA usar para borrar atributos o métodos.",
             "parameters": {
@@ -688,6 +824,42 @@ UML_ATOMIC_TOOLS = [
 
 
 SCHEMA_ARTIFACT_KEYS = {"name", "type", "visibility", "attribute", "attributes", "method", "methods", "returntype", "params"}
+
+# Canonical OMG UML 2.5 relationship types with LLM-friendly aliases
+REL_TYPE_ALIASES = {
+    "classinheritance": "ClassInheritance",
+    "inheritance": "ClassInheritance",
+    "generalization": "ClassInheritance",
+    "generalización": "ClassInheritance",
+    "generalizacion": "ClassInheritance",
+    "extends": "ClassInheritance",
+    "herencia": "ClassInheritance",
+    "classrealization": "ClassRealization",
+    "realization": "ClassRealization",
+    "realización": "ClassRealization",
+    "realizacion": "ClassRealization",
+    "implements": "ClassRealization",
+    "classaggregation": "ClassAggregation",
+    "aggregation": "ClassAggregation",
+    "agregación": "ClassAggregation",
+    "agregacion": "ClassAggregation",
+    "classcomposition": "ClassComposition",
+    "composition": "ClassComposition",
+    "composición": "ClassComposition",
+    "composicion": "ClassComposition",
+    "classdependency": "ClassDependency",
+    "dependency": "ClassDependency",
+    "dependencia": "ClassDependency",
+    "classbidirectional": "ClassBidirectional",
+    "bidirectional": "ClassBidirectional",
+    "bidireccional": "ClassBidirectional",
+    "association": "ClassBidirectional",
+    "asociación": "ClassBidirectional",
+    "asociacion": "ClassBidirectional",
+    "classunidirectional": "ClassUnidirectional",
+    "unidirectional": "ClassUnidirectional",
+    "unidireccional": "ClassUnidirectional",
+}
 
 
 def normalize_attribute_item(raw: Any) -> Optional[DiffAttribute]:
@@ -1155,6 +1327,8 @@ def parse_and_validate_diff_payload(
                     elif k == "modify":
                         if "elements" in block and isinstance(block["elements"], list):
                             merged["modify"]["elements"].extend(block["elements"])
+                        if "relationships" in block and isinstance(block["relationships"], list):
+                            merged["modify"].setdefault("relationships", []).extend(block["relationships"])
                     elif k == "remove":
                         if "elementIds" in block and isinstance(block["elementIds"], list):
                             merged["remove"]["elementIds"].extend(block["elementIds"])
@@ -1326,6 +1500,35 @@ def parse_and_validate_diff_payload(
                 cleaned_rids = [clean_element_name(r) for r in rids if clean_element_name(r)]
                 merged["remove"]["relationshipIds"].extend(cleaned_rids)
 
+            # Tool: modify_relationship (type / roles / multiplicities of an existing edge)
+            elif func_name in ("modify_relationship", "modify_relationships", "update_relationship", "update_relationships"):
+                nested = args.get("changes") if isinstance(args.get("changes"), dict) else {}
+                rel_mod: Dict[str, Any] = {"changes": {}}
+                rid = args.get("relationship_id") or args.get("id")
+                if rid and isinstance(rid, str) and rid.strip():
+                    rel_mod["id"] = clean_element_name(rid)
+                for key in ("source", "target"):
+                    val = args.get(key) or nested.get(key)
+                    if val and isinstance(val, str) and clean_element_name(val):
+                        rel_mod[key] = clean_element_name(val)
+                for key in (
+                    "type",
+                    "name",
+                    "sourceHandle",
+                    "targetHandle",
+                    "sourceRole",
+                    "targetRole",
+                    "sourceMultiplicity",
+                    "targetMultiplicity",
+                ):
+                    val = args.get(key)
+                    if val is None:
+                        val = nested.get(key)
+                    if isinstance(val, str) and val.strip():
+                        rel_mod["changes"][key] = val.strip()
+                if rel_mod["changes"]:
+                    merged["modify"].setdefault("relationships", []).append(rel_mod)
+
             # Fallback for composite apply_model_diff
             elif func_name == "apply_model_diff":
                 for k in ("add", "modify", "remove"):
@@ -1336,6 +1539,7 @@ def parse_and_validate_diff_payload(
                             merged["add"]["relationships"].extend(b.get("relationships", []))
                         elif k == "modify":
                             merged["modify"]["elements"].extend(b.get("elements", []))
+                            merged["modify"].setdefault("relationships", []).extend(b.get("relationships", []))
                         elif k == "remove":
                             merged["remove"]["elementIds"].extend(b.get("elementIds", []))
                             merged["remove"]["relationshipIds"].extend(b.get("relationshipIds", []))
@@ -1695,6 +1899,75 @@ def parse_and_validate_diff_payload(
                 )
             )
 
+    # 2b. MODIFY RELATIONSHIPS PROCESSING (type changes, roles, multiplicities)
+    rel_mods: List[DiffRelationshipModify] = []
+    if "modify" in data and isinstance(data["modify"], dict):
+        raw_rel_mod = data["modify"]
+        for m in raw_rel_mod.get("relationships", []):
+            if not isinstance(m, dict):
+                continue
+            ch = m.get("changes", {})
+            if not isinstance(ch, dict) or not ch:
+                continue
+
+            rel_entry: Dict[str, Any] = {}
+            raw_rid = m.get("id") or m.get("relationship_id") or m.get("relationshipId")
+            if isinstance(raw_rid, str) and raw_rid.strip():
+                rel_entry["id"] = raw_rid.strip()
+            raw_src = m.get("source")
+            raw_tgt = m.get("target")
+            if isinstance(raw_src, str) and clean_element_name(raw_src):
+                cleaned_src = clean_element_name(raw_src)
+                rel_entry["source"] = existing_names_map.get(cleaned_src.lower(), cleaned_src)
+            if isinstance(raw_tgt, str) and clean_element_name(raw_tgt):
+                cleaned_tgt = clean_element_name(raw_tgt)
+                rel_entry["target"] = existing_names_map.get(cleaned_tgt.lower(), cleaned_tgt)
+            if "id" not in rel_entry and ("source" not in rel_entry or "target" not in rel_entry):
+                logger.info(f"Descartando modificación de relación sin identificación: {m}.")
+                continue
+
+            changes: Dict[str, Any] = {}
+            raw_type = ch.get("type")
+            if isinstance(raw_type, str) and raw_type.strip():
+                canonical_type = REL_TYPE_ALIASES.get(raw_type.strip().lower())
+                if canonical_type:
+                    changes["type"] = canonical_type
+                else:
+                    logger.info(f"Tipo de relación inválido descartado: '{raw_type}'.")
+            raw_name = ch.get("name")
+            if isinstance(raw_name, str) and raw_name.strip():
+                changes["name"] = raw_name.strip()
+            for handle_key in ("sourceHandle", "targetHandle"):
+                raw_handle = ch.get(handle_key)
+                if isinstance(raw_handle, str) and raw_handle.strip():
+                    changes[handle_key] = raw_handle.strip()
+            for role_key in ("sourceRole", "targetRole"):
+                raw_role = ch.get(role_key)
+                if isinstance(raw_role, str) and raw_role.strip():
+                    cleaned_role = raw_role.strip().lstrip("+").strip()
+                    if cleaned_role and cleaned_role.lower() not in ("source", "target", "origen", "destino"):
+                        changes[role_key] = cleaned_role
+            for mult_key in ("sourceMultiplicity", "targetMultiplicity"):
+                raw_mult = ch.get(mult_key)
+                if isinstance(raw_mult, str) and raw_mult.strip():
+                    cleaned_mult = raw_mult.strip().replace(" ", "")
+                    if re.fullmatch(r"(\*|\d+|\d+\.\.\d+|\d+\.\.\*)", cleaned_mult):
+                        changes[mult_key] = cleaned_mult
+                    else:
+                        logger.info(f"Multiplicidad inválida descartada: '{raw_mult}'.")
+            if not changes:
+                logger.info(f"Descartando modificación de relación sin cambios válidos: {m}.")
+                continue
+            rel_entry["changes"] = changes
+            rel_mods.append(
+                DiffRelationshipModify(
+                    id=rel_entry.get("id"),
+                    source=rel_entry.get("source"),
+                    target=rel_entry.get("target"),
+                    changes=DiffRelationshipModifyChanges(**changes),
+                )
+            )
+
     # Auto-healing fallback for member deletion if model generated no modifications
     if user_prompt and (has_attr_delete_intent or has_method_delete_intent) and not has_class_delete_intent:
         if prompt_extracted_attrs:
@@ -1873,7 +2146,7 @@ def parse_and_validate_diff_payload(
                 if m.changes.removeMethods:
                     m.changes.removeMethods = list(dict.fromkeys(m.changes.removeMethods))
 
-    modify_block = DiffModifyBlock(elements=mods) if mods else None
+    modify_block = DiffModifyBlock(elements=mods, relationships=rel_mods) if (mods or rel_mods) else None
 
     # 4. ANTI-COPY FILTER FOR SYSTEM PROMPT EXAMPLES
     if add_block and add_block.elements and user_prompt:
@@ -1944,6 +2217,11 @@ def parse_and_validate_diff_payload(
                     print(f"    - [{m.id}] Atributos a Eliminar: {m.changes.removeAttributes}")
                 if m.changes.removeMethods:
                     print(f"    - [{m.id}] Métodos a Eliminar: {m.changes.removeMethods}")
+    if modify_block and modify_block.relationships:
+        print(f"  * Relaciones a Modificar ({len(modify_block.relationships)}):")
+        for r in modify_block.relationships:
+            endpoint = r.id or f"{r.source or '?'} -> {r.target or '?'}"
+            print(f"    - [{endpoint}] Cambios: {r.changes.model_dump(exclude_none=True)}")
 
     print(f"\n{'='*25} [FASE 4: VALIDACIÓN Y ANTI-EJEMPLOS] {'='*25}")
     print("  * Validación de correspondencia Semántica: OK")
@@ -1953,13 +2231,14 @@ def parse_and_validate_diff_payload(
     adds_count = len(add_block.elements or []) if add_block and add_block.elements else 0
     rels_count = len(add_block.relationships or []) if add_block and add_block.relationships else 0
     mods_count = len(modify_block.elements or []) if modify_block and modify_block.elements else 0
+    rel_mods_count = len(modify_block.relationships or []) if modify_block and modify_block.relationships else 0
     rems_count = (
         (len(remove_block.elementIds or []) + len(remove_block.relationshipIds or []))
         if remove_block
         else 0
     )
     print(
-        f"  * Resumen: {adds_count} clases nuevas, {rels_count} relaciones, {mods_count} modificaciones, {rems_count} eliminaciones"
+        f"  * Resumen: {adds_count} clases nuevas, {rels_count} relaciones, {mods_count} modificaciones de clases, {rel_mods_count} modificaciones de relaciones, {rems_count} eliminaciones"
     )
     print(f"{'='*70}\n")
 
