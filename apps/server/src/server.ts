@@ -48,7 +48,14 @@ async function main() {
   }
 
   // Idempotently seed user accounts from UMLSTUDIO_SEED_USERS (env only)
-  await seedDefaultUsers(auth, userRepo)
+  const { seeded, existing } = await seedDefaultUsers(auth, userRepo)
+  if (seeded === 0 && existing === 0) {
+    logger.warn(
+      { event: "auth.seed.empty" },
+      "UMLSTUDIO_SEED_USERS produced no users (unset, invalid, or empty): " +
+        "no accounts can log in until one is seeded or created at /register"
+    )
+  }
 
   const sharedPort =
     config.WS_PORT === config.PORT ||
