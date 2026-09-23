@@ -506,22 +506,26 @@ export const AgentChatStream: FC = () => {
           />
 
           {/* BOTÓN DE VOZ / MICRÓFONO */}
-          {speechSupported && (
-            <button
-              type="button"
-              onClick={toggleListening}
-              title={
-                isListening ? "Detener dictado por voz" : "Iniciar dictado por voz (Speech-to-Text)"
-              }
-              className={`flex h-7 w-7 items-center justify-center rounded-md transition-all ${
-                isListening
-                  ? "animate-pulse bg-destructive text-white"
-                  : "border border-border-subtle bg-surface-raised text-secondary-foreground hover:text-(--home-text-primary)"
-              }`}
-            >
-              {isListening ? <MicOffIcon className="size-3.5" /> : <MicIcon className="size-3.5" />}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={toggleListening}
+            disabled={!speechSupported}
+            title={
+              speechSupported
+                ? isListening
+                  ? "Detener dictado por voz"
+                  : "Iniciar dictado por voz (Speech-to-Text)"
+                : "Dictado por voz no soportado en este navegador (probá Chrome o Edge)"
+            }
+            aria-label={speechSupported ? "Dictado por voz" : "Dictado por voz no disponible"}
+            className={`flex h-7 w-7 items-center justify-center rounded-md transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
+              isListening
+                ? "animate-pulse bg-destructive text-white"
+                : "border border-border-subtle bg-surface-raised text-secondary-foreground hover:text-(--home-text-primary)"
+            }`}
+          >
+            {isListening ? <MicOffIcon className="size-3.5" /> : <MicIcon className="size-3.5" />}
+          </button>
 
           <button
             type="button"
