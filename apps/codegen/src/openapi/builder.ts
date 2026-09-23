@@ -100,9 +100,9 @@ export function buildRequestSchema(
     }
   }
 
-  // Foreign key references for many-to-one relations
+  // Foreign key references for FK-holding relations (many-to-one and one-to-one owners)
   for (const r of entity.relations) {
-    if (r.kind === "many-to-one") {
+    if ((r.kind === "many-to-one" || r.kind === "one-to-one") && !r.mappedBy) {
       const fkName = r.joinColumn ? toCamelCase(r.joinColumn) : `${toCamelCase(r.targetEntity)}Id`
       properties[fkName] = {
         type: "integer",
@@ -141,7 +141,7 @@ export function buildResponseSchema(
   }
 
   for (const r of entity.relations) {
-    if (r.kind === "many-to-one") {
+    if ((r.kind === "many-to-one" || r.kind === "one-to-one") && !r.mappedBy) {
       const fkName = r.joinColumn ? toCamelCase(r.joinColumn) : `${toCamelCase(r.targetEntity)}Id`
       properties[fkName] = {
         type: "integer",
