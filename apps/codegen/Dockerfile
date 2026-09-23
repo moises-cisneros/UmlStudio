@@ -22,6 +22,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 COPY packages/core ./packages/core
 COPY packages/ui ./packages/ui
 COPY apps/codegen ./apps/codegen
+COPY assets ./assets
 COPY tsconfig*.json ./
 
 RUN pnpm --filter @umlstudio/core run build
