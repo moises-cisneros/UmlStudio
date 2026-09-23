@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "migrate:string-to-json": "tsx src/scripts/migrate-string-to-json.ts",
-    "seed:users": "tsx src/scripts/seed-users.ts"
+    "seed:users": "tsx src/scripts/seed-users.ts",
+    "seed:revoke-legacy": "tsx src/scripts/seed-users.ts --revoke-legacy"
   },
   "dependencies": {
     "@hono/node-server": "2.0.6",

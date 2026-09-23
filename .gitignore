@@ -25,6 +25,18 @@ storybook-static/
 # Environment variables
 .env
 .env.*.local
+.env.seed
+*.env.seed
+**/.env.seed
+**/seed.users.json
+**/seed-users.json
+UMLSTUDIO_SEED_USERS.json
+
+# Deployment credential docs (routes doc is public; secrets never committed)
+docs/DEPLOYMENT_CREDENTIALS*.md
+docs/*CREDENTIALS*.md
+*-credentials.md
+credentials*.json
 
 # Editor-specific settings
 *.sublime-workspace
