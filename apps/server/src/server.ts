@@ -4,7 +4,7 @@ import { buildApp } from "./http/app.js"
 import { bootLoadFunction, createRedisClient, getJwtSecret } from "./redis.js"
 import { startRelayServer } from "./ws.js"
 import { createAuthService, createRedisUserRepository } from "./services/auth-service.js"
-import { seedDefaultUsers } from "./auth/seed.js"
+import { seedDefaultUsers, revokeLegacySeedUsers } from "./auth/seed.js"
 
 async function main() {
   if (process.env.NODE_ENV !== "production") {
@@ -29,7 +29,17 @@ async function main() {
     jwtSecret: getJwtSecret(),
   })
 
-  // Idempotently seed default user accounts (credentials)
+  // One-time revocation of the previously versioned demo accounts.
+  // Set UMLSTUDIO_REVOKE_LEGACY=true for a single deploy, then remove it.
+  if (process.env.UMLSTUDIO_REVOKE_LEGACY === "true") {
+    const { revoked, missing } = await revokeLegacySeedUsers(redis)
+    logger.info(
+      { event: "auth.seed.legacy_revoked", revoked, missing },
+      `legacy seed revocation: ${revoked} revoked, ${missing} already absent`
+    )
+  }
+
+  // Idempotently seed user accounts from UMLSTUDIO_SEED_USERS (env only)
   await seedDefaultUsers(auth, userRepo)
 
   const sharedPort =

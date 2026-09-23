@@ -3,13 +3,21 @@ import { loadConfig } from "../config.js"
 import { createRedisClient, getJwtSecret } from "../redis.js"
 import { logger } from "../logger.js"
 import { createAuthService, createRedisUserRepository } from "../services/auth-service.js"
-import { seedDefaultUsers } from "../auth/seed.js"
+import { revokeLegacySeedUsers, seedDefaultUsers } from "../auth/seed.js"
 
 async function main() {
   const config = loadConfig()
   const redis = createRedisClient(config.REDIS_URL)
   await redis.connect()
   logger.info({ event: "seed.connected" }, "connected to Redis")
+
+  if (process.argv.includes("--revoke-legacy")) {
+    const { revoked, missing } = await revokeLegacySeedUsers(redis)
+    logger.info(
+      { event: "seed.revoke_summary", revoked, missing },
+      `legacy seed revocation completed: ${revoked} revoked, ${missing} already absent`
+    )
+  }
 
   const repo = createRedisUserRepository(redis)
   const auth = createAuthService({

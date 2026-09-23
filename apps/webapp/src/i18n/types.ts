@@ -256,8 +256,6 @@ export interface TranslationDictionary {
     authenticating: string
     noAccount: string
     createAccountLink: string
-    quickDemoTitle: string
-    quickDemoSubtitle: string
     invalidCredentials: string
     registerTitle: string
     registerTitleHighlight: string
