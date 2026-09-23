@@ -51,10 +51,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends tini curl && rm
 
 COPY --from=deploy --chown=node:node /deploy/codegen ./
 
-EXPOSE 8002
+EXPOSE 8002 10000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://127.0.0.1:8002/health || exit 1
+  CMD curl -f http://127.0.0.1:${PORT:-8002}/health || exit 1
 
 USER node
 

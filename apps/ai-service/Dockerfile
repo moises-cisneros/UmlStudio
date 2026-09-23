@@ -22,9 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy ai-service source code
 COPY apps/ai-service ./
 
-EXPOSE 8001
+EXPOSE 8001 10000 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8001}/health || exit 1
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8001}"]
