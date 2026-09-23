@@ -36,7 +36,13 @@ class DiffRelationshipAdd(BaseModel):
     sourceHandle: Optional[str] = None
     targetHandle: Optional[str] = None
     name: Optional[str] = None
-    associationClass: Optional[str] = None
+    associationClass: Optional[str] = Field(default=None, alias="association_class")
+    intermediateClass: Optional[str] = Field(default=None, alias="intermediate_class")
+
+    model_config = {
+        "populate_by_name": True,
+        "extra": "ignore",
+    }
 
 
 class DiffElementModifyChanges(BaseModel):

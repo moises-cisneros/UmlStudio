@@ -5,10 +5,22 @@ Unified Multi-Adapter Architecture for OMG UML 2.5.
 
 import asyncio
 import json
+import logging
 import os
+import sys
+import time
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
+# Configure stdout logging so server logs are clearly visible in the console
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+logger = logging.getLogger("umlstudio.ai_service")
+logger.setLevel(logging.INFO)
 
 from .core.config import settings
 from .vision.providers import get_vision_provider
@@ -246,16 +258,7 @@ async def audit_productivity(
         or b.get("averageLockDurationMs", 0) > 45000
     ]
 
-    if not high_contention_nodes:
-        diagnosis = (
-            "Flujo de diseño óptimo. No se detectan disputas de contención "
-            "crítica ni cuellos de botella."
-        )
-        recommendations.append(
-            "Mantener el nivel actual de desacoplamiento modular entre clases."
-        )
-        status = request.fluency_status or "green"
-    else:
+    if high_contention_nodes:
         status = (
             "red"
             if any(b.get("contentionCount", 0) >= 3 for b in high_contention_nodes)
@@ -291,6 +294,90 @@ async def audit_productivity(
                 description="Encapsula familias de algoritmos intercambiables para que colaboradores trabajen en estrategias aisladas sin bloquear la clase de contexto.",
             )
         )
+    else:
+        # Check for structural model bottlenecks
+        model = request.model or {}
+        nodes = model.get("nodes", []) if isinstance(model, dict) else []
+        edges = model.get("edges", []) if isinstance(model, dict) else []
+
+        structural_bottlenecks = []
+        if isinstance(nodes, list):
+            for n in nodes:
+                if not isinstance(n, dict):
+                    continue
+                name = n.get("name") or n.get("title") or n.get("id") or "Clase"
+                methods = n.get("methods") or []
+                attributes = n.get("attributes") or []
+                node_id = n.get("id")
+
+                connected_edges = 0
+                if isinstance(edges, list) and node_id:
+                    connected_edges = sum(
+                        1
+                        for e in edges
+                        if isinstance(e, dict)
+                        and (e.get("source") == node_id or e.get("target") == node_id)
+                    )
+
+                if len(methods) >= 6 or len(attributes) >= 6 or connected_edges >= 5:
+                    structural_bottlenecks.append(
+                        {
+                            "name": name,
+                            "methods_count": len(methods),
+                            "attributes_count": len(attributes),
+                            "edges_count": connected_edges,
+                        }
+                    )
+
+        if structural_bottlenecks:
+            is_critical = any(
+                b["methods_count"] >= 9 or b["attributes_count"] >= 9
+                for b in structural_bottlenecks
+            )
+            status = "red" if is_critical else "yellow"
+            names = ", ".join(f"'{b['name']}'" for b in structural_bottlenecks)
+            diagnosis = (
+                f"Se detectaron cuellos de botella de diseño arquitectónico en {len(structural_bottlenecks)} clase(s): {names}. "
+                "La concentración excesiva de responsabilidades o acoplamiento genera fricción y riesgo de regresiones."
+            )
+            for b in structural_bottlenecks:
+                recommendations.append(
+                    f"Desacoplar '{b['name']}': segmentar sus {b['methods_count']} métodos y {b['attributes_count']} atributos en clases colaboradoras especializadas."
+                )
+
+            pattern_suggestions.append(
+                PatternSuggestion(
+                    pattern_name="Facade",
+                    gof_category="Structural",
+                    confidence=0.92,
+                    description="Oculta la complejidad de subsistemas y delega llamadas a clases más pequeñas para eliminar clases monolíticas (God Classes).",
+                )
+            )
+            pattern_suggestions.append(
+                PatternSuggestion(
+                    pattern_name="Strategy",
+                    gof_category="Behavioral",
+                    confidence=0.88,
+                    description="Aísla variaciones de comportamiento en algoritmos encapsulados para evitar clases masivas con condicionales múltiples.",
+                )
+            )
+        else:
+            status = request.fluency_status or "green"
+            diagnosis = (
+                "Flujo de diseño continuo y arquitectura equilibrada. No se detectan disputas de contención "
+                "ni sobrecargas de responsabilidades en el modelo."
+            )
+            recommendations.append(
+                "Mantener la modularidad, alta cohesión y bajo acoplamiento observados en las clases del diagrama."
+            )
+            pattern_suggestions.append(
+                PatternSuggestion(
+                    pattern_name="Factory Method",
+                    gof_category="Creational",
+                    confidence=0.85,
+                    description="Delega la instanciación de clases derivadas a métodos especializados, preservando el bajo acoplamiento del modelo.",
+                )
+            )
 
     return ProductivityAuditResponse(
         diagnosis=diagnosis,
@@ -300,7 +387,7 @@ async def audit_productivity(
     )
 
 
-VISION_PROVIDER_TIMEOUT_S = 10.0
+VISION_PROVIDER_TIMEOUT_S = 90.0
 
 
 def _vision_error(
@@ -309,6 +396,7 @@ def _vision_error(
     detail: Dict[str, Any] = {"message": message, "hint": hint}
     if extra:
         detail.update(extra)
+    logger.warning("[Vision Error] HTTP %s: %s (hint: %s)", status_code, message, hint)
     raise HTTPException(status_code=status_code, detail=detail)
 
 
@@ -319,6 +407,7 @@ async def extract_vision(image: UploadFile = File(...)) -> Dict[str, Any]:
     Diagram photo (JPG/PNG/WebP) -> provider extraction -> validated UMLModel
     plus per-element confidence for preview-with-confirmation.
     """
+    t0 = time.time()
     filename = image.filename or "upload"
     mime = (image.content_type or "").split(";")[0].strip().lower()
     ext = f".{filename.rsplit('.', 1)[-1].lower()}" if "." in filename else ""
@@ -348,7 +437,12 @@ async def extract_vision(image: UploadFile = File(...)) -> Dict[str, Any]:
             "Use JPG, PNG, or WebP with a minimum resolution of 640x480.",
         )
     width, height = dimensions
-    if width < VISION_MIN_WIDTH or height < VISION_MIN_HEIGHT:
+    logger.info(
+        "[Vision] Received diagram photo '%s': mime=%s, %d bytes, %dx%d px",
+        filename, mime, len(payload), width, height
+    )
+
+    if (width < VISION_MIN_WIDTH and height < VISION_MIN_HEIGHT) or (max(width, height) < 480 or min(width, height) < 200):
         _vision_error(
             422,
             f"Image is {width}x{height}; the minimum is 640x480.",
@@ -356,12 +450,13 @@ async def extract_vision(image: UploadFile = File(...)) -> Dict[str, Any]:
             {"min_width": VISION_MIN_WIDTH, "min_height": VISION_MIN_HEIGHT},
         )
 
-    provider_name = os.getenv("AI_PROVIDER", "stub")
+    provider_name = os.getenv("AI_PROVIDER", settings.DEFAULT_PROVIDER or "auto")
     try:
         provider = get_vision_provider(provider_name)
     except ValueError as val_err:
         _vision_error(422, str(val_err), "Set AI_PROVIDER=stub in this slice.")
 
+    logger.info("[Vision] Calling vision provider chain (primary: %s)...", provider_name)
     try:
         result = await asyncio.wait_for(
             provider.extract(payload, mime or "image/png"),
@@ -370,8 +465,14 @@ async def extract_vision(image: UploadFile = File(...)) -> Dict[str, Any]:
     except asyncio.TimeoutError:
         _vision_error(
             504,
-            "Vision provider timed out after 10s.",
+            f"Vision provider timed out after {int(VISION_PROVIDER_TIMEOUT_S)}s.",
             "Retry in a few seconds; the request is safe to repeat.",
+        )
+    except Exception as exc:
+        _vision_error(
+            502,
+            f"Fallo en extracción de visión: {str(exc)}",
+            "Verifica la conexión a los proveedores de IA o la legibilidad de la imagen.",
         )
 
     errors, offending_ids = validate_vision_model(result.model)
@@ -383,4 +484,87 @@ async def extract_vision(image: UploadFile = File(...)) -> Dict[str, Any]:
             {"errors": errors, "offending_ids": offending_ids},
         )
 
+    elapsed = time.time() - t0
+    num_nodes = len(result.model.get("nodes", []))
+    num_edges = len(result.model.get("edges", []))
+    logger.info(
+        "[Vision] Extraction successful in %.2fs: %d classes, %d relationships",
+        elapsed, num_nodes, num_edges
+    )
+
     return {"model": result.model, "confidence": result.confidence}
+
+
+@app.post("/api/audit/productivity", response_model=ProductivityAuditResponse)
+async def audit_productivity(
+    request: ProductivityAuditRequest,
+) -> ProductivityAuditResponse:
+    """Audit productivity and bottlenecks for UML modeling dynamics (CU-10).
+
+    Analyzes bottlenecks if present and provides decoupling recommendations.
+    If no bottlenecks are detected, no recommendations or GoF patterns are suggested.
+
+    Args:
+        request: Productivity audit request containing bottlenecks and metrics.
+
+    Returns:
+        ProductivityAuditResponse: Heuristic diagnosis and patterns if applicable.
+    """
+    if not request.bottlenecks:
+        return ProductivityAuditResponse(
+            diagnosis="No se detectaron cuellos de botella en el sistema.",
+            recommendations=[],
+            pattern_suggestions=[],
+            fluency_status=request.fluency_status or "green",
+        )
+
+    recommendations: List[str] = []
+    for b in request.bottlenecks:
+        node_name = b.get("nodeName") or b.get("nodeId", "Nodo")
+        contention = b.get("contentionCount", 0)
+        avg_lock = round(b.get("averageLockDurationMs", 0) / 1000)
+
+        if contention > 0:
+            recommendations.append(
+                f"Resolver contención en '{node_name}' ({contention} colisiones): "
+                "desacoplar métodos concurrentes mediante eventos o mediadores."
+            )
+        else:
+            recommendations.append(
+                f"Optimizar retención en '{node_name}' (bloqueo medio de {avg_lock}s): "
+                "particionar la clase para permitir edición concurrente."
+            )
+
+    pattern_suggestions: List[PatternSuggestion] = [
+        PatternSuggestion(
+            pattern_name="Mediator",
+            gof_category="Behavioral",
+            confidence=0.92,
+            description=(
+                "Centraliza las interacciones complejas para desacoplar clases con "
+                "alta contención de bloqueos."
+            ),
+        ),
+        PatternSuggestion(
+            pattern_name="Observer",
+            gof_category="Behavioral",
+            confidence=0.88,
+            description=(
+                "Permite suscripción reactiva a cambios sin bloquear la entidad "
+                "principal en ediciones simultáneas."
+            ),
+        ),
+    ]
+
+    diagnosis = (
+        f"Se detectaron {len(request.bottlenecks)} cuellos de botella activos en el "
+        "diagrama. Se recomienda refactorizar los nodos congestionados."
+    )
+
+    return ProductivityAuditResponse(
+        diagnosis=diagnosis,
+        recommendations=recommendations,
+        pattern_suggestions=pattern_suggestions,
+        fluency_status=request.fluency_status or "yellow",
+    )
+

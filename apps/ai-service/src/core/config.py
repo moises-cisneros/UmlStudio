@@ -54,7 +54,7 @@ class Settings:
     ).strip()
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
 
     # LM Studio settings (:1234)
     LMSTUDIO_URL: str = os.getenv("LMSTUDIO_URL", "http://localhost:1234/v1").strip()
