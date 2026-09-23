@@ -10,21 +10,29 @@ import { REFRESH_TTL_SECONDS, type Redis } from "../redis.js"
 import { AuthError, DuplicateEmailError, type AuthService } from "../services/auth-service.js"
 import { registerSchema } from "../auth/password-policy.js"
 
-/** Refresh-session cookie: HttpOnly, Strict SameSite, rotated each refresh. */
+/**
+ * Refresh-session cookie: HttpOnly, rotated each refresh.
+ * SameSite is environment-driven: production serves the SPA from a different
+ * site (Cloudflare Pages) than the API (Render), so the cookie must be
+ * `None; Secure; Partitioned` (CHIPS) or the browser drops it and every
+ * refresh 401s. Local dev stays same-site (`Strict`) so plain-HTTP localhost
+ * keeps working without a TLS proxy.
+ */
 export const REFRESH_COOKIE = "umlstudio_refresh"
 const REFRESH_COOKIE_PATH = "/api/auth"
 
-interface Deps {
-  redis: Redis
-  auth: AuthService
-  refreshTtlSec?: number
+/** True when the API and the SPA live on different sites (cloud deploy). */
+function isCrossSiteDeploy(): boolean {
+  return process.env.NODE_ENV === "production"
 }
 
 function setRefreshCookie(c: Context<AppEnv>, refreshJti: string, maxAge: number): void {
+  const crossSite = isCrossSiteDeploy()
   setCookie(c, REFRESH_COOKIE, refreshJti, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
+    sameSite: crossSite ? "None" : "Strict",
+    ...(crossSite ? { partitioned: true } : {}),
     path: REFRESH_COOKIE_PATH,
     maxAge,
   })
@@ -32,6 +40,12 @@ function setRefreshCookie(c: Context<AppEnv>, refreshJti: string, maxAge: number
 
 function clearRefreshCookie(c: Context<AppEnv>): void {
   deleteCookie(c, REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH })
+}
+
+interface Deps {
+  redis: Redis
+  auth: AuthService
+  refreshTtlSec?: number
 }
 
 const LoginBody = z.object({

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { Hono } from "hono"
 import type { AppEnv } from "../../src/http/env.js"
-import { mountDiagramRoutes, saveHead } from "../../src/routes/diagrams.js"
+import { mountDiagramRoutes, readDiagram, saveHead } from "../../src/routes/diagrams.js"
 import { loadConfig } from "../../src/config.js"
 import { getRedis } from "../../src/__tests__/setup.js"
 import { k, type Redis } from "../../src/redis.js"
@@ -123,11 +123,9 @@ describe("INT-CU13: Case of Use CU-13 Diagram Management Integration (Rename, De
     expect(patchBody.title).toBe(newTitle)
     expect(patchBody.headRev).toBeGreaterThan(1)
 
-    // Verify Redis JSON head updated
-    const redisJson = (await redis.json.get(k.diagram(diagramId), {
-      path: "$",
-    })) as Diagram[]
-    expect(redisJson[0]?.title).toBe(newTitle)
+    // Verify Redis HEAD updated
+    const head = await readDiagram(redis, diagramId)
+    expect(head?.title).toBe(newTitle)
 
     // Verify Redis metadata hash updated
     const metaTitle = await redis.hGet(k.diagramMeta(diagramId), "title")

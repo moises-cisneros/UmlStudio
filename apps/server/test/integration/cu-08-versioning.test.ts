@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { Hono } from "hono"
 import type { AppEnv } from "../../src/http/env.js"
 import { mountVersionRoutes } from "../../src/routes/versions.js"
-import { mountDiagramRoutes, saveHead } from "../../src/routes/diagrams.js"
+import { mountDiagramRoutes, readDiagram, saveHead } from "../../src/routes/diagrams.js"
 import { DiagramBody } from "../../src/routes/_schemas.js"
 import { loadConfig } from "../../src/config.js"
 import { getRedis } from "../../src/__tests__/setup.js"
@@ -312,10 +312,9 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
     expect(previewBody.nodes.some((n) => n.id === "class-payment")).toBe(false)
 
     // Assert active HEAD was not mutated by reading preview
-    const headRaw = await redis.json.get(k.diagram(diagramId))
-    const currentHead = headRaw as unknown as Diagram
-    expect(currentHead.nodes).toHaveLength(3)
-    expect(currentHead.nodes.some((n) => n.id === "class-payment")).toBe(true)
+    const currentHead = await readDiagram(redis, diagramId)
+    expect(currentHead?.nodes).toHaveLength(3)
+    expect(currentHead?.nodes.some((n) => n.id === "class-payment")).toBe(true)
 
     // 6. Act & Assert: Atomic restore to v1.0 (RF-36)
     const restoreRes = await testApp.request(
@@ -341,9 +340,9 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
     expect(restoreData.headRev).toBeGreaterThan(0)
 
     // Verify HEAD is now atomically swapped to v1.0 (2 nodes, no payment)
-    const postRestoreHead = (await redis.json.get(k.diagram(diagramId))) as unknown as Diagram
-    expect(postRestoreHead.nodes).toHaveLength(2)
-    expect(postRestoreHead.nodes.some((n) => n.id === "class-payment")).toBe(false)
+    const postRestoreHead = await readDiagram(redis, diagramId)
+    expect(postRestoreHead?.nodes).toHaveLength(2)
+    expect(postRestoreHead?.nodes.some((n) => n.id === "class-payment")).toBe(false)
 
     // Verify WebSocket relay received VERSION_RESTORED broadcast
     const restoreEvent = publishedEvents.find((e) => e.control.type === "VERSION_RESTORED")
@@ -368,9 +367,9 @@ describe("INT-CU08: Case of Use CU-08 Versioning, Snapshots and Restoration Inte
     expect(undoRes.status).toBe(200)
 
     // Verify HEAD has reverted back to the 3-node state containing Payment class
-    const undoneHead = (await redis.json.get(k.diagram(diagramId))) as unknown as Diagram
-    expect(undoneHead.nodes).toHaveLength(3)
-    expect(undoneHead.nodes.some((n) => n.id === "class-payment")).toBe(true)
+    const undoneHead = await readDiagram(redis, diagramId)
+    expect(undoneHead?.nodes).toHaveLength(3)
+    expect(undoneHead?.nodes.some((n) => n.id === "class-payment")).toBe(true)
   })
 
   it("binds immutable snapshot authorship to verified authenticated user identity (CU-08 / CU-11)", async () => {

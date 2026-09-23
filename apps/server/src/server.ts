@@ -12,6 +12,14 @@ async function main() {
   }
   const config = loadConfig()
 
+  if (process.env.NODE_ENV === "production" && !config.CORS_ORIGIN) {
+    logger.warn(
+      { event: "config.cors_origin_missing" },
+      "CORS_ORIGIN is unset in production: browser clients will be blocked by CORS. " +
+        "Set it to the frontend origin (e.g. https://umlstudio.pages.dev)."
+    )
+  }
+
   const redis = createRedisClient(config.REDIS_URL)
   await redis.connect()
   logger.info({ event: "redis.connected" }, "redis connected")
