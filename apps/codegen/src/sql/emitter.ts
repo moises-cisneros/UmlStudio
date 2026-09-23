@@ -73,7 +73,10 @@ function emitSchemaSql(kernel: KernelModel, inheritance: SpringBootInheritanceSt
       return `  ${scalar.columnName} ${scalar.sqlType}${nullable}`
     })
     for (const relation of entity.relations) {
-      if (relation.kind === "many-to-one" && relation.joinColumn) {
+      if (
+        (relation.kind === "many-to-one" || relation.kind === "one-to-one") &&
+        relation.joinColumn
+      ) {
         cols.push(`  ${relation.joinColumn} BIGINT`)
       }
     }
@@ -100,7 +103,10 @@ function emitSchemaSql(kernel: KernelModel, inheritance: SpringBootInheritanceSt
             }
           }
           for (const relation of child.relations) {
-            if (relation.kind === "many-to-one" && relation.joinColumn) {
+            if (
+              (relation.kind === "many-to-one" || relation.kind === "one-to-one") &&
+              relation.joinColumn
+            ) {
               const def = `  ${relation.joinColumn} BIGINT`
               if (!seen.has(def)) {
                 seen.add(def)
@@ -150,7 +156,10 @@ function emitSchemaSql(kernel: KernelModel, inheritance: SpringBootInheritanceSt
       continue
     }
     for (const relation of entity.relations) {
-      if (relation.kind === "many-to-one" && relation.joinColumn) {
+      if (
+        (relation.kind === "many-to-one" || relation.kind === "one-to-one") &&
+        relation.joinColumn
+      ) {
         addFk(
           entity.tableName,
           `fk_${entity.tableName}_${relation.joinColumn}`,

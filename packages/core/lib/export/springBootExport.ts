@@ -410,7 +410,7 @@ export function pluralize(word: string): string {
   return `${word}s`
 }
 
-export type KernelRelationKind = "many-to-one" | "one-to-many" | "many-to-many"
+export type KernelRelationKind = "many-to-one" | "one-to-many" | "many-to-many" | "one-to-one"
 
 export interface KernelRelation {
   kind: KernelRelationKind
@@ -507,8 +507,6 @@ interface NodeDataShape {
 
 interface EdgeDataShape {
   label?: unknown
-  sourceRole?: unknown
-  targetRole?: unknown
   sourceMultiplicity?: unknown
   targetMultiplicity?: unknown
   associationClassNodeId?: unknown
@@ -532,12 +530,39 @@ function readMemberList(value: unknown): { id?: string; name: string }[] {
     .map((entry) => ({ id: entry.id, name: entry.name }))
 }
 
-function cleanRole(value: unknown): string {
-  const raw = readString(value)?.trim() ?? ""
-  if (!raw || raw.toLowerCase() === "source" || raw.toLowerCase() === "target") {
-    return ""
+/**
+ * Parses a UML multiplicity ("1", "0..1", "1..*", "0..*", "*") into its
+ * lower bound and upper bound (`null` when unbounded). Returns `null` for
+ * missing or unrecognized values so callers fall back to legacy defaults.
+ */
+interface ParsedMultiplicity {
+  lower: number
+  upper: number | null
+}
+
+function parseMultiplicity(raw: unknown): ParsedMultiplicity | null {
+  const text = readString(raw)?.replace(/\s+/g, "") ?? ""
+  if (!text) return null
+  if (text === "*") return { lower: 0, upper: null }
+  const range = text.match(/^(\d+)\.\.(\d+|\*)$/)
+  if (range) {
+    const lower = Number(range[1])
+    const upper = range[2] === "*" ? null : Number(range[2])
+    if (upper !== null && lower > upper) return null
+    return { lower, upper }
   }
-  return raw.replace(/^\+/, "").trim()
+  const exact = text.match(/^(\d+)$/)
+  if (exact) {
+    const value = Number(exact[1])
+    return { lower: value, upper: value }
+  }
+  return null
+}
+
+/** True when the end can hold several instances ("*", "0..*", "1..*", "0..5", ...). */
+function isManyEnd(parsed: ParsedMultiplicity | null): boolean {
+  if (!parsed) return false
+  return parsed.upper === null || parsed.upper > 1
 }
 
 /**
@@ -956,15 +981,180 @@ export function buildKernelModel(
       continue
     }
 
-    const targetRole = cleanRole(data.targetRole)
-    const sourceRole = cleanRole(data.sourceRole)
-    const forwardBase = targetRole || target.className
-    const backwardBase = sourceRole || source.className
+    // Association mapping is driven ONLY by endpoints (from/to) and
+    // multiplicities. Roles never name fields, join columns or mappedBy:
+    // they are reported as warnings and ignored.
+    const rawSourceRole = readString((data as { sourceRole?: unknown }).sourceRole)?.trim() ?? ""
+    const rawTargetRole = readString((data as { targetRole?: unknown }).targetRole)?.trim() ?? ""
+    if (rawSourceRole || rawTargetRole) {
+      warnings.push(
+        `Roles on association "${source.className} -> ${target.className}" are ignored for code mapping (endpoints and multiplicities drive JPA)`
+      )
+    }
+    const multS = parseMultiplicity(data.sourceMultiplicity)
+    const multT = parseMultiplicity(data.targetMultiplicity)
+    const hasRawMultiplicity = (value: unknown): boolean =>
+      typeof value === "string" && value.trim().length > 0
+    if (
+      (hasRawMultiplicity(data.sourceMultiplicity) && !multS) ||
+      (hasRawMultiplicity(data.targetMultiplicity) && !multT)
+    ) {
+      warnings.push(
+        `Unrecognized multiplicity on association "${source.className} -> ${target.className}"; legacy N:1 orientation used`
+      )
+    }
+    // Unknown ends keep the legacy N:1 orientation (FK on the source side).
+    const manyS = multS ? isManyEnd(multS) : true
+    const manyT = multT ? isManyEnd(multT) : false
+    const optionalS = multS ? multS.lower === 0 : true
+    const optionalT = multT ? multT.lower === 0 : true
+
+    const forwardBase = target.className
+    const backwardBase = source.className
 
     if (
       edge.type === DiagramEdgeTypeRecord.ClassUnidirectional ||
       edge.type === DiagramEdgeTypeRecord.ClassBidirectional
     ) {
+      const bidirectional = edge.type === DiagramEdgeTypeRecord.ClassBidirectional
+      if (manyS && manyT) {
+        // N:M: join table owned by the source (+ inverse when bidirectional).
+        const joinTableName = `${source.tableName}_${target.tableName}`
+        const sourceColumn = `${toSnakeCase(source.className)}_id`
+        const targetColumn = `${toSnakeCase(target.className)}_id`
+        joinTables.push({
+          tableName: joinTableName,
+          sourceEntity: source.className,
+          targetEntity: target.className,
+          sourceTable: source.tableName,
+          targetTable: target.tableName,
+          sourceColumn,
+          targetColumn,
+        })
+        const ownerField = claimRelationName(
+          source,
+          takenFor(source),
+          pluralize(toCamelCase(forwardBase))
+        )
+        source.relations.push({
+          kind: "many-to-many",
+          fieldName: ownerField,
+          targetEntity: target.className,
+          targetTable: target.tableName,
+          joinTable: joinTableName,
+          joinColumnName: sourceColumn,
+          inverseJoinColumnName: targetColumn,
+          cascadeAll: false,
+          orphanRemoval: false,
+          nullable: true,
+          onDelete: "NO ACTION",
+        })
+        if (bidirectional) {
+          const inverseField = claimRelationName(
+            target,
+            takenFor(target),
+            pluralize(toCamelCase(backwardBase))
+          )
+          target.relations.push({
+            kind: "many-to-many",
+            fieldName: inverseField,
+            targetEntity: source.className,
+            targetTable: source.tableName,
+            mappedBy: ownerField,
+            cascadeAll: false,
+            orphanRemoval: false,
+            nullable: true,
+            onDelete: "NO ACTION",
+          })
+        }
+        continue
+      }
+      if (!manyS && !manyT) {
+        // 1:1: source owns the FK (+ inverse when bidirectional).
+        const joinColumn = toSnakeCase(`${toCamelCase(forwardBase)}_id`)
+        const fieldName = claimRelationName(source, takenFor(source), toCamelCase(forwardBase))
+        source.relations.push({
+          kind: "one-to-one",
+          fieldName,
+          targetEntity: target.className,
+          targetTable: target.tableName,
+          joinColumn,
+          cascadeAll: false,
+          orphanRemoval: false,
+          nullable: optionalT,
+          onDelete: "SET NULL",
+        })
+        if (bidirectional) {
+          const backField = claimRelationName(target, takenFor(target), toCamelCase(backwardBase))
+          target.relations.push({
+            kind: "one-to-one",
+            fieldName: backField,
+            targetEntity: source.className,
+            targetTable: source.tableName,
+            mappedBy: fieldName,
+            cascadeAll: false,
+            orphanRemoval: false,
+            nullable: true,
+            onDelete: "NO ACTION",
+          })
+        }
+        continue
+      }
+      if (!manyS && manyT) {
+        // 1:N mirrored: the FK lives on the target side.
+        const joinColumn = toSnakeCase(`${toCamelCase(backwardBase)}_id`)
+        const fieldName = claimRelationName(target, takenFor(target), toCamelCase(backwardBase))
+        target.relations.push({
+          kind: "many-to-one",
+          fieldName,
+          targetEntity: source.className,
+          targetTable: source.tableName,
+          joinColumn,
+          cascadeAll: false,
+          orphanRemoval: false,
+          nullable: optionalS,
+          onDelete: "SET NULL",
+        })
+        if (bidirectional) {
+          const backField = claimRelationName(
+            source,
+            takenFor(source),
+            pluralize(toCamelCase(forwardBase))
+          )
+          source.relations.push({
+            kind: "one-to-many",
+            fieldName: backField,
+            targetEntity: target.className,
+            targetTable: target.tableName,
+            mappedBy: fieldName,
+            cascadeAll: false,
+            orphanRemoval: false,
+            nullable: true,
+            onDelete: "NO ACTION",
+          })
+        } else {
+          // Unidirectional 1:N keeps S -> T navigation through the same FK
+          // column on the target table.
+          const navField = claimRelationName(
+            source,
+            takenFor(source),
+            pluralize(toCamelCase(forwardBase))
+          )
+          source.relations.push({
+            kind: "one-to-many",
+            fieldName: navField,
+            targetEntity: target.className,
+            targetTable: target.tableName,
+            joinColumn,
+            cascadeAll: false,
+            orphanRemoval: false,
+            nullable: true,
+            onDelete: "NO ACTION",
+          })
+        }
+        continue
+      }
+      // Legacy N:1 orientation (manyS): the FK lives on the source side.
       const joinColumn = toSnakeCase(`${toCamelCase(forwardBase)}_id`)
       const fieldName = claimRelationName(source, takenFor(source), toCamelCase(forwardBase))
       source.relations.push({
@@ -975,10 +1165,10 @@ export function buildKernelModel(
         joinColumn,
         cascadeAll: false,
         orphanRemoval: false,
-        nullable: true,
+        nullable: optionalT,
         onDelete: "SET NULL",
       })
-      if (edge.type === DiagramEdgeTypeRecord.ClassBidirectional) {
+      if (bidirectional) {
         const backField = claimRelationName(
           target,
           takenFor(target),
@@ -1000,6 +1190,7 @@ export function buildKernelModel(
     }
 
     // Aggregation / Composition: whole (source) holds the collection.
+    // Field names derive from endpoint class names; roles are ignored.
     const composition = edge.type === DiagramEdgeTypeRecord.ClassComposition
     const partField = claimRelationName(target, takenFor(target), toCamelCase(backwardBase))
     const partJoinColumn = toSnakeCase(`${toCamelCase(backwardBase)}_id`)
@@ -1017,7 +1208,7 @@ export function buildKernelModel(
     const wholeField = claimRelationName(
       source,
       takenFor(source),
-      pluralize(toCamelCase(targetRole || target.className))
+      pluralize(toCamelCase(forwardBase))
     )
     source.relations.push({
       kind: "one-to-many",
@@ -1115,7 +1306,7 @@ function collectEntityImports(entity: KernelEntity): string[] {
       imports.add("java.time.LocalDateTime")
     }
   }
-  if (entity.relations.some((r) => r.kind !== "many-to-one")) {
+  if (entity.relations.some((r) => r.kind === "one-to-many" || r.kind === "many-to-many")) {
     imports.add("java.util.ArrayList")
     imports.add("java.util.List")
   }
@@ -1182,9 +1373,28 @@ export function emitEntityFile(
       )
       lines.push(`  private ${relation.targetEntity} ${relation.fieldName};`)
       lines.push("")
+    } else if (relation.kind === "one-to-one" && !relation.mappedBy) {
+      lines.push("  @OneToOne")
+      lines.push(
+        `  @JoinColumn(name = "${relation.joinColumn}"${relation.nullable ? "" : ", nullable = false"})`
+      )
+      lines.push(`  private ${relation.targetEntity} ${relation.fieldName};`)
+      lines.push("")
+    } else if (relation.kind === "one-to-one") {
+      lines.push(`  @OneToOne(mappedBy = "${relation.mappedBy}")`)
+      lines.push(`  private ${relation.targetEntity} ${relation.fieldName};`)
+      lines.push("")
     } else if (relation.kind === "one-to-many") {
-      const cascade = relation.cascadeAll ? ", cascade = CascadeType.ALL, orphanRemoval = true" : ""
-      lines.push(`  @OneToMany(mappedBy = "${relation.mappedBy}"${cascade})`)
+      if (relation.mappedBy) {
+        const cascade = relation.cascadeAll
+          ? ", cascade = CascadeType.ALL, orphanRemoval = true"
+          : ""
+        lines.push(`  @OneToMany(mappedBy = "${relation.mappedBy}"${cascade})`)
+      } else {
+        // Unidirectional 1:N navigation: the FK lives on the target table.
+        lines.push("  @OneToMany")
+        lines.push(`  @JoinColumn(name = "${relation.joinColumn}")`)
+      }
       lines.push(
         `  private List<${relation.targetEntity}> ${relation.fieldName} = new ArrayList<>();`
       )
@@ -1223,7 +1433,7 @@ export function emitEntityFile(
   }
   for (const relation of entity.relations) {
     const cap = relation.fieldName.charAt(0).toUpperCase() + relation.fieldName.slice(1)
-    if (relation.kind === "many-to-one") {
+    if (relation.kind === "many-to-one" || relation.kind === "one-to-one") {
       lines.push(`  public ${relation.targetEntity} get${cap}() {`)
       lines.push(`    return this.${relation.fieldName};`)
       lines.push("  }")
@@ -1339,7 +1549,7 @@ export function emitRequestDtoFile(entity: KernelEntity): SpringBootGeneratedFil
     lines.push("")
   }
   for (const relation of entity.relations) {
-    if (relation.kind === "many-to-one") {
+    if ((relation.kind === "many-to-one" || relation.kind === "one-to-one") && !relation.mappedBy) {
       lines.push(`  @Schema(description = "ID de ${relation.fieldName}", example = "1")`)
       lines.push(`  private Long ${relation.fieldName}Id;`)
       lines.push("")
@@ -1362,7 +1572,7 @@ export function emitRequestDtoFile(entity: KernelEntity): SpringBootGeneratedFil
     lines.push("")
   }
   for (const relation of entity.relations) {
-    if (relation.kind === "many-to-one") {
+    if ((relation.kind === "many-to-one" || relation.kind === "one-to-one") && !relation.mappedBy) {
       const cap = relation.fieldName.charAt(0).toUpperCase() + relation.fieldName.slice(1)
       lines.push(`  public Long get${cap}Id() {`)
       lines.push(`    return this.${relation.fieldName}Id;`)
@@ -1404,7 +1614,7 @@ export function emitResponseDtoFile(entity: KernelEntity): SpringBootGeneratedFi
     lines.push("")
   }
   for (const relation of entity.relations) {
-    if (relation.kind === "many-to-one") {
+    if ((relation.kind === "many-to-one" || relation.kind === "one-to-one") && !relation.mappedBy) {
       lines.push(`  @Schema(description = "ID de ${relation.fieldName}", example = "1")`)
       lines.push(`  private Long ${relation.fieldName}Id;`)
       lines.push("")
@@ -1424,7 +1634,7 @@ export function emitResponseDtoFile(entity: KernelEntity): SpringBootGeneratedFi
     lines.push("")
   }
   for (const relation of entity.relations) {
-    if (relation.kind === "many-to-one") {
+    if ((relation.kind === "many-to-one" || relation.kind === "one-to-one") && !relation.mappedBy) {
       const cap = relation.fieldName.charAt(0).toUpperCase() + relation.fieldName.slice(1)
       lines.push(`  public Long get${cap}Id() {`)
       lines.push(`    return this.${relation.fieldName}Id;`)
@@ -1490,8 +1700,12 @@ export function emitServiceImplFile(entity: KernelEntity): SpringBootGeneratedFi
     `${entity.packagePath}.repository.${entity.className}Repository`,
     `${entity.packagePath}.service.${entity.className}Service`,
   ])
-  const manyToOne = entity.relations.filter((r) => r.kind === "many-to-one")
-  for (const relation of manyToOne) {
+  // FK holders (many-to-one owners and one-to-one owners) are resolved by id.
+  // Inverse sides (mappedBy) hold no FK and are excluded.
+  const fkRelations = entity.relations.filter(
+    (r) => (r.kind === "many-to-one" || r.kind === "one-to-one") && !r.mappedBy
+  )
+  for (const relation of fkRelations) {
     imports.add(`${entity.packagePath}.repository.${relation.targetEntity}Repository`)
   }
   for (const dep of entity.dependencyServices) {
@@ -1505,7 +1719,7 @@ export function emitServiceImplFile(entity: KernelEntity): SpringBootGeneratedFi
   lines.push(`public class ${entity.className}ServiceImpl implements ${entity.className}Service {`)
   lines.push("")
   lines.push(`  private final ${entity.className}Repository repository;`)
-  for (const relation of manyToOne) {
+  for (const relation of fkRelations) {
     lines.push(
       `  private final ${relation.targetEntity}Repository ${toCamelCase(relation.targetEntity)}Repository;`
     )
@@ -1516,12 +1730,14 @@ export function emitServiceImplFile(entity: KernelEntity): SpringBootGeneratedFi
   lines.push("")
   const ctorParams = [
     `${entity.className}Repository repository`,
-    ...manyToOne.map((r) => `${r.targetEntity}Repository ${toCamelCase(r.targetEntity)}Repository`),
+    ...fkRelations.map(
+      (r) => `${r.targetEntity}Repository ${toCamelCase(r.targetEntity)}Repository`
+    ),
     ...entity.dependencyServices.map((dep) => `${dep}Service ${toCamelCase(dep)}Service`),
   ]
   lines.push(`  public ${entity.className}ServiceImpl(${ctorParams.join(", ")}) {`)
   lines.push("    this.repository = repository;")
-  for (const relation of manyToOne) {
+  for (const relation of fkRelations) {
     const varName = `${toCamelCase(relation.targetEntity)}Repository`
     lines.push(`    this.${varName} = ${varName};`)
   }
@@ -1582,7 +1798,7 @@ export function emitServiceImplFile(entity: KernelEntity): SpringBootGeneratedFi
     const getter = `get${scalar.fieldName.charAt(0).toUpperCase()}${scalar.fieldName.slice(1)}`
     lines.push(`    entity.${setter}(request.${getter}());`)
   }
-  for (const relation of manyToOne) {
+  for (const relation of fkRelations) {
     const setter = `set${relation.fieldName.charAt(0).toUpperCase()}${relation.fieldName.slice(1)}`
     const getter = `get${relation.fieldName.charAt(0).toUpperCase()}${relation.fieldName.slice(1)}`
     const repoVar = `${toCamelCase(relation.targetEntity)}Repository`
@@ -1603,7 +1819,7 @@ export function emitServiceImplFile(entity: KernelEntity): SpringBootGeneratedFi
     const getter = `get${scalar.fieldName.charAt(0).toUpperCase()}${scalar.fieldName.slice(1)}`
     lines.push(`    response.${setter}(entity.${getter}());`)
   }
-  for (const relation of manyToOne) {
+  for (const relation of fkRelations) {
     const setter = `set${relation.fieldName.charAt(0).toUpperCase()}${relation.fieldName.slice(1)}`
     const getter = `get${relation.fieldName.charAt(0).toUpperCase()}${relation.fieldName.slice(1)}`
     lines.push(
