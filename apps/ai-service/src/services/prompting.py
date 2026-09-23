@@ -199,12 +199,15 @@ PROTOCOLO DE RAZONAMIENTO Y MODIFICACIÓN ESTRUCTURAL:
 4. ASOCIACIÓN DE CLASE / CLASE INTERMEDIA (OMG UML 2.5):
    - Si se solicita una "clase intermedia" o "asociación de clase" entre dos clases (ej. A y B):
      1. En "add.elements": Crea la clase intermedia con stereotype: "<<association>>" (ej. "AB_Assoc").
-     2. En "add.relationships": Crea una relación "ClassBidirectional" entre A y B con associationClass: "AB_Assoc".
+     2. En "add.relationships": Crea una relación "ClassBidirectional" entre A y B con intermediateClass: "AB_Assoc".
+   - REGLA CRÍTICA DE DIFERENCIACIÓN (ASOCIACIÓN NORMAL VS CLASE INTERMEDIA):
+     * Si el usuario pide simplemente "asociación", "relación de asociación", "asociar", o "conectar con asociación": ES UNA ASOCIACIÓN NORMAL (`ClassBidirectional`). ¡NUNCA uses `intermediateClass` ni crees clases intermedias para una asociación normal!
+     * ÚNICAMENTE usa `intermediateClass` si el usuario dice EXPLÍCITAMENTE "clase intermedia", "asociación de clase", "association class" o "asociación con clase intermedia".
 
 5. RELACIONES ENTRE CLASES EXISTENTES:
    - Si el usuario pide conectar o relacionar clases que ya existen en el diagrama (ej. "Agrega una relación entre Usuario y Venta" o "Agrega una relación de clase asociación entre Usuario y Venta"):
      * La relación se declara en "add.relationships".
-     * Si es asociación de clase, la clase intermedia se declara en "add.elements".
+     * Si es asociación de clase / clase intermedia, la clase intermedia se declara en "add.elements".
      * "modify.elements" DEBE SER ESTRICTAMENTE UNA LISTA VACÍA []. ¡Queda TERMINANTEMENTE PROHIBIDO incluir las clases existentes en "modify.elements" si no se pidió explícitamente alterar sus atributos o métodos!
 
 6. PROHIBIDO INVENTAR CONEXIONES:
@@ -239,7 +242,7 @@ Salida:
 }}
 
 EJEMPLO 2 (Clase Intermedia / Asociación de Clase entre clases existentes):
-Usuario: "Agrega una relacion de clase asociacion entre la clase usuario y la clase venta" (cuando Usuario y Venta ya existen en el diagrama)
+Usuario: "Agrega una clase intermedia entre la clase usuario y la clase venta" (cuando Usuario y Venta ya existen en el diagrama)
 Salida:
 {{
   "add": {{
@@ -247,7 +250,21 @@ Salida:
       {{ "name": "Usuario_Venta_Assoc", "type": "Class", "stereotype": "<<association>>", "attributes": [], "methods": [] }}
     ],
     "relationships": [
-      {{ "type": "ClassBidirectional", "source": "Usuario", "target": "Venta", "associationClass": "Usuario_Venta_Assoc" }}
+      {{ "type": "ClassBidirectional", "source": "Usuario", "target": "Venta", "intermediateClass": "Usuario_Venta_Assoc" }}
+    ]
+  }},
+  "modify": {{ "elements": [] }},
+  "remove": {{ "elementIds": [], "relationshipIds": [] }}
+}}
+
+EJEMPLO 2B (Relación de Asociación NORMAL - SIN clase intermedia):
+Usuario: "Agrega una relacion de asociacion entre la clase hoja y la clase pato"
+Salida:
+{{
+  "add": {{
+    "elements": [],
+    "relationships": [
+      {{ "type": "ClassBidirectional", "source": "Hoja", "target": "Pato" }}
     ]
   }},
   "modify": {{ "elements": [] }},
@@ -382,7 +399,10 @@ UML_DIFF_TOOL_SCHEMA = {
                                 },
                                 "source": {"type": "string"},
                                 "target": {"type": "string"},
-                                "associationClass": {"type": "string"},
+                                "intermediateClass": {
+                                    "type": "string",
+                                    "description": "Nombre de la clase intermedia. Usar ÚNICAMENTE si el usuario pidió explícitamente clase intermedia o asociación de clase. NUNCA para asociaciones normales.",
+                                },
                             },
                             "required": ["type", "source", "target"],
                         },
@@ -619,9 +639,9 @@ UML_ATOMIC_TOOLS = [
                     },
                     "source": {"type": "string", "description": "Nombre de la clase origen."},
                     "target": {"type": "string", "description": "Nombre de la clase destino."},
-                    "associationClass": {
+                    "intermediateClass": {
                         "type": "string",
-                        "description": "Nombre de la clase intermedia en una asociación de clase.",
+                        "description": "Nombre de la clase intermedia (Clase de Asociación OMG UML 2.5). Usar ÚNICAMENTE si el usuario pidió explícitamente clase intermedia o asociación de clase. NUNCA para asociaciones normales.",
                     },
                 },
                 "required": ["type", "source", "target"],
@@ -1264,7 +1284,12 @@ def parse_and_validate_diff_payload(
                 rel_type = args.get("type") or "ClassBidirectional"
                 source = args.get("source") or args.get("from")
                 target = args.get("target") or args.get("to")
-                assoc_cls = args.get("associationClass") or args.get("association_class")
+                assoc_cls = (
+                    args.get("intermediateClass")
+                    or args.get("intermediate_class")
+                    or args.get("associationClass")
+                    or args.get("association_class")
+                )
                 if source and target:
                     rel_dict: Dict[str, Any] = {
                         "type": rel_type,
@@ -1272,6 +1297,7 @@ def parse_and_validate_diff_payload(
                         "target": target,
                     }
                     if assoc_cls:
+                        rel_dict["intermediateClass"] = assoc_cls
                         rel_dict["associationClass"] = assoc_cls
                     merged["add"]["relationships"].append(rel_dict)
 
@@ -1464,13 +1490,19 @@ def parse_and_validate_diff_payload(
         rels: List[DiffRelationshipAdd] = []
         for r in raw_add.get("relationships", []):
             if isinstance(r, dict) and "type" in r and "source" in r and "target" in r:
-                raw_assoc = r.get("associationClass") or r.get("association_class")
+                raw_assoc = (
+                    r.get("intermediateClass")
+                    or r.get("intermediate_class")
+                    or r.get("associationClass")
+                    or r.get("association_class")
+                )
                 assoc_cls = clean_element_name(raw_assoc) if raw_assoc else None
                 rels.append(
                     DiffRelationshipAdd(
                         type=r["type"],
                         source=clean_element_name(r["source"]),
                         target=clean_element_name(r["target"]),
+                        intermediateClass=assoc_cls,
                         associationClass=assoc_cls,
                     )
                 )
@@ -1492,14 +1524,15 @@ def parse_and_validate_diff_payload(
                             )
                         )
 
-            if rel.associationClass:
-                assoc_lower = rel.associationClass.lower()
+            assoc_class_target = rel.intermediateClass or rel.associationClass
+            if assoc_class_target:
+                assoc_lower = assoc_class_target.lower()
                 already_in_add = any(e.name.lower() == assoc_lower for e in elements)
                 already_in_diag = assoc_lower in existing_names_map
                 if not already_in_add and not already_in_diag:
                     elements.append(
                         DiffElementAdd(
-                            name=rel.associationClass,
+                            name=assoc_class_target,
                             type="Class",
                             stereotype="<<association>>",
                             attributes=[],
@@ -1884,7 +1917,11 @@ def parse_and_validate_diff_payload(
         if add_block.relationships:
             print(f"  * Relaciones a Agregar ({len(add_block.relationships)}):")
             for r in add_block.relationships:
-                assoc_info = f" (associationClass: {r.associationClass})" if r.associationClass else ""
+                assoc_info = (
+                    f" (intermediateClass: {r.intermediateClass or r.associationClass})"
+                    if (r.intermediateClass or r.associationClass)
+                    else ""
+                )
                 print(f"    - {r.type}: {r.source} -> {r.target}{assoc_info}")
     if modify_block and modify_block.elements:
         print(f"  * Clases a Modificar ({len(modify_block.elements)}): {[m.id for m in modify_block.elements]}")

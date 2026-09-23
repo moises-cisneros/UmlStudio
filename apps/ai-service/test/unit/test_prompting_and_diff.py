@@ -228,9 +228,38 @@ class TestPromptingAndDiff(unittest.TestCase):
         self.assertIsNotNone(diff.add)
         self.assertEqual(len(diff.add.relationships), 1)
         self.assertEqual(diff.add.relationships[0].associationClass, "Usuario_Venta_Assoc")
+        self.assertEqual(diff.add.relationships[0].intermediateClass, "Usuario_Venta_Assoc")
         # Association class is synthesized in add.elements
         self.assertEqual(len(diff.add.elements), 1)
         self.assertEqual(diff.add.elements[0].name, "Usuario_Venta_Assoc")
+
+    def test_parse_diff_with_intermediate_class(self):
+        current_model = {
+            "nodes": [
+                {"id": "node-1", "data": {"name": "Pato"}},
+                {"id": "node-2", "data": {"name": "Hoja"}},
+            ]
+        }
+        raw_json = {
+            "add": {
+                "relationships": [
+                    {
+                        "type": "ClassBidirectional",
+                        "source": "Pato",
+                        "target": "Hoja",
+                        "intermediateClass": "Pato_Hoja_Assoc",
+                    }
+                ]
+            }
+        }
+        diff = parse_and_validate_diff_payload(raw_json, current_model=current_model)
+        self.assertIsNotNone(diff.add)
+        self.assertEqual(len(diff.add.relationships), 1)
+        self.assertEqual(diff.add.relationships[0].intermediateClass, "Pato_Hoja_Assoc")
+        self.assertEqual(diff.add.relationships[0].associationClass, "Pato_Hoja_Assoc")
+        self.assertEqual(len(diff.add.elements), 1)
+        self.assertEqual(diff.add.elements[0].name, "Pato_Hoja_Assoc")
+        self.assertEqual(diff.add.elements[0].stereotype, "<<association>>")
 
     def test_discards_noop_modifications_when_name_unchanged(self):
         current_model = {
