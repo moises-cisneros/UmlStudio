@@ -33,6 +33,7 @@ import { useFlushOnUnload } from "@/hooks/useFlushOnUnload"
 import { useEditorShortcuts } from "@/hooks/useEditorShortcuts"
 import { log } from "@/logger"
 import { addSharedDiagramEntry } from "@/utils/sharedDiagramStorage"
+import { setActiveDiagramForTracking } from "@/utils/localProductivityTracker"
 import { useTranslation } from "@/i18n"
 import { currentAccessToken, useAuthStore } from "@/stores/useAuthStore"
 
@@ -51,6 +52,14 @@ export const UmlStudioShared: React.FC = () => {
   const { setEditor, editor } = useEditorContext()
   const { locale, t: tr } = useTranslation()
   const t = useVersioningTranslation()
+
+  useEffect(() => {
+    setActiveDiagramForTracking(diagramId ?? null)
+    return () => {
+      setActiveDiagramForTracking(null)
+    }
+  }, [diagramId])
+
   const [diagramTitle, setDiagramTitle] = useState<string | null>(() =>
     editor ? editor.getDiagramMetadata().diagramTitle || null : null
   )

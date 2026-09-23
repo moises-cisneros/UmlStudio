@@ -52,6 +52,7 @@ const createUmlStudioAliasResolver = (): Plugin => {
 
 const webappPort = Number(process.env.UMLSTUDIO_WEBAPP_PORT || 5173)
 const serverPort = Number(process.env.UMLSTUDIO_SERVER_PORT || 8000)
+const aiPort = Number(process.env.UMLSTUDIO_AI_PORT || 8001)
 const wsPort = Number(process.env.UMLSTUDIO_WS_PORT || 4444)
 const docsPort = Number(process.env.UMLSTUDIO_DOCS_PORT || 3001)
 
@@ -80,6 +81,14 @@ export default defineConfig({
       allow: [resolve(__dirname, "..", ".."), resolve(__dirname, "..", "..", "packages", "core")],
     },
     proxy: {
+      "/api/vision": {
+        target: `http://127.0.0.1:${aiPort}`,
+        changeOrigin: true,
+      },
+      "/api/chat": {
+        target: `http://127.0.0.1:${aiPort}`,
+        changeOrigin: true,
+      },
       "/api": {
         target: `http://127.0.0.1:${serverPort}`,
         changeOrigin: true,

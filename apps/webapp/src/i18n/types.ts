@@ -108,7 +108,10 @@ export interface TranslationDictionary {
     filterFavorites: string
     filterType: string
     newDiagram: string
+    importDiagram: string
     importJson: string
+    importXmi: string
+    importPhoto: string
     quickStartTitle: string
     emptyStateTitle: string
     emptyStateDesc: string

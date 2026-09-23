@@ -1,6 +1,6 @@
-import React, { lazy, Suspense, useEffect, useMemo, useRef } from "react"
-import { useLocation } from "@tanstack/react-router"
-import { type UMLDiagramType } from "@umlstudio/core"
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useLocation, useNavigate } from "@tanstack/react-router"
+import { type UMLDiagramType, type UMLModel } from "@umlstudio/core"
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
 import { useModalContext } from "@/contexts"
 import { useImportDiagramFile } from "@/hooks/useImportDiagramFile"
@@ -13,6 +13,8 @@ import { pruneExpiredSharedDiagrams } from "@/utils/sharedDiagramStorage"
 import { readHighlightSharedDiagramId } from "@/lib/navProvenance"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import { useTranslation } from "@/i18n"
+import { toast } from "react-toastify"
+import { VisionImportDialog } from "@/components/vision/VisionImportDialog"
 
 import { Heart, LayoutGrid, List, SlidersHorizontal } from "lucide-react"
 import { Button } from "@umlstudio/ui/components/button"
@@ -31,22 +33,47 @@ export const HomePage = () => {
   const { t } = useTranslation()
   useDocumentTitle(t.dashboard.title)
   const location = useLocation()
+  const navigate = useNavigate()
   const highlightSharedDiagramId = readHighlightSharedDiagramId(location.state) ?? null
   const { openModal } = useModalContext()
   const setCurrentModelId = usePersistenceModelStore((state) => state.setCurrentModelId)
+  const createModel = usePersistenceModelStore((state) => state.createModel)
   const jsonImportRef = useRef<HTMLInputElement>(null)
+  const xmiImportRef = useRef<HTMLInputElement>(null)
+  const [isVisionOpen, setIsVisionOpen] = useState(false)
   const importFile = useImportDiagramFile()
 
   const chrome = useHomeChrome()
 
   const openNewDiagram = () => openModal("NEW_DIAGRAM", { dialogVariant: "home" })
   const triggerJsonImport = () => jsonImportRef.current?.click()
+  const triggerXmiImport = () => xmiImportRef.current?.click()
+  const triggerVisionImport = () => setIsVisionOpen(true)
 
   const handleJsonImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) void importFile(file)
     e.target.value = ""
   }
+
+  const handleXmiImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) void importFile(file)
+    e.target.value = ""
+  }
+
+  const handleCreateDiagramFromVision = useCallback(
+    async (model: UMLModel) => {
+      createModel(model)
+      await navigate({
+        to: "/local/$id",
+        params: { id: model.id },
+        replace: true,
+      })
+      toast.success(`"${model.title || "Diagram"}" ${t.dashboard.diagramsCount}`)
+    },
+    [createModel, navigate, t]
+  )
 
   useEffect(() => {
     setCurrentModelId(null)
@@ -73,17 +100,34 @@ export const HomePage = () => {
           chrome={chrome}
           onNewDiagram={openNewDiagram}
           onImportJson={triggerJsonImport}
+          onImportXmi={triggerXmiImport}
+          onImportVision={triggerVisionImport}
         />
       }
     >
       <input
         ref={jsonImportRef}
         type="file"
-        accept=".json,application/json,.xmi,.xml,application/xml,text/xml"
+        accept=".json,application/json"
         className="sr-only"
         onChange={handleJsonImport}
         aria-hidden="true"
         tabIndex={-1}
+      />
+      <input
+        ref={xmiImportRef}
+        type="file"
+        accept=".xmi,.xml,application/xml,text/xml"
+        className="sr-only"
+        onChange={handleXmiImport}
+        aria-hidden="true"
+        tabIndex={-1}
+      />
+
+      <VisionImportDialog
+        open={isVisionOpen}
+        onClose={() => setIsVisionOpen(false)}
+        onCreateDiagram={handleCreateDiagramFromVision}
       />
 
       <div className="mt-6 px-4 md:px-0">
