@@ -258,17 +258,56 @@ function serializeNode(node: UmlStudioNode, allEdges: UmlStudioEdge[]): string[]
       const cleanEdgeId = assocEdge.id.replace(/[^a-zA-Z0-9_]/g, "_")
       const srcPropId = `EAID_src_${cleanEdgeId}`
       const dstPropId = `EAID_dst_${cleanEdgeId}`
+      const edgeData = assocEdge.data as
+        | {
+            sourceRole?: string
+            targetRole?: string
+            roleA?: string
+            roleB?: string
+            sourceMultiplicity?: string
+            targetMultiplicity?: string
+            multiplicityA?: string
+            multiplicityB?: string
+          }
+        | undefined
+
+      const effectiveSourceRole = edgeData?.roleA ?? edgeData?.sourceRole
+      const rawSourceRole =
+        typeof effectiveSourceRole === "string" &&
+        effectiveSourceRole.trim() &&
+        effectiveSourceRole.trim().toLowerCase() !== "source"
+          ? effectiveSourceRole.replace(/^\+/, "").trim()
+          : ""
+      const srcRoleName = rawSourceRole ? escapeXml(rawSourceRole) : ""
+
+      const effectiveTargetRole = edgeData?.roleB ?? edgeData?.targetRole
+      const rawTargetRole =
+        typeof effectiveTargetRole === "string" &&
+        effectiveTargetRole.trim() &&
+        effectiveTargetRole.trim().toLowerCase() !== "target"
+          ? effectiveTargetRole.replace(/^\+/, "").trim()
+          : ""
+      const tgtRoleName = rawTargetRole ? escapeXml(rawTargetRole) : ""
+
+      const effectiveSourceMult = edgeData?.multiplicityA ?? edgeData?.sourceMultiplicity
+      const effectiveTargetMult = edgeData?.multiplicityB ?? edgeData?.targetMultiplicity
+
       lines.push(`      <memberEnd xmi:idref="${dstPropId}"/>`)
       lines.push(
-        `      <ownedEnd xmi:type="uml:Property" xmi:id="${dstPropId}" visibility="public" association="${escapeXml(node.id)}" isStatic="false" isReadOnly="false" isDerived="false" isOrdered="false" isUnique="true" isDerivedUnion="false" aggregation="none">`
+        `      <ownedEnd xmi:type="uml:Property" xmi:id="${dstPropId}" name="${tgtRoleName}" visibility="public" association="${escapeXml(node.id)}" isStatic="false" isReadOnly="false" isDerived="false" isOrdered="false" isUnique="true" isDerivedUnion="false" aggregation="none">`
       )
       lines.push(`        <type xmi:idref="${escapeXml(assocEdge.target)}"/>`)
+      const tgtMultLines = buildMultiplicityXml(effectiveTargetMult, `${dstPropId}_mult`, false)
+      lines.push(...tgtMultLines)
       lines.push("      </ownedEnd>")
+
       lines.push(`      <memberEnd xmi:idref="${srcPropId}"/>`)
       lines.push(
-        `      <ownedEnd xmi:type="uml:Property" xmi:id="${srcPropId}" visibility="public" association="${escapeXml(node.id)}" isStatic="false" isReadOnly="false" isDerived="false" isOrdered="false" isUnique="true" isDerivedUnion="false" aggregation="none">`
+        `      <ownedEnd xmi:type="uml:Property" xmi:id="${srcPropId}" name="${srcRoleName}" visibility="public" association="${escapeXml(node.id)}" isStatic="false" isReadOnly="false" isDerived="false" isOrdered="false" isUnique="true" isDerivedUnion="false" aggregation="none">`
       )
       lines.push(`        <type xmi:idref="${escapeXml(assocEdge.source)}"/>`)
+      const srcMultLines = buildMultiplicityXml(effectiveSourceMult, `${srcPropId}_mult`, false)
+      lines.push(...srcMultLines)
       lines.push("      </ownedEnd>")
     }
   }
@@ -300,8 +339,12 @@ function serializeModelEdges(edges: UmlStudioEdge[]): string[] {
       label?: string
       sourceRole?: string
       targetRole?: string
+      roleA?: string
+      roleB?: string
       sourceMultiplicity?: string
       targetMultiplicity?: string
+      multiplicityA?: string
+      multiplicityB?: string
       associationClassNodeId?: string
     }
 
@@ -325,30 +368,29 @@ function serializeModelEdges(edges: UmlStudioEdge[]): string[] {
     lines.push(`      <memberEnd xmi:idref="${tgtPropId}" />`)
 
     // Source End
+    const effectiveSourceRole = edgeData?.roleA ?? edgeData?.sourceRole
     const rawSourceRole =
-      typeof edgeData?.sourceRole === "string" &&
-      edgeData.sourceRole.trim() &&
-      edgeData.sourceRole.trim().toLowerCase() !== "source"
-        ? edgeData.sourceRole.replace(/^\+/, "").trim()
+      typeof effectiveSourceRole === "string" &&
+      effectiveSourceRole.trim() &&
+      effectiveSourceRole.trim().toLowerCase() !== "source"
+        ? effectiveSourceRole.replace(/^\+/, "").trim()
         : ""
     const srcRoleName = rawSourceRole ? escapeXml(rawSourceRole) : ""
     lines.push(
       `      <ownedEnd xmi:type="uml:Property" xmi:id="${srcPropId}" name="${srcRoleName}" type="${escapeXml(edge.source)}" association="${escapeXml(edge.id)}">`
     )
-    const srcMultLines = buildMultiplicityXml(
-      edgeData?.sourceMultiplicity,
-      `${srcPropId}_mult`,
-      false
-    )
+    const effectiveSourceMult = edgeData?.multiplicityA ?? edgeData?.sourceMultiplicity
+    const srcMultLines = buildMultiplicityXml(effectiveSourceMult, `${srcPropId}_mult`, false)
     lines.push(...srcMultLines)
     lines.push("      </ownedEnd>")
 
     // Target End
+    const effectiveTargetRole = edgeData?.roleB ?? edgeData?.targetRole
     const rawTargetRole =
-      typeof edgeData?.targetRole === "string" &&
-      edgeData.targetRole.trim() &&
-      edgeData.targetRole.trim().toLowerCase() !== "target"
-        ? edgeData.targetRole.replace(/^\+/, "").trim()
+      typeof effectiveTargetRole === "string" &&
+      effectiveTargetRole.trim() &&
+      effectiveTargetRole.trim().toLowerCase() !== "target"
+        ? effectiveTargetRole.replace(/^\+/, "").trim()
         : ""
     const tgtRoleName = rawTargetRole ? escapeXml(rawTargetRole) : ""
     const aggAttr = isComposition
@@ -359,11 +401,8 @@ function serializeModelEdges(edges: UmlStudioEdge[]): string[] {
     lines.push(
       `      <ownedEnd xmi:type="uml:Property" xmi:id="${tgtPropId}" name="${tgtRoleName}" type="${escapeXml(edge.target)}"${aggAttr} association="${escapeXml(edge.id)}">`
     )
-    const tgtMultLines = buildMultiplicityXml(
-      edgeData?.targetMultiplicity,
-      `${tgtPropId}_mult`,
-      false
-    )
+    const effectiveTargetMult = edgeData?.multiplicityB ?? edgeData?.targetMultiplicity
+    const tgtMultLines = buildMultiplicityXml(effectiveTargetMult, `${tgtPropId}_mult`, false)
     lines.push(...tgtMultLines)
     lines.push("      </ownedEnd>")
 

@@ -1,18 +1,139 @@
 import { describe, it, expect } from "vitest"
-import { readFileSync, writeFileSync } from "node:fs"
+import { writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { exportToXmi } from "../../lib/export/xmiExport"
 import { importXmiDiagram } from "../../lib/import/xmiImport"
+import type { UMLModel } from "../../lib/typings"
+
+/**
+ * Minimal Bridge-pattern model — replaces the deleted diagramTemplates/Bridge.json.
+ * Uses canonical type values from DiagramNodeTypeRecord / DiagramEdgeTypeRecord.
+ */
+const bridgeModel: UMLModel = {
+  version: "4.0.0",
+  id: "bridge-inline",
+  title: "Bridge Diagram",
+  type: "ClassDiagram",
+  nodes: [
+    {
+      id: "abstraction",
+      type: "class",
+      position: { x: 100, y: 80 },
+      width: 180,
+      height: 80,
+      measured: { width: 180, height: 80 },
+      data: {
+        name: "Abstraction",
+        attributes: [],
+        methods: [{ name: "operation", returnType: "void", visibility: "public", parameters: [] }],
+      },
+    },
+    {
+      id: "refinedAbstraction",
+      type: "class",
+      position: { x: 100, y: 240 },
+      width: 180,
+      height: 80,
+      measured: { width: 180, height: 80 },
+      data: {
+        name: "RefinedAbstraction",
+        attributes: [],
+        methods: [{ name: "operation", returnType: "void", visibility: "public", parameters: [] }],
+      },
+    },
+    {
+      id: "implementor",
+      type: "class",
+      position: { x: 420, y: 80 },
+      width: 180,
+      height: 80,
+      measured: { width: 180, height: 80 },
+      data: {
+        name: "Implementor",
+        attributes: [],
+        methods: [
+          { name: "operationImpl", returnType: "void", visibility: "public", parameters: [] },
+        ],
+        stereotype: "interface",
+      },
+    },
+    {
+      id: "concreteImplA",
+      type: "class",
+      position: { x: 350, y: 240 },
+      width: 180,
+      height: 80,
+      measured: { width: 180, height: 80 },
+      data: {
+        name: "ConcreteImplementorA",
+        attributes: [],
+        methods: [
+          { name: "operationImpl", returnType: "void", visibility: "public", parameters: [] },
+        ],
+      },
+    },
+    {
+      id: "concreteImplB",
+      type: "class",
+      position: { x: 560, y: 240 },
+      width: 180,
+      height: 80,
+      measured: { width: 180, height: 80 },
+      data: {
+        name: "ConcreteImplementorB",
+        attributes: [],
+        methods: [
+          { name: "operationImpl", returnType: "void", visibility: "public", parameters: [] },
+        ],
+      },
+    },
+  ],
+  edges: [
+    {
+      id: "e-abstraction-impl",
+      type: "ClassUnidirectional",
+      source: "abstraction",
+      target: "implementor",
+      sourceHandle: "right",
+      targetHandle: "left",
+      data: { points: [] },
+    },
+    {
+      id: "e-refined-abstraction",
+      type: "ClassInheritance",
+      source: "refinedAbstraction",
+      target: "abstraction",
+      sourceHandle: "top",
+      targetHandle: "bottom",
+      data: { points: [] },
+    },
+    {
+      id: "e-concA-impl",
+      type: "ClassRealization",
+      source: "concreteImplA",
+      target: "implementor",
+      sourceHandle: "top",
+      targetHandle: "bottom",
+      data: { points: [] },
+    },
+    {
+      id: "e-concB-impl",
+      type: "ClassRealization",
+      source: "concreteImplB",
+      target: "implementor",
+      sourceHandle: "top",
+      targetHandle: "bottom",
+      data: { points: [] },
+    },
+  ],
+  assessments: {},
+  interactive: { elements: {}, relationships: {} },
+}
 
 describe("Bridge Diagram export/import verification", () => {
-  it("exports Bridge.json to valid EA XMI and updates bridge_diagram.xmi", async () => {
-    const bridgeJsonPath = resolve(
-      __dirname,
-      "../../../../apps/webapp/assets/diagramTemplates/Bridge.json"
-    )
+  it("exports Bridge model to valid EA XMI and updates bridge_diagram.xmi", async () => {
     const bridgeDiagramXmiPath = resolve(__dirname, "../../../../docs/examples/bridge_diagram.xmi")
 
-    const bridgeModel = JSON.parse(readFileSync(bridgeJsonPath, "utf-8"))
     const result = await exportToXmi(bridgeModel, {
       diagramName: "Bridge Diagram",
       targetDialect: "EnterpriseArchitect",
@@ -28,7 +149,7 @@ describe("Bridge Diagram export/import verification", () => {
     // 1. Unspecified multiplicities and roles should NOT emit dummy values
     expect(result.xmiContent).not.toContain('<lowerValue xmi:type="uml:LiteralInteger"')
     expect(result.xmiContent).not.toContain('<upperValue xmi:type="uml:LiteralUnlimitedNatural"')
-    expect(result.xmiContent).not.toContain("<role name=")
+    expect(result.xmiContent).not.toContain('<role name=')
 
     // 2. Return types on operations (EAnone_void)
     expect(result.xmiContent).toContain('<ownedParameter xmi:type="uml:Parameter"')

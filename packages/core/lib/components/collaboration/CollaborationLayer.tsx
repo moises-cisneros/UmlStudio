@@ -204,6 +204,17 @@ function LocalCollaborationAwareness({
     }
 
     const handlePointerMove = (event: PointerEvent) => {
+      if (
+        document.querySelector('[role="dialog"]') !== null ||
+        (event.target as HTMLElement | null)?.closest?.('[role="dialog"]') !== null
+      ) {
+        if (pendingRef.current) {
+          pendingRef.current = null
+          awareness.setLocalAwarenessCursor(null)
+        }
+        return
+      }
+
       const flowPosition = reactFlow.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,

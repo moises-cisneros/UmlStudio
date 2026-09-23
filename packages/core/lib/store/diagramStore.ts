@@ -543,8 +543,30 @@ export const createDiagramStore = (ydoc: Y.Doc): UseBoundStore<StoreApi<DiagramS
                   const deletedNode = getNodesMap(ydoc).get(change.id)
                   if (deletedNode) {
                     const connectedEdges = getConnectedEdges([deletedNode], get().edges)
+                    const assocEdges = get().edges.filter(
+                      (edge) =>
+                        (edge.data as Record<string, unknown> | undefined)
+                          ?.associationClassNodeId === change.id
+                    )
                     getNodesMap(ydoc).delete(change.id)
                     connectedEdges.forEach((edge) => getEdgesMap(ydoc).delete(edge.id))
+                    assocEdges.forEach((edge) => getEdgesMap(ydoc).delete(edge.id))
+                    const edgesToRemove = new Set([
+                      ...connectedEdges.map((e) => e.id),
+                      ...assocEdges.map((e) => e.id),
+                    ])
+                    if (edgesToRemove.size > 0) {
+                      set(
+                        (state) => ({
+                          edges: state.edges.filter((e) => !edgesToRemove.has(e.id)),
+                          selectedElementIds: state.selectedElementIds.filter(
+                            (id) => !edgesToRemove.has(id)
+                          ),
+                        }),
+                        undefined,
+                        "onNodesChange-remove-assoc-edges"
+                      )
+                    }
                   }
                 } else {
                   const isTransient =
@@ -655,7 +677,23 @@ export const createDiagramStore = (ydoc: Y.Doc): UseBoundStore<StoreApi<DiagramS
                     undefined,
                     "onEdgesChange-remove"
                   )
+                  const deletedEdge = currentEdges.find((e) => e.id === change.id)
+                  const assocNodeId = (deletedEdge?.data as Record<string, unknown> | undefined)
+                    ?.associationClassNodeId as string | undefined
                   getEdgesMap(ydoc).delete(change.id)
+                  if (assocNodeId) {
+                    getNodesMap(ydoc).delete(assocNodeId)
+                    set(
+                      (state) => ({
+                        nodes: state.nodes.filter((n) => n.id !== assocNodeId),
+                        selectedElementIds: state.selectedElementIds.filter(
+                          (id) => id !== assocNodeId
+                        ),
+                      }),
+                      undefined,
+                      "onEdgesChange-remove-assoc-node"
+                    )
+                  }
                 }
               }
             })

@@ -8,6 +8,65 @@ import { UMLDiagramType } from "../../lib/types/DiagramType"
 import { DiagramNodeTypeRecord, DiagramEdgeTypeRecord } from "../../lib/modelElementTypes"
 import type { UMLModel } from "../../lib/typings"
 
+/** Minimal Bridge-pattern model replacing the deleted diagramTemplates/Bridge.json */
+const BRIDGE_MODEL_INLINE: UMLModel = {
+  version: "4.0.0",
+  id: "bridge-inline-cu05",
+  title: "Bridge Diagram",
+  type: "ClassDiagram",
+  nodes: [
+    {
+      id: "abstraction",
+      type: "class",
+      position: { x: 100, y: 80 },
+      width: 180,
+      height: 80,
+      measured: { width: 180, height: 80 },
+      data: { name: "Abstraction", attributes: [], methods: [] },
+    },
+    {
+      id: "implementor",
+      type: "class",
+      position: { x: 420, y: 80 },
+      width: 180,
+      height: 80,
+      measured: { width: 180, height: 80 },
+      data: { name: "Implementor", attributes: [], methods: [], stereotype: "interface" },
+    },
+    {
+      id: "concreteImpl",
+      type: "class",
+      position: { x: 420, y: 240 },
+      width: 180,
+      height: 80,
+      measured: { width: 180, height: 80 },
+      data: { name: "ConcreteImplementor", attributes: [], methods: [] },
+    },
+  ],
+  edges: [
+    {
+      id: "e-unlabelled-assoc",
+      type: "ClassUnidirectional",
+      source: "abstraction",
+      target: "implementor",
+      sourceHandle: "right",
+      targetHandle: "left",
+      data: { points: [] },
+    },
+    {
+      id: "e-realization",
+      type: "ClassRealization",
+      source: "concreteImpl",
+      target: "implementor",
+      sourceHandle: "top",
+      targetHandle: "bottom",
+      data: { points: [] },
+    },
+  ],
+  assessments: {},
+  interactive: { elements: {}, relationships: {} },
+}
+
 describe("INT-CU05: Case of Use CU-05 XMI Import/Export Interoperability", () => {
   let ajv: Ajv
   let validateModel: ValidateFunction
@@ -183,13 +242,7 @@ describe("INT-CU05: Case of Use CU-05 XMI Import/Export Interoperability", () =>
   })
 
   it("Step 4: exports empty name in connectors and associations when unlabelled and no assoc_ in labels", async () => {
-    const bridgeJsonPath = resolve(
-      __dirname,
-      "../../../../apps/webapp/assets/diagramTemplates/Bridge.json"
-    )
-    const bridgeModel: UMLModel = JSON.parse(readFileSync(bridgeJsonPath, "utf-8"))
-
-    const exportResult = await exportToXmi(bridgeModel, {
+    const exportResult = await exportToXmi(BRIDGE_MODEL_INLINE, {
       targetDialect: "EnterpriseArchitect",
       xmiVersion: "2.1",
       diagramName: "Bridge Diagram",

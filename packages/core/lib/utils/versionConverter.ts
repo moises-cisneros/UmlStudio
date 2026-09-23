@@ -886,10 +886,76 @@ function stripRuntimeInteractionState(model: UMLModel): UMLModel {
   return changed ? { ...model, nodes, edges } : model
 }
 
+function normalizeAssociationClasses(model: UMLModel): UMLModel {
+  let changed = false
+  const edgeAssocMap = new Map<string, string>()
+  const nodeAssocMap = new Map<string, string>()
+
+  model.edges.forEach((edge) => {
+    const assocNodeId = (edge.data as Record<string, unknown> | undefined)
+      ?.associationClassNodeId as string | undefined
+    if (assocNodeId) {
+      edgeAssocMap.set(edge.id, assocNodeId)
+      nodeAssocMap.set(assocNodeId, edge.id)
+    }
+  })
+
+  model.nodes.forEach((node) => {
+    const nodeData = node.data as Record<string, unknown> | undefined
+    if (nodeData?.isAssociationClass && typeof nodeData.associationEdgeId === "string") {
+      edgeAssocMap.set(nodeData.associationEdgeId, node.id)
+      nodeAssocMap.set(node.id, nodeData.associationEdgeId)
+    }
+  })
+
+  const nextNodes = model.nodes.map((node) => {
+    const edgeId = nodeAssocMap.get(node.id)
+    if (edgeId) {
+      const nodeData = (node.data ?? {}) as Record<string, unknown>
+      if (!nodeData.isAssociationClass || nodeData.associationEdgeId !== edgeId) {
+        changed = true
+        return {
+          ...node,
+          data: {
+            ...nodeData,
+            isAssociationClass: true,
+            associationEdgeId: edgeId,
+          },
+        }
+      }
+    }
+    return node
+  })
+
+  const nextEdges = model.edges.map((edge) => {
+    const assocNodeId = edgeAssocMap.get(edge.id)
+    if (assocNodeId) {
+      const edgeData = (edge.data ?? {}) as Record<string, unknown>
+      const needsPoints = !Array.isArray(edgeData.points)
+      if (edgeData.associationClassNodeId !== assocNodeId || needsPoints) {
+        changed = true
+        return {
+          ...edge,
+          data: {
+            ...edgeData,
+            points: Array.isArray(edgeData.points) ? edgeData.points : [],
+            associationClassNodeId: assocNodeId,
+          },
+        }
+      }
+    }
+    return edge
+  })
+
+  return changed ? { ...model, nodes: nextNodes, edges: nextEdges } : model
+}
+
 export function normalizeModel(model: UMLModel): UMLModel {
   return stripRuntimeInteractionState(
     normalizeElementTags(
-      normalizeClassStereotypes(sanitizeLegacyNodes(normalizeStraightEdgeWaypoints(model)))
+      normalizeClassStereotypes(
+        normalizeAssociationClasses(sanitizeLegacyNodes(normalizeStraightEdgeWaypoints(model)))
+      )
     )
   )
 }

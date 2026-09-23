@@ -88,10 +88,7 @@ describe("published model JSON schema", () => {
 })
 
 describe("schema accepts every real diagram model (fixtures)", () => {
-  const dirs = [
-    join(import.meta.dirname, "../../../../apps/webapp/tests/fixtures"),
-    join(import.meta.dirname, "../../../../apps/webapp/assets/diagramTemplates"),
-  ]
+  const dirs = [join(import.meta.dirname, "../../../../apps/webapp/tests/fixtures")]
   const models = dirs.flatMap((dir) =>
     existsSync(dir)
       ? readdirSync(dir)
@@ -101,7 +98,7 @@ describe("schema accepts every real diagram model (fixtures)", () => {
   )
 
   it("found fixtures to validate", () => {
-    expect(models.length).toBeGreaterThanOrEqual(5)
+    expect(models.length).toBeGreaterThanOrEqual(1)
   })
 
   it.each(models)("validates importDiagram(%s)", (_name, path) => {
