@@ -38,6 +38,10 @@ class DiffRelationshipAdd(BaseModel):
     name: Optional[str] = None
     associationClass: Optional[str] = Field(default=None, alias="association_class")
     intermediateClass: Optional[str] = Field(default=None, alias="intermediate_class")
+    sourceRole: Optional[str] = Field(default=None, alias="source_role")
+    targetRole: Optional[str] = Field(default=None, alias="target_role")
+    sourceMultiplicity: Optional[str] = Field(default=None, alias="source_multiplicity")
+    targetMultiplicity: Optional[str] = Field(default=None, alias="target_multiplicity")
 
     model_config = {
         "populate_by_name": True,
@@ -70,8 +74,37 @@ class DiffAddBlock(BaseModel):
     relationships: Optional[List[DiffRelationshipAdd]] = None
 
 
+class DiffRelationshipModifyChanges(BaseModel):
+    type: Optional[str] = None
+    name: Optional[str] = None
+    sourceHandle: Optional[str] = None
+    targetHandle: Optional[str] = None
+    sourceRole: Optional[str] = Field(default=None, alias="source_role")
+    targetRole: Optional[str] = Field(default=None, alias="target_role")
+    sourceMultiplicity: Optional[str] = Field(default=None, alias="source_multiplicity")
+    targetMultiplicity: Optional[str] = Field(default=None, alias="target_multiplicity")
+
+    model_config = {
+        "populate_by_name": True,
+        "extra": "ignore",
+    }
+
+
+class DiffRelationshipModify(BaseModel):
+    id: Optional[str] = None
+    source: Optional[str] = None
+    target: Optional[str] = None
+    changes: DiffRelationshipModifyChanges
+
+    model_config = {
+        "populate_by_name": True,
+        "extra": "ignore",
+    }
+
+
 class DiffModifyBlock(BaseModel):
     elements: Optional[List[DiffElementModify]] = None
+    relationships: Optional[List[DiffRelationshipModify]] = None
 
 
 class DiffRemoveBlock(BaseModel):

@@ -1,6 +1,55 @@
 import { DiagramNodeTypeRecord, DiagramEdgeTypeRecord } from "../../modelElementTypes"
 import type { UMLModel } from "../../typings"
-import type { AIAdapter, ModelDiff } from "../types"
+import type { AIAdapter, DiffRelationshipModify, ModelDiff } from "../types"
+import { findTargetNode } from "../diffEngine"
+
+const MOCK_REL_TYPE_KEYWORDS: Array<{
+  type: (typeof DiagramEdgeTypeRecord)[keyof typeof DiagramEdgeTypeRecord]
+  keywords: string[]
+}> = [
+  {
+    type: DiagramEdgeTypeRecord.ClassInheritance,
+    keywords: ["herencia", "hereda", "generaliz", "extends"],
+  },
+  { type: DiagramEdgeTypeRecord.ClassRealization, keywords: ["realiz", "implementa", "interfaz"] },
+  { type: DiagramEdgeTypeRecord.ClassAggregation, keywords: ["agregaci"] },
+  { type: DiagramEdgeTypeRecord.ClassComposition, keywords: ["composici"] },
+  {
+    type: DiagramEdgeTypeRecord.ClassDependency,
+    keywords: ["dependencia", "depende", "usa", "utiliza"],
+  },
+  { type: DiagramEdgeTypeRecord.ClassUnidirectional, keywords: ["unidireccional"] },
+  {
+    type: DiagramEdgeTypeRecord.ClassBidirectional,
+    keywords: ["asociaci", "bidireccional", "relaci"],
+  },
+]
+
+function extractTwoClasses(prompt: string, model: UMLModel): [string, string] | null {
+  const candidates = (model.nodes ?? [])
+    .map((n) => (typeof n.data?.name === "string" ? n.data.name : ""))
+    .filter((name) => name && prompt.toLowerCase().includes(name.toLowerCase()))
+  const unique = [...new Set(candidates)]
+  if (unique.length < 2) return null
+  const lower = prompt.toLowerCase()
+  const firstIndex = (name: string) => lower.indexOf(name.toLowerCase())
+  const sorted = [...unique].sort((a, b) => firstIndex(a) - firstIndex(b))
+  return [sorted[0], sorted[1]]
+}
+
+function extractMultiplicity(prompt: string): string | null {
+  const match = prompt.match(/(\d+\s*\.\.\s*\*|\d+\s*\.\.\s*\d+|\*|(?<![\d.])\d+(?![\d.]))/)
+  if (!match) return null
+  return match[1].replace(/\s+/g, "")
+}
+
+function nodeDisplayName(
+  node: { data?: { name?: unknown } } | undefined,
+  fallback: string
+): string {
+  const name = node?.data?.name
+  return typeof name === "string" && name.trim() ? name : fallback
+}
 
 /**
  * Deterministic Mock AI Adapter for offline testing and CI execution.
@@ -10,8 +59,54 @@ import type { AIAdapter, ModelDiff } from "../types"
 export class MockAIAdapter implements AIAdapter {
   readonly providerName = "mock-local"
 
-  async generateDiff(prompt: string, _currentModel: UMLModel): Promise<ModelDiff> {
+  async generateDiff(prompt: string, currentModel: UMLModel): Promise<ModelDiff> {
     const normalizedPrompt = prompt.toLowerCase()
+
+    const wantsRelationEdit =
+      normalizedPrompt.includes("multiplicidad") ||
+      normalizedPrompt.includes("rol") ||
+      normalizedPrompt.includes("relaci")
+    if (wantsRelationEdit) {
+      const pair = extractTwoClasses(prompt, currentModel)
+      if (pair) {
+        const [source, target] = pair
+        const changes: DiffRelationshipModify["changes"] = {}
+        const mult = extractMultiplicity(prompt)
+        if (normalizedPrompt.includes("multiplicidad") && mult) {
+          changes.targetMultiplicity = mult
+        }
+        const quotedRole = prompt.match(/rol\s+["“]([^"”]+)["”]/iu)
+        const bareRole = quotedRole ? null : prompt.match(/rol\s+([\p{L}\d_]+)/iu)
+        const roleName = (quotedRole?.[1] ?? bareRole?.[1] ?? "").trim()
+        if (roleName) {
+          changes.targetRole = roleName
+        }
+        for (const entry of MOCK_REL_TYPE_KEYWORDS) {
+          if (
+            entry.keywords.some((k) => normalizedPrompt.includes(k)) &&
+            /(cambia|convierte|pasa|modifica|ahora|tipo)/.test(normalizedPrompt)
+          ) {
+            changes.type = entry.type
+            break
+          }
+        }
+        if (Object.keys(changes).length > 0) {
+          const sourceNode = findTargetNode(currentModel.nodes ?? [], source)
+          const targetNode = findTargetNode(currentModel.nodes ?? [], target)
+          return {
+            modify: {
+              relationships: [
+                {
+                  source: nodeDisplayName(sourceNode, source),
+                  target: nodeDisplayName(targetNode, target),
+                  changes,
+                },
+              ],
+            },
+          }
+        }
+      }
+    }
 
     // Strategy Pattern (INT-CU03 requirement)
     if (normalizedPrompt.includes("strategy") || normalizedPrompt.includes("estrategia")) {

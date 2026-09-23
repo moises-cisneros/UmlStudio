@@ -24,6 +24,24 @@ interface IWindow extends Window {
   }
 }
 
+function mapSpeechError(error: string): string | null {
+  switch (error) {
+    case "no-speech":
+      return "No se detectó voz: hablá más cerca del micrófono, en voz alta, y probá de nuevo."
+    case "audio-capture":
+      return "No se pudo capturar el audio: revisá que el micrófono esté conectado y no lo use otra aplicación."
+    case "not-allowed":
+    case "service-not-allowed":
+      return "Permiso de micrófono denegado: habilitalo en el navegador para usar el dictado por voz."
+    case "network":
+      return "El dictado por voz necesita conexión a internet: revisá tu red e intentá de nuevo."
+    case "aborted":
+      return null
+    default:
+      return `El dictado por voz falló (${error}): intentá de nuevo.`
+  }
+}
+
 interface SpeechRecognitionInstance extends EventTarget {
   continuous: boolean
   interimResults: boolean
@@ -92,8 +110,9 @@ export function useSpeechRecognition({
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         setIsListening(false)
-        if (onErrorRef.current) {
-          onErrorRef.current(event.error)
+        const friendly = mapSpeechError(event.error)
+        if (friendly && onErrorRef.current) {
+          onErrorRef.current(friendly)
         }
       }
 

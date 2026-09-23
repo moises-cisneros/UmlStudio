@@ -6,15 +6,22 @@ import {
   XCircleIcon,
   MicIcon,
   MicOffIcon,
+  Keyboard,
   LockIcon,
   EyeIcon,
 } from "lucide-react"
 import { toast } from "react-toastify"
-import { applyDiff, type ModelDiff } from "@umlstudio/core"
+import {
+  applyDiff,
+  findTargetEdge,
+  type DiffRelationshipModify,
+  type ModelDiff,
+} from "@umlstudio/core"
 import { useEditorContext } from "@/contexts"
 import { useTranslation } from "@/i18n"
-import { aiService } from "@/services/aiService"
+import { aiService, type ChatResult } from "@/services/aiService"
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition"
+import { useVoiceRecorder, formatElapsed } from "@/hooks/useVoiceRecorder"
 
 interface DiffProposalItem {
   type: "add" | "mod" | "del"
@@ -31,6 +38,59 @@ interface ChatMessage {
     applied?: boolean
     rawDiff?: ModelDiff
   }
+}
+
+const REL_TYPE_NAMES_ES: Record<string, string> = {
+  ClassInheritance: "Herencia",
+  ClassRealization: "Realización",
+  ClassAggregation: "Agregación",
+  ClassComposition: "Composición",
+  ClassDependency: "Dependencia",
+  ClassBidirectional: "Asociación",
+  ClassUnidirectional: "Asociación unidireccional",
+}
+
+function nodeDisplayName(
+  nodes: Array<{ id: string; data?: { name?: unknown } }>,
+  id?: string
+): string | undefined {
+  if (!id) return undefined
+  const found = nodes.find((n) => n.id === id)
+  const name = found?.data?.name
+  return typeof name === "string" && name.trim() ? name : undefined
+}
+
+function describeRelationshipMod(
+  relMod: DiffRelationshipModify,
+  edges: Array<{ id: string; source: string; target: string; type: string }>,
+  nodes: Array<{ id: string; data?: { name?: unknown } }>
+): string {
+  const targetEdge = findTargetEdge(
+    edges as Parameters<typeof findTargetEdge>[0],
+    nodes as Parameters<typeof findTargetEdge>[1],
+    relMod.id,
+    relMod.source,
+    relMod.target
+  )
+  const sourceLabel =
+    relMod.source ?? nodeDisplayName(nodes, targetEdge?.source) ?? relMod.id ?? "?"
+  const targetLabel =
+    relMod.target ?? nodeDisplayName(nodes, targetEdge?.target) ?? relMod.id ?? "?"
+  const parts: string[] = []
+  const ch = relMod.changes
+  if (ch.type) {
+    const newName = REL_TYPE_NAMES_ES[ch.type] ?? ch.type
+    const oldName = targetEdge ? (REL_TYPE_NAMES_ES[targetEdge.type] ?? targetEdge.type) : null
+    parts.push(
+      oldName && oldName !== newName ? `tipo: ${oldName} → ${newName}` : `tipo: ${newName}`
+    )
+  }
+  if (ch.sourceMultiplicity) parts.push(`multiplicidad origen: ${ch.sourceMultiplicity}`)
+  if (ch.targetMultiplicity) parts.push(`multiplicidad destino: ${ch.targetMultiplicity}`)
+  if (ch.sourceRole) parts.push(`rol origen: "${ch.sourceRole}"`)
+  if (ch.targetRole) parts.push(`rol destino: "${ch.targetRole}"`)
+  if (ch.name) parts.push(`etiqueta: "${ch.name}"`)
+  return `~ Relación ${sourceLabel} → ${targetLabel}: ${parts.join("; ") || "sin cambios"}`
 }
 
 export const AgentChatStream: FC = () => {
@@ -78,6 +138,146 @@ export const AgentChatStream: FC = () => {
     },
   })
 
+  // Audio recording (MediaRecorder -> Whisper STT -> diff)
+  const recorder = useVoiceRecorder({
+    onError: (msg) => {
+      toast.warn(msg)
+    },
+  })
+  const [isSendingVoice, setIsSendingVoice] = useState(false)
+
+  const buildDiffItems = (diff: ModelDiff): DiffProposalItem[] => {
+    const items: DiffProposalItem[] = []
+
+    if (diff.add?.elements) {
+      diff.add.elements.forEach((el) => {
+        const prefix = el.stereotype ? el.stereotype : el.type || "Class"
+        const details: string[] = []
+        if (el.attributes?.length) {
+          const attrNames = el.attributes.map((a) => a.name).join(", ")
+          details.push(`${el.attributes.length} atributo(s): ${attrNames}`)
+        }
+        if (el.methods?.length) {
+          const methodNames = el.methods.map((m) => m.name).join(", ")
+          details.push(`${el.methods.length} método(s): ${methodNames}`)
+        }
+        const detailStr = details.length ? ` [${details.join(" | ")}]` : ""
+        items.push({ type: "add", text: `+ ${prefix} ${el.name}${detailStr}` })
+      })
+    }
+    if (diff.add?.relationships) {
+      diff.add.relationships.forEach((rel) => {
+        const assocInfo = (rel as { associationClass?: string }).associationClass
+          ? ` [Clase Intermedia: ${(rel as { associationClass?: string }).associationClass}]`
+          : ""
+        items.push({
+          type: "add",
+          text: `+ ${rel.type}: ${rel.source} -> ${rel.target}${assocInfo}`,
+        })
+      })
+    }
+    const existingNodes = editor?.model?.nodes ?? []
+    const existingEdges = editor?.model?.edges ?? []
+    if (diff.modify?.elements) {
+      diff.modify.elements.forEach((mod) => {
+        const matchedNode = existingNodes.find((n) => {
+          const nName =
+            typeof (n.data as { name?: string })?.name === "string"
+              ? (n.data as { name: string }).name
+              : ""
+          return n.id === mod.id || (nName && nName.toLowerCase() === mod.id.toLowerCase())
+        })
+        const nodeName =
+          typeof (matchedNode?.data as { name?: string })?.name === "string"
+            ? (matchedNode?.data as { name: string }).name
+            : ""
+        const displayName = nodeName || mod.id
+        const detailParts: string[] = []
+        if (mod.changes.attributes?.length) {
+          detailParts.push(`${mod.changes.attributes.length} atributo(s)`)
+        }
+        if (mod.changes.methods?.length) {
+          detailParts.push(`${mod.changes.methods.length} método(s)`)
+        }
+        const remAttrs =
+          mod.changes.removeAttributes ??
+          ((mod.changes as Record<string, unknown>).remove_attributes as string[] | undefined)
+        if (remAttrs?.length) {
+          detailParts.push(`-${remAttrs.length} atributo(s)`)
+        }
+        const remMethods =
+          mod.changes.removeMethods ??
+          ((mod.changes as Record<string, unknown>).remove_methods as string[] | undefined)
+        if (remMethods?.length) {
+          detailParts.push(`-${remMethods.length} método(s)`)
+        }
+        const detail = detailParts.length ? `: ${detailParts.join(", ")}` : ""
+        items.push({
+          type: "mod",
+          text: `~ Modificar clase ${displayName}${detail}`,
+        })
+      })
+    }
+    if (diff.modify?.relationships) {
+      diff.modify.relationships.forEach((relMod) => {
+        items.push({
+          type: "mod",
+          text: describeRelationshipMod(relMod, existingEdges, existingNodes),
+        })
+      })
+    }
+    const remElements =
+      diff.remove?.elementIds ??
+      ((diff.remove as Record<string, unknown> | undefined)?.element_ids as string[] | undefined)
+    if (remElements?.length) {
+      remElements.forEach((id) => {
+        const matchedNode = existingNodes.find((n) => {
+          const nName =
+            typeof (n.data as { name?: string })?.name === "string"
+              ? (n.data as { name: string }).name
+              : ""
+          return n.id === id || (nName && nName.toLowerCase() === id.toLowerCase())
+        })
+        const nodeName =
+          typeof (matchedNode?.data as { name?: string })?.name === "string"
+            ? (matchedNode?.data as { name: string }).name
+            : ""
+        const displayName = nodeName || id
+        items.push({ type: "del", text: `- Eliminar clase (${displayName})` })
+      })
+    }
+    const remRels =
+      diff.remove?.relationshipIds ??
+      ((diff.remove as Record<string, unknown> | undefined)?.relationship_ids as
+        | string[]
+        | undefined)
+    if (remRels?.length) {
+      remRels.forEach((id) => {
+        items.push({ type: "del", text: `- Eliminar relación (${id})` })
+      })
+    }
+
+    return items
+  }
+
+  const postAgentResponse = (result: ChatResult, items: DiffProposalItem[]) => {
+    const agentResponse: ChatMessage = {
+      id: `a-${Date.now()}`,
+      sender: "agent",
+      text: result.message,
+      diffProposal:
+        items.length > 0
+          ? {
+              title: "Propuesta de Cambios UML",
+              items,
+              rawDiff: result.diff,
+            }
+          : undefined,
+    }
+
+    setMessages((prev) => [...prev, agentResponse])
+  }
+
   const handleSendPrompt = async (textToSend?: string) => {
     const text = (textToSend ?? promptText).trim()
     if (!text) return
@@ -94,124 +294,7 @@ export const AgentChatStream: FC = () => {
 
     try {
       const result = await aiService.generateDiff(text, editor?.model, providerMode)
-      const diff = result.diff
-
-      const items: DiffProposalItem[] = []
-
-      if (diff.add?.elements) {
-        diff.add.elements.forEach((el) => {
-          const prefix = el.stereotype ? el.stereotype : el.type || "Class"
-          const details: string[] = []
-          if (el.attributes?.length) {
-            const attrNames = el.attributes.map((a) => a.name).join(", ")
-            details.push(`${el.attributes.length} atributo(s): ${attrNames}`)
-          }
-          if (el.methods?.length) {
-            const methodNames = el.methods.map((m) => m.name).join(", ")
-            details.push(`${el.methods.length} método(s): ${methodNames}`)
-          }
-          const detailStr = details.length ? ` [${details.join(" | ")}]` : ""
-          items.push({ type: "add", text: `+ ${prefix} ${el.name}${detailStr}` })
-        })
-      }
-      if (diff.add?.relationships) {
-        diff.add.relationships.forEach((rel) => {
-          const assocInfo = (rel as { associationClass?: string }).associationClass
-            ? ` [Clase Intermedia: ${(rel as { associationClass?: string }).associationClass}]`
-            : ""
-          items.push({
-            type: "add",
-            text: `+ ${rel.type}: ${rel.source} -> ${rel.target}${assocInfo}`,
-          })
-        })
-      }
-      const existingNodes = editor?.model?.nodes ?? []
-      if (diff.modify?.elements) {
-        diff.modify.elements.forEach((mod) => {
-          const matchedNode = existingNodes.find((n) => {
-            const nName =
-              typeof (n.data as { name?: string })?.name === "string"
-                ? (n.data as { name: string }).name
-                : ""
-            return n.id === mod.id || (nName && nName.toLowerCase() === mod.id.toLowerCase())
-          })
-          const nodeName =
-            typeof (matchedNode?.data as { name?: string })?.name === "string"
-              ? (matchedNode?.data as { name: string }).name
-              : ""
-          const displayName = nodeName || mod.id
-          const detailParts: string[] = []
-          if (mod.changes.attributes?.length) {
-            detailParts.push(`${mod.changes.attributes.length} atributo(s)`)
-          }
-          if (mod.changes.methods?.length) {
-            detailParts.push(`${mod.changes.methods.length} método(s)`)
-          }
-          const remAttrs =
-            mod.changes.removeAttributes ??
-            ((mod.changes as Record<string, unknown>).remove_attributes as string[] | undefined)
-          if (remAttrs?.length) {
-            detailParts.push(`-${remAttrs.length} atributo(s)`)
-          }
-          const remMethods =
-            mod.changes.removeMethods ??
-            ((mod.changes as Record<string, unknown>).remove_methods as string[] | undefined)
-          if (remMethods?.length) {
-            detailParts.push(`-${remMethods.length} método(s)`)
-          }
-          const detail = detailParts.length ? `: ${detailParts.join(", ")}` : ""
-          items.push({
-            type: "mod",
-            text: `~ Modificar clase ${displayName}${detail}`,
-          })
-        })
-      }
-      const remElements =
-        diff.remove?.elementIds ??
-        ((diff.remove as Record<string, unknown> | undefined)?.element_ids as string[] | undefined)
-      if (remElements?.length) {
-        remElements.forEach((id) => {
-          const matchedNode = existingNodes.find((n) => {
-            const nName =
-              typeof (n.data as { name?: string })?.name === "string"
-                ? (n.data as { name: string }).name
-                : ""
-            return n.id === id || (nName && nName.toLowerCase() === id.toLowerCase())
-          })
-          const nodeName =
-            typeof (matchedNode?.data as { name?: string })?.name === "string"
-              ? (matchedNode?.data as { name: string }).name
-              : ""
-          const displayName = nodeName || id
-          items.push({ type: "del", text: `- Eliminar clase (${displayName})` })
-        })
-      }
-      const remRels =
-        diff.remove?.relationshipIds ??
-        ((diff.remove as Record<string, unknown> | undefined)?.relationship_ids as
-          | string[]
-          | undefined)
-      if (remRels?.length) {
-        remRels.forEach((id) => {
-          items.push({ type: "del", text: `- Eliminar relación (${id})` })
-        })
-      }
-
-      const agentResponse: ChatMessage = {
-        id: `a-${Date.now()}`,
-        sender: "agent",
-        text: result.message,
-        diffProposal:
-          items.length > 0
-            ? {
-                title: "Propuesta de Cambios UML",
-                items,
-                rawDiff: diff,
-              }
-            : undefined,
-      }
-
-      setMessages((prev) => [...prev, agentResponse])
+      postAgentResponse(result, buildDiffItems(result.diff))
     } catch (err) {
       const errorMsg: ChatMessage = {
         id: `err-${Date.now()}`,
@@ -221,6 +304,40 @@ export const AgentChatStream: FC = () => {
       setMessages((prev) => [...prev, errorMsg])
     } finally {
       setIsThinking(false)
+    }
+  }
+
+  const handleSendVoice = async () => {
+    const blob = recorder.audioBlob
+    if (!blob || isSendingVoice) return
+    setIsSendingVoice(true)
+    setIsThinking(true)
+    try {
+      const result = await aiService.generateDiffFromVoice(
+        blob,
+        editor?.model,
+        "voz.webm",
+        providerMode
+      )
+      const transcript = (result.transcript ?? "").trim()
+      const userMsg: ChatMessage = {
+        id: `u-voice-${Date.now()}`,
+        sender: "user",
+        text: transcript || "Nota de voz (sin transcripción)",
+      }
+      setMessages((prev) => [...prev, userMsg])
+      postAgentResponse(result, buildDiffItems(result.diff))
+    } catch (err) {
+      const errorMsg: ChatMessage = {
+        id: `err-${Date.now()}`,
+        sender: "agent",
+        text: `Error al procesar el audio: ${err instanceof Error ? err.message : String(err)}`,
+      }
+      setMessages((prev) => [...prev, errorMsg])
+    } finally {
+      setIsThinking(false)
+      setIsSendingVoice(false)
+      recorder.resetRecording()
     }
   }
 
@@ -489,54 +606,154 @@ export const AgentChatStream: FC = () => {
 
       {/* CONTENEDOR DE ENTRADA (PROMPT & VOZ) */}
       <div className="agent-prompt-container shrink-0">
-        <div className="agent-input-row">
-          <input
-            type="text"
-            value={promptText}
-            onChange={(e) => setPromptText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSendPrompt()}
-            placeholder={
-              isListening ? "Escuchando voz..." : "Describe el cambio o clase a modelar..."
-            }
-            className={`agent-input-field ${
-              isListening
-                ? "border-destructive bg-[color-mix(in_srgb,var(--umlstudio-danger)_10%,transparent)]"
-                : ""
-            }`}
-          />
+        {recorder.status === "recording" ? (
+          <div className="agent-input-row border-destructive bg-[color-mix(in_srgb,var(--umlstudio-danger)_10%,transparent)]">
+            <span
+              className="size-2.5 shrink-0 animate-pulse rounded-full bg-destructive"
+              aria-hidden="true"
+            />
+            <span className="flex-1 text-[12px] font-semibold text-(--home-text-primary)">
+              Grabando {formatElapsed(recorder.elapsed)}…
+            </span>
+            <button
+              type="button"
+              onClick={recorder.stopRecording}
+              title="Detener la grabación y revisar el audio antes de enviarlo"
+              aria-label="Detener grabación"
+              className="flex items-center gap-1.5 rounded-md bg-destructive px-2.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <span className="size-3 rounded-[2px] bg-current" aria-hidden="true" />
+              <span>Detener</span>
+            </button>
+            <button
+              type="button"
+              onClick={recorder.cancelRecording}
+              title="Cancelar la grabación y descartar el audio"
+              aria-label="Cancelar grabación"
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle bg-surface-raised text-secondary-foreground transition-colors hover:text-(--home-text-primary)"
+            >
+              <XCircleIcon className="size-3.5" />
+            </button>
+          </div>
+        ) : recorder.status === "recorded" && recorder.audioUrl ? (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <audio
+                src={recorder.audioUrl}
+                controls
+                className="h-8 min-w-0 flex-1"
+                aria-label="Vista previa del audio grabado"
+              />
+              <span className="shrink-0 text-[11px] text-muted-foreground">
+                {formatElapsed(recorder.elapsed)}
+              </span>
+            </div>
+            <div className="agent-input-row">
+              <button
+                type="button"
+                onClick={() => void handleSendVoice()}
+                disabled={isSendingVoice || isThinking}
+                title="Enviar el audio al Copiloto (transcribe y propone cambios)"
+                aria-label="Enviar audio"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-(--umlstudio-primary) px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+              >
+                <SendIcon className="size-3.5" />
+                <span>{isSendingVoice ? "Enviando…" : "Enviar audio"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={recorder.cancelRecording}
+                disabled={isSendingVoice}
+                title="Descartar el audio grabado"
+                aria-label="Descartar audio"
+                className="flex h-7 items-center gap-1 rounded-md border border-border-subtle bg-surface-raised px-2 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+              >
+                <XCircleIcon className="size-3.5" />
+                <span>Descartar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void recorder.startRecording()}
+                disabled={isSendingVoice || !recorder.hasSupport}
+                title="Descartar y grabar de nuevo"
+                aria-label="Volver a grabar"
+                className="flex h-7 items-center gap-1 rounded-md border border-border-subtle bg-surface-raised px-2 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+              >
+                <MicIcon className="size-3.5" />
+                <span>Regrabar</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="agent-input-row">
+            <input
+              type="text"
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSendPrompt()}
+              placeholder={
+                isListening ? "Escuchando voz..." : "Describe el cambio o clase a modelar..."
+              }
+              className={`agent-input-field ${
+                isListening
+                  ? "border-destructive bg-[color-mix(in_srgb,var(--umlstudio-danger)_10%,transparent)]"
+                  : ""
+              }`}
+            />
 
-          {/* BOTÓN DE VOZ / MICRÓFONO */}
-          <button
-            type="button"
-            onClick={toggleListening}
-            disabled={!speechSupported}
-            title={
-              speechSupported
-                ? isListening
-                  ? "Detener dictado por voz"
-                  : "Iniciar dictado por voz (Speech-to-Text)"
-                : "Dictado por voz no soportado en este navegador (probá Chrome o Edge)"
-            }
-            aria-label={speechSupported ? "Dictado por voz" : "Dictado por voz no disponible"}
-            className={`flex h-7 w-7 items-center justify-center rounded-md transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
-              isListening
-                ? "animate-pulse bg-destructive text-white"
-                : "border border-border-subtle bg-surface-raised text-secondary-foreground hover:text-(--home-text-primary)"
-            }`}
-          >
-            {isListening ? <MicOffIcon className="size-3.5" /> : <MicIcon className="size-3.5" />}
-          </button>
+            {/* BOTÓN DE GRABACIÓN DE AUDIO */}
+            <button
+              type="button"
+              onClick={() => void recorder.startRecording()}
+              disabled={!recorder.hasSupport || isThinking}
+              title={
+                recorder.hasSupport
+                  ? "Grabar audio: luego podés detenerlo, revisarlo y enviarlo al Copiloto"
+                  : "Grabación de audio no soportada en este navegador (probá Chrome o Edge)"
+              }
+              aria-label={recorder.hasSupport ? "Grabar audio" : "Grabación de audio no disponible"}
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle bg-surface-raised text-secondary-foreground transition-all hover:text-(--home-text-primary) disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <MicIcon className="size-3.5" />
+            </button>
 
-          <button
-            type="button"
-            onClick={() => handleSendPrompt()}
-            disabled={!promptText.trim() || isThinking}
-            aria-label={t.agent.send}
-            className="flex h-7 w-7 items-center justify-center rounded-md bg-(--umlstudio-primary) text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-          >
-            <SendIcon className="size-3.5" />
-          </button>
-        </div>
+            {/* BOTÓN DE DICTADO RÁPIDO POR VOZ */}
+            <button
+              type="button"
+              onClick={toggleListening}
+              disabled={!speechSupported}
+              title={
+                speechSupported
+                  ? isListening
+                    ? "Detener dictado por voz"
+                    : "Dictado rápido por voz (escribe directo en el campo)"
+                  : "Dictado por voz no soportado en este navegador (probá Chrome o Edge)"
+              }
+              aria-label={speechSupported ? "Dictado por voz" : "Dictado por voz no disponible"}
+              className={`flex h-7 w-7 items-center justify-center rounded-md transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
+                isListening
+                  ? "animate-pulse bg-destructive text-white"
+                  : "border border-border-subtle bg-surface-raised text-secondary-foreground hover:text-(--home-text-primary)"
+              }`}
+            >
+              {isListening ? (
+                <MicOffIcon className="size-3.5" />
+              ) : (
+                <Keyboard className="size-3.5" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSendPrompt()}
+              disabled={!promptText.trim() || isThinking}
+              aria-label={t.agent.send}
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-(--umlstudio-primary) text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+            >
+              <SendIcon className="size-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
