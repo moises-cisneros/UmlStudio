@@ -2,7 +2,7 @@ import { Hono } from "hono"
 import { randomBytes } from "node:crypto"
 import type { Config } from "../config.js"
 import type { AppEnv } from "../http/env.js"
-import { k, type Redis } from "../redis.js"
+import { gunzipJson, gzipJson, k, type Redis } from "../redis.js"
 import type { Diagram } from "../types.js"
 import type { RelayHook } from "../http/app.js"
 import { Errors } from "../http/errors.js"
@@ -20,11 +20,19 @@ interface Deps {
   auth?: AuthService
 }
 
-/** Returns the current HEAD diagram or null if missing. */
+/**
+ * Returns the current HEAD diagram or null if missing.
+ * HEAD is stored as a gzip+base64 string (plain SET/GET) so the service runs
+ * on any Redis/Valkey, including managed instances without the RedisJSON module.
+ */
 export async function readDiagram(redis: Redis, id: string): Promise<Diagram | null> {
-  const result = (await redis.json.get(k.diagram(id), { path: "$" })) as Diagram[] | null
-  if (!result || !Array.isArray(result) || result.length === 0) return null
-  return (result[0] as Diagram | undefined) ?? null
+  const raw = await redis.get(k.diagram(id))
+  if (typeof raw !== "string" || raw.length === 0) return null
+  try {
+    return gunzipJson<Diagram>(raw)
+  } catch {
+    return null
+  }
 }
 
 const TTL_REFRESH_THROTTLE_SECONDS = 24 * 3600
@@ -60,7 +68,7 @@ export async function saveHead(
   const meta = k.diagramMeta(diagram.id)
 
   const multi = redis.multi()
-  multi.json.set(head, "$", persisted as never)
+  multi.set(head, gzipJson(persisted))
   multi.expire(head, ttl)
   multi.hSet(meta, {
     title: diagram.title,

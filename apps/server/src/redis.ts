@@ -198,10 +198,11 @@ end
 -- Truly atomic restore: writes the auto-snapshot + flips HEAD + bumps
 -- headRev in one Lua transaction so a concurrent autosave can never observe
 -- a torn state (auto-snapshot saved but HEAD not yet rolled, or vice versa).
--- Bodies cross the boundary because Lua has no gunzip:
+-- HEAD is a gzip+base64 string (see gzipJson): Lua has no gunzip, so the
+-- caller passes both bodies pre-encoded —
 --   - args[8] is the gzipped+base64 pre-restore body (auto-snapshot wire form)
---   - args[10] is the raw JSON to set into HEAD (RedisJSON wire form),
---     pre-decoded by TS from the source version's gzipped body.
+--   - args[10] is the gzipped+base64 restored HEAD body, pre-encoded by TS
+--     from the source version (plain SET/GET storage, no RedisJSON needed).
 local function restore_version(keys, args)
   -- keys[1] = diagram:{id}
   -- keys[2] = diagram:{id}:versions
@@ -216,7 +217,7 @@ local function restore_version(keys, args)
   -- args[7]  = librarySchemaVersion of the auto-snapshot
   -- args[8]  = preRestoreGzipBody (base64-gzipped JSON)
   -- args[9]  = restoreFromVid (verified for safety)
-  -- args[10] = headJson (raw JSON body to JSON.SET into HEAD)
+  -- args[10] = headGzipBody (base64-gzipped JSON, pre-encoded by TS)
   -- args[11] = author (server-resolved verified user id; '' when anonymous)
 
   if redis.call('EXISTS', keys[1]) == 0 then
@@ -239,12 +240,12 @@ local function restore_version(keys, args)
   --
   -- Order: HEAD swap goes first, then the auto-snapshot is committed and
   -- eviction runs. Lua does not roll back side effects of earlier
-  -- redis.call's, so if JSON.SET fails (RedisJSON OOM, malformed input)
+  -- redis.call's, so if the HEAD write fails (OOM, malformed input)
   -- we want to abort BEFORE eviction has destroyed older rows. Doing
   -- eviction first risks losing named milestones to a HEAD-write that
   -- never lands.
   local ttlHead = tonumber(args[4])
-  redis.call('JSON.SET', keys[1], '$', args[10])
+  redis.call('SET', keys[1], args[10])
   redis.call('EXPIRE', keys[1], ttlHead)
   redis.call('HSET', keys[3], 'updatedAt', args[2])
   local newRev = redis.call('HINCRBY', keys[3], 'headRev', 1)
@@ -349,8 +350,9 @@ redis.register_function{
 
 /**
  * Load the umlstudio Lua function library at boot. Idempotent — `REPLACE`
- * upgrades existing definitions. Verifies the RedisJSON module is loaded
- * (required for HEAD storage). Throws if the module is missing or too old.
+ * upgrades existing definitions. Diagram HEADs are plain gzip+base64 strings,
+ * so the RedisJSON module is NOT required; its presence is only logged for
+ * diagnostics. Never throws for a missing module.
  */
 export async function bootLoadFunction(client: Redis): Promise<void> {
   try {

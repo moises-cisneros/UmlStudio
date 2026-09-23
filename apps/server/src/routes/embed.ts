@@ -1,7 +1,7 @@
 import { Hono, type Context } from "hono"
 import type { AppEnv } from "../http/env.js"
 import type { Redis } from "../redis.js"
-import { k } from "../redis.js"
+import { gunzipJson, k } from "../redis.js"
 import { Errors } from "../http/errors.js"
 import { validate } from "../http/middleware/validate.js"
 import { type ConversionResource, QueueFullError } from "../resources/conversion-resource.js"
@@ -34,7 +34,7 @@ async function readDiagramWithEtag(
   diagramId: string
 ): Promise<{ diagram: Diagram; etag: string; ttlSeconds: number } | null> {
   const multi = redis.multi()
-  multi.json.get(k.diagram(diagramId), { path: "$" })
+  multi.get(k.diagram(diagramId))
   multi.hGet(k.diagramMeta(diagramId), "headRev")
   multi.ttl(k.diagram(diagramId))
   const replies = (await multi.exec()) as unknown[]
@@ -42,8 +42,15 @@ async function readDiagramWithEtag(
     if (reply instanceof Error) throw reply
   }
 
-  const body = replies[0] as Diagram[] | null
-  const diagram = body && Array.isArray(body) && body.length > 0 ? body[0] : undefined
+  const raw = replies[0] as string | null
+  let diagram: Diagram | undefined
+  if (typeof raw === "string" && raw.length > 0) {
+    try {
+      diagram = gunzipJson<Diagram>(raw)
+    } catch {
+      diagram = undefined
+    }
+  }
   if (!diagram) return null
 
   const headRev = (replies[1] as string | null) ?? "0"

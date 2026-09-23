@@ -72,15 +72,19 @@ export function ownerReader({ secret }: OwnerCookieOptions) {
  * a fresh nonce is generated each call. Safe to set on every successful POST.
  *
  * `Secure` is enabled in production so the cookie is never sent over plain
- * HTTP (defence-in-depth alongside SameSite=Lax). Disabled in dev so local
- * `http://localhost` flows work without a TLS proxy.
+ * HTTP. SameSite is environment-driven like the refresh cookie: production
+ * serves the SPA cross-site (Pages vs Render API), so it needs
+ * `None; Secure; Partitioned`; local `http://localhost` stays `Lax` and
+ * insecure so dev works without a TLS proxy.
  */
 export function setOwnerCookie(c: Context<AppEnv>, diagramId: string, secret: string): void {
   const value = tokenFor(diagramId, secret)
+  const crossSite = process.env.NODE_ENV === "production"
   setCookie(c, `${COOKIE_PREFIX}${diagramId}`, value, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
+    sameSite: crossSite ? "None" : "Lax",
+    ...(crossSite ? { partitioned: true } : {}),
     path: "/",
     maxAge: MAX_AGE_SECONDS,
   })

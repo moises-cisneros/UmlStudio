@@ -156,7 +156,7 @@ async function restoreVersion(
   const autoVid = ulid()
   const nowMs = Date.now()
   const updatedAt = new Date(nowMs).toISOString()
-  const headJson = JSON.stringify({ ...restored, updatedAt })
+  const headGz = gzipJson({ ...restored, updatedAt })
   const autoGz = gzipJson(input.preRestoreBody)
 
   const reply = (await fcall(
@@ -173,7 +173,7 @@ async function restoreVersion(
       input.preRestoreBody.version,
       autoGz,
       input.fromVersionId,
-      headJson,
+      headGz,
       input.author,
     ]
   )) as [string, string, string[]]
