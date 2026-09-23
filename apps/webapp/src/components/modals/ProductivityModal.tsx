@@ -5,9 +5,12 @@ import { DialogFooter } from "@umlstudio/ui/components/dialog"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@umlstudio/ui/components/tabs"
 import { useEditorContext, useModalContext } from "@/contexts"
 import { useTranslation } from "@/i18n"
+import { useAuthStore } from "@/stores/useAuthStore"
+import { setTrackingPaused } from "@/utils/localProductivityTracker"
 import { HomeDialogContent } from "./HomeDialog"
 import {
   fetchProductivityReport,
+  computeLocalProductivityReport,
   auditProductivityWithAi,
   exportProductivityAsJson,
   type DiagramProductivityReport,
@@ -26,8 +29,15 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
   const { t } = useTranslation()
   const { editor } = useEditorContext()
   const { closeModal } = useModalContext()
+  const user = useAuthStore((s) => s.user)
 
   const activeDiagramId = propDiagramId || editor?.model?.id || "default-diagram"
+  const model = editor?.model
+
+  const isLocalDiagram =
+    typeof window !== "undefined" &&
+    (window.location.pathname.startsWith("/local") ||
+      !window.location.pathname.startsWith("/shared"))
 
   const [report, setReport] = useState<DiagramProductivityReport | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
@@ -37,90 +47,79 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
 
   const loadMetrics = useCallback(async () => {
     setLoading(true)
+    if (isLocalDiagram) {
+      setReport(computeLocalProductivityReport(activeDiagramId, model, user))
+      setLoading(false)
+      return
+    }
     try {
       const data = await fetchProductivityReport(activeDiagramId)
-      setReport(data)
+      if (
+        data &&
+        (data.collaborators.length > 0 ||
+          data.totalActiveSeconds > 0 ||
+          data.bottlenecks.length > 0)
+      ) {
+        setReport(data)
+      } else {
+        setReport(computeLocalProductivityReport(activeDiagramId, model, user))
+      }
     } catch {
-      // Fallback local report generation if server endpoint unavailable
-      const now = Date.now()
-      setReport({
-        diagramId: activeDiagramId,
-        sessionStartedAt: now - 1800_000,
-        lastUpdatedAt: now,
-        totalActiveSeconds: 1560,
-        totalIdleSeconds: 240,
-        collaborators: [
-          {
-            userId: "local-user",
-            userName: "Modelador Principal",
-            activeSeconds: 1560,
-            idleSeconds: 240,
-            lastActiveTimestamp: now,
-          },
-        ],
-        bottlenecks: [],
-        velocity: {
-          classesPerHour: 8.5,
-          methodsPerHour: 22.0,
-          refactorsPerHour: 4.2,
-          totalClassesCreated: 4,
-          totalMethodsCreated: 11,
-          totalRefactors: 2,
-        },
-        fluencyStatus: "green",
-        fluencyScore: 95,
-      })
+      setReport(computeLocalProductivityReport(activeDiagramId, model, user))
     } finally {
       setLoading(false)
     }
-  }, [activeDiagramId])
+  }, [activeDiagramId, isLocalDiagram, model, user])
 
   useEffect(() => {
-    let isMounted = true
-    fetchProductivityReport(activeDiagramId)
-      .then((data) => {
-        if (isMounted) {
-          setReport(data)
-          setLoading(false)
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          const now = Date.now()
-          setReport({
-            diagramId: activeDiagramId,
-            sessionStartedAt: now - 1800_000,
-            lastUpdatedAt: now,
-            totalActiveSeconds: 1560,
-            totalIdleSeconds: 240,
-            collaborators: [
-              {
-                userId: "local-user",
-                userName: "Modelador Principal",
-                activeSeconds: 1560,
-                idleSeconds: 240,
-                lastActiveTimestamp: now,
-              },
-            ],
-            bottlenecks: [],
-            velocity: {
-              classesPerHour: 8.5,
-              methodsPerHour: 22.0,
-              refactorsPerHour: 4.2,
-              totalClassesCreated: 4,
-              totalMethodsCreated: 11,
-              totalRefactors: 2,
-            },
-            fluencyStatus: "green",
-            fluencyScore: 95,
-          })
-          setLoading(false)
-        }
-      })
-    return () => {
-      isMounted = false
+    // Al ingresar al modal, el usuario queda inactivo en el diagrama
+    setTrackingPaused(true)
+    if (editor && typeof editor.setLocalAwarenessCursor === "function") {
+      editor.setLocalAwarenessCursor(null)
     }
-  }, [activeDiagramId])
+
+    let ignore = false
+    const fetchInitial = async () => {
+      // Para diagrama local: 100% en memoria, cero sockets y cero red
+      if (isLocalDiagram) {
+        if (!ignore) {
+          setReport(computeLocalProductivityReport(activeDiagramId, model, user))
+          setLoading(false)
+        }
+        return
+      }
+
+      // Para colaborativo: una única foto fija de lo que llevan trabajando hasta ese momento
+      try {
+        const data = await fetchProductivityReport(activeDiagramId)
+        if (ignore) return
+        if (
+          data &&
+          (data.collaborators.length > 0 ||
+            data.totalActiveSeconds > 0 ||
+            data.bottlenecks.length > 0)
+        ) {
+          setReport(data)
+        } else {
+          setReport(computeLocalProductivityReport(activeDiagramId, model, user))
+        }
+      } catch {
+        if (!ignore) {
+          setReport(computeLocalProductivityReport(activeDiagramId, model, user))
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void fetchInitial()
+    return () => {
+      ignore = true
+      setTrackingPaused(false)
+    }
+  }, [activeDiagramId, isLocalDiagram, model, user, editor])
 
   const handleAiAudit = async () => {
     if (!report) return
@@ -128,7 +127,7 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
     try {
       const result = await auditProductivityWithAi(report)
       setAiAudit(result)
-      toast.success("Diagnóstico heurístico generado con éxito")
+      toast.success("Diagnóstico generado con éxito")
     } catch {
       toast.error("No se pudo contactar al servicio de IA")
     } finally {
@@ -285,9 +284,13 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {b.contentionCount > 0 && (
+                        {b.contentionCount > 0 ? (
                           <span className="px-2 py-0.5 text-xs font-bold bg-destructive/15 text-destructive rounded-md">
                             {b.contentionCount} colisión(es)
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 text-xs font-semibold bg-amber-500/15 text-amber-500 rounded-md">
+                            Sobrecarga de diseño
                           </span>
                         )}
                         {b.currentHolderUserId && (
@@ -423,8 +426,9 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
                 </div>
               ) : (
                 <div className="p-6 text-center rounded-lg border border-dashed border-border bg-muted/20 text-muted-foreground text-sm">
-                  Presioná &quot;Analizar con IA&quot; para obtener recomendaciones heurísticas
-                  sobre cuellos de botella y desacoplamiento.
+                  {report && report.bottlenecks.length === 0
+                    ? '✓ No se detectaron cuellos de botella en el sistema. Presioná "Analizar con IA" para verificar el estado de fluidez.'
+                    : 'Presioná "Analizar con IA" para analizar los cuellos de botella detectados y obtener recomendaciones de solución.'}
                 </div>
               )}
             </div>

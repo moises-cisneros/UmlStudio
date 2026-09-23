@@ -37,8 +37,8 @@ export class VisionImportError extends Error {
 
 function resolveVisionUrl(): string {
   const env = (import.meta as unknown as { env?: Record<string, string | undefined> })?.env
-  const base = env?.["VITE_AI_SERVICE_URL"]
-  return base ? `${base.replace(/\/$/, "")}/api/vision` : "/api/vision"
+  const base = env?.["VITE_AI_SERVICE_URL"] || "http://127.0.0.1:8001"
+  return `${base.replace(/\/$/, "")}/api/vision`
 }
 
 export function validateImageFile(file: File): void {
@@ -85,6 +85,9 @@ export async function uploadImageForVision(
 
   if (response.ok) {
     const data = (await response.json()) as VisionResponse
+    if (data?.model?.nodes && Array.isArray(data.model.nodes)) {
+      data.model.nodes = data.model.nodes.map(normalizeVisionNode)
+    }
     return data
   }
 
@@ -189,6 +192,51 @@ export function validateVisionModel(model: unknown): VisionModelValidation {
 const DEFAULT_NODE_SIZE = { width: 180, height: 120 }
 const CASCADE_STEP = 32
 
+export function normalizeVisionNode(node: UmlStudioNode): UmlStudioNode {
+  const data = (node.data ? { ...node.data } : { name: "Class" }) as Record<string, unknown>
+  if (Array.isArray(data.attributes)) {
+    data.attributes = data.attributes.map((attr: unknown, idx: number) => {
+      if (typeof attr === "string") {
+        return { id: `attr-${node.id}-${idx + 1}`, name: attr }
+      }
+      if (attr && typeof attr === "object") {
+        const item = attr as { id?: string; name?: string }
+        return {
+          id: item.id || `attr-${node.id}-${idx + 1}`,
+          name: typeof item.name === "string" ? item.name : String(attr),
+        }
+      }
+      return { id: `attr-${node.id}-${idx + 1}`, name: String(attr ?? "") }
+    })
+  } else {
+    data.attributes = []
+  }
+
+  if (Array.isArray(data.methods)) {
+    data.methods = data.methods.map((meth: unknown, idx: number) => {
+      if (typeof meth === "string") {
+        return { id: `meth-${node.id}-${idx + 1}`, name: meth }
+      }
+      if (meth && typeof meth === "object") {
+        const item = meth as { id?: string; name?: string; isAbstract?: boolean }
+        return {
+          id: item.id || `meth-${node.id}-${idx + 1}`,
+          name: typeof item.name === "string" ? item.name : String(meth),
+          ...(item.isAbstract ? { isAbstract: true } : {}),
+        }
+      }
+      return { id: `meth-${node.id}-${idx + 1}`, name: String(meth ?? "") }
+    })
+  } else {
+    data.methods = []
+  }
+
+  return {
+    ...node,
+    data: data as UmlStudioNode["data"],
+  }
+}
+
 function randomId(): string {
   const cryptoRef = globalThis.crypto
   if (cryptoRef && typeof cryptoRef.randomUUID === "function") {
@@ -237,7 +285,7 @@ export function mergeVisionModel(current: UMLModel, incoming: UMLModel): UMLMode
   }
 
   const nodes: UmlStudioNode[] = incoming.nodes.map((node, index) =>
-    withGeometryFallback({ ...node, id: takeId(node.id) }, index)
+    withGeometryFallback(normalizeVisionNode({ ...node, id: takeId(node.id) }), index)
   )
   const edges: UmlStudioEdge[] = incoming.edges.map((edge) => ({
     ...edge,

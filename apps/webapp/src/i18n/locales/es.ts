@@ -110,7 +110,10 @@ export const es: TranslationDictionary = {
     filterFavorites: "Filtrar favoritos",
     filterType: "Tipo de Diagrama",
     newDiagram: "Nuevo",
-    importJson: "Importar",
+    importDiagram: "Importar",
+    importJson: "Importar JSON (.json)",
+    importXmi: "Importar XMI (.xmi, .xml)",
+    importPhoto: "Importar Foto / Imagen",
     quickStartTitle: "Plantillas",
     emptyStateTitle: "No se encontraron diagramas",
     emptyStateDesc:

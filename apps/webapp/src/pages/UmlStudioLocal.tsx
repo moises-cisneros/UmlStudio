@@ -27,6 +27,7 @@ import { log } from "@/logger"
 import { normalizeThumbnailSvg } from "@/utils/thumbnailSvg"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import { installPerfHooks } from "@/utils/perfHooks"
+import { setActiveDiagramForTracking } from "@/utils/localProductivityTracker"
 import { ErrorPage } from "./ErrorPage"
 import { useTranslation } from "@/i18n"
 
@@ -57,6 +58,13 @@ export const UmlStudioLocal: FC = () => {
   const setThumbnail = usePersistenceModelStore((store) => store.setThumbnail)
 
   useDocumentTitle(diagram?.model.title)
+
+  useEffect(() => {
+    setActiveDiagramForTracking(diagramId ?? null)
+    return () => {
+      setActiveDiagramForTracking(null)
+    }
+  }, [diagramId])
 
   useEffect(() => {
     if (!diagramId) return

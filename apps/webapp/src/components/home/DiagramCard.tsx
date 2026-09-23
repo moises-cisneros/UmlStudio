@@ -4,7 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type Ref,
@@ -155,7 +154,6 @@ export type DiagramActionsMenuViewProps = {
   onChangeSharedView: (view: DiagramView) => void
   onRemoveSharedEntry: () => void
   containerClassName?: string
-  stopPropagation?: boolean
 }
 
 const DEFAULT_MENU_CONTAINER_CLASS = "relative"
@@ -176,7 +174,6 @@ export function DiagramActionsMenuView({
   onChangeSharedView,
   onRemoveSharedEntry,
   containerClassName = DEFAULT_MENU_CONTAINER_CLASS,
-  stopPropagation = false,
 }: DiagramActionsMenuViewProps) {
   const { t } = useTranslation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -209,23 +206,8 @@ export function DiagramActionsMenuView({
         }
     : null
 
-  const stopIfNeeded = (
-    event: ReactMouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement> | React.SyntheticEvent
-  ) => {
-    if (stopPropagation) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-  }
-
   return (
-    <div
-      className={cn("relative z-30", containerClassName)}
-      onClick={stopIfNeeded}
-      onMouseDown={stopIfNeeded}
-      onPointerDown={stopIfNeeded}
-      onKeyDown={stopIfNeeded}
-    >
+    <div className={cn("relative z-30", containerClassName)}>
       <DropdownMenu open={isMenuOpen} onOpenChange={(open) => setIsMenuOpen(open)}>
         <DropdownMenuTrigger
           render={
@@ -235,9 +217,6 @@ export function DiagramActionsMenuView({
               size="icon-lg"
               aria-label={t.dashboard.diagramActionsAria}
               className="pointer-events-auto relative z-30 rounded-lg text-muted-foreground transition-all duration-150 hover:bg-accent hover:text-foreground group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 aria-expanded:bg-accent aria-expanded:text-foreground aria-expanded:opacity-100 home-card-control"
-              onClick={stopIfNeeded}
-              onMouseDown={stopIfNeeded}
-              onPointerDown={stopIfNeeded}
             />
           }
         >
@@ -433,7 +412,6 @@ export function DiagramActionsMenuView({
 type DiagramActionsMenuProps = {
   diagram: RecentDiagram
   containerClassName?: string
-  stopPropagation?: boolean
   isExpired?: boolean
   onSharedDiagramRemoved?: (diagramId: string) => void
   onSharedDiagramViewChange?: (diagramId: string, view: DiagramView) => void
@@ -442,7 +420,6 @@ type DiagramActionsMenuProps = {
 export const DiagramActionsMenu = ({
   diagram,
   containerClassName,
-  stopPropagation = false,
   isExpired = false,
   onSharedDiagramRemoved,
   onSharedDiagramViewChange,
@@ -490,7 +467,6 @@ export const DiagramActionsMenu = ({
       diagram={diagram}
       isExpired={isExpired}
       canDelete={isLocalDiagram && !isCurrentDiagramInEditor}
-      stopPropagation={stopPropagation}
       containerClassName={containerClassName}
       onOpen={() => navigate(getDiagramNav(diagram))}
       onRename={() => {
@@ -708,37 +684,8 @@ export function DiagramCardView({
             >
               {title}
             </h3>
-
-            <div className="relative z-20 flex shrink-0 items-center gap-0.5">
-              {onToggleFavorite && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-lg"
-                  aria-label={isFavorite ? t.dashboard.removeFavorite : t.dashboard.addFavorite}
-                  aria-pressed={isFavorite}
-                  className={cn(
-                    "pointer-events-auto transition-opacity home-card-control",
-                    isFavorite
-                      ? "text-rose-500 opacity-100"
-                      : "text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-rose-500"
-                  )}
-                  onClick={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    onToggleFavorite()
-                  }}
-                >
-                  <Heart
-                    className="size-4.5"
-                    aria-hidden="true"
-                    fill={isFavorite ? "currentColor" : "none"}
-                  />
-                </Button>
-              )}
-
-              {actionsMenu}
-            </div>
+            {/* Spacer to keep title aligned when controls overlay is absolute */}
+            <div className="shrink-0" style={{ width: "var(--card-controls-width, 64px)" }} />
           </div>
 
           <DiagramPreview
@@ -775,6 +722,37 @@ export function DiagramCardView({
           </div>
         </CardFooter>
       </Link>
+
+      {/* Controls sit OUTSIDE the Link (above its after-overlay) so pointer events always reach them */}
+      <div className="absolute right-2 top-2.5 z-20 flex items-center gap-0.5">
+        {onToggleFavorite && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-lg"
+            aria-label={isFavorite ? t.dashboard.removeFavorite : t.dashboard.addFavorite}
+            aria-pressed={isFavorite}
+            className={cn(
+              "pointer-events-auto transition-opacity home-card-control",
+              isFavorite
+                ? "text-rose-500 opacity-100"
+                : "text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-rose-500"
+            )}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onToggleFavorite()
+            }}
+          >
+            <Heart
+              className="size-4.5"
+              aria-hidden="true"
+              fill={isFavorite ? "currentColor" : "none"}
+            />
+          </Button>
+        )}
+        {actionsMenu}
+      </div>
     </Card>
   )
 }
@@ -873,7 +851,6 @@ export function DiagramCardComponent({
       actionsMenu={
         <DiagramActionsMenu
           diagram={diagram}
-          stopPropagation
           isExpired={isExpired}
           containerClassName="pointer-events-auto relative"
           onSharedDiagramRemoved={onSharedDiagramRemoved}

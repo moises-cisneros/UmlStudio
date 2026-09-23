@@ -12,8 +12,13 @@ const isSupportedDiagram = (file: File) => {
     name.endsWith(".json") ||
     name.endsWith(".xmi") ||
     name.endsWith(".xml") ||
+    name.endsWith(".png") ||
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg") ||
+    name.endsWith(".webp") ||
     file.type.includes("json") ||
-    file.type.includes("xml")
+    file.type.includes("xml") ||
+    file.type.startsWith("image/")
   )
 }
 
@@ -55,7 +60,9 @@ export function DiagramFileDropzone() {
       const files = Array.from(event.dataTransfer?.files ?? [])
       const diagram = files.find(isSupportedDiagram)
       if (!diagram) {
-        toast.error("Drop an UmlStudio .json or Enterprise Architect .xmi file.")
+        toast.error(
+          "Drop an UmlStudio .json, Enterprise Architect .xmi, or diagram photo (.png, .jpg, .webp)."
+        )
         return
       }
       void importFile(diagram)
@@ -85,10 +92,11 @@ export function DiagramFileDropzone() {
       <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-primary bg-background/60 px-10 py-8 text-center shadow-lg">
         <FileUpIcon className="size-9 text-primary" aria-hidden />
         <div className="space-y-1">
-          <p className="text-base font-semibold text-foreground">Drop to import an XMI diagram</p>
+          <p className="text-base font-semibold text-foreground">Drop to import a diagram</p>
           <p className="text-sm text-muted-foreground">
-            An Enterprise Architect <code className="font-mono">.xmi</code> file opens as a new
-            diagram.
+            UmlStudio <code className="font-mono">.json</code>, Enterprise Architect{" "}
+            <code className="font-mono">.xmi</code>, or photo{" "}
+            <code className="font-mono">.png, .jpg, .webp</code> opens as a new diagram.
           </p>
         </div>
       </div>

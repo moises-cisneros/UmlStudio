@@ -30,6 +30,7 @@ interface VisionImportDialogProps {
   open: boolean
   onClose: () => void
   onMerged?: (added: { nodes: number; edges: number }) => void
+  onCreateDiagram?: (model: UMLModel) => void
 }
 
 function nodeLabel(model: UMLModel, id: string): string {
@@ -47,7 +48,12 @@ function toastVisionError(err: unknown, fileName: string): void {
   toast.error(`Could not import "${fileName}". Please try again.`)
 }
 
-export function VisionImportDialog({ open, onClose, onMerged }: VisionImportDialogProps) {
+export function VisionImportDialog({
+  open,
+  onClose,
+  onMerged,
+  onCreateDiagram,
+}: VisionImportDialogProps) {
   const { editor } = useEditorContext()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>("idle")
@@ -69,9 +75,7 @@ export function VisionImportDialog({ open, onClose, onMerged }: VisionImportDial
     onClose()
   }
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const processFile = useCallback(async (file: File) => {
     setFileName(file.name)
     setPhase("uploading")
     try {
@@ -92,21 +96,48 @@ export function VisionImportDialog({ open, onClose, onMerged }: VisionImportDial
       setPhase("idle")
       setPreview(null)
     }
+  }, [])
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    await processFile(file)
   }
 
   const handleConfirm = useCallback(() => {
-    // FA-01: explicit confirm merges into the Yjs store via editor.model
-    // (setter routes through diagramStore.setNodesAndEdges → reconcileYMap).
     if (!preview || phase !== "preview" || busy) return
-    if (!editor) {
-      toast.error("Editor is not available. Open a diagram and try again.")
-      return
-    }
     const validation = validateVisionModel(preview.model)
     if (!validation.valid) {
       toast.error(
         `Import rejected: ${validation.errors[0]} Only UML class diagrams (OMG UML 2.5) are supported.`
       )
+      return
+    }
+
+    if (onCreateDiagram) {
+      setPhase("merging")
+      try {
+        const newDiagramId = crypto.randomUUID()
+        const newModel: UMLModel = {
+          ...preview.model,
+          id: newDiagramId,
+          title: fileName
+            ? fileName.replace(/\.[^/.]+$/, "")
+            : preview.model.title || "Imported diagram",
+        }
+        onCreateDiagram(newModel)
+        reset()
+        onClose()
+      } catch (err) {
+        log.error("Vision create diagram failed", err as Error)
+        toast.error("Could not create diagram from photo.")
+        setPhase("preview")
+      }
+      return
+    }
+
+    if (!editor) {
+      toast.error("Editor is not available. Open a diagram and try again.")
       return
     }
     setPhase("merging")
@@ -130,7 +161,7 @@ export function VisionImportDialog({ open, onClose, onMerged }: VisionImportDial
       toast.error("Could not merge the import. The diagram was not changed.")
       setPhase("preview")
     }
-  }, [preview, phase, busy, editor, fileName, reset, onMerged, onClose])
+  }, [preview, phase, busy, onCreateDiagram, editor, fileName, reset, onClose, onMerged])
 
   return (
     <Dialog
@@ -143,8 +174,8 @@ export function VisionImportDialog({ open, onClose, onMerged }: VisionImportDial
         <DialogHeader>
           <DialogTitle>Import diagram photo</DialogTitle>
           <DialogDescription>
-            Upload a photo of a UML class diagram (JPG, PNG, or WebP, max 10MB, min 640x480). Review
-            the extracted preview, then confirm to merge it into the canvas.
+            Upload a photo or image of a UML class diagram (PNG, JPG, JPEG, or WebP). Review the
+            extracted preview, then confirm to import it into your workspace.
           </DialogDescription>
         </DialogHeader>
 

@@ -86,6 +86,7 @@ export class WebSocketManager {
       this.websocket?.send(JSON.stringify(awarenessMessage))
 
       this.instance.broadcastFullState()
+      this.instance.broadcastAwareness?.()
     }
 
     this.websocket.onmessage = (event) => {

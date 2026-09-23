@@ -1,6 +1,12 @@
 import type { FC } from "react"
-import { Search, FolderInput, Plus } from "lucide-react"
+import { Search, FolderInput, Plus, FileCode, FileText, Camera, ChevronDown } from "lucide-react"
 import { Button } from "@umlstudio/ui/components/button"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@umlstudio/ui/components/dropdown-menu"
 import { BrandLockup } from "@/components/navbar/BrandLockup"
 import { ThemeSwitcherMenu } from "@/components/navbar/ThemeSwitcher"
 import { LanguageSwitcher } from "@/components/navbar/LanguageSwitcher"
@@ -13,15 +19,21 @@ export type HomeWorkbenchHeaderProps = {
   chrome: HomeChrome
   onNewDiagram?: () => void
   onImportJson?: () => void
+  onImportXmi?: () => void
+  onImportVision?: () => void
 }
 
 export const HomeWorkbenchHeader: FC<HomeWorkbenchHeaderProps> = ({
   chrome,
   onNewDiagram,
   onImportJson,
+  onImportXmi,
+  onImportVision,
 }) => {
   const { searchTerm, setSearchTerm } = chrome
   const { t } = useTranslation()
+
+  const hasImportOptions = onImportJson || onImportXmi || onImportVision
 
   return (
     <div className="sticky top-0 z-20 flex flex-col gap-2.5 border-b border-border-subtle bg-surface px-4 py-2.5 pt-0 md:px-6">
@@ -46,16 +58,58 @@ export const HomeWorkbenchHeader: FC<HomeWorkbenchHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {onImportJson && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onImportJson}
-              className="border-border-subtle bg-(--home-surface-raised) text-xs"
-            >
-              <FolderInput className="size-3.5 mr-1" />
-              <span className="hidden sm:inline">{t.dashboard.importJson}</span>
-            </Button>
+          {hasImportOptions && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-border-subtle bg-(--home-surface-raised) text-xs"
+                  >
+                    <FolderInput className="size-3.5 mr-1" />
+                    <span className="hidden sm:inline">{t.dashboard.importDiagram}</span>
+                    <ChevronDown className="size-3 ml-1 opacity-70" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-56">
+                {onImportJson && (
+                  <DropdownMenuItem onClick={onImportJson} className="cursor-pointer gap-2 text-xs">
+                    <FileCode className="size-4 text-emerald-500 shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{t.dashboard.importJson}</span>
+                      <span className="text-[10px] text-muted-foreground">UmlStudio JSON</span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+                {onImportXmi && (
+                  <DropdownMenuItem onClick={onImportXmi} className="cursor-pointer gap-2 text-xs">
+                    <FileText className="size-4 text-blue-500 shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{t.dashboard.importXmi}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        Enterprise Architect XMI
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+                {onImportVision && (
+                  <DropdownMenuItem
+                    onClick={onImportVision}
+                    className="cursor-pointer gap-2 text-xs"
+                  >
+                    <Camera className="size-4 text-amber-500 shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{t.dashboard.importPhoto}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        Reconocimiento IA (Vision)
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {onNewDiagram && (
