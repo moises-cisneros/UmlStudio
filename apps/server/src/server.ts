@@ -32,19 +32,44 @@ async function main() {
   // Idempotently seed default user accounts (credentials)
   await seedDefaultUsers(auth, userRepo)
 
-  const relay = startRelayServer({
-    port: config.WS_PORT,
-    host: config.HOST,
-    verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
-  })
+  const sharedPort =
+    config.WS_PORT === config.PORT ||
+    (process.env.NODE_ENV === "production" && !process.env.WS_PORT)
 
-  const app = buildApp({ config, redis, relay, auth })
-  const httpServer = app.listen(config.PORT, config.HOST, () => {
-    logger.info(
-      { event: "http.listen", host: config.HOST, port: config.PORT },
-      "http server listening"
-    )
-  })
+  let relay: import("./ws.js").RelayServer
+  let httpServer: ReturnType<ReturnType<typeof buildApp>["listen"]>
+
+  if (sharedPort) {
+    const relayPublish = {
+      publishControl: (diagramId: string, control: import("./types.js").ControlEvent) => {
+        relay?.publishControl(diagramId, control)
+      },
+    }
+    const app = buildApp({ config, redis, relay: relayPublish, auth })
+    httpServer = app.listen(config.PORT, config.HOST, () => {
+      logger.info(
+        { event: "http.listen", host: config.HOST, port: config.PORT },
+        "http server listening (single port HTTP + WS)"
+      )
+    })
+    relay = startRelayServer({
+      server: httpServer as import("http").Server,
+      verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
+    })
+  } else {
+    relay = startRelayServer({
+      port: config.WS_PORT,
+      host: config.HOST,
+      verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
+    })
+    const app = buildApp({ config, redis, relay, auth })
+    httpServer = app.listen(config.PORT, config.HOST, () => {
+      logger.info(
+        { event: "http.listen", host: config.HOST, port: config.PORT },
+        "http server listening"
+      )
+    })
+  }
 
   const shutdown = async (signal: string) => {
     logger.info({ event: "shutdown.begin", signal }, "shutdown")

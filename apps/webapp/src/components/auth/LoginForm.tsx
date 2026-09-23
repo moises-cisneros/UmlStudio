@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { toast } from "react-toastify"
-import { Eye, EyeOff, Lock, Mail, ArrowRight, Sparkles } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail, ArrowRight } from "lucide-react"
 import { Button } from "@umlstudio/ui/components/button"
 import { Field, FieldError, FieldLabel } from "@umlstudio/ui/components/field"
 import { Input } from "@umlstudio/ui/components/input"
@@ -11,27 +11,6 @@ interface LoginFormProps {
   redirect?: string
   onSuccess: () => void
 }
-
-const DEMO_ACCOUNTS = [
-  {
-    label: "Admin",
-    email: "admin@umlstudio.com",
-    password: "UmlStudio#2026",
-    roleKey: "leadModeler" as const,
-  },
-  {
-    label: "Modeler",
-    email: "modeler@umlstudio.com",
-    password: "UmlStudio#2026",
-    roleKey: "collabModeler" as const,
-  },
-  {
-    label: "Reviewer",
-    email: "alice@umlstudio.com",
-    password: "UmlStudio#2026",
-    roleKey: "reviewer" as const,
-  },
-]
 
 export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
   const { t } = useTranslation()
@@ -59,40 +38,8 @@ export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
     }
   }
 
-  function handleQuickFill(demo: (typeof DEMO_ACCOUNTS)[number]) {
-    setEmail(demo.email)
-    setPassword(demo.password)
-    setError(null)
-  }
-
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {/* Quick-fill demo accounts */}
-      <div className="rounded-xl border border-border-subtle bg-surface-raised/60 p-3">
-        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-          <Sparkles className="size-3 text-(--dodger-blue)" />
-          <span>{t.auth.quickDemoTitle}</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {DEMO_ACCOUNTS.map((demo) => {
-            const roleLabel = t.auth[demo.roleKey]
-            return (
-              <button
-                key={demo.email}
-                type="button"
-                onClick={() => handleQuickFill(demo)}
-                className="group flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-all hover:border-(--dodger-blue) hover:bg-(--dodger-blue)/10"
-                title={`${demo.label} (${roleLabel}): ${demo.email}`}
-              >
-                <span className="font-semibold text-(--dodger-blue)">{demo.label}</span>
-                <span className="text-[11px] text-muted-foreground group-hover:text-foreground">
-                  ({roleLabel})
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
 
       <Field>
         <FieldLabel htmlFor="login-email" className="text-xs font-semibold">

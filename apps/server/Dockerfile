@@ -53,10 +53,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf 
 
 COPY --from=deploy --chown=node:node /deploy/server ./
 
-EXPOSE 8000 4444
+EXPOSE 8000 4444 10000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:8000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+  CMD node -e "const p = process.env.PORT || 8000; fetch('http://127.0.0.1:' + p + '/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
 USER node
 
