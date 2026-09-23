@@ -587,7 +587,9 @@ export function importXmiDiagram(xmiString: string, options: XmiImportOptions = 
           const targetNode = nodeMap.get(finalTargetId)
           const { sourceHandle, targetHandle } = deriveOptimalHandles(sourceNode, targetNode)
 
-          const edgeId = xmiId || `edge-assoc-${finalSourceId}-${finalTargetId}`
+          const edgeId = isAssocClassType
+            ? `edge-assoc-${finalSourceId}-${finalTargetId}`
+            : xmiId || `edge-assoc-${finalSourceId}-${finalTargetId}`
           const rawSourceRole = sourceEnd.getAttribute("name")
           const rawTargetRole = targetEnd.getAttribute("name")
           const sourceRole = sanitizeRoleName(rawSourceRole)
@@ -595,6 +597,17 @@ export function importXmiDiagram(xmiString: string, options: XmiImportOptions = 
           const srcMult = sanitizeMultiplicity(parseMultiplicity(sourceEnd))
           const tgtMult = sanitizeMultiplicity(parseMultiplicity(targetEnd))
           const label = sanitizeEdgeLabel(el.getAttribute("name"))
+
+          if (assocClassNodeId) {
+            const assocNode = nodeMap.get(assocClassNodeId)
+            if (assocNode) {
+              assocNode.data = {
+                ...assocNode.data,
+                isAssociationClass: true,
+                associationEdgeId: edgeId,
+              }
+            }
+          }
 
           edges.push({
             id: edgeId,
@@ -724,8 +737,18 @@ export function importXmiDiagram(xmiString: string, options: XmiImportOptions = 
       if (label && !existing.data?.label) {
         existing.data = { ...existing.data, label }
       }
-      if (assocClassNodeId && !existing.data?.associationClassNodeId) {
-        existing.data = { ...existing.data, associationClassNodeId: assocClassNodeId }
+      if (assocClassNodeId) {
+        if (!existing.data?.associationClassNodeId) {
+          existing.data = { ...existing.data, associationClassNodeId: assocClassNodeId }
+        }
+        const assocNode = nodeMap.get(assocClassNodeId)
+        if (assocNode) {
+          assocNode.data = {
+            ...assocNode.data,
+            isAssociationClass: true,
+            associationEdgeId: existing.id,
+          }
+        }
       }
       if (isAssoc) {
         if (srcMult && !existing.data?.sourceMultiplicity) {

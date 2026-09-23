@@ -383,10 +383,14 @@ export function applyDiff(currentModel: UMLModel, diff: ModelDiff): UMLModel {
           ? (targetNode!.data as { name: string }).name.toLowerCase()
           : ""
 
+      const edgeData = edge.data as Record<string, unknown> | undefined
+      const assocClassId = edgeData?.associationClassNodeId as string | undefined
+
       let isMatch =
         removedRelIds.has(edge.id) ||
         removedElementIds.has(edge.source) ||
-        removedElementIds.has(edge.target)
+        removedElementIds.has(edge.target) ||
+        (Boolean(assocClassId) && removedElementIds.has(assocClassId!))
 
       if (!isMatch && (diff.remove.relationshipIds?.length ?? 0) > 0) {
         for (const rawRel of diff.remove.relationshipIds!) {
@@ -399,8 +403,20 @@ export function applyDiff(currentModel: UMLModel, diff: ModelDiff): UMLModel {
       }
 
       if (isMatch) {
+        if (assocClassId) {
+          removedElementIds.add(assocClassId)
+        }
         delete interactiveRelationships[edge.id]
         edges.splice(i, 1)
+      }
+    }
+
+    // Cascade remove any intermediate nodes attached to removed edges
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      if (removedElementIds.has(nodes[i].id)) {
+        delete assessments[nodes[i].id]
+        delete interactiveElements[nodes[i].id]
+        nodes.splice(i, 1)
       }
     }
   }
@@ -670,20 +686,24 @@ export function applyDiff(currentModel: UMLModel, diff: ModelDiff): UMLModel {
       const ty = targetNode ? targetNode.position.y + Math.floor(targetNode.height / 2) : 150
       const midX = Math.round((sx + tx) / 2)
 
-      if (rel.associationClass === "MF_Assoc") {
+      const rawAssoc = rel.intermediateClass || rel.associationClass
+      let assocName = rawAssoc
+      if (assocName === "MF_Assoc") {
         const sName = sourceNode?.data?.name || rel.source
         const tName = targetNode?.data?.name || rel.target
         if (sName !== "M" && tName !== "F" && sName !== "F" && tName !== "M") {
-          rel.associationClass = `${sName}${tName}_Assoc`
+          assocName = `${sName}${tName}_Assoc`
         }
       }
+      rel.associationClass = assocName
+      rel.intermediateClass = assocName
 
-      const assocClassId = rel.associationClass ? resolveNodeId(rel.associationClass) : undefined
+      const assocClassId = assocName ? resolveNodeId(assocName) : undefined
 
       let assocNode: UmlStudioNode | undefined = assocClassId
         ? nodes.find((n) => n.id === assocClassId)
         : undefined
-      if (!assocNode && rel.associationClass && sourceNode && targetNode) {
+      if (!assocNode && assocName && sourceNode && targetNode) {
         const newNodeId = `node-${generateUUID()}`
         const defaultX = Math.round((sourceNode.position.x + targetNode.position.x) / 2)
         const defaultY = Math.round((sourceNode.position.y + targetNode.position.y) / 2) + 130
@@ -695,9 +715,10 @@ export function applyDiff(currentModel: UMLModel, diff: ModelDiff): UMLModel {
           height: 110,
           measured: { width: DROPS.DEFAULT_ELEMENT_WIDTH, height: 110 },
           data: {
-            name: rel.associationClass,
+            name: assocName,
             stereotype: "<<association>>",
             isAssociationClass: true,
+            associationEdgeId: edgeId,
             attributes: [],
             methods: [],
           },
@@ -712,6 +733,7 @@ export function applyDiff(currentModel: UMLModel, diff: ModelDiff): UMLModel {
         interactiveElements[newNodeId] = true
       } else if (assocNode && sourceNode && targetNode) {
         assocNode.data.isAssociationClass = true
+        assocNode.data.associationEdgeId = edgeId
         if (!assocNode.data.stereotype) {
           assocNode.data.stereotype = "<<association>>"
         }

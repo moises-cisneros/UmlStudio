@@ -108,6 +108,7 @@ export const useElementInteractions = () => {
             name: "AssociationClass",
             stereotype: ClassStereotype.Association,
             isAssociationClass: true,
+            associationEdgeId: assocEdgeId,
             attributes: [],
             methods: [],
           },
@@ -120,6 +121,7 @@ export const useElementInteractions = () => {
           target: node.id,
           type: "ClassBidirectional",
           data: {
+            points: [],
             associationClassNodeId: intermediateNodeId,
           },
         }

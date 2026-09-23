@@ -143,6 +143,36 @@ export const getSVG = (
       MainEdgesGTag.appendChild(clonedPath)
     })
 
+    const connectorLines = edgeContainer.querySelectorAll(
+      "line[data-testid*='association-class-connector'], line"
+    )
+    connectorLines.forEach((line) => {
+      const clonedLine = line.cloneNode(true) as Element
+
+      if (!clonedLine.getAttribute("stroke-width")) {
+        clonedLine.setAttribute("stroke-width", "1.5")
+      }
+
+      if (!clonedLine.getAttribute("stroke")) {
+        const styleAttr = clonedLine.getAttribute("style") || ""
+        const strokeMatch = styleAttr.match(/stroke:\s*([^;]+)/)
+        if (strokeMatch) {
+          clonedLine.setAttribute("stroke", strokeMatch[1].trim())
+        } else {
+          clonedLine.setAttribute("stroke", STROKE_COLOR)
+        }
+      }
+
+      if (!clonedLine.getAttribute("stroke-dasharray")) {
+        clonedLine.setAttribute("stroke-dasharray", "6 4")
+      }
+
+      clonedLine.setAttribute("opacity", "1")
+      clonedLine.setAttribute("stroke-opacity", "1")
+
+      MainEdgesGTag.appendChild(clonedLine)
+    })
+
     const inlineMarkers = edgeContainer.querySelectorAll("[data-inline-marker]")
     inlineMarkers.forEach((marker) => {
       MainEdgesGTag.appendChild(marker.cloneNode(true))
@@ -523,6 +553,23 @@ function getEdgeBoundsFromDOM(container: HTMLElement): Rect | undefined {
     }
 
     const strokeWidth = parseFloat(marker.getAttribute("stroke-width") ?? "0")
+    if (strokeWidth > maxStrokeWidth) {
+      maxStrokeWidth = strokeWidth
+    }
+  })
+
+  const connectorLines = container.querySelectorAll(
+    "line[data-testid*='association-class-connector'], line"
+  )
+  connectorLines.forEach((line) => {
+    const x1 = parseFloat(line.getAttribute("x1") ?? "")
+    const y1 = parseFloat(line.getAttribute("y1") ?? "")
+    const x2 = parseFloat(line.getAttribute("x2") ?? "")
+    const y2 = parseFloat(line.getAttribute("y2") ?? "")
+    if (Number.isFinite(x1) && Number.isFinite(y1) && Number.isFinite(x2) && Number.isFinite(y2)) {
+      allPoints.push({ x: x1, y: y1 }, { x: x2, y: y2 })
+    }
+    const strokeWidth = parseFloat(line.getAttribute("stroke-width") ?? "1.5")
     if (strokeWidth > maxStrokeWidth) {
       maxStrokeWidth = strokeWidth
     }

@@ -238,13 +238,20 @@ export function startRelayServer(opts: StartOptions): RelayServer {
 
                     if ("selectedElementId" in clientState) {
                       const selectedElementId = clientState.selectedElementId
+                      const selectedElementName =
+                        typeof clientState.selectedElementName === "string"
+                          ? clientState.selectedElementName
+                          : typeof clientState.nodeName === "string"
+                            ? clientState.nodeName
+                            : undefined
                       productivityCollector.recordNodeLock(
                         diagramId,
                         {
                           userId: effectiveUserId,
                           userName: effectiveUserName,
                         },
-                        typeof selectedElementId === "string" ? selectedElementId : null
+                        typeof selectedElementId === "string" ? selectedElementId : null,
+                        selectedElementName
                       )
                     }
                   }

@@ -62,14 +62,18 @@ export class YjsSync {
     this.sendFramedMessage(MessageType.YjsUpdate, state)
   }
 
-  public setSendBroadcastMessage = (sendFn: SendBroadcastMessage) => {
-    this.sendBroadcastMessage = sendFn
-
+  public broadcastAwareness = () => {
+    if (!this.sendBroadcastMessage) return
     const localState = this.awareness.getLocalState()
     if (localState) {
       const awarenessUpdate = encodeAwarenessUpdate(this.awareness, [this.awareness.clientID])
       this.sendFramedMessage(MessageType.AwarenessUpdate, awarenessUpdate)
     }
+  }
+
+  public setSendBroadcastMessage = (sendFn: SendBroadcastMessage) => {
+    this.sendBroadcastMessage = sendFn
+    this.broadcastAwareness()
   }
 
   public setLocalAwarenessUser = (user: CollaborationUser) => {

@@ -32,6 +32,7 @@ export interface DiffRelationshipAdd {
   targetHandle?: string
   name?: string
   associationClass?: string
+  intermediateClass?: string
 }
 
 export interface DiffElementModify {

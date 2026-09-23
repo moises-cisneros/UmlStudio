@@ -685,6 +685,10 @@ export class UmlStudioEditor {
     this.syncManager.broadcastFullState()
   }
 
+  public broadcastAwareness() {
+    this.syncManager.broadcastAwareness()
+  }
+
   public setLocalAwarenessUser(user: UmlStudio.CollaborationUser) {
     this.syncManager.setLocalAwarenessUser(user)
   }
