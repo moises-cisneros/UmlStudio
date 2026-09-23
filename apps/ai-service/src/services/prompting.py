@@ -1177,6 +1177,15 @@ def parse_and_validate_diff_payload(
 
             if "diff" in args and isinstance(args["diff"], dict):
                 args = args["diff"]
+                
+            if (
+                isinstance(args, dict)
+                and isinstance(args.get("properties"), dict)
+                and "name" not in args
+                and "className" not in args
+                and "class_name" not in args
+            ):
+                args = args["properties"]
 
             # Tool: create_class / add_elements
             if func_name in ("create_class", "add_class", "add_element", "add_elements") or (

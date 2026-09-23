@@ -52,6 +52,19 @@ export function useSpeechRecognition({
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
 
+  // Latest callbacks via refs: the recognition instance must survive
+  // re-renders (e.g. every keystroke or interim result). Depending on the
+  // closures directly would recreate + abort the session on each render.
+  const onResultRef = useRef(onResult)
+  const onErrorRef = useRef(onError)
+
+  // Sync after render (never during): keeps the stable recognition
+  // instance calling the latest callbacks without recreating it.
+  useEffect(() => {
+    onResultRef.current = onResult
+    onErrorRef.current = onError
+  })
+
   useEffect(() => {
     if (typeof window === "undefined") return
     const win = window as unknown as IWindow
@@ -72,15 +85,15 @@ export function useSpeechRecognition({
           }
         }
         setTranscript(currentTranscript)
-        if (onResult && currentTranscript.trim()) {
-          onResult(currentTranscript)
+        if (onResultRef.current && currentTranscript.trim()) {
+          onResultRef.current(currentTranscript)
         }
       }
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         setIsListening(false)
-        if (onError) {
-          onError(event.error)
+        if (onErrorRef.current) {
+          onErrorRef.current(event.error)
         }
       }
 
@@ -96,7 +109,7 @@ export function useSpeechRecognition({
         recognitionRef.current.abort()
       }
     }
-  }, [lang, onResult, onError])
+  }, [lang])
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current) return
