@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@umlstudio/ui/component
 import { ChevronDownIcon, FolderKanban } from "lucide-react"
 import { toast, type ToastContentProps } from "react-toastify"
 import { useModalContext } from "@/contexts"
-import { useMediaQuery } from "@/hooks"
+import { useMediaQuery, useCollaborators } from "@/hooks"
 import { useExportAsPNG, useExportAsSpringBoot, useExportAsOpenApi, useExportAsXMI } from "@/hooks"
 import { log } from "@/logger"
 import { JsonFileImportButton, XmiFileImportButton } from "./XmiFileImportButton"
@@ -82,6 +82,7 @@ export function FileMenuItems({
   const diagramId = useDiagramIdFromPath()
   const sharedDiagramId = useSharedDiagramId()
   const deleteModel = usePersistenceModelStore((s) => s.deleteModel)
+  const { isCollaborativeBlocked } = useCollaborators()
   const exportAsPng = useExportAsPNG()
   const exportAsSpringBoot = useExportAsSpringBoot()
   const exportAsOpenApi = useExportAsOpenApi()
@@ -160,6 +161,10 @@ export function FileMenuItems({
   const runExport = useCallback(
     async (format: ExportFormat, action: () => Promise<ExportRunResult | void>) => {
       if (busyFormat) return
+      if (isCollaborativeBlocked) {
+        toast.warning(t.collaborators.exportBlockedToast)
+        return
+      }
       onSelect()
       setBusyFormat(format)
       try {
@@ -179,7 +184,7 @@ export function FileMenuItems({
         setBusyFormat(null)
       }
     },
-    [busyFormat, onSelect]
+    [busyFormat, isCollaborativeBlocked, onSelect, t]
   )
 
   return (
@@ -194,16 +199,40 @@ export function FileMenuItems({
       <DropdownMenuSeparator />
 
       <DropdownMenuGroup>
-        <DropdownMenuLabel>{t.common.importLabel}</DropdownMenuLabel>
-        <JsonFileImportButton close={onSelect} />
-        <XmiFileImportButton close={onSelect} />
-        <VisionPhotoImportItem close={onSelect} onImportPhoto={onImportPhoto} />
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>{t.common.importLabel}</span>
+          {isCollaborativeBlocked && (
+            <span
+              className="text-[10px] font-normal text-amber-500"
+              title={t.collaborators.importExportDisabledTooltip}
+            >
+              (bloqueado)
+            </span>
+          )}
+        </DropdownMenuLabel>
+        <JsonFileImportButton close={onSelect} disabled={isCollaborativeBlocked} />
+        <XmiFileImportButton close={onSelect} disabled={isCollaborativeBlocked} />
+        <VisionPhotoImportItem
+          close={onSelect}
+          onImportPhoto={onImportPhoto}
+          disabled={isCollaborativeBlocked}
+        />
       </DropdownMenuGroup>
 
       <DropdownMenuSeparator />
 
       <DropdownMenuGroup>
-        <DropdownMenuLabel>{t.menu.exportAs}</DropdownMenuLabel>
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>{t.menu.exportAs}</span>
+          {isCollaborativeBlocked && (
+            <span
+              className="text-[10px] font-normal text-amber-500"
+              title={t.collaborators.importExportDisabledTooltip}
+            >
+              (bloqueado)
+            </span>
+          )}
+        </DropdownMenuLabel>
         <div
           className="flex flex-col gap-1.5 px-2 py-1.5"
           role="group"
@@ -245,7 +274,7 @@ export function FileMenuItems({
           </label>
         </div>
         <DropdownMenuItem
-          disabled={busyFormat === "PNG"}
+          disabled={busyFormat === "PNG" || isCollaborativeBlocked}
           onClick={() =>
             runExport("PNG", async () =>
               exportAsPng({ scale: pngScale, transparent: transparentPng })
@@ -256,32 +285,32 @@ export function FileMenuItems({
           <DropdownMenuShortcut>Ctrl+Shift+E</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={busyFormat === "JSON"}
+          disabled={busyFormat === "JSON" || isCollaborativeBlocked}
           onClick={() => runExport("JSON", async () => exportAsJson())}
         >
           {t.menu.exportJson}
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={busyFormat === "XMI"}
+          disabled={busyFormat === "XMI" || isCollaborativeBlocked}
           onClick={() => runExport("XMI", async () => exportAsXMI())}
         >
           {t.menu.exportXmi}
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={busyFormat === "Spring Boot"}
+          disabled={busyFormat === "Spring Boot" || isCollaborativeBlocked}
           onClick={() => runExport("Spring Boot", async () => exportAsSpringBoot())}
         >
           {t.menu.exportSpringBoot}
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={busyFormat === "OpenAPI"}
+          disabled={busyFormat === "OpenAPI" || isCollaborativeBlocked}
           onClick={() => runExport("OpenAPI", async () => exportAsOpenApi())}
         >
           <span>{t.menu.exportOpenApi}</span>
           <DropdownMenuShortcut>Ctrl+Alt+A</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={busyFormat === "Postman"}
+          disabled={busyFormat === "Postman" || isCollaborativeBlocked}
           onClick={() =>
             runExport("Postman", async () => exportAsOpenApi({ defaultTab: "postman" }))
           }
@@ -352,6 +381,7 @@ export const FileMenu: FC<FileMenuProps> = ({ color, onClose }) => {
   const [visionOpen, setVisionOpen] = useState(false)
   const isLg = useMediaQuery("(min-width: 1024px)")
   const { t } = useTranslation()
+  const { isCollaborativeBlocked } = useCollaborators()
 
   const close = useCallback(() => {
     setOpen(false)
@@ -391,7 +421,11 @@ export const FileMenu: FC<FileMenuProps> = ({ color, onClose }) => {
           <FileMenuItems onSelect={close} onImportPhoto={() => setVisionOpen(true)} />
         </DropdownMenuContent>
       </DropdownMenu>
-      <VisionImportDialog open={visionOpen} onClose={() => setVisionOpen(false)} />
+      <VisionImportDialog
+        open={visionOpen}
+        onClose={() => setVisionOpen(false)}
+        isCollaborativeBlocked={isCollaborativeBlocked}
+      />
     </>
   )
 }

@@ -108,7 +108,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     } catch (err: unknown) {
       set({ token: null, user: null, status: "anonymous" })
       if (err instanceof Error && (err.name === "TypeError" || err.message.includes("fetch"))) {
-        throw new Error("Unable to reach the backend server. Check your connection and try again.",
+        throw new Error(
+          "Unable to reach the backend server. Check your connection and try again.",
           {
             cause: err,
           }

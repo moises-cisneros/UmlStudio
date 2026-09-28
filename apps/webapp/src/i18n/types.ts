@@ -100,6 +100,9 @@ export interface TranslationDictionary {
     connecting: string
     clickToFollow: string
     followingClickToStop: string
+    importBlockedToast: string
+    exportBlockedToast: string
+    importExportDisabledTooltip: string
   }
   dashboard: {
     title: string

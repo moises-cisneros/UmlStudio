@@ -5,13 +5,21 @@ import { toast } from "react-toastify"
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
 import { log } from "@/logger"
 import { uploadImageForVision, validateVisionModel } from "@/components/vision/visionImport"
+import { useCollaborators } from "./useCollaborators"
+import { useTranslation } from "@/i18n"
 
 export function useImportDiagramFile() {
   const createModel = usePersistenceModelStore((state) => state.createModel)
   const navigate = useNavigate()
+  const { isCollaborativeBlocked } = useCollaborators()
+  const { t } = useTranslation()
 
   return useCallback(
     async (file: File) => {
+      if (isCollaborativeBlocked) {
+        toast.warning(t.collaborators.importBlockedToast)
+        return
+      }
       try {
         const lowerName = file.name.toLowerCase()
         const isJson = lowerName.endsWith(".json") || file.type.includes("json")
@@ -75,6 +83,6 @@ export function useImportDiagramFile() {
         )
       }
     },
-    [createModel, navigate]
+    [createModel, navigate, isCollaborativeBlocked, t]
   )
 }

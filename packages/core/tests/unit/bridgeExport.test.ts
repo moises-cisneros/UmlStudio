@@ -149,7 +149,7 @@ describe("Bridge Diagram export/import verification", () => {
     // 1. Unspecified multiplicities and roles should NOT emit dummy values
     expect(result.xmiContent).not.toContain('<lowerValue xmi:type="uml:LiteralInteger"')
     expect(result.xmiContent).not.toContain('<upperValue xmi:type="uml:LiteralUnlimitedNatural"')
-    expect(result.xmiContent).not.toContain('<role name=')
+    expect(result.xmiContent).not.toContain("<role name=")
 
     // 2. Return types on operations (EAnone_void)
     expect(result.xmiContent).toContain('<ownedParameter xmi:type="uml:Parameter"')

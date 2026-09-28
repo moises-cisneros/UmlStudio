@@ -13,6 +13,7 @@ import { Field, FieldLabel } from "@umlstudio/ui/components/field"
 import { Input } from "@umlstudio/ui/components/input"
 import type { UMLModel } from "@umlstudio/core"
 import { useEditorContext } from "@/contexts"
+import { useTranslation } from "@/i18n"
 import { log } from "@/logger"
 import {
   VISION_ACCEPTED_MIME,
@@ -31,6 +32,7 @@ interface VisionImportDialogProps {
   onClose: () => void
   onMerged?: (added: { nodes: number; edges: number }) => void
   onCreateDiagram?: (model: UMLModel) => void
+  isCollaborativeBlocked?: boolean
 }
 
 function nodeLabel(model: UMLModel, id: string): string {
@@ -53,8 +55,10 @@ export function VisionImportDialog({
   onClose,
   onMerged,
   onCreateDiagram,
+  isCollaborativeBlocked = false,
 }: VisionImportDialogProps) {
   const { editor } = useEditorContext()
+  const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>("idle")
   const [fileName, setFileName] = useState("")
@@ -140,6 +144,12 @@ export function VisionImportDialog({
       toast.error("Editor is not available. Open a diagram and try again.")
       return
     }
+
+    if (isCollaborativeBlocked) {
+      toast.warning(t.collaborators.importBlockedToast)
+      return
+    }
+
     setPhase("merging")
     try {
       const current = editor.model
@@ -161,7 +171,19 @@ export function VisionImportDialog({
       toast.error("Could not merge the import. The diagram was not changed.")
       setPhase("preview")
     }
-  }, [preview, phase, busy, onCreateDiagram, editor, fileName, reset, onClose, onMerged])
+  }, [
+    preview,
+    phase,
+    busy,
+    onCreateDiagram,
+    editor,
+    isCollaborativeBlocked,
+    t,
+    fileName,
+    reset,
+    onClose,
+    onMerged,
+  ])
 
   return (
     <Dialog

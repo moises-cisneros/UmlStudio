@@ -7,6 +7,9 @@ import {
 } from "@umlstudio/core"
 import { useVersionStore } from "@/stores/useVersionStore"
 import { useModalContext, useEditorContext } from "@/contexts"
+import { useCollaborators } from "./useCollaborators"
+import { useTranslation } from "@/i18n"
+import { toast } from "react-toastify"
 
 export type EditorShortcutId =
   | "save-version"
@@ -70,6 +73,8 @@ export function useEditorShortcuts(diagramId: string | undefined) {
   const requestSave = useVersionStore((s) => s.requestSave)
   const { openModal } = useModalContext()
   const { editor } = useEditorContext()
+  const { isCollaborativeBlocked } = useCollaborators()
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (!diagramId) return
@@ -87,6 +92,10 @@ export function useEditorShortcuts(diagramId: string | undefined) {
         openModal("SHARE", { dialogVariant: "editor" })
       },
       "api-docs": () => {
+        if (isCollaborativeBlocked) {
+          toast.warning(t.collaborators.exportBlockedToast)
+          return
+        }
         openModal("OPENAPI_DOCS", { diagramId })
       },
       "toggle-multiselect": () => {
@@ -98,5 +107,14 @@ export function useEditorShortcuts(diagramId: string | undefined) {
     })
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [diagramId, openDrawer, closeDrawer, requestSave, openModal, editor])
+  }, [
+    diagramId,
+    openDrawer,
+    closeDrawer,
+    requestSave,
+    openModal,
+    editor,
+    isCollaborativeBlocked,
+    t,
+  ])
 }
