@@ -58,9 +58,7 @@ export const NewDiagramModal = () => {
           />
         </HomeDialogField>
 
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {t.newDiagram.scratchHint}
-        </p>
+        <p className="text-xs leading-relaxed text-muted-foreground">{t.newDiagram.scratchHint}</p>
       </div>
 
       <HomeDialogActions

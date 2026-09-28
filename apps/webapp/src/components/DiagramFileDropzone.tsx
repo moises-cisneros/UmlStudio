@@ -3,6 +3,8 @@ import { createPortal } from "react-dom"
 import { FileUpIcon } from "lucide-react"
 import { toast } from "react-toastify"
 import { useImportDiagramFile } from "@/hooks/useImportDiagramFile"
+import { useCollaborators } from "@/hooks/useCollaborators"
+import { useTranslation } from "@/i18n"
 
 const dragHasFiles = (event: DragEvent) => event.dataTransfer?.types.includes("Files") ?? false
 
@@ -24,6 +26,8 @@ const isSupportedDiagram = (file: File) => {
 
 export function DiagramFileDropzone() {
   const importFile = useImportDiagramFile()
+  const { isCollaborativeBlocked } = useCollaborators()
+  const { t } = useTranslation()
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const dragDepthRef = useRef(0)
 
@@ -57,6 +61,11 @@ export function DiagramFileDropzone() {
       event.preventDefault()
       endDrag()
 
+      if (isCollaborativeBlocked) {
+        toast.warning(t.collaborators.importBlockedToast)
+        return
+      }
+
       const files = Array.from(event.dataTransfer?.files ?? [])
       const diagram = files.find(isSupportedDiagram)
       if (!diagram) {
@@ -80,7 +89,7 @@ export function DiagramFileDropzone() {
       window.removeEventListener("drop", onDrop)
       window.removeEventListener("dragend", endDrag)
     }
-  }, [endDrag, importFile])
+  }, [endDrag, importFile, isCollaborativeBlocked, t])
 
   if (!isDraggingFile) return null
 

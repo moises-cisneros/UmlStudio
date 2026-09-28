@@ -4,6 +4,9 @@ import { Filesystem, Directory } from "@capacitor/filesystem"
 import { Share } from "@capacitor/share"
 import { useFileDownload } from "./useFileDownload"
 import { useEditorContext } from "@/contexts"
+import { useCollaborators } from "./useCollaborators"
+import { useTranslation } from "@/i18n"
+import { toast } from "react-toastify"
 
 type exportAsPNGOptions = {
   setWhiteBackground?: boolean
@@ -14,6 +17,8 @@ type exportAsPNGOptions = {
 
 export const useExportAsPNG = () => {
   const { editor } = useEditorContext()
+  const { isCollaborativeBlocked } = useCollaborators()
+  const { t } = useTranslation()
   const downloadFile = useFileDownload()
 
   const exportAsPNG = async ({
@@ -23,6 +28,11 @@ export const useExportAsPNG = () => {
   }: exportAsPNGOptions = {}): Promise<SvgToPngResult> => {
     if (!editor) {
       throw new Error("Editor context is not available")
+    }
+
+    if (isCollaborativeBlocked) {
+      toast.warning(t.collaborators.exportBlockedToast)
+      throw new Error("Collaborative export blocked")
     }
 
     const umlstudioSVG = await editor.exportAsSVG({ svgMode: "compat" })

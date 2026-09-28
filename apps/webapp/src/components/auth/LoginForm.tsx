@@ -40,7 +40,6 @@ export function LoginForm({ redirect, onSuccess }: LoginFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-
       <Field>
         <FieldLabel htmlFor="login-email" className="text-xs font-semibold">
           {t.auth.emailLabel}

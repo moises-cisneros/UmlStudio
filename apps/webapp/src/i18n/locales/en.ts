@@ -102,6 +102,11 @@ export const en: TranslationDictionary = {
     connecting: "Connecting...",
     clickToFollow: "Click to follow/focus",
     followingClickToStop: "Following · Click to stop following",
+    importBlockedToast:
+      "Importing is disabled when two or more collaborators are working on the diagram.",
+    exportBlockedToast:
+      "Exporting is disabled when two or more collaborators are working on the diagram.",
+    importExportDisabledTooltip: "Disabled while two or more collaborators are working.",
   },
   dashboard: {
     title: "Your diagrams",

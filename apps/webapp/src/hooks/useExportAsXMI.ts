@@ -1,6 +1,8 @@
 import { exportToXmi } from "@umlstudio/core/export"
 import { useEditorContext } from "@/contexts"
 import { useFileDownload } from "./useFileDownload"
+import { useCollaborators } from "./useCollaborators"
+import { useTranslation } from "@/i18n"
 import { isIOS, isAndroid } from "@/utils/platform"
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem"
 import { Share } from "@capacitor/share"
@@ -8,11 +10,18 @@ import { toast } from "react-toastify"
 
 export const useExportAsXMI = () => {
   const { editor } = useEditorContext()
+  const { isCollaborativeBlocked } = useCollaborators()
+  const { t } = useTranslation()
   const downloadFile = useFileDownload()
 
   const exportAsXMI = async () => {
     if (!editor) {
       throw new Error("Editor context is not available")
+    }
+
+    if (isCollaborativeBlocked) {
+      toast.warning(t.collaborators.exportBlockedToast)
+      return
     }
 
     const result = await exportToXmi(editor.model, {
