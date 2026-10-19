@@ -68,11 +68,18 @@ class Settings:
     # Whisper STT settings (Local faster-whisper)
     WHISPER_ENGINE: str = os.getenv("WHISPER_ENGINE", "local").strip()
     WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "base").strip()
+    # "es" by default; "auto" lets Whisper detect the spoken language.
+    WHISPER_LANGUAGE: str = os.getenv("WHISPER_LANGUAGE", "es").strip()
+    # Directory holding the pre-downloaded model (Docker: /opt/whisper-models). Empty = library default cache.
+    WHISPER_MODEL_DIR: str = os.getenv("WHISPER_MODEL_DIR", "").strip()
+    # Load the model in the background at startup so the first request is not slow.
+    WHISPER_PRELOAD: bool = os.getenv("WHISPER_PRELOAD", "false").strip().lower() in ("1", "true", "yes", "on")
 
     # Provider strategy:
-    # - 'auto': Cloudflare -> OpenRouter -> Gemini -> LM Studio -> Ollama (No mocks)
+    # - 'auto': complexity-based cloud order (complex prompt: Gemini -> OpenRouter -> Cloudflare;
+    #   simple prompt: Cloudflare -> OpenRouter -> Gemini), then LM Studio -> Ollama (No mocks)
     # - 'local': LM Studio -> Ollama
-    # - 'cloud': Cloudflare -> OpenRouter -> Gemini
+    # - 'cloud': same complexity-based order over Cloudflare, OpenRouter and Gemini
     # - specific: 'cloudflare' | 'openrouter' | 'gemini' | 'lmstudio' | 'ollama'
     DEFAULT_PROVIDER: str = os.getenv("DEFAULT_PROVIDER", "auto").strip()
 
@@ -109,6 +116,7 @@ class Settings:
                 "configured": True,
                 "engine": cls.WHISPER_ENGINE,
                 "model": cls.WHISPER_MODEL,
+                "language": cls.WHISPER_LANGUAGE,
             },
         }
 

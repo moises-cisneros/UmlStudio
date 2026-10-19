@@ -10,8 +10,9 @@ from typing import Dict, Any, Optional
 
 from ..models.uml import ChatResponse, ModelDiff
 from .diff_quality import assess_diff, build_repair_feedback, score_diff, strip_example_copies
-from .transcription import transcribe_audio_bytes
+from .transcription import normalize_spoken_uml, transcribe_audio_bytes
 
+MIN_TRANSCRIPT_CONFIDENCE = 0.2
 MAX_REPAIR_ROUNDS = 1
 
 logger = logging.getLogger("umlstudio.ai_service.pipeline")
@@ -136,6 +137,14 @@ class AIPipeline:
         transcribed_text, confidence = await transcribe_audio_bytes(audio_bytes, filename)
 
         if not transcribed_text or not transcribed_text.strip():
+            raise ValueError("No se pudo extraer texto audible de la grabación de voz.")
+        if confidence < MIN_TRANSCRIPT_CONFIDENCE:
+            raise ValueError(
+                "No se entendió el audio con suficiente claridad. Habla más cerca del micrófono "
+                "o reduce el ruido de fondo e inténtalo de nuevo."
+            )
+        transcribed_text = normalize_spoken_uml(transcribed_text)
+        if not transcribed_text:
             raise ValueError("No se pudo extraer texto audible de la grabación de voz.")
 
         logger.info(f"Pipeline de voz: audio transcrito con éxito -> '{transcribed_text}'")

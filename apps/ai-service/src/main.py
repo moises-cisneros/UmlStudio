@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import time
+from contextlib import asynccontextmanager
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,12 +46,28 @@ from .models.uml import (
     ProductivityAuditResponse,
 )
 from .services.pipeline import AIPipeline
-from .services.transcription import transcribe_audio_bytes
+from .services.transcription import TranscriptionError, is_ready, transcribe_audio_bytes, warm_up
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Optionally warms the voice model in the background so /health answers immediately."""
+    warm_task = None
+    if getattr(settings, "WHISPER_PRELOAD", False):
+        warm_task = asyncio.create_task(asyncio.to_thread(warm_up))
+    try:
+        yield
+    finally:
+        if warm_task is not None:
+            # warm_up runs in a thread and cannot be cancelled; do not block shutdown on it.
+            warm_task.cancel()
+
 
 app = FastAPI(
     title="UmlStudio AI Service",
     description="Production Multi-Adapter AI Service for UML Class Diagram Modeling and Analysis",
     version="2.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -75,6 +92,11 @@ async def get_providers() -> Dict[str, Any]:
     return {
         "default": settings.DEFAULT_PROVIDER,
         "providers": settings.get_provider_status(),
+        "voice": {
+            "engine": settings.WHISPER_ENGINE,
+            "model": settings.WHISPER_MODEL,
+            "ready": (settings.WHISPER_ENGINE or "").strip().lower() == "stub" or is_ready(),
+        },
     }
 
 
@@ -145,6 +167,11 @@ async def process_voice_chat(
             current_model=model_dict,
             provider=provider,
         )
+    except TranscriptionError as t_err:
+        raise HTTPException(
+            status_code=503,
+            detail=f"El motor de voz no está disponible: {str(t_err)}",
+        )
     except ValueError as val_err:
         raise HTTPException(status_code=400, detail=str(val_err))
     except RuntimeError as r_err:
@@ -178,7 +205,13 @@ async def transcribe_audio(file: UploadFile = File(...)) -> TranscribeResponse:
     if not file_bytes:
         raise HTTPException(status_code=400, detail="El archivo de audio está vacío.")
 
-    text, confidence = await transcribe_audio_bytes(file_bytes, file.filename or "audio.webm")
+    try:
+        text, confidence = await transcribe_audio_bytes(file_bytes, file.filename or "audio.webm")
+    except TranscriptionError as t_err:
+        raise HTTPException(
+            status_code=503,
+            detail=f"El motor de voz no está disponible: {str(t_err)}",
+        )
 
     return TranscribeResponse(
         text=text,
