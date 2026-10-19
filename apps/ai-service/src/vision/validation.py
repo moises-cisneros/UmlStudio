@@ -129,11 +129,17 @@ def validate_vision_model(model: object) -> Tuple[List[str], List[str]]:
         errors.append("Fields 'nodes' and 'edges' must be arrays.")
         return (errors, [])
 
+    known_node_ids = set()
     for node in nodes:
         if not isinstance(node, dict):
             errors.append("Every node must be an object.")
             continue
         node_id = node.get("id", "<unknown>")
+        if isinstance(node_id, str):
+            if node_id in known_node_ids:
+                errors.append(f"Duplicate node id '{node_id}'.")
+                offending_ids.append(node_id)
+            known_node_ids.add(node_id)
         for field in _NODE_REQUIRED:
             if field not in node:
                 errors.append(f"Node '{node_id}' is missing required field '{field}'.")
@@ -159,6 +165,12 @@ def validate_vision_model(model: object) -> Tuple[List[str], List[str]]:
         data = edge.get("data")
         if not isinstance(data, dict) or not isinstance(data.get("points"), list):
             errors.append(f"Edge '{edge_id}' must carry data.points.")
+        for end in ("source", "target"):
+            ref = edge.get(end)
+            if isinstance(ref, str) and ref not in known_node_ids:
+                errors.append(f"Edge '{edge_id}' references unknown node '{ref}' as {end}.")
+                if isinstance(edge_id, str):
+                    offending_ids.append(edge_id)
 
     return (errors, offending_ids)
 

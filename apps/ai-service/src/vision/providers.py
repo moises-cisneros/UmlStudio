@@ -10,11 +10,13 @@ Multi-Adapter Vision Architecture:
 - ChainedVisionProvider: Automatic fallback chain.
 """
 
+import ast
 import base64
 import io
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Protocol, Tuple, runtime_checkable
@@ -22,6 +24,7 @@ import httpx
 from PIL import Image
 
 from ..core.config import settings
+from ..core.uml_text import normalize_multiplicity
 
 logger = logging.getLogger("umlstudio.vision")
 logger.setLevel(logging.INFO)
@@ -134,7 +137,18 @@ CRITICAL RULES:
    - ClassBidirectional: Plain solid line with NO arrows and NO diamonds on either end.
 5. NO SELF-LOOPS: Never create an edge where source equals target unless it is genuinely a reflexive line looping back to the same class.
 6. Layout: Position nodes logically in a grid matching their visual layout in the image (e.g. top row: Class A, Class B, Class E; bottom row: Class C, Class D, Class F).
-7. Output ONLY the JSON object. Do not include markdown backticks or commentary.
+7. EDGE DIRECTION: "source" and "target" follow UML semantics, not reading order:
+   - ClassInheritance: source = the subclass (the end WITHOUT the triangle), target = the superclass (the triangle end).
+   - ClassRealization: source = the implementing class, target = the interface (the triangle end).
+   - ClassComposition / ClassAggregation: source = the whole (the diamond end), target = the part.
+   - ClassDependency / ClassUnidirectional: source = the end without the arrowhead, target = the arrowhead end.
+   - ClassBidirectional: any order. Multiplicity and role text printed near one end belongs to that end: sourceMultiplicity/sourceRole near the source class, targetMultiplicity/targetRole near the target class. Multiplicities use UML notation: "1", "0..1", "1..*", "0..*", "*".
+8. HAND-DRAWN AND PHOTOGRAPHED DIAGRAMS: the image may be hand-drawn on paper or a whiteboard, a phone photo (skewed, shadows, glare), or a screenshot from tools such as draw.io, StarUML, PlantUML or Visual Paradigm. Tolerate wobbly lines and rotated text. If a character is hard to read, give your best reading instead of dropping the member.
+9. LANGUAGE: names and notation may be in Spanish or English (herencia, composición, agregación, realización, dependencia). Keep every class, attribute and method name exactly as written; do not translate or "fix" them.
+10. ABSTRACT AND STATIC: an ITALIC class name or the tag {abstract} means stereotype "<<abstract>>"; an italic method is abstract ("isAbstract": true). An UNDERLINED member is static: keep its text unchanged. Only use "<<interface>>" or "<<enumeration>>" when the box says so (enum literals go in "attributes").
+11. COMPLETENESS: first count the class boxes, then output exactly one node per box, including boxes that only show a name. Never invent classes or relationships that are not drawn and never merge two boxes. A box linked by a dashed line to the middle of an association line is an association class: set that association edge's "associationClassNodeId" to the box's node id.
+12. SCOPE: only UML class diagram content belongs in the output. Ignore titles, legends, watermarks and comment notes. If the image is not a class diagram, return empty "nodes" and "edges" arrays.
+13. Output ONLY the JSON object. Do not include markdown backticks or commentary.
 """
 
 
@@ -201,12 +215,99 @@ def _load_stub_fixture() -> VisionResult:
     return VisionResult(model=payload["model"], confidence=payload["confidence"])
 
 
+_VISIBILITY_SYMBOLS = {
+    "public": "+", "publico": "+", "público": "+", "+": "+",
+    "private": "-", "privado": "-", "-": "-",
+    "protected": "#", "protegido": "#", "#": "#",
+    "package": "~", "paquete": "~", "~": "~",
+}
+_MEMBER_PREFIX = ("+", "-", "#", "~")
+_ROLE_PLACEHOLDER_RE = re.compile(r"^[+\-#~]?\s*role[\s_]*[ab]$", re.IGNORECASE)
+_MULTIPLICITY_TEXT_RE = re.compile(r"^[+\-#~]?\s*(\d+(\.\.(\d+|\*))?|\*)$")
+_KNOWN_STEREOTYPES = {"interface", "abstract", "enumeration", "association", "datatype", "utility"}
+
+
+def _visibility_symbol(raw: Any) -> str:
+    return _VISIBILITY_SYMBOLS.get(str(raw or "").strip().lower(), "+")
+
+
+def _format_attribute(raw: Any) -> str:
+    """Accepts 'name', '- name: Type' or {name,type,visibility} and returns UML notation."""
+    if isinstance(raw, dict):
+        name = str(raw.get("name") or "").strip()
+        if not name:
+            return ""
+        if name.startswith(_MEMBER_PREFIX) or ":" in name:
+            return name if name.startswith(_MEMBER_PREFIX) else f"{_visibility_symbol(raw.get('visibility'))} {name}"
+        vis = _visibility_symbol(raw.get("visibility"))
+        attr_type = str(raw.get("type") or "").strip()
+        return f"{vis} {name}: {attr_type}" if attr_type else f"{vis} {name}"
+    return str(raw).strip()
+
+
+def _format_method(raw: Any) -> str:
+    """Accepts '+ run(): void' or {name,returnType,visibility,parameters} and returns UML notation."""
+    if not isinstance(raw, dict):
+        return str(raw).strip()
+    name = str(raw.get("name") or "").strip()
+    if not name:
+        return ""
+    vis = _visibility_symbol(raw.get("visibility"))
+    if name.startswith(_MEMBER_PREFIX):
+        return name
+    if "(" in name:
+        return f"{vis} {name}"
+    params = raw.get("parameters") or raw.get("params") or []
+    rendered = []
+    for param in params if isinstance(params, list) else []:
+        if isinstance(param, dict):
+            p_name = str(param.get("name") or "arg")
+            p_type = str(param.get("type") or "").strip()
+            rendered.append(f"{p_name}: {p_type}" if p_type else p_name)
+        else:
+            rendered.append(str(param))
+    ret = str(raw.get("returnType") or raw.get("return_type") or raw.get("type") or "void").strip()
+    return f"{vis} {name}({', '.join(rendered)}): {ret}"
+
+
+def _normalize_stereotype(raw: Any, is_abstract: bool = False) -> Optional[str]:
+    text = str(raw or "").strip()
+    text = text.strip("«»<>").strip()
+    lowered = text.lower()
+    if lowered in ("", "class", "none", "null"):
+        return "<<abstract>>" if is_abstract else None
+    if lowered == "enum":
+        lowered = "enumeration"
+    if lowered in _KNOWN_STEREOTYPES:
+        return f"<<{lowered}>>"
+    return f"<<{text}>>"
+
+
+def _is_noise_member(name: str) -> bool:
+    """Roles/multiplicities floating near edges that a model mistook for attributes."""
+    stripped = name.strip()
+    return bool(_ROLE_PLACEHOLDER_RE.match(stripped) or _MULTIPLICITY_TEXT_RE.match(stripped))
+
+
+def _first_present(mapping: Dict[str, Any], keys: Tuple[str, ...]) -> Any:
+    for key in keys:
+        value = mapping.get(key)
+        if value not in (None, "", []):
+            return value
+    return None
+
+
+def _edge_end_value(edge: Dict[str, Any], edge_data: Dict[str, Any], keys: Tuple[str, ...]) -> Optional[str]:
+    value = _first_present(edge_data, keys) or _first_present(edge, keys)
+    return str(value).strip() if value not in (None, "") else None
+
+
 def _normalize_uml_model(raw_data: Any) -> VisionResult:
     """Normalize extracted model dictionary or class list into strict uml-model-4 structure."""
+    confidence: Dict[str, float] = {}
     if isinstance(raw_data, list):
         raw_nodes: List[Dict[str, Any]] = []
         raw_edges: List[Dict[str, Any]] = []
-        confidence: Dict[str, float] = {}
         class_name_to_id: Dict[str, str] = {}
         for idx, item in enumerate(raw_data):
             if not isinstance(item, dict):
@@ -258,15 +359,28 @@ def _normalize_uml_model(raw_data: Any) -> VisionResult:
         model = {"nodes": raw_nodes, "edges": raw_edges}
     elif isinstance(raw_data, dict):
         model = raw_data.get("model", raw_data)
-        confidence = raw_data.get("confidence", {})
-        raw_nodes = model.get("nodes") or model.get("classes") or []
-        raw_edges = model.get("edges") or model.get("relationships") or []
+        if not isinstance(model, dict):
+            model = {}
+        supplied_confidence = raw_data.get("confidence", {})
+        confidence = dict(supplied_confidence) if isinstance(supplied_confidence, dict) else {}
+        raw_nodes = _first_present(model, ("nodes", "classes", "elements")) or []
+        raw_edges = _first_present(
+            model, ("edges", "relationships", "relations", "connections", "links", "associations")
+        ) or []
     else:
         return VisionResult(model={"version": "4.0.0", "id": "diagram-empty", "title": "Empty", "type": "ClassDiagram", "nodes": [], "edges": []})
 
-    normalized_nodes = []
-    class_name_to_id = {}
+    normalized_nodes: List[Dict[str, Any]] = []
+    nodes_by_name: Dict[str, Dict[str, Any]] = {}
+    class_name_to_id: Dict[str, str] = {}
     used_node_ids = set()
+
+    def register_alias(alias: Any, node_id: str) -> None:
+        text = str(alias or "").strip()
+        if not text:
+            return
+        class_name_to_id.setdefault(text, node_id)
+        class_name_to_id.setdefault(text.lower(), node_id)
 
     for i, node in enumerate(raw_nodes):
         if not isinstance(node, dict):
@@ -274,73 +388,81 @@ def _normalize_uml_model(raw_data: Any) -> VisionResult:
         data = node.get("data", {})
         if not isinstance(data, dict):
             data = {}
-        name = str(data.get("name") or node.get("name") or f"Class{i + 1}")
+        name = str(data.get("name") or node.get("name") or f"Class{i + 1}").strip()
         clean_name_id = f"node-{name.lower().replace(' ', '')}"
         raw_id = str(node.get("id") or clean_name_id)
-
-        # Disambiguate if model repeated IDs across different classes (e.g. node-classf for both E and F)
-        if raw_id in used_node_ids or (raw_id.endswith("classf") and "e" in name.lower()):
-            node_id = clean_name_id
-            if node_id in used_node_ids:
-                node_id = f"{node_id}-{i + 1}"
-        else:
-            node_id = raw_id
-        used_node_ids.add(node_id)
-
-        col = i % 3
-        row = i // 3
-        default_x = 80 + col * 280
-        default_y = 100 + row * 220
-        pos = node.get("position", {})
-        pos_x = float(pos.get("x", default_x)) if isinstance(pos, dict) else default_x
-        pos_y = float(pos.get("y", default_y)) if isinstance(pos, dict) else default_y
-
-        raw_stereo = str(data.get("stereotype") or node.get("stereotype") or "").strip()
-        if raw_stereo.lower() in ("<<class>>", "class", "<<>>", "none", "null", ""):
-            stereotype = None
-        else:
-            stereotype = raw_stereo if raw_stereo.startswith("<<") else f"<<{raw_stereo}>>"
 
         attributes = data.get("attributes") or node.get("attributes") or []
         if not isinstance(attributes, list):
             attributes = [attributes]
-
-        normalized_attrs = []
-        for k, a in enumerate(attributes):
-            if isinstance(a, dict):
-                attr_name = str(a.get("name") or "").strip()
-                attr_id = str(a.get("id") or f"attr-{node_id}-{k + 1}")
-            else:
-                attr_name = str(a).strip()
-                attr_id = f"attr-{node_id}-{k + 1}"
-
-            if not attr_name:
-                continue
-            # Filter out relationship roles mistakenly placed in class attributes
-            if attr_name.lower() in (
-                "role a", "role b", "- role a", "- role b", "+ role a", "+ role b", "role_a", "role_b"
-            ):
-                continue
-            normalized_attrs.append({"id": attr_id, "name": attr_name})
-
         methods = data.get("methods") or node.get("methods") or []
         if not isinstance(methods, list):
             methods = [methods]
 
-        normalized_methods = []
-        for k, m in enumerate(methods):
-            if isinstance(m, dict):
-                meth_name = str(m.get("name") or "").strip()
-                meth_id = str(m.get("id") or f"meth-{node_id}-{k + 1}")
-                is_abs = bool(m.get("isAbstract", False))
-            else:
-                meth_name = str(m).strip()
-                meth_id = f"meth-{node_id}-{k + 1}"
-                is_abs = False
+        member_attrs: List[str] = []
+        for a in attributes:
+            attr_name = _format_attribute(a)
+            if attr_name and not _is_noise_member(attr_name):
+                member_attrs.append(attr_name)
 
-            if not meth_name:
-                continue
-            meth_item: Dict[str, Any] = {"id": meth_id, "name": meth_name}
+        member_methods: List[Tuple[str, bool]] = []
+        for m in methods:
+            meth_name = _format_method(m)
+            if meth_name:
+                member_methods.append((meth_name, bool(m.get("isAbstract", False)) if isinstance(m, dict) else False))
+
+        # Same class drawn/extracted twice (case-insensitive): merge members instead of duplicating the box
+        existing = nodes_by_name.get(name.lower())
+        if existing is not None:
+            existing_attr_names = {a["name"] for a in existing["data"]["attributes"]}
+            for attr_name in member_attrs:
+                if attr_name not in existing_attr_names:
+                    existing["data"]["attributes"].append(
+                        {"id": f"attr-{existing['id']}-{len(existing['data']['attributes']) + 1}", "name": attr_name}
+                    )
+                    existing_attr_names.add(attr_name)
+            existing_meth_names = {m["name"] for m in existing["data"]["methods"]}
+            for meth_name, is_abs in member_methods:
+                if meth_name not in existing_meth_names:
+                    item: Dict[str, Any] = {
+                        "id": f"meth-{existing['id']}-{len(existing['data']['methods']) + 1}",
+                        "name": meth_name,
+                    }
+                    if is_abs:
+                        item["isAbstract"] = True
+                    existing["data"]["methods"].append(item)
+                    existing_meth_names.add(meth_name)
+            register_alias(raw_id, existing["id"])
+            register_alias(clean_name_id, existing["id"])
+            continue
+
+        # Models sometimes repeat ids across different classes: keep ids globally unique
+        if raw_id in used_node_ids:
+            node_id = clean_name_id
+            suffix = 2
+            while node_id in used_node_ids:
+                node_id = f"{clean_name_id}-{suffix}"
+                suffix += 1
+        else:
+            node_id = raw_id
+        used_node_ids.add(node_id)
+
+        grid_index = len(normalized_nodes)
+        default_x = 80 + (grid_index % 3) * 280
+        default_y = 100 + (grid_index // 3) * 220
+        pos = node.get("position", {})
+        pos_x = float(pos.get("x", default_x)) if isinstance(pos, dict) else default_x
+        pos_y = float(pos.get("y", default_y)) if isinstance(pos, dict) else default_y
+
+        is_abstract = bool(data.get("isAbstract") or node.get("isAbstract"))
+        stereotype = _normalize_stereotype(data.get("stereotype") or node.get("stereotype"), is_abstract)
+
+        normalized_attrs = [
+            {"id": f"attr-{node_id}-{k + 1}", "name": attr_name} for k, attr_name in enumerate(member_attrs)
+        ]
+        normalized_methods = []
+        for k, (meth_name, is_abs) in enumerate(member_methods):
+            meth_item: Dict[str, Any] = {"id": f"meth-{node_id}-{k + 1}", "name": meth_name}
             if is_abs:
                 meth_item["isAbstract"] = True
             normalized_methods.append(meth_item)
@@ -351,13 +473,12 @@ def _normalize_uml_model(raw_data: Any) -> VisionResult:
         min_required_height = 50.0 + max(1, len(normalized_attrs)) * 22.0 + max(1, len(normalized_methods)) * 22.0
         height = max(raw_height, min_required_height)
 
-        class_name_to_id[name] = node_id
-        class_name_to_id[name.lower()] = node_id
-        class_name_to_id[clean_name_id] = node_id
-        class_name_to_id[raw_id] = node_id
+        register_alias(name, node_id)
+        register_alias(clean_name_id, node_id)
+        register_alias(raw_id, node_id)
         class_name_to_id[node_id] = node_id
 
-        node_data = {
+        node_data: Dict[str, Any] = {
             "name": name,
             "attributes": normalized_attrs,
             "methods": normalized_methods,
@@ -365,7 +486,7 @@ def _normalize_uml_model(raw_data: Any) -> VisionResult:
         if stereotype:
             node_data["stereotype"] = stereotype
 
-        normalized_nodes.append({
+        normalized_node = {
             "id": node_id,
             "type": "class" if node.get("type") != "package" else "package",
             "width": width,
@@ -373,15 +494,30 @@ def _normalize_uml_model(raw_data: Any) -> VisionResult:
             "position": {"x": pos_x, "y": pos_y},
             "measured": {"width": width, "height": height},
             "data": node_data,
-        })
+        }
+        normalized_nodes.append(normalized_node)
+        nodes_by_name[name.lower()] = normalized_node
         if node_id not in confidence:
-            confidence[node_id] = 0.92
+            # A box with no members is more likely a partial read than a rich one
+            confidence[node_id] = 0.92 if (normalized_attrs or normalized_methods) else 0.65
 
-    normalized_edges = []
+    valid_node_ids = {n["id"] for n in normalized_nodes}
+
+    def resolve(ref: str) -> Optional[str]:
+        ref = (ref or "").strip()
+        if not ref:
+            return None
+        resolved = class_name_to_id.get(ref) or class_name_to_id.get(ref.lower())
+        if resolved is None and ref in valid_node_ids:
+            resolved = ref
+        return resolved
+
+    normalized_edges: List[Dict[str, Any]] = []
+    used_edge_ids = set()
+    seen_edge_keys = set()
     for j, edge in enumerate(raw_edges):
         if not isinstance(edge, dict):
             continue
-        edge_id = str(edge.get("id") or f"edge-{j + 1}")
         edge_data = edge.get("data", {})
         if not isinstance(edge_data, dict):
             edge_data = {}
@@ -389,22 +525,40 @@ def _normalize_uml_model(raw_data: Any) -> VisionResult:
         raw_type = edge.get("type") or edge_data.get("type") or "ClassBidirectional"
         edge_type = _normalize_edge_type(raw_type, edge_data)
 
-        raw_source = str(edge.get("source") or "")
-        raw_target = str(edge.get("target") or "")
-        source = class_name_to_id.get(raw_source) or class_name_to_id.get(raw_source.lower()) or raw_source
-        target = class_name_to_id.get(raw_target) or class_name_to_id.get(raw_target.lower()) or raw_target
+        raw_source = str(_first_present(edge, ("source", "from", "src", "origin")) or "")
+        raw_target = str(_first_present(edge, ("target", "to", "dst", "destination")) or "")
+        source = resolve(raw_source)
+        target = resolve(raw_target)
         if not source or not target:
+            logger.warning("[Vision] Dropping edge %r -> %r: endpoint does not match any extracted class", raw_source, raw_target)
             continue
 
         # Prevent hallucinated self-loops
         if source == target:
             continue
 
-        label = edge_data.get("label") or edge.get("label") or None
-        src_mult = edge_data.get("sourceMultiplicity") or edge.get("sourceMultiplicity") or None
-        tgt_mult = edge_data.get("targetMultiplicity") or edge.get("targetMultiplicity") or None
-        src_role = edge_data.get("sourceRole") or edge.get("sourceRole") or None
-        tgt_role = edge_data.get("targetRole") or edge.get("targetRole") or None
+        edge_key = (edge_type, source, target)
+        if edge_key in seen_edge_keys:
+            continue
+        seen_edge_keys.add(edge_key)
+
+        edge_id = str(edge.get("id") or f"edge-{j + 1}")
+        if edge_id in used_edge_ids:
+            base_id, suffix = edge_id, 2
+            while edge_id in used_edge_ids:
+                edge_id = f"{base_id}-{suffix}"
+                suffix += 1
+        used_edge_ids.add(edge_id)
+
+        label = _edge_end_value(edge, edge_data, ("label", "name", "verb"))
+        src_mult = normalize_multiplicity(
+            _edge_end_value(edge, edge_data, ("sourceMultiplicity", "source_multiplicity", "multiplicityA", "multiplicity_a"))
+        )
+        tgt_mult = normalize_multiplicity(
+            _edge_end_value(edge, edge_data, ("targetMultiplicity", "target_multiplicity", "multiplicityB", "multiplicity_b"))
+        )
+        src_role = _edge_end_value(edge, edge_data, ("sourceRole", "source_role", "roleA", "role_a"))
+        tgt_role = _edge_end_value(edge, edge_data, ("targetRole", "target_role", "roleB", "role_b"))
         raw_assoc_class = (
             edge_data.get("associationClassNodeId")
             or edge.get("associationClassNodeId")
@@ -414,10 +568,7 @@ def _normalize_uml_model(raw_data: Any) -> VisionResult:
             or edge.get("associationClass")
             or None
         )
-        assoc_class_id = None
-        if raw_assoc_class:
-            raw_assoc_str = str(raw_assoc_class)
-            assoc_class_id = class_name_to_id.get(raw_assoc_str) or class_name_to_id.get(raw_assoc_str.lower()) or raw_assoc_str
+        assoc_class_id = resolve(str(raw_assoc_class)) or str(raw_assoc_class) if raw_assoc_class else None
 
         normalized_edges.append({
             "id": edge_id,
@@ -427,11 +578,11 @@ def _normalize_uml_model(raw_data: Any) -> VisionResult:
             "sourceHandle": str(edge.get("sourceHandle") or "right"),
             "targetHandle": str(edge.get("targetHandle") or "left"),
             "data": {
-                "label": str(label) if label else None,
-                "sourceMultiplicity": str(src_mult) if src_mult else None,
-                "targetMultiplicity": str(tgt_mult) if tgt_mult else None,
-                "sourceRole": str(src_role) if src_role else None,
-                "targetRole": str(tgt_role) if tgt_role else None,
+                "label": label,
+                "sourceMultiplicity": src_mult,
+                "targetMultiplicity": tgt_mult,
+                "sourceRole": src_role,
+                "targetRole": tgt_role,
                 "associationClassNodeId": str(assoc_class_id) if assoc_class_id else None,
                 "points": edge_data.get("points", []),
             },
@@ -453,6 +604,71 @@ def _normalize_uml_model(raw_data: Any) -> VisionResult:
     return VisionResult(model=final_model, confidence=confidence)
 
 
+_TRAILING_COMMA_RE = re.compile(r",\s*([}\]])")
+
+
+def _closers_for(prefix: str) -> Optional[str]:
+    """Closing brackets needed to balance `prefix`, or None if it ends inside a string."""
+    stack: List[str] = []
+    in_string = False
+    escaped = False
+    for ch in prefix:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch in "{[":
+            stack.append(ch)
+        elif ch in "}]" and stack:
+            stack.pop()
+    if in_string:
+        return None
+    return "".join("}" if opener == "{" else "]" for opener in reversed(stack))
+
+
+def _repair_truncated_json(text: str) -> Optional[Any]:
+    """Recovers the complete leading part of a JSON document cut off by a token limit."""
+    starts = [i for i in (text.find("{"), text.find("[")) if i != -1]
+    if not starts:
+        return None
+    body = text[min(starts):]
+    boundaries = [i for i, ch in enumerate(body) if ch in "}]"]
+    for index in reversed(boundaries[-300:]):
+        prefix = body[: index + 1]
+        closers = _closers_for(prefix)
+        if closers is None:
+            continue
+        try:
+            parsed = json.loads(_TRAILING_COMMA_RE.sub(r"\1", prefix + closers))
+        except Exception:
+            continue
+        if isinstance(parsed, (dict, list)):
+            return parsed
+    return None
+
+
+def _loads_lenient(text: str) -> Optional[Any]:
+    """json.loads that also tolerates trailing commas and Python-style dict/list literals."""
+    for candidate in (text, _TRAILING_COMMA_RE.sub(r"\1", text)):
+        try:
+            parsed = json.loads(candidate)
+        except Exception:
+            continue
+        if isinstance(parsed, (dict, list)):
+            return parsed
+    try:
+        parsed = ast.literal_eval(_TRAILING_COMMA_RE.sub(r"\1", text))
+    except Exception:
+        return None
+    return parsed if isinstance(parsed, (dict, list)) else None
+
+
 def _parse_vision_json(content: Any) -> Optional[VisionResult]:
     """Parse vision result from dict, list, or raw string."""
     if not content:
@@ -464,47 +680,36 @@ def _parse_vision_json(content: Any) -> Optional[VisionResult]:
         return None
 
     cleaned = content.strip()
-    # Strip markdown code fences if present
+    candidates: List[str] = []
+
+    # Markdown code fences (with or without a language tag)
     if "```" in cleaned:
-        parts = cleaned.split("```")
-        for part in parts[1::2]:
+        for part in cleaned.split("```")[1::2]:
             cand = part.strip()
-            if cand.startswith("json"):
+            if cand.lower().startswith("json"):
                 cand = cand[4:].strip()
-            try:
-                parsed = json.loads(cand)
-                if isinstance(parsed, (dict, list)):
-                    return _normalize_uml_model(parsed)
-            except Exception:
-                continue
+            candidates.append(cand)
+    candidates.append(cleaned)
 
-    # Attempt direct json load
-    try:
-        parsed = json.loads(cleaned)
-        if isinstance(parsed, (dict, list)):
-            return _normalize_uml_model(parsed)
-    except Exception:
-        pass
-
-    # Attempt locating outermost '[' and ']' or '{' and '}'
-    start_brace = cleaned.find("{")
-    end_brace = cleaned.rfind("}")
-    start_bracket = cleaned.find("[")
-    end_bracket = cleaned.rfind("]")
-
-    candidates = []
+    # Outermost braces/brackets, e.g. JSON surrounded by prose
+    start_brace, end_brace = cleaned.find("{"), cleaned.rfind("}")
+    start_bracket, end_bracket = cleaned.find("["), cleaned.rfind("]")
     if start_brace != -1 and end_brace > start_brace:
         candidates.append(cleaned[start_brace : end_brace + 1])
     if start_bracket != -1 and end_bracket > start_bracket:
         candidates.append(cleaned[start_bracket : end_bracket + 1])
 
     for cand in candidates:
-        try:
-            parsed = json.loads(cand)
-            if isinstance(parsed, (dict, list)):
-                return _normalize_uml_model(parsed)
-        except Exception:
-            pass
+        parsed = _loads_lenient(cand)
+        if parsed is not None:
+            return _normalize_uml_model(parsed)
+
+    # Last resort: the answer was cut off by a token limit
+    for cand in candidates:
+        repaired = _repair_truncated_json(cand)
+        if repaired is not None:
+            logger.warning("[Vision] Recovered a truncated JSON response")
+            return _normalize_uml_model(repaired)
 
     return None
 
