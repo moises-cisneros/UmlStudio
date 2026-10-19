@@ -22,6 +22,7 @@ import { useTranslation } from "@/i18n"
 import { aiService, type ChatResult } from "@/services/aiService"
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition"
 import { useVoiceRecorder, formatElapsed } from "@/hooks/useVoiceRecorder"
+import { voiceFileNameForBlob } from "./voiceFileName"
 
 interface DiffProposalItem {
   type: "add" | "mod" | "del"
@@ -316,7 +317,7 @@ export const AgentChatStream: FC = () => {
       const result = await aiService.generateDiffFromVoice(
         blob,
         editor?.model,
-        "voz.webm",
+        voiceFileNameForBlob(blob),
         providerMode
       )
       const transcript = (result.transcript ?? "").trim()

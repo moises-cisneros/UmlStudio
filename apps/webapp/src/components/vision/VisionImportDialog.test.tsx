@@ -107,6 +107,68 @@ describe("uploadImageForVision", () => {
     }
   })
 
+  it("uses the server message for a 504 and falls back to the 90s copy", async () => {
+    const structured = vi.fn(async () =>
+      jsonResponse(504, {
+        detail: { message: "Vision provider timed out after 90s.", hint: "Retry soon." },
+      })
+    )
+    const withServer = (await uploadImageForVision(pngFile(), structured).catch(
+      (error: unknown) => error
+    )) as VisionImportError
+    expect(withServer.status).toBe(504)
+    expect(withServer.message).toBe("Vision provider timed out after 90s.")
+    expect(withServer.hint).toBe("Retry soon.")
+
+    const bare = vi.fn(async () => jsonResponse(504, {}))
+    const fallback = (await uploadImageForVision(pngFile(), bare).catch(
+      (error: unknown) => error
+    )) as VisionImportError
+    expect(fallback.message).toContain("90s")
+    expect(fallback.message).not.toContain("10s")
+  })
+
+  it("maps a 502 to a specific provider-failure message using the server hint", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse(502, {
+        detail: {
+          message: "Fallo en extracción de visión: todos los proveedores fallaron",
+          hint: "Verifica la conexión a los proveedores de IA.",
+        },
+      })
+    )
+    const err = (await uploadImageForVision(pngFile(), fetchMock).catch(
+      (error: unknown) => error
+    )) as VisionImportError
+    expect(err).toBeInstanceOf(VisionImportError)
+    expect(err.status).toBe(502)
+    expect(err.message).toContain("todos los proveedores fallaron")
+    expect(err.hint).toBe("Verifica la conexión a los proveedores de IA.")
+
+    const bare = vi.fn(async () => jsonResponse(502, {}))
+    const generic = (await uploadImageForVision(pngFile(), bare).catch(
+      (error: unknown) => error
+    )) as VisionImportError
+    expect(generic.status).toBe(502)
+    expect(generic.message).toMatch(/provider/i)
+    expect(generic.hint.length).toBeGreaterThan(0)
+  })
+
+  it("reads a structured {message, hint} 422 detail as strings, not objects", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse(422, {
+        detail: { message: "Extracted model failed validation.", hint: "Class diagrams only." },
+      })
+    )
+    const err = (await uploadImageForVision(pngFile(), fetchMock).catch(
+      (error: unknown) => error
+    )) as VisionImportError
+    expect(typeof err.message).toBe("string")
+    expect(err.message).toBe("Extracted model failed validation.")
+    expect(err.message).not.toContain("[object Object]")
+    expect(err.hint).toBe("Class diagrams only.")
+  })
+
   it("degrades gracefully when the endpoint is absent", async () => {
     const fetchMock = vi.fn(async () => {
       throw new TypeError("fetch failed")

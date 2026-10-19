@@ -21,7 +21,7 @@ export type VisionResponse = {
   confidence: VisionConfidence
 }
 
-export type VisionErrorStatus = 413 | 422 | 504 | 0
+export type VisionErrorStatus = 413 | 422 | 502 | 504 | 0
 
 export class VisionImportError extends Error {
   readonly status: VisionErrorStatus
@@ -102,15 +102,24 @@ export async function uploadImageForVision(
     const detail = await readErrorDetail(response)
     throw new VisionImportError(
       422,
-      detail || "The image could not be processed.",
-      "Use JPG, PNG, or WebP with a minimum resolution of 640x480."
+      detail.message || "The image could not be processed.",
+      detail.hint || "Use JPG, PNG, or WebP with a minimum resolution of 640x480."
     )
   }
   if (response.status === 504) {
+    const detail = await readErrorDetail(response)
     throw new VisionImportError(
       504,
-      "Vision provider timed out after 10s.",
-      "Retry in a few seconds; the request is safe to repeat."
+      detail.message || "Vision provider timed out after 90s.",
+      detail.hint || "Retry in a few seconds; the request is safe to repeat."
+    )
+  }
+  if (response.status === 502) {
+    const detail = await readErrorDetail(response)
+    throw new VisionImportError(
+      502,
+      detail.message || "The vision providers failed to read the image.",
+      detail.hint || "Verify the AI providers are reachable, or try a clearer photo, then retry."
     )
   }
   throw new VisionImportError(
@@ -120,15 +129,28 @@ export async function uploadImageForVision(
   )
 }
 
-async function readErrorDetail(response: Response): Promise<string> {
+type ErrorDetail = { message: string; hint: string }
+
+/**
+ * The service answers either `{detail: "text"}` or `{detail: {message, hint, ...}}`.
+ * Always returns strings so callers never render "[object Object]".
+ */
+async function readErrorDetail(response: Response): Promise<ErrorDetail> {
+  const empty: ErrorDetail = { message: "", hint: "" }
   try {
-    const data = (await response.json()) as {
-      detail?: string
-      message?: string
+    const data = (await response.json()) as { detail?: unknown; message?: unknown }
+    const detail = data.detail ?? data.message
+    if (typeof detail === "string") return { message: detail, hint: "" }
+    if (detail && typeof detail === "object") {
+      const structured = detail as { message?: unknown; hint?: unknown }
+      return {
+        message: typeof structured.message === "string" ? structured.message : "",
+        hint: typeof structured.hint === "string" ? structured.hint : "",
+      }
     }
-    return data.detail ?? data.message ?? ""
+    return empty
   } catch {
-    return ""
+    return empty
   }
 }
 
