@@ -9,7 +9,10 @@ import logging
 from typing import Dict, Any, Optional
 
 from ..models.uml import ChatResponse, ModelDiff
+from .diff_quality import assess_diff, build_repair_feedback, score_diff, strip_example_copies
 from .transcription import transcribe_audio_bytes
+
+MAX_REPAIR_ROUNDS = 1
 
 logger = logging.getLogger("umlstudio.ai_service.pipeline")
 
@@ -51,6 +54,7 @@ class AIPipeline:
 
         adapter = get_adapter(provider)
         diff = await adapter.generate_diff(clean_prompt, current_model or {})
+        diff = await cls._repair_if_needed(adapter, clean_prompt, current_model or {}, diff)
 
         adds_count = len(diff.add.elements) if diff.add and diff.add.elements else 0
         rels_count = len(diff.add.relationships) if diff.add and diff.add.relationships else 0
@@ -74,16 +78,47 @@ class AIPipeline:
         summary = ", ".join(parts) if parts else "0 cambios estructurales"
         print(f"[AI-SERVICE] <<< Diff Generado: {summary}\n")
 
-        message = (
-            f"Propuesta generada ({summary}) mediante '{adapter.provider_name}' "
-            f"conforme al estándar OMG UML 2.5."
-        )
+        if not parts:
+            message = (
+                f"El modelo '{adapter.provider_name}' no pudo interpretar la solicitud y no propuso cambios. "
+                "Reformúlala con más detalle o prueba con otro proveedor de IA."
+            )
+        else:
+            message = (
+                f"Propuesta generada ({summary}) mediante '{adapter.provider_name}' "
+                f"conforme al estándar OMG UML 2.5."
+            )
 
         return ChatResponse(
             provider=adapter.provider_name,
             diff=diff,
             message=message,
         )
+
+    @classmethod
+    async def _repair_if_needed(cls, adapter, prompt: str, current_model: Dict[str, Any], diff: ModelDiff) -> ModelDiff:
+        """
+        One bounded self-correction round: if the quality gate finds problems, ask the model again
+        with explicit feedback and keep whichever diff scores better. Failures never lose the first diff.
+        """
+        best = diff
+        for _ in range(MAX_REPAIR_ROUNDS):
+            issues = assess_diff(prompt, best, current_model)
+            if not issues:
+                break
+            logger.info("Diff con %d problema(s); reintentando con retroalimentación: %s", len(issues), issues)
+            repair_prompt = f"{prompt}\n\n{build_repair_feedback(issues)}"
+            try:
+                candidate = await adapter.generate_diff(repair_prompt, current_model)
+            except Exception as exc:
+                logger.warning("Reintento de reparación falló (%s); se conserva el primer resultado.", exc)
+                break
+            if score_diff(prompt, candidate, current_model) > score_diff(prompt, best, current_model):
+                best = candidate
+        cleaned, removed = strip_example_copies(prompt, best, current_model)
+        if removed:
+            logger.warning("Descartadas clases copiadas de los ejemplos del prompt: %s", removed)
+        return cleaned
 
     @classmethod
     async def process_voice(

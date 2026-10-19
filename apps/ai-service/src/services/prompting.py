@@ -11,6 +11,11 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
+from ..core.uml_text import (
+    REL_TYPE_ALIASES,
+    normalize_multiplicity,
+    normalize_relationship_type,
+)
 from ..models.uml import (
     ModelDiff,
     DiffAddBlock,
@@ -246,6 +251,30 @@ PROTOCOLO DE RAZONAMIENTO Y MODIFICACIÓN ESTRUCTURAL:
      * Para cambiar el tipo usa "changes": {{"type": "<nuevo tipo>"}} con los 7 tipos válidos de la regla 3 (ej. "ClassDependency" a "ClassInheritance").
      * Formato de multiplicidad UML: "1", "0..1", "1..*", "0..*" o "*".
 
+9. MODELADO GENERATIVO (DOMINIOS Y PROMPTS COMPLEJOS):
+   - Cuando el usuario DESCRIBE un dominio, sistema o escenario (ej. "un sistema de biblioteca donde los socios piden libros prestados") en lugar de dictar una edición puntual, NO te limites a las palabras literales: INFIERE el modelo completo que un arquitecto de software esperaría.
+   - ENTIDADES: cada sustantivo con identidad propia y responsabilidades es una clase (singular, PascalCase, en el idioma del usuario). Los roles, estados y tipos con valores fijos (ej. estado del préstamo, método de pago) son enums con stereotype "<<enumeration>>". Lo polimórfico ("distintos tipos de", "puede ser X o Y") es una superclase abstracta ("<<abstract>>") o interfaz ("<<interface>>") con sus subclases.
+   - MIEMBROS: dale a cada clase principal entre 2 y 5 atributos tipados y coherentes (identificador, nombre/título, fechas, montos, estado) y 1 a 3 métodos de negocio con tipo de retorno. Nunca clases vacías si el dominio permite inferir su contenido. Los atributos mencionados por el usuario SIEMPRE se incluyen exactamente como los dijo.
+   - TIPO DE RELACIÓN (señales del lenguaje):
+     * "es un", "es una clase de", "tipos de", "hereda de", "especializa" -> ClassInheritance (source = subclase, target = superclase).
+     * "implementa", "cumple el contrato", "interfaz" -> ClassRealization (source = clase, target = interfaz).
+     * "se compone de", "está formado por", "contiene" cuando la parte NO existe sin el todo (línea de pedido, habitación) -> ClassComposition (source = el todo).
+     * "tiene", "agrupa", "incluye" cuando la parte existe por sí sola o se comparte (departamento-empleado) -> ClassAggregation (source = el todo).
+     * "usa", "depende de", "recibe como parámetro" -> ClassDependency.
+     * "se relaciona con", "realiza", "pertenece a", "compra", "pide prestado" -> ClassBidirectional (o ClassUnidirectional si solo una clase conoce a la otra).
+   - LECTURA OBLIGATORIA DE source/target (verifica cada relación leyéndola en voz alta antes de responder):
+     * ClassInheritance: source HEREDA DE target (Gato hereda de Animal => source "Gato", target "Animal"). La subclase siempre es el source.
+     * ClassRealization: source IMPLEMENTA target (la interfaz es el target).
+     * ClassComposition / ClassAggregation: source CONTIENE a target (el source es el todo, el target es la parte).
+     * ClassDependency: source USA / DEPENDE DE target.
+     * Asociaciones: source y target en el orden natural de la frase.
+     * Herencia, realización y dependencia NO llevan multiplicidades ni roles.
+   - MULTIPLICIDADES (siempre completa "sourceMultiplicity" y "targetMultiplicity" cuando se puedan inferir): "un X tiene muchos Y" -> source "1", target "0..*"; "al menos uno" / "uno o más" -> "1..*"; "opcional" / "como máximo uno" -> "0..1"; "exactamente uno" -> "1"; "muchos a muchos" -> "*" en ambos extremos. Si la relación muchos-a-muchos necesita datos propios (fecha, cantidad, nota), crea una clase intermedia explícita o una asociación de clase solo si el usuario la pidió; si no, una clase de unión con nombre de negocio (ej. Inscripción, Préstamo).
+   - ETIQUETAS Y ROLES: usa "name" para el verbo de la relación ("realiza", "contiene") y "sourceRole"/"targetRole" cuando el texto nombre el papel de un extremo.
+   - PROMPTS COMPUESTOS: procesa TODAS las cláusulas del mensaje, en orden, y no omitas las últimas. Resuelve referencias ("a esa clase", "la anterior", "ambas") con el contexto del diagrama y de la frase. Si el mensaje mezcla creación, modificación y eliminación, devuelve las tres secciones del diff en la misma respuesta.
+   - COHERENCIA: toda relación debe conectar clases que existen en el diagrama o que agregas en el mismo diff; no dejes clases aisladas salvo que el usuario lo pida; no inventes clases ajenas al dominio descrito.
+   - PROPORCIONALIDAD: este modo generativo SOLO aplica cuando el usuario describe un dominio o pide "un sistema/módulo/modelo de ...". Para ediciones puntuales ("agrega la clase X", "quita el atributo Y") aplican las reglas 1 a 8 sin añadir nada que no se pidió.
+
 EJEMPLOS CANÓNICOS (SÓLO DE REFERENCIA SINTÁCTICA, NO COPIAR NOMBRES):
 
 EJEMPLO 1 (Crear patrón GoF Strategy):
@@ -404,6 +433,33 @@ Salida:
   "remove": {{ "elementIds": [], "relationshipIds": [] }}
 }}
 
+EJEMPLO 8 (Dominio descrito en lenguaje natural, con inferencia de miembros y multiplicidades):
+Usuario: "Un taller mecánico atiende vehículos de clientes; cada vehículo tiene varias órdenes de trabajo y cada orden se compone de al menos un servicio. Los vehículos pueden ser autos o motos."
+Salida:
+{{
+  "add": {{
+    "elements": [
+      {{ "name": "Cliente", "type": "Class", "attributes": [{{ "name": "- id: int" }}, {{ "name": "+ nombre: String" }}, {{ "name": "+ telefono: String" }}], "methods": [] }},
+      {{ "name": "Vehiculo", "type": "Class", "stereotype": "<<abstract>>", "attributes": [{{ "name": "- placa: String" }}, {{ "name": "+ marca: String" }}, {{ "name": "+ anio: int" }}], "methods": [{{ "name": "+ obtenerHistorial(): List<OrdenTrabajo>" }}] }},
+      {{ "name": "Auto", "type": "Class", "attributes": [{{ "name": "+ numeroPuertas: int" }}], "methods": [] }},
+      {{ "name": "Moto", "type": "Class", "attributes": [{{ "name": "+ cilindrada: int" }}], "methods": [] }},
+      {{ "name": "OrdenTrabajo", "type": "Class", "attributes": [{{ "name": "- numero: int" }}, {{ "name": "+ fechaIngreso: Date" }}, {{ "name": "+ estado: EstadoOrden" }}], "methods": [{{ "name": "+ calcularTotal(): Double" }}] }},
+      {{ "name": "Servicio", "type": "Class", "attributes": [{{ "name": "+ descripcion: String" }}, {{ "name": "+ costo: Double" }}], "methods": [] }},
+      {{ "name": "EstadoOrden", "type": "Class", "stereotype": "<<enumeration>>", "attributes": [{{ "name": "+ PENDIENTE" }}, {{ "name": "+ EN_PROCESO" }}, {{ "name": "+ FINALIZADA" }}], "methods": [] }}
+    ],
+    "relationships": [
+      {{ "type": "ClassBidirectional", "source": "Cliente", "target": "Vehiculo", "name": "posee", "sourceMultiplicity": "1", "targetMultiplicity": "0..*" }},
+      {{ "type": "ClassInheritance", "source": "Auto", "target": "Vehiculo" }},
+      {{ "type": "ClassInheritance", "source": "Moto", "target": "Vehiculo" }},
+      {{ "type": "ClassBidirectional", "source": "Vehiculo", "target": "OrdenTrabajo", "name": "tiene", "sourceMultiplicity": "1", "targetMultiplicity": "0..*" }},
+      {{ "type": "ClassComposition", "source": "OrdenTrabajo", "target": "Servicio", "sourceMultiplicity": "1", "targetMultiplicity": "1..*" }},
+      {{ "type": "ClassDependency", "source": "OrdenTrabajo", "target": "EstadoOrden" }}
+    ]
+  }},
+  "modify": {{ "elements": [] }},
+  "remove": {{ "elementIds": [], "relationshipIds": [] }}
+}}
+
 CONTEXTO DEL DIAGRAMA ACTUAL:
 {context_str}
 
@@ -468,6 +524,11 @@ UML_DIFF_TOOL_SCHEMA = {
                                 },
                                 "source": {"type": "string"},
                                 "target": {"type": "string"},
+                                "name": {"type": "string", "description": "Verbo o etiqueta de la relación (ej. 'realiza')."},
+                                "sourceRole": {"type": "string"},
+                                "targetRole": {"type": "string"},
+                                "sourceMultiplicity": {"type": "string", "description": "1, 0..1, 1..*, 0..* o *"},
+                                "targetMultiplicity": {"type": "string", "description": "1, 0..1, 1..*, 0..* o *"},
                                 "intermediateClass": {
                                     "type": "string",
                                     "description": "Nombre de la clase intermedia. Usar ÚNICAMENTE si el usuario pidió explícitamente clase intermedia o asociación de clase. NUNCA para asociaciones normales.",
@@ -723,7 +784,7 @@ UML_ATOMIC_TOOLS = [
         "type": "function",
         "function": {
             "name": "create_relationship",
-            "description": "Crea una relación UML OMG 2.5 entre dos clases.",
+            "description": "Crea una relación UML OMG 2.5 entre dos clases. Léela así: 'source hereda de target' (herencia), 'source implementa target' (realización, target = interfaz), 'source contiene a target' (composición/agregación, source = el todo), 'source usa target' (dependencia).",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -740,8 +801,13 @@ UML_ATOMIC_TOOLS = [
                         ],
                         "description": "Tipo de relación OMG UML 2.5.",
                     },
-                    "source": {"type": "string", "description": "Nombre de la clase origen."},
-                    "target": {"type": "string", "description": "Nombre de la clase destino."},
+                    "source": {"type": "string", "description": "Nombre de la clase origen (subclase en herencia/realización; el 'todo' en composición/agregación)."},
+                    "target": {"type": "string", "description": "Nombre de la clase destino (superclase/interfaz en herencia/realización; la 'parte' en composición/agregación)."},
+                    "name": {"type": "string", "description": "Verbo o etiqueta opcional de la relación (ej. 'realiza', 'contiene')."},
+                    "sourceRole": {"type": "string", "description": "Rol del extremo origen (opcional)."},
+                    "targetRole": {"type": "string", "description": "Rol del extremo destino (opcional)."},
+                    "sourceMultiplicity": {"type": "string", "description": "Multiplicidad del extremo origen: 1, 0..1, 1..*, 0..* o *. Complétala siempre que se pueda inferir."},
+                    "targetMultiplicity": {"type": "string", "description": "Multiplicidad del extremo destino: 1, 0..1, 1..*, 0..* o *. Complétala siempre que se pueda inferir."},
                     "intermediateClass": {
                         "type": "string",
                         "description": "Nombre de la clase intermedia (Clase de Asociación OMG UML 2.5). Usar ÚNICAMENTE si el usuario pidió explícitamente clase intermedia o asociación de clase. NUNCA para asociaciones normales.",
@@ -823,44 +889,18 @@ UML_ATOMIC_TOOLS = [
 ]
 
 
+# Class names that only exist because the system prompt examples use them. A diff full of these
+# that the user never mentioned is a copied example, not an answer (see services/diff_quality.py).
+PROMPT_EXAMPLE_CLASS_NAMES = frozenset({
+    "context", "strategy", "concretestrategya", "concretestrategyb",
+    "usuario", "venta", "usuarioventaassoc", "hoja", "pato", "cliente", "cuenta",
+    "vehiculo", "auto", "moto", "ordentrabajo", "servicio", "estadoorden",
+})
+
+# Relationship kinds whose ends carry no multiplicity or role in UML.
+_ENDLESS_RELATIONSHIP_TYPES = ("ClassInheritance", "ClassRealization", "ClassDependency")
+
 SCHEMA_ARTIFACT_KEYS = {"name", "type", "visibility", "attribute", "attributes", "method", "methods", "returntype", "params"}
-
-# Canonical OMG UML 2.5 relationship types with LLM-friendly aliases
-REL_TYPE_ALIASES = {
-    "classinheritance": "ClassInheritance",
-    "inheritance": "ClassInheritance",
-    "generalization": "ClassInheritance",
-    "generalización": "ClassInheritance",
-    "generalizacion": "ClassInheritance",
-    "extends": "ClassInheritance",
-    "herencia": "ClassInheritance",
-    "classrealization": "ClassRealization",
-    "realization": "ClassRealization",
-    "realización": "ClassRealization",
-    "realizacion": "ClassRealization",
-    "implements": "ClassRealization",
-    "classaggregation": "ClassAggregation",
-    "aggregation": "ClassAggregation",
-    "agregación": "ClassAggregation",
-    "agregacion": "ClassAggregation",
-    "classcomposition": "ClassComposition",
-    "composition": "ClassComposition",
-    "composición": "ClassComposition",
-    "composicion": "ClassComposition",
-    "classdependency": "ClassDependency",
-    "dependency": "ClassDependency",
-    "dependencia": "ClassDependency",
-    "classbidirectional": "ClassBidirectional",
-    "bidirectional": "ClassBidirectional",
-    "bidireccional": "ClassBidirectional",
-    "association": "ClassBidirectional",
-    "asociación": "ClassBidirectional",
-    "asociacion": "ClassBidirectional",
-    "classunidirectional": "ClassUnidirectional",
-    "unidirectional": "ClassUnidirectional",
-    "unidireccional": "ClassUnidirectional",
-}
-
 
 def normalize_attribute_item(raw: Any) -> Optional[DiffAttribute]:
     if raw is None:
@@ -1208,6 +1248,70 @@ def normalize_methods_list(raw_methods: Any) -> List[DiffMethod]:
     return result
 
 
+_END_KEY_ALIASES = {
+    "sourceMultiplicity": ("sourceMultiplicity", "source_multiplicity", "multiplicityA", "multiplicity_a"),
+    "targetMultiplicity": ("targetMultiplicity", "target_multiplicity", "multiplicityB", "multiplicity_b"),
+    "sourceRole": ("sourceRole", "source_role", "roleA", "role_a"),
+    "targetRole": ("targetRole", "target_role", "roleB", "role_b"),
+    "name": ("name", "label", "verb"),
+}
+
+
+def _stereotype_of(name: str, elements: List[DiffElementAdd], existing: Dict[str, Dict[str, Any]]) -> str:
+    key = (name or "").lower()
+    for el in elements:
+        if el.name.lower() == key:
+            return (el.stereotype or "").lower()
+    return str((existing.get(key) or {}).get("stereotype") or "").lower()
+
+
+def _sanitize_relationships(
+    rels: List[DiffRelationshipAdd],
+    elements: List[DiffElementAdd],
+    existing: Dict[str, Dict[str, Any]],
+) -> None:
+    """Deterministic fixes for common small-model mistakes, applied in place."""
+    for rel in rels:
+        if rel.type in _ENDLESS_RELATIONSHIP_TYPES:
+            rel.sourceMultiplicity = None
+            rel.targetMultiplicity = None
+            rel.sourceRole = None
+            rel.targetRole = None
+        if rel.type in ("ClassInheritance", "ClassRealization"):
+            source_is_interface = "interface" in _stereotype_of(rel.source, elements, existing)
+            target_is_interface = "interface" in _stereotype_of(rel.target, elements, existing)
+            if source_is_interface and not target_is_interface:
+                rel.source, rel.target = rel.target, rel.source
+
+
+def _extract_relationship_ends(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Pulls label, roles and multiplicities out of a raw relationship dict (top level or
+    nested under 'data'), normalizing multiplicities. Only keys with a value are returned.
+    """
+    nested = raw.get("data") if isinstance(raw.get("data"), dict) else {}
+    found: Dict[str, Any] = {}
+    for canonical, aliases in _END_KEY_ALIASES.items():
+        value = None
+        for key in aliases:
+            value = raw.get(key)
+            if value in (None, ""):
+                value = nested.get(key)
+            if value not in (None, ""):
+                break
+        if value in (None, ""):
+            continue
+        if canonical.endswith("Multiplicity"):
+            value = normalize_multiplicity(value)
+        elif isinstance(value, str):
+            value = value.strip()
+        else:
+            value = str(value)
+        if value:
+            found[canonical] = value
+    return found
+
+
 def clean_and_parse_json(text: str) -> Any:
     """
     Robust JSON parser supporting valid JSON, markdown fences, single-quoted strings,
@@ -1479,6 +1583,7 @@ def parse_and_validate_diff_payload(
                         "source": source,
                         "target": target,
                     }
+                    rel_dict.update(_extract_relationship_ends(args))
                     if assoc_cls:
                         rel_dict["intermediateClass"] = assoc_cls
                         rel_dict["associationClass"] = assoc_cls
@@ -1712,13 +1817,16 @@ def parse_and_validate_diff_payload(
                 assoc_cls = clean_element_name(raw_assoc) if raw_assoc else None
                 rels.append(
                     DiffRelationshipAdd(
-                        type=r["type"],
+                        type=normalize_relationship_type(r["type"]),
                         source=clean_element_name(r["source"]),
                         target=clean_element_name(r["target"]),
                         intermediateClass=assoc_cls,
                         associationClass=assoc_cls,
+                        **_extract_relationship_ends(r),
                     )
                 )
+
+        _sanitize_relationships(rels, elements, existing_node_data)
 
         # Ensure normal classes and association class element exist in elements or diagram if referenced in relationship
         for rel in rels:

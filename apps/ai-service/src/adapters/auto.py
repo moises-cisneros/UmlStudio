@@ -1,9 +1,12 @@
 """
 Auto-Adaptive Multi-Adapter.
 Cascades across active providers according to the configured mode:
-- 'auto': Cloudflare -> OpenRouter -> Gemini -> LM Studio -> Ollama (No mocks)
+The cloud order depends on the prompt (see is_complex_prompt): complex prompts try the
+strongest model first (Gemini -> OpenRouter -> Cloudflare), simple ones the cheapest first
+(Cloudflare -> OpenRouter -> Gemini).
+- 'auto': cloud (order above) -> LM Studio -> Ollama (No mocks)
 - 'local': LM Studio -> Ollama
-- 'cloud': Cloudflare -> OpenRouter -> Gemini
+- 'cloud': cloud providers only (order above)
 If no provider succeeds, raises an explicit error stating no active models.
 """
 
@@ -17,6 +20,7 @@ from .lmstudio import LMStudioAdapter
 from .ollama import OllamaAdapter
 from ..models.uml import ModelDiff
 from ..core.config import settings
+from ..services.diff_quality import is_complex_prompt
 
 logger = logging.getLogger("umlstudio.ai_service.adapters.auto")
 
@@ -39,7 +43,7 @@ class AutoAdaptiveAdapter(BaseAIAdapter):
         if self.mode in ("cloud", "remote"):
             return await self._run_cloud_cascade(prompt, current_model)
 
-        # MODE: AUTO (Default order: Cloudflare -> OpenRouter -> Gemini -> LM Studio -> Ollama)
+        # MODE: AUTO (cloud order chosen by prompt complexity, then LM Studio -> Ollama)
         return await self._run_auto_cascade(prompt, current_model)
 
     async def _run_local_cascade(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
@@ -67,71 +71,48 @@ class AutoAdaptiveAdapter(BaseAIAdapter):
             "No hay modelos locales de IA activos o respondiendo en este momento (LM Studio :1234 u Ollama :11434)."
         )
 
+    def _cloud_candidates(self, prompt: str):
+        """
+        (label, configured, factory) in the order they should be tried.
+        Complex prompts go to the strongest model first: small free models tend to copy few-shot
+        examples and invert relationship directions. Simple prompts keep the cheapest-first order.
+        """
+        gemini = ("Gemini", bool(settings.GEMINI_API_KEY), lambda: GeminiAdapter())
+        openrouter = ("OpenRouter", bool(settings.OPENROUTER_API_KEY), lambda: OpenRouterAdapter())
+        cloudflare = (
+            "Cloudflare",
+            bool(settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN),
+            lambda: CloudflareAdapter(),
+        )
+        if is_complex_prompt(prompt):
+            return [gemini, openrouter, cloudflare]
+        return [cloudflare, openrouter, gemini]
+
+    async def _try_cloud(self, prompt: str, current_model: Dict[str, Any], tag: str) -> Optional[ModelDiff]:
+        for label, configured, factory in self._cloud_candidates(prompt):
+            if not configured:
+                continue
+            try:
+                adapter = factory()
+                result = await adapter.generate_diff(prompt, current_model)
+                self._active_provider = adapter.provider_name
+                return result
+            except Exception as exc:
+                logger.warning(f"{tag}: {label} fallo ({exc}), probando siguiente proveedor...")
+        return None
+
     async def _run_cloud_cascade(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
-        # 1. Cloudflare Workers AI
-        if settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN:
-            try:
-                cf = CloudflareAdapter()
-                res = await cf.generate_diff(prompt, current_model)
-                self._active_provider = cf.provider_name
-                return res
-            except Exception as exc:
-                logger.warning(f"CloudMode: Cloudflare fallo ({exc}), intentando OpenRouter...")
-
-        # 2. OpenRouter (Free-tier model pool)
-        if settings.OPENROUTER_API_KEY:
-            try:
-                openrouter = OpenRouterAdapter()
-                res = await openrouter.generate_diff(prompt, current_model)
-                self._active_provider = openrouter.provider_name
-                return res
-            except Exception as exc:
-                logger.warning(f"CloudMode: OpenRouter fallo ({exc}), intentando Gemini...")
-
-        # 3. Google Gemini
-        if settings.GEMINI_API_KEY:
-            try:
-                gemini = GeminiAdapter()
-                res = await gemini.generate_diff(prompt, current_model)
-                self._active_provider = gemini.provider_name
-                return res
-            except Exception as exc:
-                logger.warning(f"CloudMode: Gemini fallo ({exc})...")
-
+        result = await self._try_cloud(prompt, current_model, "CloudMode")
+        if result is not None:
+            return result
         raise RuntimeError(
             "No hay modelos de IA cloud activos o disponibles en este momento (Cloudflare, OpenRouter o Gemini)."
         )
 
     async def _run_auto_cascade(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
-        # 1. Cloudflare Workers AI (Modelos gratuitos)
-        if settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN:
-            try:
-                cf = CloudflareAdapter()
-                res = await cf.generate_diff(prompt, current_model)
-                self._active_provider = cf.provider_name
-                return res
-            except Exception as exc:
-                logger.warning(f"AutoAdaptive: Cloudflare fallo ({exc}), probando OpenRouter...")
-
-        # 2. OpenRouter API (Pool gratuito)
-        if settings.OPENROUTER_API_KEY:
-            try:
-                openrouter = OpenRouterAdapter()
-                res = await openrouter.generate_diff(prompt, current_model)
-                self._active_provider = openrouter.provider_name
-                return res
-            except Exception as exc:
-                logger.warning(f"AutoAdaptive: OpenRouter fallo ({exc}), probando Gemini...")
-
-        # 3. Google Gemini API
-        if settings.GEMINI_API_KEY:
-            try:
-                gemini = GeminiAdapter()
-                res = await gemini.generate_diff(prompt, current_model)
-                self._active_provider = gemini.provider_name
-                return res
-            except Exception as exc:
-                logger.warning(f"AutoAdaptive: Gemini fallo ({exc}), probando LM Studio local...")
+        result = await self._try_cloud(prompt, current_model, "AutoAdaptive")
+        if result is not None:
+            return result
 
         # 4. LM Studio Local (:1234)
         try:
