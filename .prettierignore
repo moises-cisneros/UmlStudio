@@ -17,3 +17,11 @@ package-lock.json
 **/venv
 **/target
 apps/webapp/src/routeTree.gen.ts
+**/.docusaurus
+**/.pytest_cache
+.atl
+openspec
+# Local-only material (excluded from git)
+docs/internal
+docs/examples
+docs/mockups
