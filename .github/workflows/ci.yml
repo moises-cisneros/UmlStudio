@@ -15,6 +15,71 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.diff.outputs.build }}
+      has_node_tests: ${{ steps.diff.outputs.has_node_tests }}
+      suites: ${{ steps.diff.outputs.suites }}
+      python: ${{ steps.diff.outputs.python }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "has_node_tests=true" >> "$GITHUB_OUTPUT"
+            echo "suites=[\"core\",\"server\",\"codegen\",\"webapp\",\"mcp\",\"ai\",\"scripts\"]" >> "$GITHUB_OUTPUT"
+            echo "python=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          files=$(git diff --name-only "$BASE" "$HEAD" 2>/dev/null || git diff --name-only origin/${{ github.base_ref }} HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          echo "Changed files in PR:"
+          echo "$files"
+
+          has() { echo "$files" | grep -Eq "$1"; }
+
+          shared='^(packages/|pnpm-lock\.yaml|pnpm-workspace\.yaml|package\.json|tsconfig|\.github/workflows/ci\.yml)'
+
+          is_core=$(has "^packages/core/|$shared" && echo true || echo false)
+          is_ui=$(has "^packages/ui/|$shared" && echo true || echo false)
+          is_server=$(has "^apps/server/|^packages/core/|$shared|^docker/" && echo true || echo false)
+          is_webapp=$(has "^apps/webapp/|^packages/|$shared" && echo true || echo false)
+          is_codegen=$(has "^apps/codegen/|^packages/core/|$shared" && echo true || echo false)
+          is_mcp=$(has "^apps/mcp-server/|^packages/core/|$shared" && echo true || echo false)
+          is_ai=$(has "^apps/ai-service/ts/|^apps/ai-service/vitest|^packages/core/|$shared" && echo true || echo false)
+          is_scripts=$(has "^scripts/|$shared" && echo true || echo false)
+          is_python=$(has "^apps/ai-service/" && echo true || echo false)
+
+          build_needed=$(has "^(apps/(webapp|codegen|server)|packages/)|$shared" && echo true || echo false)
+
+          suites=()
+          if [ "$is_core" = "true" ]; then suites+=("\"core\""); fi
+          if [ "$is_server" = "true" ]; then suites+=("\"server\""); fi
+          if [ "$is_codegen" = "true" ]; then suites+=("\"codegen\""); fi
+          if [ "$is_webapp" = "true" ]; then suites+=("\"webapp\""); fi
+          if [ "$is_mcp" = "true" ]; then suites+=("\"mcp\""); fi
+          if [ "$is_ai" = "true" ]; then suites+=("\"ai\""); fi
+          if [ "$is_scripts" = "true" ]; then suites+=("\"scripts\""); fi
+
+          if [ ${#suites[@]} -gt 0 ]; then
+            json="[$(IFS=,; echo "${suites[*]}")]"
+            echo "has_node_tests=true" >> "$GITHUB_OUTPUT"
+            echo "suites=$json" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_node_tests=false" >> "$GITHUB_OUTPUT"
+            echo "suites=[]" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "build=$build_needed" >> "$GITHUB_OUTPUT"
+          echo "python=$is_python" >> "$GITHUB_OUTPUT"
+
   quality:
     name: Lint & format
     runs-on: ubuntu-latest
@@ -32,6 +97,8 @@ jobs:
 
   build:
     name: Build
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,12 +113,13 @@ jobs:
 
   test-node:
     name: Test (${{ matrix.suite }})
+    needs: changes
+    if: needs.changes.outputs.has_node_tests == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # server uses Testcontainers (Redis in Docker), available on ubuntu runners.
-        suite: [core, server, codegen, webapp, mcp, ai, scripts]
+        suite: ${{ fromJSON(needs.changes.outputs.suites) }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -66,6 +134,8 @@ jobs:
 
   test-python:
     name: Test (ai-service python)
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -83,7 +153,7 @@ jobs:
   ci-passed:
     name: CI passed
     if: always()
-    needs: [quality, build, test-node, test-python]
+    needs: [changes, quality, build, test-node, test-python]
     runs-on: ubuntu-latest
     steps:
       - name: Fail when any required job did not succeed
@@ -91,4 +161,4 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           echo "Results: $RESULTS"
-          for r in $RESULTS; do [ "$r" = "success" ] || exit 1; done
+          for r in $RESULTS; do [ "$r" = "success" ] || [ "$r" = "skipped" ] || exit 1; done
