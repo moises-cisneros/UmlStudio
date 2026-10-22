@@ -71,5 +71,10 @@ target/
 .opencode/
 .hermes/
 .agents/
-.github/
+# .github: agent tooling stays local; repository automation is versioned
+.github/*
+!.github/workflows/
+!.github/ISSUE_TEMPLATE/
+!.github/CODEOWNERS
+!.github/pull_request_template.md
 .agent/

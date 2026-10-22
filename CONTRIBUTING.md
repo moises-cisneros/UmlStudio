@@ -94,7 +94,8 @@ Tipos válidos: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`. Nunca se tra
 <tipo>(<alcance>): <descripción en minúscula, sin punto final>
 ```
 
-- **Tipos**: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `build`. Usá `docs`, no `doc`.
+- **Tipos** (`commitlint.config.mjs`): `feat`, `fix`, `refactor`, `perf`, `style`, `docs`, `test`, `build`, `ci`, `chore`, `revert`. Usá `docs`, no `doc`.
+- **Cuerpo**: opcional; explica el _por qué_, con líneas de hasta 100 caracteres.
 - **Alcance**: la app o el paquete (`webapp`, `server`, `core`, `ui`, `ai-service`, `codegen`, `mcp`, `infra`, `deploy`).
 - **Ejemplos**: `feat(server): add diagram ownership check` · `fix(webapp): keep voice recorder alive on rerender`.
 - Un commit = un cambio coherente que compila y pasa los tests (código + test + docs juntos).

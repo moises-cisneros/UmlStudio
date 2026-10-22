@@ -1,0 +1,86 @@
+name: Repo guard
+
+# 1. Only collaborators may open issues and pull requests.
+# 2. No AI attribution in issue/PR descriptions or comments (it is stripped automatically).
+#
+# Security: pull_request_target runs with a write token, so this workflow NEVER checks out
+# or executes code from the pull request. It only checks out the default branch to reuse
+# scripts/ai-attribution.mjs, and passes user text through environment variables.
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created, edited]
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions: {}
+
+jobs:
+  collaborators-only:
+    name: Collaborators only
+    if: >-
+      (github.event_name == 'issues' && github.event.action != 'edited') ||
+      (github.event_name == 'pull_request_target' && github.event.action != 'edited')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      ASSOCIATION: ${{ github.event.issue.author_association || github.event.pull_request.author_association }}
+      AUTHOR: ${{ github.event.issue.user.login || github.event.pull_request.user.login }}
+      NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+      KIND: ${{ github.event_name == 'issues' && 'issue' || 'pr' }}
+    steps:
+      - name: Close contributions from non-collaborators
+        run: |
+          case "$ASSOCIATION" in OWNER|MEMBER|COLLABORATOR) echo "Allowed: $AUTHOR ($ASSOCIATION)"; exit 0;; esac
+          case "$AUTHOR" in dependabot\[bot\]|github-actions\[bot\]) echo "Allowed bot: $AUTHOR"; exit 0;; esac
+          msg="This repository only accepts issues and pull requests from its collaborators. Closing automatically."
+          if [ "$KIND" = issue ]; then
+            gh issue close "$NUMBER" --reason "not planned" --comment "$msg"
+            gh issue lock "$NUMBER" --reason spam || true
+          else
+            gh pr close "$NUMBER" --comment "$msg"
+            gh pr lock "$NUMBER" --reason spam || true
+          fi
+
+  strip-ai-attribution:
+    name: Strip AI attribution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      EVENT: ${{ github.event_name }}
+      NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+      COMMENT_ID: ${{ github.event.comment.id }}
+      TEXT: ${{ github.event.comment.body || github.event.issue.body || github.event.pull_request.body }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: scripts
+          persist-credentials: false
+      - name: Remove attribution lines
+        run: |
+          set +e
+          node scripts/ai-attribution.mjs --strip-env TEXT > "$RUNNER_TEMP/clean.md"
+          code=$?
+          set -e
+          [ "$code" = 0 ] && { echo "No AI attribution found."; exit 0; }
+          [ "$code" = 2 ] || exit "$code"
+          if [ -n "$COMMENT_ID" ]; then
+            gh api -X PATCH "repos/$GH_REPO/issues/comments/$COMMENT_ID" -F "body=@$RUNNER_TEMP/clean.md" > /dev/null
+          elif [ "$EVENT" = issues ]; then
+            gh issue edit "$NUMBER" --body-file "$RUNNER_TEMP/clean.md"
+          else
+            gh pr edit "$NUMBER" --body-file "$RUNNER_TEMP/clean.md"
+          fi
+          echo "::notice::AI attribution removed from #$NUMBER"

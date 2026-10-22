@@ -1,0 +1,2 @@
+pnpm exec commitlint --edit "$1"
+node scripts/ai-attribution.mjs --message-file "$1"
