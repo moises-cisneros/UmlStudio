@@ -5,7 +5,7 @@
 > **Periodo**: desde el 2026-09-07 (primer commit) hasta la evaluación del primer parcial.
 > **Trazabilidad**: requisitos en [`REQUIREMENTS.md`](REQUIREMENTS.md), arquitectura en [`../ARCHITECTURE.md`](../ARCHITECTURE.md), calidad en [`QUALITY_STANDARDS.md`](QUALITY_STANDARDS.md).
 
-En PUDS, un **ciclo** termina en una versión del producto y atraviesa las cuatro fases (Inicio, Elaboración, Construcción, Transición). Cada fase se divide en **iteraciones**. El primer parcial equivale a un ciclo completo: **release v1.0**. El segundo parcial será el **Ciclo 2** y se documentará en su propio archivo.
+En PUDS, un **ciclo** termina en una versión del producto y atraviesa las cuatro fases (Inicio, Elaboración, Construcción, Transición). Cada fase se divide en **iteraciones**. El primer parcial equivale a un ciclo completo: **release v1.0**. El segundo parcial es el **Ciclo 2**, documentado en [`CICLO_2.md`](CICLO_2.md).
 
 ---
 
@@ -284,6 +284,6 @@ Ejecución: `pnpm run test:all` (core, server, codegen). Las suites de `ai-servi
 | Criterio                                           |                                        Estado                                         |
 | :------------------------------------------------- | :-----------------------------------------------------------------------------------: |
 | 14 CU implementados y desplegados en producción    |                                          ✅                                           |
-| Una prueba de integración por CU                   | ✅ (deuda: `cu-05` está duplicado en `packages/core/test/` y `packages/core/tests/`)  |
+| Una prueba de integración por CU                   |                                          ✅                                           |
 | Arquitectura documentada (4+1)                     |                      ✅ [`ARCHITECTURE.md`](../ARCHITECTURE.md)                       |
 | Integración continua (CI) que ejecute lint y tests | ✅ GitHub Actions: CI en cada PR y deploy automático (incorporado al cerrar el ciclo) |
