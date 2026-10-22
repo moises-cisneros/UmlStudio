@@ -60,7 +60,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @umlstudio/ui run build
+      # Packages import @umlstudio/core from its build output (dist).
+      - run: pnpm run build:lib
       - run: pnpm run test:${{ matrix.suite }}
 
   test-python:
