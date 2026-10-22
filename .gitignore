@@ -9,7 +9,6 @@ pnpm-debug.log*
 dist/
 build/
 coverage/
-storybook-static/
 
 # Temporary files and cache
 .tmp/
@@ -31,13 +30,6 @@ storybook-static/
 **/.env.seed
 **/seed.users.json
 **/seed-users.json
-UMLSTUDIO_SEED_USERS.json
-
-# Deployment credential docs (routes doc is public; secrets never committed)
-docs/DEPLOYMENT_CREDENTIALS*.md
-docs/*CREDENTIALS*.md
-*-credentials.md
-credentials*.json
 
 # Editor-specific settings
 *.sublime-workspace
@@ -49,51 +41,30 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
-# Testing artifacts
-jest-cache/
-jest-output/
-**/test-results/
-**/playwright-report/
-**/blob-report/
-
 # Lint and Prettier caches
 eslintcache
 .prettiercache
 
-library/stats.html
-
-# Capacitor native projects
-android/
-/ios/
-
-# Fastlane
-**/fastlane/report.xml
-**/fastlane/README.md
-**/fastlane/test_output
-**/fastlane/screenshots
-**/fastlane/screenshots-framed
-**/fastlane/screenshots-preview
-**/fastlane/screenshots-review.html
-**/fastlane/device-frames
-**/.DerivedData*/
-
-# Capacitor generated icons
-icons/
+# Python (AI service & MCP server)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
 venv/
-.context/
-docs/.docusaurus/
-docs/build/
+
+# Java & Maven (Codegen)
+target/
+*.class
+.gradle/
+
+# Documentation (Docusaurus)
+.docusaurus/
 
 # Stray pnpm store if pnpm is run outside the workspace root
 .pnpm-store/
 
-# Temp dir used by scripts/check-doc-snippets.mjs (removed on each run)
-docs/.snippet-typecheck/
-
-# Live-update publish artifacts (built by scripts/build-live-update.mjs)
-**/live-updates-dist/
-
-# IDE
+# IDE & AI Tooling
 .vscode/
 .claude/
 .cursor/
@@ -102,9 +73,3 @@ docs/.snippet-typecheck/
 .agents/
 .github/
 .agent/
-
-# Docs
-docs/
-AGENTS.md
-openspec/
-.openspec/
