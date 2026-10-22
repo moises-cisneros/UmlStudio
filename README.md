@@ -209,7 +209,23 @@ pnpm format                  # Formatea todos los archivos del proyecto con Pret
 
 ---
 
-## 8. Licencia
+## 8. Documentación del Proyecto
+
+| Documento                                                | Contenido                                                |
+| :------------------------------------------------------- | :------------------------------------------------------- |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md)                     | Arquitectura (vistas 4+1), flujos y despliegue           |
+| [`DESIGN.md`](DESIGN.md)                                 | Sistema visual y tokens                                  |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)                     | Flujo de trabajo del equipo: issues, ramas, commits y PR |
+| [`AGENTS.md`](AGENTS.md)                                 | Guía para agentes de IA                                  |
+| [`docs/CICLO_1.md`](docs/CICLO_1.md)                     | Ciclo PUDS 1: fases, casos de uso y pruebas              |
+| [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md)           | Requisitos funcionales y no funcionales                  |
+| [`docs/DATABASE.md`](docs/DATABASE.md)                   | Persistencia (Redis, IndexedDB, PostgreSQL generado)     |
+| [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md)   | Convenciones de código y comandos de calidad             |
+| [`docs/QUALITY_STANDARDS.md`](docs/QUALITY_STANDARDS.md) | Calidad según ISO/IEC 25010                              |
+
+---
+
+## 9. Licencia
 
 Este proyecto está bajo la licencia **MIT**. Ver el archivo [LICENSE](LICENSE) para más detalles.
 
