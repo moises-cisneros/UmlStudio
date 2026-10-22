@@ -63,6 +63,7 @@ overrides:
   "react-dom": "19.2.7"
 
 allowBuilds:
+  "@parcel/watcher": true
   "@swc/core": true
   "@vscode/vsce-sign": true
   "core-js": false
