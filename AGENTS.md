@@ -61,7 +61,7 @@ pnpm --filter @umlstudio/<paquete> test   # un paquete
 10. **Puertos**: `5173, 8000, 4444, 8001, 8002, 8003, 6379`. Si un test o script tuyo levanta un proceso, cerralo antes de terminar. `pnpm dev` lo corre el usuario en su terminal.
 11. **Secretos**: nunca commitees `.env*`, tokens ni material local no versionado; nunca cites credenciales en código, issues o PR.
 12. **Sin atribución de IA**: nunca agregues `Co-authored-by`, `Assisted-by` ni líneas "Generated with …" que nombren una IA en commits, PR, issues o comentarios. El autor es siempre el integrante del equipo. El CI rechaza los PR que lo incumplan.
-13. **Git**: Conventional Commits en inglés y una rama por issue (ver `CONTRIBUTING.md`). `main` está protegida: todo entra por PR aprobado. No hagas push ni merge sin pedido explícito.
+13. **Git**: Conventional Commits en inglés y una rama por issue (ver `CONTRIBUTING.md`). `main` está protegida: todo entra por PR con los checks en verde. No hagas push ni merge sin pedido explícito.
 
 ## Cosas que no son obvias
 

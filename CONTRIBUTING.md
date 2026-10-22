@@ -33,7 +33,7 @@ Issue ──► rama ──► commits ──► Pull Request ──► revisió
 2. Te asignás el issue y creás la rama desde `main` actualizado.
 3. Trabajás con commits pequeños.
 4. Abrís un PR que cierra el issue (`Closes #12`).
-5. El **otro** integrante revisa. Nadie aprueba su propio PR.
+5. Se pide revisión al compañero (recomendada, no obligatoria). Cualquiera de los dos puede integrar el PR cuando los checks están en verde.
 6. Se integra con _squash merge_ y se borra la rama.
 
 ### 2.1 Issues
@@ -123,7 +123,7 @@ Husky da feedback en segundos y evita commits rotos. El CI es la barrera real: l
 - **Tamaño**: idealmente menos de 400 líneas cambiadas. Si crece, dividilo en PR encadenados.
 - **Título**: igual que un commit convencional (es el mensaje del _squash_).
 - **Descripción**: la plantilla (`.github/pull_request_template.md`) se carga sola. Incluye qué cambia, el issue que cierra con su CU/RF, cómo probarlo y el checklist.
-- **Para hacer merge** (regla de `main`): aprobación del compañero, checks `CI passed` y `Commits & attribution` en verde, conversaciones resueltas y rama al día con `main`. Solo se permite _squash merge_. El mensaje final se arma con el título y la descripción del PR.
+- **Para hacer merge** (regla de `main`): todo entra por PR (no hay push directo), checks `CI passed` y `Commits & attribution` en verde, conversaciones resueltas y rama al día con `main`. La aprobación del compañero no es obligatoria. Solo se permite _squash merge_. El mensaje final se arma con el título y la descripción del PR.
 
 ### 2.6 Revisión
 
@@ -144,7 +144,7 @@ Un issue está terminado cuando:
 - [ ] Tiene pruebas automatizadas (unitarias y, si cambia un CU, su `INT-CUxx`).
 - [ ] El CI está en verde (y lo corriste localmente antes de pedir revisión).
 - [ ] La documentación afectada está actualizada (tabla de la sección 4).
-- [ ] Fue revisado y aprobado por el compañero e integrado en `main`.
+- [ ] Fue integrado en `main` mediante PR (idealmente con revisión del compañero).
 - [ ] Si afecta a producción, se desplegó y se verificó el `/health` del servicio.
 
 ## 4. Qué documento actualizar
