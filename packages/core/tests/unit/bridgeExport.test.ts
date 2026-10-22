@@ -1,6 +1,4 @@
 import { describe, it, expect } from "vitest"
-import { writeFileSync } from "node:fs"
-import { resolve } from "node:path"
 import { exportToXmi } from "../../lib/export/xmiExport"
 import { importXmiDiagram } from "../../lib/import/xmiImport"
 import type { UMLModel } from "../../lib/typings"
@@ -131,9 +129,7 @@ const bridgeModel: UMLModel = {
 }
 
 describe("Bridge Diagram export/import verification", () => {
-  it("exports Bridge model to valid EA XMI and updates bridge_diagram.xmi", async () => {
-    const bridgeDiagramXmiPath = resolve(__dirname, "../../../../docs/examples/bridge_diagram.xmi")
-
+  it("exports Bridge model to valid EA XMI and round-trips it", async () => {
     const result = await exportToXmi(bridgeModel, {
       diagramName: "Bridge Diagram",
       targetDialect: "EnterpriseArchitect",
@@ -163,9 +159,6 @@ describe("Bridge Diagram export/import verification", () => {
     // 4. Formal diagram elements geometry
     expect(result.xmiContent).toContain("<elements>")
     expect(result.xmiContent).toMatch(/<element geometry="Left=\d+;Top=\d+;Right=\d+;Bottom=\d+;"/)
-
-    // Write updated bridge_diagram.xmi
-    writeFileSync(bridgeDiagramXmiPath, result.xmiContent, "utf-8")
 
     // Reimport to verify round-trip
     const reimported = importXmiDiagram(result.xmiContent)

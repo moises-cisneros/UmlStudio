@@ -1,0 +1,41 @@
+name: PR conventions
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-conventions-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  conventions:
+    name: Commits & attribution
+    runs-on: ubuntu-latest
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      PR_BODY: ${{ github.event.pull_request.body }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Commit messages follow Conventional Commits
+        run: pnpm exec commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+      - name: PR title follows Conventional Commits (it becomes the squash commit)
+        run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint --verbose
+      - name: No AI authors or co-authors in commits
+        run: node scripts/ai-attribution.mjs --range "$BASE_SHA..$HEAD_SHA"
+      - name: No AI attribution in the PR title or description
+        run: node scripts/ai-attribution.mjs --env PR_TITLE PR_BODY

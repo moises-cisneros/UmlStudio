@@ -88,7 +88,10 @@ describe("published model JSON schema", () => {
 })
 
 describe("schema accepts every real diagram model (fixtures)", () => {
-  const dirs = [join(import.meta.dirname, "../../../../apps/webapp/tests/fixtures")]
+  const dirs = [
+    join(import.meta.dirname, "../fixtures/models"),
+    join(import.meta.dirname, "../../../../apps/webapp/tests/fixtures"),
+  ]
   const models = dirs.flatMap((dir) =>
     existsSync(dir)
       ? readdirSync(dir)

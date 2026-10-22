@@ -1,0 +1,131 @@
+name: Deploy
+
+# Runs only after CI succeeds on a push to main (merged PR), or manually.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Service to deploy
+        type: choice
+        options: [all, webapp, server, ai-service, codegen]
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    name: Detect changes
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.diff.outputs.sha }}
+      webapp: ${{ steps.diff.outputs.webapp }}
+      server: ${{ steps.diff.outputs.server }}
+      ai-service: ${{ steps.diff.outputs.ai-service }}
+      codegen: ${{ steps.diff.outputs.codegen }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+      - id: diff
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [ -n "$TARGET" ]; then
+            for s in webapp server ai-service codegen; do
+              [ "$TARGET" = all ] || [ "$TARGET" = "$s" ] && v=true || v=false
+              echo "$s=$v" >> "$GITHUB_OUTPUT"
+            done
+            exit 0
+          fi
+          files=$(git diff --name-only HEAD~1 HEAD)
+          echo "$files"
+          has() { echo "$files" | grep -Eq "$1" && echo true || echo false; }
+          shared='^(packages/|pnpm-lock.yaml|pnpm-workspace.yaml|package.json)'
+          echo "webapp=$(has "^apps/webapp/|$shared")" >> "$GITHUB_OUTPUT"
+          echo "server=$(has "^apps/server/|$shared|^assets/fonts/")" >> "$GITHUB_OUTPUT"
+          echo "ai-service=$(has '^apps/ai-service/')" >> "$GITHUB_OUTPUT"
+          echo "codegen=$(has "^apps/codegen/|$shared")" >> "$GITHUB_OUTPUT"
+
+  webapp:
+    name: Deploy webapp (Cloudflare Pages)
+    needs: changes
+    if: needs.changes.outputs.webapp == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build:lib && pnpm run build:webapp
+        env:
+          VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
+          VITE_SERVER_URL_WSS: ${{ vars.VITE_SERVER_URL_WSS }}
+          VITE_AI_SERVICE_URL: ${{ vars.VITE_AI_SERVICE_URL }}
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy apps/webapp/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+            --branch=main --commit-hash=${{ needs.changes.outputs.sha }}
+
+  render:
+    name: Deploy ${{ matrix.service }} (Render)
+    needs: changes
+    runs-on: ubuntu-latest
+    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: server
+            hook: RENDER_DEPLOY_HOOK_SERVER
+            health: RENDER_HEALTH_URL_SERVER
+          - service: ai-service
+            hook: RENDER_DEPLOY_HOOK_AI_SERVICE
+            health: RENDER_HEALTH_URL_AI_SERVICE
+          - service: codegen
+            hook: RENDER_DEPLOY_HOOK_CODEGEN
+            health: RENDER_HEALTH_URL_CODEGEN
+    steps:
+      - name: Trigger deploy hook
+        if: needs.changes.outputs[matrix.service] == 'true'
+        env:
+          HOOK: ${{ secrets[matrix.hook] }}
+          SHA: ${{ needs.changes.outputs.sha }}
+        run: |
+          [ -n "$HOOK" ] || { echo "::error::Missing secret ${{ matrix.hook }}"; exit 1; }
+          curl -fsS -X POST "$HOOK&ref=$SHA" > /dev/null
+          echo "Deploy of ${{ matrix.service }} requested for $SHA"
+      - name: Wait until the service answers /health
+        if: needs.changes.outputs[matrix.service] == 'true' && vars[matrix.health] != ''
+        env:
+          URL: ${{ vars[matrix.health] }}
+        run: |
+          # Render builds take a few minutes and free instances cold-start; poll up to 15 min.
+          sleep 120
+          for i in $(seq 1 26); do
+            if curl -fsS --max-time 60 "$URL" > /dev/null; then echo "Healthy: $URL"; exit 0; fi
+            sleep 30
+          done
+          echo "::error::$URL did not become healthy"; exit 1
