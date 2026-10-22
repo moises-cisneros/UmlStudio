@@ -2,13 +2,13 @@
 
 ## Requisitos Funcionales (RF) y No Funcionales (RNF) bajo PUDS
 
-> **Metodología**: PUDS · **Estándar UML**: OMG UML 2.5 · **Versión**: 1.0 (Ciclo 1)
+> **Metodología**: PUDS · **Estándar UML**: OMG UML 2.5 · **Versión**: 2.0 (Ciclo 2 en curso)
 
 ---
 
 ## 1. Introducción
 
-Requisitos funcionales (RF) y no funcionales (RNF) de UmlStudio, organizados por módulo. Cada RF tiene un identificador estable y se traza a un caso de uso de [`CICLO_1.md`](CICLO_1.md). Los huecos de numeración (por ejemplo, RF-30) son intencionales: los identificadores no se reutilizan.
+Requisitos funcionales (RF) y no funcionales (RNF) de UmlStudio, organizados por módulo. Cada RF tiene un identificador estable y se traza a un caso de uso: CU-01 a CU-14 en [`CICLO_1.md`](CICLO_1.md) y CU-15 a CU-17 en [`CICLO_2.md`](CICLO_2.md). Los huecos de numeración (por ejemplo, RF-30) son intencionales: los identificadores no se reutilizan.
 
 ---
 
@@ -144,6 +144,25 @@ Requisitos funcionales (RF) y no funcionales (RNF) de UmlStudio, organizados por
 
 ---
 
+### MOD-12: IA de Sala (`apps/server` + `apps/ai-service` + `apps/webapp`) — Ciclo 2
+
+| ID        | Requisito                                                                                                                                                                                                                                       | Prioridad | Caso de Uso |
+| :-------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------- | :---------- |
+| **RF-51** | Cada sala colaborativa debe tener **un único asistente de IA compartido**, atendido por el servidor. No existe una IA independiente por usuario dentro de la sala.                                                                              | Alta      | CU-15       |
+| **RF-52** | El sistema debe permitir que cualquier participante de la sala **pregunte** a la IA (modo mentor) o le **pida un cambio** (modo ejecutor), por texto o por voz, eligiendo la intención de forma explícita.                                      | Alta      | CU-15       |
+| **RF-53** | El sistema debe mostrar a **todos** los participantes, en tiempo real, quién preguntó, qué preguntó, el estado de la IA (en cola, pensando) y qué respondió o propuso. Al entrar a la sala se carga el historial.                               | Alta      | CU-15       |
+| **RF-54** | La IA debe **identificar al autor** de cada consulta (identidad del JWT) y dirigirse a él por su nombre; el servidor garantiza que la respuesta empiece con ese nombre.                                                                         | Alta      | CU-15       |
+| **RF-55** | La IA debe responder con el contexto del **tablero actual** (clases, atributos, métodos y relaciones, leídos de la réplica del servidor) y de la **memoria de la sala** (resumen, acuerdos y mensajes recientes).                               | Alta      | CU-15       |
+| **RF-56** | La IA debe **separar las consultas individuales**: cada consulta usa solo el rastro de su autor (sus preguntas previas y los elementos que creó o tiene seleccionados), sin mezclarlo con el de otros participantes.                            | Alta      | CU-15       |
+| **RF-57** | En **modo mentor**, la IA debe explicar conceptos de diseño y UML con ejemplos tomados del diagrama actual, sin modificarlo.                                                                                                                    | Alta      | CU-15       |
+| **RF-58** | En **modo ejecutor**, la IA debe devolver una **propuesta de cambio** como `ModelDiff` validado, que cualquier participante aplica una sola vez (_claim_ atómico) y que se rechaza si el tablero cambió (`stale`).                              | Alta      | CU-16       |
+| **RF-59** | El propietario del diagrama debe poder **configurar la IA de su sala**: habilitarla, permitir o no que **entregue soluciones** (modo ejecutor), aplicar sus propuestas con confirmación o de forma automática y activar el moderador proactivo. | Media     | CU-17       |
+| **RF-60** | El sistema debe atender las consultas **simultáneas** en orden de llegada (cola por sala con posición visible), sin perder ni mezclar ninguna, y rechazar con `429` cuando la cola esté llena.                                                  | Alta      | CU-15       |
+| **RF-61** | La IA debe conservar una **memoria de largo plazo** entre sesiones, de la sala (resúmenes, acuerdos y cambios aplicados) y de cada usuario dentro de la sala (sus dudas), y recuperar por relevancia lo pertinente a cada consulta.             | Media     | CU-15       |
+| **RF-62** | El sistema debe ofrecer un **moderador proactivo** opcional: tras un periodo sin cambios, la IA publica como máximo una observación de diseño cada 2 minutos, dirigida al autor del elemento.                                                   | Baja      | CU-15       |
+
+---
+
 ## 3. Requisitos No Funcionales
 
 ### Rendimiento
@@ -197,7 +216,7 @@ Requisitos funcionales (RF) y no funcionales (RNF) de UmlStudio, organizados por
 
 | ID         | Requisito                                                                                                                                                                                                              | Módulo | Métrica / Verificación                     |
 | :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----- | :----------------------------------------- |
-| **RNF-23** | **Testing Automatizado con Vitest**: Toda funcionalidad debe contar con pruebas unitarias y debe existir una matriz de pruebas de integración con al menos 1 prueba automatizada por cada Caso de Uso (CU-01 a CU-14). | Todos  | 100% pass rate en Vitest (`pnpm test:all`) |
+| **RNF-23** | **Testing Automatizado con Vitest**: Toda funcionalidad debe contar con pruebas unitarias y debe existir una matriz de pruebas de integración con al menos 1 prueba automatizada por cada Caso de Uso (CU-01 a CU-17). | Todos  | 100% pass rate en Vitest (`pnpm test:all`) |
 | **RNF-24** | **Calidad y Estilo de Código con ESLint**: El código debe mantener indentación estricta de 2 espacios, tipado TypeScript riguroso sin `any` arbitrarios, y cero errores o advertencias.                                | Todos  | `pnpm lint` (0 errors, 0 warnings)         |
 | **RNF-25** | **Seguridad de Dependencias y Bloqueo npm**: Uso exclusivo de `pnpm` y catálogo centralizado; prohibición absoluta de `npm` y `package-lock.json`. 0 vulnerabilidades críticas o altas.                                | Todos  | `pnpm audit`                               |
 
@@ -210,12 +229,23 @@ Requisitos funcionales (RF) y no funcionales (RNF) de UmlStudio, organizados por
 | **RNF-28** | **Persistencia durable**: Redis con persistencia en disco (AOF en local, Render Key Value en producción); PostgreSQL (Neon) disponible para los proyectos generados.                      | MOD-Infra | Configuración de servicios |
 | **RNF-29** | **Cifrado en Tránsito SSL/TLS**: Todos los puntos de entrada (HTTP y WebSocket) deben operar obligatoriamente bajo certificados SSL/TLS válidos (HTTPS / WSS).                            | MOD-Infra | Certificados SSL grado A   |
 
+### IA de Sala (Ciclo 2)
+
+| ID         | Requisito                                                                                                                                                                                                                                                               | Módulo | Métrica / Verificación                                                      |
+| :--------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----- | :-------------------------------------------------------------------------- |
+| **RNF-30** | **IA centralizada**: la IA de sala se orquesta en el servidor, que es el único punto que observa el tablero, conoce las identidades y atiende a todos. En modo sala, el navegador nunca llama directo al servicio de inferencia.                                        | MOD-12 | Revisión de arquitectura; sin llamadas a `ai-service` desde el modo sala    |
+| **RNF-31** | **Infraestructura intercambiable**: el proveedor de inferencia (modelo local o nube) y el almacén de memoria de largo plazo se eligen por configuración, sin cambiar código.                                                                                            | MOD-12 | Cambio de proveedor en la demo solo con variables de entorno                |
+| **RNF-32** | **Identidad real**: el autor de cada mensaje y de cada cambio sale del JWT. No existen identidades de respaldo ni mensajes con autor elegido por el cliente.                                                                                                            | MOD-12 | INT-CU15; los clientes no pueden emitir eventos de la IA                    |
+| **RNF-33** | **Respuesta percibida**: la consulta se confirma (`202` y estado visible para todos) en ≤1 s; la inferencia tiene un tiempo máximo de 90 s y, si falla, se informa la causa real sin respuestas simuladas.                                                              | MOD-12 | Latencia del `POST` de mensajes; prueba con proveedor caído                 |
+| **RNF-34** | **Inferencia protegida**: el endpoint interno de `ai-service` y el servidor del modelo propio no son públicos: solo aceptan llamadas autenticadas (token interno o identidad de servicio).                                                                              | MOD-12 | Llamada sin token → `401`                                                   |
+| **RNF-35** | **Aislamiento de la memoria**: la memoria de la IA se guarda en un almacén exclusivo del producto, separado por entorno, y particionado por sala y por usuario mediante políticas de la base de datos (no solo filtros en el código). Se borra al eliminar el diagrama. | MOD-12 | Prueba: una sala no lee la memoria de otra, ni un usuario el rastro de otro |
+
 ---
 
 ## 4. Trazabilidad
 
 Cada RF tiene trazabilidad directa a:
 
-- Un **Caso de Uso** y una **iteración del ciclo** documentados en [`CICLO_1.md`](CICLO_1.md) (CU-01 a CU-14)
+- Un **Caso de Uso** y una **iteración del ciclo** documentados en [`CICLO_1.md`](CICLO_1.md) (CU-01 a CU-14) o [`CICLO_2.md`](CICLO_2.md) (CU-15 a CU-17)
 - Un **Módulo arquitectónico** documentado en [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
 - Un **Estándar de calidad** mapeado en [`QUALITY_STANDARDS.md`](QUALITY_STANDARDS.md)
