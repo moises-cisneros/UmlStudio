@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.1" xmlns:uml="http://schema.omg.org/spec/UML/2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">
+  <xmi:Documentation exporter="Enterprise Architect" exporterVersion="6.5" />
+  <uml:Model xmi:type="uml:Model" name="EA_Model" visibility="public" xmi:id="d4fd3979-d1bb-451b-b3a4-e4dea94a90c4">
+    <packagedElement xmi:type="uml:Package" xmi:id="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" name="Bridge Diagram" visibility="public">
+    <packagedElement xmi:type="uml:Class" xmi:id="2eb1ceb2-266e-4669-89f1-c61e246cb10c" name="Abstraction">
+      <ownedOperation xmi:type="uml:Operation" xmi:id="96d06d69-c8d2-4ea3-8d6b-d05c22a03286" name="operation" visibility="public">
+        <ownedParameter xmi:type="uml:Parameter" xmi:id="96d06d69-c8d2-4ea3-8d6b-d05c22a03286_ret" name="return" direction="return" type="EAnone_void" />
+      </ownedOperation>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Class" xmi:id="7052e703-263f-4df5-95e0-3558793849af" name="RefinedAbstraction1">
+      <ownedOperation xmi:type="uml:Operation" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b" name="method" visibility="public">
+        <ownedParameter xmi:type="uml:Parameter" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b_ret" name="return" direction="return" type="EAnone_void" />
+      </ownedOperation>
+      <generalization xmi:type="uml:Generalization" xmi:id="1737993042486-7052e703-263f-4df5-95e0-3558793849af-2eb1ceb2-266e-4669-89f1-c61e246cb10c" general="2eb1ceb2-266e-4669-89f1-c61e246cb10c" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Class" xmi:id="286257b1-ebd3-424f-b3e4-c1c2a722531b" name="Client">
+    </packagedElement>
+    <packagedElement xmi:type="uml:Class" xmi:id="2fecb039-1b0d-4de9-8820-fa120c51f4f6" name="RefinedAbstraction2">
+      <ownedOperation xmi:type="uml:Operation" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b" name="method" visibility="public">
+        <ownedParameter xmi:type="uml:Parameter" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b_ret" name="return" direction="return" type="EAnone_void" />
+      </ownedOperation>
+      <generalization xmi:type="uml:Generalization" xmi:id="1737993045593-2fecb039-1b0d-4de9-8820-fa120c51f4f6-2eb1ceb2-266e-4669-89f1-c61e246cb10c" general="2eb1ceb2-266e-4669-89f1-c61e246cb10c" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Class" xmi:id="889cb1f6-175a-45c0-ae06-d1acab5dcbdc" name="Implementor">
+      <ownedOperation xmi:type="uml:Operation" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b" name="operationImpl" visibility="public">
+        <ownedParameter xmi:type="uml:Parameter" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b_ret" name="return" direction="return" type="EAnone_void" />
+      </ownedOperation>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Class" xmi:id="2e018906-a3db-4308-977b-175ace3c3185" name="ConcreteImplementor1">
+      <ownedOperation xmi:type="uml:Operation" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b" name="operationImpl" visibility="public">
+        <ownedParameter xmi:type="uml:Parameter" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b_ret" name="return" direction="return" type="EAnone_void" />
+      </ownedOperation>
+      <generalization xmi:type="uml:Generalization" xmi:id="1737993203512-2e018906-a3db-4308-977b-175ace3c3185-889cb1f6-175a-45c0-ae06-d1acab5dcbdc" general="889cb1f6-175a-45c0-ae06-d1acab5dcbdc" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Class" xmi:id="1bb3eed4-bcc2-45af-9b6e-62020b9c439d" name="ConcreteImplementor2">
+      <ownedOperation xmi:type="uml:Operation" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b" name="operationImpl" visibility="public">
+        <ownedParameter xmi:type="uml:Parameter" xmi:id="964c1c16-441b-4d1e-99c3-406f3a37f50b_ret" name="return" direction="return" type="EAnone_void" />
+      </ownedOperation>
+      <generalization xmi:type="uml:Generalization" xmi:id="1737993210921-1bb3eed4-bcc2-45af-9b6e-62020b9c439d-889cb1f6-175a-45c0-ae06-d1acab5dcbdc" general="889cb1f6-175a-45c0-ae06-d1acab5dcbdc" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="xy-edge__286257b1-ebd3-424f-b3e4-c1c2a722531bright-2eb1ceb2-266e-4669-89f1-c61e246cb10cleft" name="">
+      <memberEnd xmi:idref="prop_xy-edge__286257b1-ebd3-424f-b3e4-c1c2a722531bright-2eb1ceb2-266e-4669-89f1-c61e246cb10cleft_src" />
+      <memberEnd xmi:idref="prop_xy-edge__286257b1-ebd3-424f-b3e4-c1c2a722531bright-2eb1ceb2-266e-4669-89f1-c61e246cb10cleft_tgt" />
+      <ownedEnd xmi:type="uml:Property" xmi:id="prop_xy-edge__286257b1-ebd3-424f-b3e4-c1c2a722531bright-2eb1ceb2-266e-4669-89f1-c61e246cb10cleft_src" name="" type="286257b1-ebd3-424f-b3e4-c1c2a722531b" association="xy-edge__286257b1-ebd3-424f-b3e4-c1c2a722531bright-2eb1ceb2-266e-4669-89f1-c61e246cb10cleft">
+      </ownedEnd>
+      <ownedEnd xmi:type="uml:Property" xmi:id="prop_xy-edge__286257b1-ebd3-424f-b3e4-c1c2a722531bright-2eb1ceb2-266e-4669-89f1-c61e246cb10cleft_tgt" name="" type="2eb1ceb2-266e-4669-89f1-c61e246cb10c" association="xy-edge__286257b1-ebd3-424f-b3e4-c1c2a722531bright-2eb1ceb2-266e-4669-89f1-c61e246cb10cleft">
+      </ownedEnd>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="1737993220311-2eb1ceb2-266e-4669-89f1-c61e246cb10c-889cb1f6-175a-45c0-ae06-d1acab5dcbdc" name="">
+      <memberEnd xmi:idref="prop_1737993220311-2eb1ceb2-266e-4669-89f1-c61e246cb10c-889cb1f6-175a-45c0-ae06-d1acab5dcbdc_src" />
+      <memberEnd xmi:idref="prop_1737993220311-2eb1ceb2-266e-4669-89f1-c61e246cb10c-889cb1f6-175a-45c0-ae06-d1acab5dcbdc_tgt" />
+      <ownedEnd xmi:type="uml:Property" xmi:id="prop_1737993220311-2eb1ceb2-266e-4669-89f1-c61e246cb10c-889cb1f6-175a-45c0-ae06-d1acab5dcbdc_src" name="" type="2eb1ceb2-266e-4669-89f1-c61e246cb10c" association="1737993220311-2eb1ceb2-266e-4669-89f1-c61e246cb10c-889cb1f6-175a-45c0-ae06-d1acab5dcbdc">
+      </ownedEnd>
+      <ownedEnd xmi:type="uml:Property" xmi:id="prop_1737993220311-2eb1ceb2-266e-4669-89f1-c61e246cb10c-889cb1f6-175a-45c0-ae06-d1acab5dcbdc_tgt" name="" type="889cb1f6-175a-45c0-ae06-d1acab5dcbdc" association="1737993220311-2eb1ceb2-266e-4669-89f1-c61e246cb10c-889cb1f6-175a-45c0-ae06-d1acab5dcbdc">
+      </ownedEnd>
+    </packagedElement>
+    </packagedElement>
+  </uml:Model>
+  <xmi:Extension exporter="Enterprise Architect" exporterVersion="6.5">
+    <elements>
+      <element xmi:idref="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" xmi:type="uml:Package" name="Bridge Diagram" scope="public">
+        <model package2="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" package="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" tpos="0" ea_localid="2" ea_eleType="package"/>
+        <properties isSpecification="false" sType="Package" nType="0" scope="public"/>
+        <project author="UmlStudio" version="1.0" created="2026-09-16 22:36:55" modified="2026-09-16 22:36:55" status="Proposed"/>
+      </element>
+      <element xmi:idref="2eb1ceb2-266e-4669-89f1-c61e246cb10c" xmi:type="uml:Class" name="Abstraction" scope="public">
+        <model package="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" tpos="0" ea_eleType="element"/>
+        <properties isSpecification="false" sType="Class" nType="0" scope="public" isRoot="false" isLeaf="false" isAbstract="false" isActive="false"/>
+        <project author="UmlStudio" version="1.0" created="2026-09-16 22:36:55" modified="2026-09-16 22:36:55" status="Proposed"/>
+      </element>
+      <element xmi:idref="7052e703-263f-4df5-95e0-3558793849af" xmi:type="uml:Class" name="RefinedAbstraction1" scope="public">
+        <model package="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" tpos="0" ea_eleType="element"/>
+        <properties isSpecification="false" sType="Class" nType="0" scope="public" isRoot="false" isLeaf="false" isAbstract="false" isActive="false"/>
+        <project author="UmlStudio" version="1.0" created="2026-09-16 22:36:55" modified="2026-09-16 22:36:55" status="Proposed"/>
+      </element>
+      <element xmi:idref="286257b1-ebd3-424f-b3e4-c1c2a722531b" xmi:type="uml:Class" name="Client" scope="public">
+        <model package="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" tpos="0" ea_eleType="element"/>
+        <properties isSpecification="false" sType="Class" nType="0" scope="public" isRoot="false" isLeaf="false" isAbstract="false" isActive="false"/>
+        <project author="UmlStudio" version="1.0" created="2026-09-16 22:36:55" modified="2026-09-16 22:36:55" status="Proposed"/>
+      </element>
+      <element xmi:idref="2fecb039-1b0d-4de9-8820-fa120c51f4f6" xmi:type="uml:Class" name="RefinedAbstraction2" scope="public">
+        <model package="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" tpos="0" ea_eleType="element"/>
+        <properties isSpecification="false" sType="Class" nType="0" scope="public" isRoot="false" isLeaf="false" isAbstract="false" isActive="false"/>
+        <project author="UmlStudio" version="1.0" created="2026-09-16 22:36:55" modified="2026-09-16 22:36:55" status="Proposed"/>
+      </element>
+      <element xmi:idref="889cb1f6-175a-45c0-ae06-d1acab5dcbdc" xmi:type="uml:Class" name="Implementor" scope="public">
+        <model package="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" tpos="0" ea_eleType="element"/>
+        <properties isSpecification="false" sType="Class" nType="0" scope="public" isRoot="false" isLeaf="false" isAbstract="false" isActive="false"/>
+        <project author="UmlStudio" version="1.0" created="2026-09-16 22:36:55" modified="2026-09-16 22:36:55" status="Proposed"/>
+      </element>
+      <element xmi:idref="2e018906-a3db-4308-977b-175ace3c3185" xmi:type="uml:Class" name="ConcreteImplementor1" scope="public">
+        <model package="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" tpos="0" ea_eleType="element"/>
+        <properties isSpecification="false" sType="Class" nType="0" scope="public" isRoot="false" isLeaf="false" isAbstract="false" isActive="false"/>
+        <project author="UmlStudio" version="1.0" created="2026-09-16 22:36:55" modified="2026-09-16 22:36:55" status="Proposed"/>
+      </element>
+      <element xmi:idref="1bb3eed4-bcc2-45af-9b6e-62020b9c439d" xmi:type="uml:Class" name="ConcreteImplementor2" scope="public">
+        <model package="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" tpos="0" ea_eleType="element"/>
+        <properties isSpecification="false" sType="Class" nType="0" scope="public" isRoot="false" isLeaf="false" isAbstract="false" isActive="false"/>
+        <project author="UmlStudio" version="1.0" created="2026-09-16 22:36:55" modified="2026-09-16 22:36:55" status="Proposed"/>
+      </element>
+    </elements>
+    <connectors>
+      <connector xmi:idref="xy-edge__286257b1-ebd3-424f-b3e4-c1c2a722531bright-2eb1ceb2-266e-4669-89f1-c61e246cb10cleft" name="">
+        <source xmi:idref="286257b1-ebd3-424f-b3e4-c1c2a722531b">
+          <model type="Class" name="Client"/>
+          <type aggregation="none" containment="Unspecified"/>
+          <constraints/>
+          <modifiers isOrdered="false" changeable="none" isNavigable="false"/>
+          <style value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Unspecified;"/>
+          <documentation/>
+          <xrefs/>
+          <tags/>
+        </source>
+        <target xmi:idref="2eb1ceb2-266e-4669-89f1-c61e246cb10c">
+          <model type="Class" name="Abstraction"/>
+          <type aggregation="none" containment="Unspecified"/>
+          <constraints/>
+          <modifiers isOrdered="false" changeable="none" isNavigable="false"/>
+          <style value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Unspecified;"/>
+          <documentation/>
+          <xrefs/>
+          <tags/>
+        </target>
+        <properties ea_type="Association" direction="Unspecified"/>
+        <modifiers isRoot="false" isLeaf="false"/>
+        <appearance linemode="3" linecolor="0" linewidth="0" seqno="0" headStyle="0" lineStyle="0"/>
+      </connector>
+      <connector xmi:idref="1737993042486-7052e703-263f-4df5-95e0-3558793849af-2eb1ceb2-266e-4669-89f1-c61e246cb10c" name="">
+        <source xmi:idref="7052e703-263f-4df5-95e0-3558793849af">
+          <model type="Class" name="RefinedAbstraction1"/>
+          <type aggregation="none"/>
+        </source>
+        <target xmi:idref="2eb1ceb2-266e-4669-89f1-c61e246cb10c">
+          <model type="Class" name="Abstraction"/>
+          <type aggregation="none"/>
+        </target>
+        <properties ea_type="Generalization" direction="Source -> Destination"/>
+        <modifiers isRoot="false" isLeaf="false"/>
+        <appearance linemode="3" linecolor="0" linewidth="0" seqno="0" headStyle="0" lineStyle="0"/>
+      </connector>
+      <connector xmi:idref="1737993045593-2fecb039-1b0d-4de9-8820-fa120c51f4f6-2eb1ceb2-266e-4669-89f1-c61e246cb10c" name="">
+        <source xmi:idref="2fecb039-1b0d-4de9-8820-fa120c51f4f6">
+          <model type="Class" name="RefinedAbstraction2"/>
+          <type aggregation="none"/>
+        </source>
+        <target xmi:idref="2eb1ceb2-266e-4669-89f1-c61e246cb10c">
+          <model type="Class" name="Abstraction"/>
+          <type aggregation="none"/>
+        </target>
+        <properties ea_type="Generalization" direction="Source -> Destination"/>
+        <modifiers isRoot="false" isLeaf="false"/>
+        <appearance linemode="3" linecolor="0" linewidth="0" seqno="0" headStyle="0" lineStyle="0"/>
+      </connector>
+      <connector xmi:idref="1737993203512-2e018906-a3db-4308-977b-175ace3c3185-889cb1f6-175a-45c0-ae06-d1acab5dcbdc" name="">
+        <source xmi:idref="2e018906-a3db-4308-977b-175ace3c3185">
+          <model type="Class" name="ConcreteImplementor1"/>
+          <type aggregation="none"/>
+        </source>
+        <target xmi:idref="889cb1f6-175a-45c0-ae06-d1acab5dcbdc">
+          <model type="Class" name="Implementor"/>
+          <type aggregation="none"/>
+        </target>
+        <properties ea_type="Generalization" direction="Source -> Destination"/>
+        <modifiers isRoot="false" isLeaf="false"/>
+        <appearance linemode="3" linecolor="0" linewidth="0" seqno="0" headStyle="0" lineStyle="0"/>
+      </connector>
+      <connector xmi:idref="1737993210921-1bb3eed4-bcc2-45af-9b6e-62020b9c439d-889cb1f6-175a-45c0-ae06-d1acab5dcbdc" name="">
+        <source xmi:idref="1bb3eed4-bcc2-45af-9b6e-62020b9c439d">
+          <model type="Class" name="ConcreteImplementor2"/>
+          <type aggregation="none"/>
+        </source>
+        <target xmi:idref="889cb1f6-175a-45c0-ae06-d1acab5dcbdc">
+          <model type="Class" name="Implementor"/>
+          <type aggregation="none"/>
+        </target>
+        <properties ea_type="Generalization" direction="Source -> Destination"/>
+        <modifiers isRoot="false" isLeaf="false"/>
+        <appearance linemode="3" linecolor="0" linewidth="0" seqno="0" headStyle="0" lineStyle="0"/>
+      </connector>
+      <connector xmi:idref="1737993220311-2eb1ceb2-266e-4669-89f1-c61e246cb10c-889cb1f6-175a-45c0-ae06-d1acab5dcbdc" name="">
+        <source xmi:idref="2eb1ceb2-266e-4669-89f1-c61e246cb10c">
+          <model type="Class" name="Abstraction"/>
+          <type aggregation="none" containment="Unspecified"/>
+          <constraints/>
+          <modifiers isOrdered="false" changeable="none" isNavigable="false"/>
+          <style value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Unspecified;"/>
+          <documentation/>
+          <xrefs/>
+          <tags/>
+        </source>
+        <target xmi:idref="889cb1f6-175a-45c0-ae06-d1acab5dcbdc">
+          <model type="Class" name="Implementor"/>
+          <type aggregation="none" containment="Unspecified"/>
+          <constraints/>
+          <modifiers isOrdered="false" changeable="none" isNavigable="false"/>
+          <style value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Unspecified;"/>
+          <documentation/>
+          <xrefs/>
+          <tags/>
+        </target>
+        <properties ea_type="Association" direction="Unspecified"/>
+        <modifiers isRoot="false" isLeaf="false"/>
+        <appearance linemode="3" linecolor="0" linewidth="0" seqno="0" headStyle="0" lineStyle="0"/>
+      </connector>
+    </connectors>
+    <primitivetypes>
+      <packagedElement xmi:type="uml:Package" xmi:id="EAPrimitiveTypesPackage" name="EA_PrimitiveTypes_Package" visibility="public">
+        <packagedElement xmi:type="uml:Package" xmi:id="EAnoneTypesPackage" name="EA_none_Types_Package" visibility="public">
+          <packagedElement xmi:type="uml:PrimitiveType" xmi:id="EAnone_void" name="void" visibility="public"/>
+        </packagedElement>
+      </packagedElement>
+    </primitivetypes>
+    <diagrams>
+      <diagram xmi:id="EAID_DIAGRAM_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4">
+        <model package="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4" localID="2" owner="EAPK_D4FD3979_D1BB_451B_B3A4_E4DEA94A90C4"/>
+        <properties name="Bridge Diagram" type="Logical"/>
+        <project author="UmlStudio" version="1.0" created="2026-09-16 22:36:55" modified="2026-09-16 22:36:55"/>
+        <style appearance="BackColor=-1;BorderColor=-1;BorderWidth=-1;FontColor=-1;VSwimLanes=1;HSwimLanes=1;BorderStyle=0;"/>
+        <extendedProperties ptInstances="SX=150;SY=175;EX=330;EY=245;SND=1;GUID={2eb1ceb2-266e-4669-89f1-c61e246cb10c}; SX=-60;SY=330;EX=120;EY=400;SND=2;GUID={7052e703-263f-4df5-95e0-3558793849af}; SX=-115;SY=185;EX=52;EY=225;SND=3;GUID={286257b1-ebd3-424f-b3e4-c1c2a722531b}; SX=255;SY=325;EX=435;EY=395;SND=4;GUID={2fecb039-1b0d-4de9-8820-fa120c51f4f6}; SX=635;SY=175;EX=835;EY=245;SND=5;GUID={889cb1f6-175a-45c0-ae06-d1acab5dcbdc}; SX=505;SY=305;EX=705;EY=375;SND=6;GUID={2e018906-a3db-4308-977b-175ace3c3185}; SX=765;SY=305;EX=965;EY=375;SND=7;GUID={1bb3eed4-bcc2-45af-9b6e-62020b9c439d};"/>
+        <elements>
+          <element geometry="Left=150;Top=175;Right=330;Bottom=245;" subject="2eb1ceb2-266e-4669-89f1-c61e246cb10c" seqno="1" style="DUID=58A9D992;"/>
+          <element geometry="Left=-60;Top=330;Right=120;Bottom=400;" subject="7052e703-263f-4df5-95e0-3558793849af" seqno="2" style="DUID=A4EE5CC2;"/>
+          <element geometry="Left=-115;Top=185;Right=52;Bottom=225;" subject="286257b1-ebd3-424f-b3e4-c1c2a722531b" seqno="3" style="DUID=712E53B9;"/>
+          <element geometry="Left=255;Top=325;Right=435;Bottom=395;" subject="2fecb039-1b0d-4de9-8820-fa120c51f4f6" seqno="4" style="DUID=6B219150;"/>
+          <element geometry="Left=635;Top=175;Right=835;Bottom=245;" subject="889cb1f6-175a-45c0-ae06-d1acab5dcbdc" seqno="5" style="DUID=E8992738;"/>
+          <element geometry="Left=505;Top=305;Right=705;Bottom=375;" subject="2e018906-a3db-4308-977b-175ace3c3185" seqno="6" style="DUID=3A8C1C08;"/>
+          <element geometry="Left=765;Top=305;Right=965;Bottom=375;" subject="1bb3eed4-bcc2-45af-9b6e-62020b9c439d" seqno="7" style="DUID=30E481D4;"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;Path=;" subject="xy-edge__286257b1-ebd3-424f-b3e4-c1c2a722531bright-2eb1ceb2-266e-4669-89f1-c61e246cb10cleft" style="Mode=3;Color=-1;LWidth=0;Hidden=0;"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;Path=;" subject="1737993042486-7052e703-263f-4df5-95e0-3558793849af-2eb1ceb2-266e-4669-89f1-c61e246cb10c" style="Mode=3;Color=-1;LWidth=0;Hidden=0;"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;Path=;" subject="1737993045593-2fecb039-1b0d-4de9-8820-fa120c51f4f6-2eb1ceb2-266e-4669-89f1-c61e246cb10c" style="Mode=3;Color=-1;LWidth=0;Hidden=0;"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;Path=;" subject="1737993203512-2e018906-a3db-4308-977b-175ace3c3185-889cb1f6-175a-45c0-ae06-d1acab5dcbdc" style="Mode=3;Color=-1;LWidth=0;Hidden=0;"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;Path=;" subject="1737993210921-1bb3eed4-bcc2-45af-9b6e-62020b9c439d-889cb1f6-175a-45c0-ae06-d1acab5dcbdc" style="Mode=3;Color=-1;LWidth=0;Hidden=0;"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;Path=;" subject="1737993220311-2eb1ceb2-266e-4669-89f1-c61e246cb10c-889cb1f6-175a-45c0-ae06-d1acab5dcbdc" style="Mode=3;Color=-1;LWidth=0;Hidden=0;"/>
+        </elements>
+      </diagram>
+    </diagrams>
+  </xmi:Extension>
+</xmi:XMI>

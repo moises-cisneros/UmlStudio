@@ -276,7 +276,7 @@ describe("INT-CU05: Case of Use CU-05 XMI Import/Export Interoperability", () =>
   })
 
   it("Step 6: imports native Enterprise Architect associations from Example.xmi with type xmi:idref and connectors", () => {
-    const exampleXmiPath = resolve(__dirname, "../../../../docs/examples/Example.xmi")
+    const exampleXmiPath = resolve(__dirname, "../fixtures/ea-example.xmi")
     const exampleXmi = readFileSync(exampleXmiPath, "utf-8")
 
     const model = importXmiDiagram(exampleXmi)
@@ -314,7 +314,7 @@ describe("INT-CU05: Case of Use CU-05 XMI Import/Export Interoperability", () =>
   })
 
   it("Step 7: imports bridge_diagram.xmi with all relationships and no assoc_ technical label pollution", () => {
-    const bridgeXmiPath = resolve(__dirname, "../../../../docs/examples/bridge_diagram.xmi")
+    const bridgeXmiPath = resolve(__dirname, "../fixtures/ea-bridge.xmi")
     const bridgeXmi = readFileSync(bridgeXmiPath, "utf-8")
 
     const model = importXmiDiagram(bridgeXmi)

@@ -31,16 +31,6 @@
     },
     {
       "files": [
-        "*.dart"
-      ],
-      "options": {
-        "tabWidth": 2,
-        "printWidth": 80,
-        "useTabs": false
-      }
-    },
-    {
-      "files": [
         "*.sql"
       ],
       "options": {

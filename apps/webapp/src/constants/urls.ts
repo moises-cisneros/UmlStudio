@@ -5,4 +5,4 @@ export const serverWSSUrl =
   `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws`
 
 export const bugReportURL =
-  "https://github.com/umlstudio/UmlStudio/issues/new?labels=bug&template=bug-report.md"
+  "https://github.com/moises-cisneros/UmlStudio/issues/new?template=bug_report.yml"
