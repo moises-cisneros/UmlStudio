@@ -9,6 +9,7 @@ import {
   encodeAwarenessUpdate,
   removeAwarenessStates,
 } from "y-protocols/awareness"
+import * as encoding from "lib0/encoding"
 import * as Y from "yjs"
 import * as decoding from "lib0/decoding"
 import { productivityCollector } from "./services/productivity-collector.js"
@@ -29,6 +30,14 @@ type RoomAwarenessState = {
 interface ExtendedWebSocket extends WebSocket {
   diagramId?: string
   userId?: string
+  clientUserId?: string
+  sharedUserProfile?: SharedUserProfile
+}
+
+interface SharedUserProfile {
+  name?: string
+  avatar?: string
+  color?: string
 }
 
 export interface RelayServer {
@@ -45,12 +54,15 @@ export interface StartOptions {
   server?: WebSocket.ServerOptions["server"]
   maxSocketsPerRoom?: number
   verifyToken?: (token: string) => Promise<string>
+  resolveUserProfile?: (userId: string) => Promise<SharedUserProfile | undefined>
 }
 
 /** Close code for rejected shared-room joins (app-level unauthorized). */
 export const WS_UNAUTHORIZED_CLOSE_CODE = 4401
 
 const MAX_PAYLOAD_BYTES = 1_048_576
+const MAX_PENDING_MESSAGE_BYTES = MAX_PAYLOAD_BYTES
+const SHARED_PROFILE_TIMEOUT_MS = 1_000
 
 const HEARTBEAT_INTERVAL_MS = 30_000
 const DEFAULT_MAX_SOCKETS_PER_ROOM = 100
@@ -116,6 +128,47 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     return { present, removed }
   }
 
+  function normalizeSharedAwarenessUpdate(
+    update: Uint8Array,
+    userId: string,
+    profile: SharedUserProfile | undefined
+  ): Uint8Array | undefined {
+    try {
+      const decoder = decoding.createDecoder(update)
+      const encoder = encoding.createEncoder()
+      const len = decoding.readVarUint(decoder)
+      encoding.writeVarUint(encoder, len)
+
+      const sharedUser = {
+        id: userId,
+        ...(profile?.name ? { name: profile.name } : {}),
+        ...(profile?.color ? { color: profile.color } : {}),
+        ...(profile?.avatar ? { imageUrl: profile.avatar } : {}),
+      }
+
+      for (let i = 0; i < len; i++) {
+        const clientId = decoding.readVarUint(decoder)
+        const clock = decoding.readVarUint(decoder)
+        const state = JSON.parse(decoding.readVarString(decoder)) as unknown
+        const normalizedState =
+          state === null
+            ? null
+            : state && typeof state === "object" && !Array.isArray(state)
+              ? { ...(state as Record<string, unknown>), user: sharedUser }
+              : undefined
+
+        if (normalizedState === undefined) return undefined
+        encoding.writeVarUint(encoder, clientId)
+        encoding.writeVarUint(encoder, clock)
+        encoding.writeVarString(encoder, JSON.stringify(normalizedState))
+      }
+
+      return encoding.toUint8Array(encoder)
+    } catch {
+      return undefined
+    }
+  }
+
   /**
    * When a socket disconnects, remove its tracked awareness client IDs
    * from the room awareness state and broadcast the removal to peers.
@@ -168,12 +221,14 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     ws: ExtendedWebSocketWithAlive,
     request: IncomingMessage
   ): Promise<void> {
+    let sharedUserProfileReady: Promise<void> = Promise.resolve()
     const url = new URL(request.url ?? "", `http://${request.headers.host}`)
     const diagramId = url.searchParams.get("diagramId")
     if (!diagramId || !DIAGRAM_ID_RE.test(diagramId)) {
       ws.close(1008, "Invalid diagramId")
       return
     }
+    const validDiagramId = diagramId
 
     const mode = url.searchParams.get("mode") ?? "local"
     if (mode === "shared") {
@@ -183,7 +238,28 @@ export function startRelayServer(opts: StartOptions): RelayServer {
         return
       }
       try {
-        ws.userId = await opts.verifyToken(token)
+        const verifiedUserId = await opts.verifyToken(token)
+        ws.userId = verifiedUserId
+        let profileTimeout: ReturnType<typeof setTimeout> | undefined
+        sharedUserProfileReady = Promise.race([
+          Promise.resolve().then(() => opts.resolveUserProfile?.(verifiedUserId)),
+          new Promise<undefined>((resolve) => {
+            profileTimeout = setTimeout(() => {
+              logger.warn(
+                { diagramId, userId: verifiedUserId },
+                "ws shared profile lookup timed out"
+              )
+              resolve(undefined)
+            }, SHARED_PROFILE_TIMEOUT_MS)
+          }),
+        ])
+          .then((profile) => {
+            if (profile) ws.sharedUserProfile = profile
+          })
+          .catch((err: unknown) => {
+            logger.warn({ err, diagramId, userId: verifiedUserId }, "ws shared profile unavailable")
+          })
+          .finally(() => clearTimeout(profileTimeout))
       } catch {
         ws.close(WS_UNAUTHORIZED_CLOSE_CODE, "Authentication required")
         return
@@ -215,20 +291,41 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     const isFirstSocketInRoom = room.size === 1
     if (isFirstSocketInRoom) boardReplicas.open(diagramId)
 
-    ws.on("message", (raw: WebSocket.RawData) => {
-      const message =
-        typeof raw === "string" ? raw : raw instanceof Buffer ? raw.toString("utf-8") : ""
+    function processMessage(message: string): void {
+      let broadcastMessage = message
 
       try {
         const parsed = JSON.parse(message) as Record<string, unknown>
 
         if (typeof parsed.diagramData === "string") {
-          const roomState = roomAwarenessStates.get(diagramId)
+          const roomState = roomAwarenessStates.get(validDiagramId)
           if (roomState) {
             boardReplicas.applyFrame(diagramId, parsed.diagramData)
             const decoded = Buffer.from(parsed.diagramData, "base64")
             if (decoded.length > 0 && decoded[0] === AWARENESS_MSG_TYPE) {
-              const awarenessUpdate = new Uint8Array(decoded.subarray(1))
+              const rawAwarenessUpdate = new Uint8Array(decoded.subarray(1))
+              const awarenessUpdate = ws.userId
+                ? normalizeSharedAwarenessUpdate(
+                    rawAwarenessUpdate,
+                    ws.userId,
+                    ws.sharedUserProfile
+                  )
+                : rawAwarenessUpdate
+              if (!awarenessUpdate) {
+                logger.warn(
+                  { diagramId: validDiagramId, userId: ws.userId },
+                  "ws invalid shared awareness update"
+                )
+                return
+              }
+              if (ws.userId) {
+                const normalizedFrame = new Uint8Array(1 + awarenessUpdate.length)
+                normalizedFrame[0] = AWARENESS_MSG_TYPE
+                normalizedFrame.set(awarenessUpdate, 1)
+                broadcastMessage = JSON.stringify({
+                  diagramData: Buffer.from(normalizedFrame).toString("base64"),
+                })
+              }
               applyAwarenessUpdate(roomState.awareness, awarenessUpdate, ws)
 
               const { present, removed } = decodeAwarenessUpdateClients(awarenessUpdate)
@@ -243,33 +340,41 @@ export function startRelayServer(opts: StartOptions): RelayServer {
                     const user = clientState.user as
                       | { id?: string; name?: string; color?: string }
                       | undefined
-                    const effectiveUserId = ws.userId || user?.id || `client-${id}`
-                    const effectiveUserName = user?.name || ws.userId || `User ${id}`
-                    ws.userId = ws.userId || effectiveUserId
+                    const clientUserId =
+                      typeof user?.id === "string" && user.id.length > 0 ? user.id : undefined
+                    const effectiveUserId = ws.userId ?? ws.clientUserId ?? clientUserId
 
-                    productivityCollector.recordActivity(diagramId, {
-                      userId: effectiveUserId,
-                      userName: effectiveUserName,
-                      color: user?.color,
-                    })
+                    if (effectiveUserId) {
+                      if (!ws.userId && !ws.clientUserId && clientUserId) {
+                        ws.clientUserId = clientUserId
+                      }
+                      const effectiveUserName = ws.userId ? ws.sharedUserProfile?.name : user?.name
+                      const effectiveColor = ws.userId ? ws.sharedUserProfile?.color : user?.color
 
-                    if ("selectedElementId" in clientState) {
-                      const selectedElementId = clientState.selectedElementId
-                      const selectedElementName =
-                        typeof clientState.selectedElementName === "string"
-                          ? clientState.selectedElementName
-                          : typeof clientState.nodeName === "string"
-                            ? clientState.nodeName
-                            : undefined
-                      productivityCollector.recordNodeLock(
-                        diagramId,
-                        {
-                          userId: effectiveUserId,
-                          userName: effectiveUserName,
-                        },
-                        typeof selectedElementId === "string" ? selectedElementId : null,
-                        selectedElementName
-                      )
+                      productivityCollector.recordActivity(validDiagramId, {
+                        userId: effectiveUserId,
+                        userName: effectiveUserName,
+                        color: effectiveColor,
+                      })
+
+                      if ("selectedElementId" in clientState) {
+                        const selectedElementId = clientState.selectedElementId
+                        const selectedElementName =
+                          typeof clientState.selectedElementName === "string"
+                            ? clientState.selectedElementName
+                            : typeof clientState.nodeName === "string"
+                              ? clientState.nodeName
+                              : undefined
+                        productivityCollector.recordNodeLock(
+                          validDiagramId,
+                          {
+                            userId: effectiveUserId,
+                            userName: effectiveUserName,
+                          },
+                          typeof selectedElementId === "string" ? selectedElementId : null,
+                          selectedElementName
+                        )
+                      }
                     }
                   }
                 }
@@ -285,26 +390,40 @@ export function startRelayServer(opts: StartOptions): RelayServer {
           parsed.telemetry !== null
         ) {
           const t = parsed.telemetry as Record<string, unknown>
-          const effectiveUserId =
-            ws.userId || (typeof t.userId === "string" ? t.userId : "anonymous")
-          productivityCollector.recordActivity(
-            diagramId,
-            {
-              userId: effectiveUserId,
-              userName: typeof t.userName === "string" ? t.userName : undefined,
-              color: typeof t.color === "string" ? t.color : undefined,
-            },
-            {
-              createdClasses: typeof t.createdClasses === "number" ? t.createdClasses : undefined,
-              createdMethods: typeof t.createdMethods === "number" ? t.createdMethods : undefined,
-              refactors: typeof t.refactors === "number" ? t.refactors : undefined,
+          const telemetryUserId =
+            typeof t.userId === "string" && t.userId.length > 0 ? t.userId : undefined
+          const effectiveUserId = ws.userId ?? ws.clientUserId ?? telemetryUserId
+          if (effectiveUserId) {
+            if (!ws.userId && !ws.clientUserId && telemetryUserId) {
+              ws.clientUserId = telemetryUserId
             }
-          )
+            productivityCollector.recordActivity(
+              validDiagramId,
+              {
+                userId: effectiveUserId,
+                userName: ws.userId
+                  ? ws.sharedUserProfile?.name
+                  : typeof t.userName === "string"
+                    ? t.userName
+                    : undefined,
+                color: ws.userId
+                  ? ws.sharedUserProfile?.color
+                  : typeof t.color === "string"
+                    ? t.color
+                    : undefined,
+              },
+              {
+                createdClasses: typeof t.createdClasses === "number" ? t.createdClasses : undefined,
+                createdMethods: typeof t.createdMethods === "number" ? t.createdMethods : undefined,
+                refactors: typeof t.refactors === "number" ? t.refactors : undefined,
+              }
+            )
+          }
           return
         }
 
         if (ws.userId) {
-          productivityCollector.recordActivity(diagramId, {
+          productivityCollector.recordActivity(validDiagramId, {
             userId: ws.userId,
           })
         }
@@ -312,7 +431,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
         if (parsed.kind === "control") {
           logger.warn(
             {
-              diagramId,
+              diagramId: validDiagramId,
               type: (parsed as { control?: { type?: string } }).control?.type,
             },
             "ws control envelope from client dropped"
@@ -323,31 +442,62 @@ export function startRelayServer(opts: StartOptions): RelayServer {
         // Payload is not JSON or not a control envelope; ignore and treat as regular broadcast
       }
 
-      broadcast(rooms, diagramId, message, ws)
+      broadcast(rooms, validDiagramId, broadcastMessage, ws)
+    }
+
+    let pendingMessageBytes = 0
+    let messageQueue = Promise.resolve()
+    ws.on("message", (raw: WebSocket.RawData) => {
+      const message =
+        typeof raw === "string" ? raw : raw instanceof Buffer ? raw.toString("utf-8") : ""
+      const messageBytes = Buffer.byteLength(message, "utf-8")
+      if (pendingMessageBytes + messageBytes > MAX_PENDING_MESSAGE_BYTES) {
+        logger.warn(
+          { diagramId: validDiagramId, pendingMessageBytes },
+          "ws profile-pending message queue over capacity"
+        )
+        ws.close(1013, "Try again later")
+        return
+      }
+      pendingMessageBytes += messageBytes
+
+      messageQueue = messageQueue
+        .then(async () => {
+          try {
+            await sharedUserProfileReady
+            if (ws.readyState === WebSocket.OPEN) processMessage(message)
+          } finally {
+            pendingMessageBytes -= messageBytes
+          }
+        })
+        .catch((err: unknown) => {
+          logger.error({ err, diagramId: validDiagramId }, "ws message processing failed")
+        })
     })
 
     ws.on("close", () => {
-      if (ws.userId) {
-        productivityCollector.recordDisconnection(diagramId, ws.userId)
+      const userId = ws.userId ?? ws.clientUserId
+      if (userId) {
+        productivityCollector.recordDisconnection(validDiagramId, userId)
       }
-      const r = rooms.get(diagramId)
+      const r = rooms.get(validDiagramId)
       if (r) {
         r.delete(ws)
 
         // Broadcast awareness removal for this socket's tracked clients
         const socketIds = awarenessClientIdsBySocket.get(ws)
         if (socketIds && socketIds.size > 0) {
-          broadcastAwarenessRemoval(diagramId, ws, Array.from(socketIds))
+          broadcastAwarenessRemoval(validDiagramId, ws, Array.from(socketIds))
         }
 
         if (r.size === 0) {
-          rooms.delete(diagramId)
-          boardReplicas.close(diagramId)
-          const roomState = roomAwarenessStates.get(diagramId)
+          rooms.delete(validDiagramId)
+          boardReplicas.close(validDiagramId)
+          const roomState = roomAwarenessStates.get(validDiagramId)
           if (roomState) {
             roomState.awareness.destroy()
             roomState.doc.destroy()
-            roomAwarenessStates.delete(diagramId)
+            roomAwarenessStates.delete(validDiagramId)
           }
         }
       }
