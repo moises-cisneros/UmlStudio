@@ -21,6 +21,7 @@ export const k = {
   versionBody: (id: string, vid: string) => `diagram:{${id}}:version:${vid}`,
   versionMeta: (id: string, vid: string) => `diagram:{${id}}:version:${vid}:meta`,
   autoVersionMarker: (id: string) => `diagram:{${id}}:auto-version-marker`,
+  aiChat: (id: string) => `diagram:{${id}}:ai:chat`,
   authUser: (id: string) => `auth:user:{${id}}`,
   authUserByEmail: (email: string) => `auth:user:email:${email.toLowerCase()}`,
   authRefresh: (jti: string) => `auth:refresh:${jti}`,
