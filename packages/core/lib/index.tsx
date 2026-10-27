@@ -76,6 +76,8 @@ export {
 
 export { validateDiff, applyDiff, findTargetNode, findTargetEdge } from "./ai/diffEngine"
 export { MockAIAdapter } from "./ai/adapters/mockAdapter"
+export { boardToDsl, type BoardDslBudget } from "./ai/boardDsl"
+export type { RoomAiIntent, RoomChatMessage, RoomAiPolicy } from "./ai/roomTypes"
 export type {
   AIAdapter,
   ModelDiff,
