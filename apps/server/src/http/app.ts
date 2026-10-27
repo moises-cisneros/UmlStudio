@@ -24,6 +24,8 @@ import { mountConversionRoutes } from "../routes/conversion.js"
 import { mountCodegenRoutes } from "../routes/codegen.js"
 import { mountProductivityRoutes } from "../routes/productivity.js"
 import { mountHealthRoutes } from "../routes/health.js"
+import { mountRoomAiRoutes } from "../routes/room-ai.js"
+import { createRoomAiService } from "../services/room-ai/room-ai-service.js"
 import { mountEmbedApiRoutes, mountEmbedRoutes } from "../routes/embed.js"
 import { ConversionResource } from "../resources/conversion-resource.js"
 import { SvgPreviewCache } from "../services/svg-preview-cache.js"
@@ -92,6 +94,13 @@ export function buildApp(deps: AppDeps): ServerType {
   app.route("/api/users", mountUserRoutes({ auth }))
   app.route("/api", mountDiagramRoutes({ config, redis, auth }, relay))
   app.route("/api", mountVersionRoutes({ config, redis, auth }, relay))
+  app.route(
+    "/api",
+    mountRoomAiRoutes({
+      auth,
+      roomAi: createRoomAiService({ redis, ttlSeconds: config.DIAGRAM_TTL_SECONDS }),
+    })
+  )
   app.route("/api", mountConversionRoutes({ getResource }))
   app.route("/api", mountCodegenRoutes())
   app.route("/api", mountProductivityRoutes())
