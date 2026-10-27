@@ -69,6 +69,13 @@ describe("boardToDsl", () => {
     expect(dsl).toContain("Cliente -- Factura : Association")
   })
 
+  it("does not throw for an edge without data and emits it without multiplicities", () => {
+    const { data: _data, ...rest } = association
+    const edge = rest as unknown as UmlStudioEdge
+    const dsl = boardToDsl(model(sample().nodes, [edge]), { maxChars: 10_000 })
+    expect(dsl).toContain("Cliente -- Factura : Association")
+  })
+
   it("keeps selected classes complete and reduces the rest to names when over budget", () => {
     const dsl = boardToDsl(sample(), { maxChars: 60, selectedIds: ["factura"] })
     expect(dsl).toContain("class Factura { numero: String; +calcularTotal(): Decimal }")
