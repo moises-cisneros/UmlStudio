@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import type { RoomAiIntent, RoomChatMessage } from "@umlstudio/core"
+import type { RoomAiEvent, RoomAiIntent, RoomChatMessage } from "@umlstudio/core"
 import { k, type Redis } from "../../redis.js"
 import type { AuthProfile } from "../auth-service.js"
 import {
@@ -41,10 +41,12 @@ interface RoomAiServiceDeps {
   ttlSeconds: number
   chat?: ChatRepository<RoomChatMessage>
   now?: () => Date
+  /** Broadcasts room AI events to every socket in the room. */
+  publish?: (diagramId: string, event: RoomAiEvent) => void
 }
 
 export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
-  const { redis, ttlSeconds, now = () => new Date() } = deps
+  const { redis, ttlSeconds, now = () => new Date(), publish } = deps
   const chat = deps.chat ?? createChatRepository<RoomChatMessage>(redis, ttlSeconds)
 
   async function assertRoomExists(diagramId: string): Promise<void> {
@@ -73,6 +75,7 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
 
       const { messages } = await chat.list(diagramId, { limit: CHAT_MAX_MESSAGES })
       const queuePosition = messages.filter((m) => m.status === "queued").length
+      publish?.(diagramId, { type: "message.created", message })
       return { messageId: message.id, queuePosition }
     },
 

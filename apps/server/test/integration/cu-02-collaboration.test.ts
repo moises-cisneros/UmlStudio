@@ -3,6 +3,7 @@ import { describe, it, expect, afterEach } from "vitest"
 import WebSocket from "ws"
 import { createServer } from "node:net"
 import * as Y from "yjs"
+import * as decoding from "lib0/decoding"
 import { createHeadlessSync, MessageType, type YjsSync } from "@umlstudio/core/internals"
 import { startRelayServer, WS_UNAUTHORIZED_CLOSE_CODE } from "../../src/ws.js"
 import { COMMIT_VERSION_SOURCE, k } from "../../src/redis.js"
@@ -48,6 +49,24 @@ function encodeFrame(type: MessageType, payload: Uint8Array = new Uint8Array(0))
   buf[0] = type
   buf.set(payload, 1)
   return Buffer.from(buf).toString("base64")
+}
+
+function decodeAwarenessStates(base64Data: string): Array<Record<string, unknown>> {
+  const frame = new Uint8Array(Buffer.from(base64Data, "base64"))
+  if (frame[0] !== MessageType.AwarenessUpdate) return []
+
+  const decoder = decoding.createDecoder(frame.subarray(1))
+  const length = decoding.readVarUint(decoder)
+  const states: Array<Record<string, unknown>> = []
+  for (let i = 0; i < length; i++) {
+    decoding.readVarUint(decoder) // client ID
+    decoding.readVarUint(decoder) // clock
+    const state = JSON.parse(decoding.readVarString(decoder)) as unknown
+    if (state && typeof state === "object" && !Array.isArray(state)) {
+      states.push(state as Record<string, unknown>)
+    }
+  }
+  return states
 }
 
 function connectPeer(
@@ -301,7 +320,31 @@ describe("INT-CU02: Case of Use CU-02 Real-Time Collaboration Integration", () =
       verifyToken: async (token) => {
         if (token === "token-alice") return "usr-alice"
         if (token === "token-bob") return "usr-bob"
+        if (token === "token-no-profile") return "usr-no-profile"
+        if (token === "token-slow-profile") return "usr-slow-profile"
+        if (token === "token-hung-profile") return "usr-hung-profile"
         throw new Error("Unauthorized token")
+      },
+      resolveUserProfile: async (userId) => {
+        if (userId === "usr-alice") {
+          return {
+            name: "Alice Architect",
+            color: "#1c7ed6",
+            avatar: "https://avatar.example.com/alice.png",
+          }
+        }
+        if (userId === "usr-bob") {
+          return { name: "Bob Modeler", color: "#37b24d" }
+        }
+        if (userId === "usr-no-profile") throw new Error("Profile unavailable")
+        if (userId === "usr-slow-profile") {
+          await new Promise((resolve) => setTimeout(resolve, 250))
+          return { name: "Slow Profile", color: "#7950f2" }
+        }
+        if (userId === "usr-hung-profile") {
+          await new Promise<never>(() => {})
+        }
+        throw new Error("Unknown user")
       },
     })
     const roomId = "shared-auth-room"
@@ -310,10 +353,10 @@ describe("INT-CU02: Case of Use CU-02 Real-Time Collaboration Integration", () =
       mode: "shared",
       token: "token-alice",
       user: {
-        id: "usr-alice",
-        name: "Alice Architect",
-        color: "#1c7ed6",
-        imageUrl: "https://avatar.example.com/alice.png",
+        id: "usr-impersonated",
+        name: "Mallory",
+        color: "#ff0000",
+        imageUrl: "https://avatar.example.com/mallory.png",
       },
     })
 
@@ -326,9 +369,37 @@ describe("INT-CU02: Case of Use CU-02 Real-Time Collaboration Integration", () =
         color: "#37b24d",
       },
     })
-    peers.push(peer1, peer2)
+    const peer3 = connectPeer(port, roomId, {
+      mode: "shared",
+      token: "token-no-profile",
+      user: { id: "usr-impersonated", name: "Mallory", color: "#ff0000" },
+    })
+    const peer4 = connectPeer(port, roomId, {
+      mode: "shared",
+      token: "token-slow-profile",
+      user: { id: "usr-impersonated", name: "Mallory", color: "#ff0000" },
+    })
+    const peer5 = connectPeer(port, roomId, {
+      mode: "shared",
+      token: "token-hung-profile",
+      user: { id: "usr-impersonated", name: "Mallory", color: "#ff0000" },
+    })
+    let noProfileState: Record<string, unknown> | undefined
+    let slowProfileState: Record<string, unknown> | undefined
+    let hungProfileState: Record<string, unknown> | undefined
+    peer2.ws.on("message", (raw) => {
+      const parsed = JSON.parse(raw.toString()) as { diagramData?: string }
+      if (!parsed.diagramData) return
+      for (const state of decodeAwarenessStates(parsed.diagramData)) {
+        const user = state.user as Record<string, unknown> | undefined
+        if (user?.id === "usr-no-profile") noProfileState = state
+        if (user?.id === "usr-slow-profile") slowProfileState = state
+        if (user?.id === "usr-hung-profile") hungProfileState = state
+      }
+    })
+    peers.push(peer1, peer2, peer3, peer4, peer5)
 
-    await Promise.all([peer1.ready, peer2.ready])
+    await Promise.all([peer1.ready, peer2.ready, peer3.ready, peer4.ready, peer5.ready])
     await flushNetwork()
 
     // Peer 1 locks a class element
@@ -356,7 +427,39 @@ describe("INT-CU02: Case of Use CU-02 Real-Time Collaboration Integration", () =
     )
     expect(lockHolder?.user?.id).toBe("usr-alice")
     expect(lockHolder?.user?.name).toBe("Alice Architect")
+    expect(lockHolder?.user?.color).toBe("#1c7ed6")
     expect(lockHolder?.user?.imageUrl).toBe("https://avatar.example.com/alice.png")
+
+    peer3.sync.setLocalAwarenessSelectedElement("node-no-profile")
+    peer3.sync.broadcastAwareness()
+    await flushNetwork()
+
+    await waitFor(
+      () => noProfileState !== undefined,
+      4000,
+      "peer2 did not observe verified identity without profile details"
+    )
+
+    expect(noProfileState?.selectedElementId).toBe("node-no-profile")
+    expect(noProfileState?.user).toEqual({ id: "usr-no-profile" })
+
+    await waitFor(
+      () => slowProfileState !== undefined,
+      4000,
+      "peer2 did not receive initial awareness after slow profile resolution"
+    )
+    expect(slowProfileState?.user).toEqual({
+      id: "usr-slow-profile",
+      name: "Slow Profile",
+      color: "#7950f2",
+    })
+
+    await waitFor(
+      () => hungProfileState !== undefined,
+      4000,
+      "peer2 did not receive initial awareness after profile lookup stalled"
+    )
+    expect(hungProfileState?.user).toEqual({ id: "usr-hung-profile" })
 
     // Peer 1 closes connection abruptly
     await peer1.close()

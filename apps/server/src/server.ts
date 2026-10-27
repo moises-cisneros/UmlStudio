@@ -71,6 +71,9 @@ async function main() {
       publishControl: (diagramId: string, control: import("./types.js").ControlEvent) => {
         relay?.publishControl(diagramId, control)
       },
+      publishRoomAi: (diagramId: string, event: import("@umlstudio/core").RoomAiEvent) => {
+        relay?.publishRoomAi(diagramId, event)
+      },
     }
     const app = buildApp({ config, redis, relay: relayPublish, auth })
     httpServer = app.listen(config.PORT, config.HOST, () => {
@@ -82,6 +85,7 @@ async function main() {
     relay = startRelayServer({
       server: httpServer as import("http").Server,
       verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
+      resolveUserProfile: (userId) => auth.getProfile(userId),
       authorship,
     })
   } else {
@@ -89,6 +93,7 @@ async function main() {
       port: config.WS_PORT,
       host: config.HOST,
       verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
+      resolveUserProfile: (userId) => auth.getProfile(userId),
       authorship,
     })
     const app = buildApp({ config, redis, relay, auth })
