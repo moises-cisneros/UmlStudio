@@ -13,9 +13,24 @@ export interface BoardReplica {
   getModel: () => UMLModel
   /** Monotonic counter, incremented each time the board changes. */
   getRevision: () => number
-  /** Apply a base64 relay frame; returns true when it was a document update. */
-  applyFrame: (base64Frame: string) => boolean
+  /**
+   * Apply a base64 relay frame; returns true when it was a document update.
+   * `authorId` is the authenticated user behind the frame; without it the
+   * changes are applied but not attributed.
+   */
+  applyFrame: (base64Frame: string, authorId?: string) => boolean
   destroy: () => void
+}
+
+/** Elements created or modified by one authenticated user in a single update. */
+export interface ElementsAuthored {
+  roomId: string
+  authorId: string
+  elementIds: string[]
+}
+
+export interface BoardReplicaOptions {
+  onElementsAuthored?: (change: ElementsAuthored) => void
 }
 
 export interface BoardReplicaRegistry {
@@ -23,7 +38,7 @@ export interface BoardReplicaRegistry {
   open: (roomId: string) => BoardReplica
   get: (roomId: string) => BoardReplica | undefined
   /** Feed a relayed frame to the room replica; ignores unknown rooms. */
-  applyFrame: (roomId: string, base64Frame: string) => boolean
+  applyFrame: (roomId: string, base64Frame: string, authorId?: string) => boolean
   close: (roomId: string) => void
   closeAll: () => void
 }
@@ -48,45 +63,66 @@ function buildModel(roomId: string, doc: Y.Doc): UMLModel {
   }
 }
 
-export function createBoardReplica(roomId: string): BoardReplica {
+export function createBoardReplica(
+  roomId: string,
+  options: BoardReplicaOptions = {}
+): BoardReplica {
   const doc = new Y.Doc()
   let revision = 0
   doc.on("update", () => {
     revision += 1
   })
 
+  // Applying an update is synchronous, so the observers fill `touched` before `applyFrame` returns.
+  const touched = new Set<string>()
+  for (const name of ["nodes", "edges"]) {
+    doc.getMap(name).observe((event) => {
+      for (const [key, change] of event.changes.keys) {
+        // Deleted elements have no author to credit.
+        if (change.action !== "delete") touched.add(key)
+      }
+    })
+  }
+
   return {
     roomId,
     getModel: () => buildModel(roomId, doc),
     getRevision: () => revision,
-    applyFrame: (base64Frame) => {
+    applyFrame: (base64Frame, authorId) => {
       const frame = Buffer.from(base64Frame, "base64")
       if (frame.length === 0 || frame[0] !== DOC_UPDATE_MSG_TYPE) return false
+      touched.clear()
       try {
         Y.applyUpdate(doc, new Uint8Array(frame.subarray(1)), REMOTE_ORIGIN)
-        return true
       } catch {
         // Malformed update from a client: the relay keeps working, the replica skips it.
         return false
       }
+      if (authorId && touched.size > 0) {
+        options.onElementsAuthored?.({ roomId, authorId, elementIds: Array.from(touched) })
+      }
+      return true
     },
     destroy: () => doc.destroy(),
   }
 }
 
-export function createBoardReplicaRegistry(): BoardReplicaRegistry {
+export function createBoardReplicaRegistry(
+  options: BoardReplicaOptions = {}
+): BoardReplicaRegistry {
   const replicas = new Map<string, BoardReplica>()
 
   return {
     open: (roomId) => {
       const existing = replicas.get(roomId)
       if (existing) return existing
-      const replica = createBoardReplica(roomId)
+      const replica = createBoardReplica(roomId, options)
       replicas.set(roomId, replica)
       return replica
     },
     get: (roomId) => replicas.get(roomId),
-    applyFrame: (roomId, base64Frame) => replicas.get(roomId)?.applyFrame(base64Frame) ?? false,
+    applyFrame: (roomId, base64Frame, authorId) =>
+      replicas.get(roomId)?.applyFrame(base64Frame, authorId) ?? false,
     close: (roomId) => {
       replicas.get(roomId)?.destroy()
       replicas.delete(roomId)

@@ -19,19 +19,20 @@ El estado colaborativo en vivo **no** se guarda en una base: vive en el `Y.Doc` 
 
 Las llaves con `{id}` usan _hash tags_ para que todas las claves de un diagrama caigan en el mismo slot (requisito de las funciones Lua).
 
-| Clave                              | Contenido                                                                                                                       |
-| :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------ |
-| `diagram:{id}`                     | Cuerpo actual del diagrama (HEAD), JSON comprimido gzip + base64                                                                |
-| `diagram:{id}:meta`                | Metadatos del diagrama, incluida la revisión `headRev` (control optimista con `If-Match`)                                       |
-| `diagram:{id}:versions`            | Índice ordenado de versiones                                                                                                    |
-| `diagram:{id}:version:<vid>`       | Cuerpo de una versión (gzip + base64)                                                                                           |
-| `diagram:{id}:version:<vid>:meta`  | Nombre, descripción, tipo (`user`/`auto`), autor, fecha                                                                         |
-| `diagram:{id}:auto-version-marker` | Control de las versiones automáticas                                                                                            |
-| `diagram:{id}:ai:chat`             | Chat de la sala con la IA: LIST de mensajes JSON (el más antiguo primero), recortada a 200 con `LTRIM`, con el TTL del diagrama |
-| `auth:user:{id}`                   | Hash del usuario (email, hash de contraseña, nombre, avatar, color)                                                             |
-| `auth:user:email:<email>`          | Índice email → id                                                                                                               |
-| `auth:user:{userId}:diagrams`      | Diagramas del usuario                                                                                                           |
-| `auth:refresh:<jti>`               | Sesión de refresco (TTL 7 días, se consume al rotar)                                                                            |
+| Clave                              | Contenido                                                                                                                            |
+| :--------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| `diagram:{id}`                     | Cuerpo actual del diagrama (HEAD), JSON comprimido gzip + base64                                                                     |
+| `diagram:{id}:meta`                | Metadatos del diagrama, incluida la revisión `headRev` (control optimista con `If-Match`)                                            |
+| `diagram:{id}:versions`            | Índice ordenado de versiones                                                                                                         |
+| `diagram:{id}:version:<vid>`       | Cuerpo de una versión (gzip + base64)                                                                                                |
+| `diagram:{id}:version:<vid>:meta`  | Nombre, descripción, tipo (`user`/`auto`), autor, fecha                                                                              |
+| `diagram:{id}:auto-version-marker` | Control de las versiones automáticas                                                                                                 |
+| `diagram:{id}:ai:chat`             | Chat de la sala con la IA: LIST de mensajes JSON (el más antiguo primero), recortada a 200 con `LTRIM`, con el TTL del diagrama      |
+| `diagram:{id}:ai:authorship`       | Autoría del tablero: HASH `elementId -> userId` (último autor de cada elemento, solo usuarios autenticados), con el TTL del diagrama |
+| `auth:user:{id}`                   | Hash del usuario (email, hash de contraseña, nombre, avatar, color)                                                                  |
+| `auth:user:email:<email>`          | Índice email → id                                                                                                                    |
+| `auth:user:{userId}:diagrams`      | Diagramas del usuario                                                                                                                |
+| `auth:refresh:<jti>`               | Sesión de refresco (TTL 7 días, se consume al rotar)                                                                                 |
 
 No se requiere el módulo RedisJSON: todo se guarda con `SET`/`GET` y hashes.
 
