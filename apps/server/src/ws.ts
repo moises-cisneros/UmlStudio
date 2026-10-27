@@ -312,7 +312,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
         if (typeof parsed.diagramData === "string") {
           const roomState = roomAwarenessStates.get(validDiagramId)
           if (roomState) {
-            boardReplicas.applyFrame(diagramId, parsed.diagramData, ws.authenticatedUserId)
+            boardReplicas.applyFrame(validDiagramId, parsed.diagramData, ws.authenticatedUserId)
             const decoded = Buffer.from(parsed.diagramData, "base64")
             if (decoded.length > 0 && decoded[0] === AWARENESS_MSG_TYPE) {
               const rawAwarenessUpdate = new Uint8Array(decoded.subarray(1))
