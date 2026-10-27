@@ -93,6 +93,24 @@ export interface TranslationDictionary {
     attributes: string
     methods: string
   }
+  roomAi: {
+    tabRoom: string
+    title: string
+    empty: string
+    loading: string
+    loadError: string
+    sendError: string
+    inputPlaceholder: string
+    send: string
+    you: string
+    aiAuthor: string
+    replyingTo: string
+    queued: string
+    failed: string
+    thinkingFor: (name: string) => string
+    thinking: string
+    queueLength: (count: number) => string
+  }
   collaborators: {
     activeUsers: string
     you: string

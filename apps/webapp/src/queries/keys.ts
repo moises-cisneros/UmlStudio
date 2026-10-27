@@ -7,3 +7,9 @@ export const versionKeys = {
   body: (kind: RepositoryKind, diagramId: string, versionId: string) =>
     [...versionKeys.all, "body", kind, diagramId, versionId] as const,
 }
+
+export const roomAiKeys = {
+  all: ["room-ai"] as const,
+  messages: (diagramId: string) => [...roomAiKeys.all, "messages", diagramId] as const,
+  status: (diagramId: string) => [...roomAiKeys.all, "status", diagramId] as const,
+}

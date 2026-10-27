@@ -1,13 +1,16 @@
 import { type FC } from "react"
-import { SparklesIcon, ListTreeIcon, XIcon } from "lucide-react"
+import { SparklesIcon, ListTreeIcon, MessagesSquareIcon, XIcon } from "lucide-react"
 import { useWorkbenchStore } from "@/stores/useWorkbenchStore"
 import { useTranslation } from "@/i18n"
+import { useSharedDiagramId } from "@/hooks/useSharedDiagramId"
+import { RoomChatPanelContainer } from "@/components/roomai/RoomChatPanelContainer"
 import { AgentChatStream } from "./AgentChatStream"
 import { ClassInspectorTab } from "./ClassInspectorTab"
 
 export const RightDockWorkspace: FC = () => {
   const { isAgentDockOpen, activeDockTab, setActiveDockTab, toggleAgentDock } = useWorkbenchStore()
   const { t } = useTranslation()
+  const sharedDiagramId = useSharedDiagramId()
 
   if (!isAgentDockOpen) return null
 
@@ -43,6 +46,18 @@ export const RightDockWorkspace: FC = () => {
           <span>{t.agent.tabInspector}</span>
         </button>
 
+        {sharedDiagramId && (
+          <button
+            type="button"
+            className="workbench-dock-tab"
+            data-active={activeDockTab === "room"}
+            onClick={() => setActiveDockTab("room")}
+          >
+            <MessagesSquareIcon className="size-3.5" />
+            <span>{t.roomAi.tabRoom}</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={toggleAgentDock}
@@ -55,7 +70,11 @@ export const RightDockWorkspace: FC = () => {
 
       {/* CONTENIDO DE LA PESTAÑA ACTIVA */}
       <div className="workbench-dock-body">
-        {activeDockTab === "agent" ? <AgentChatStream /> : <ClassInspectorTab />}
+        {activeDockTab === "agent" && <AgentChatStream />}
+        {activeDockTab === "inspector" && <ClassInspectorTab />}
+        {activeDockTab === "room" && sharedDiagramId && (
+          <RoomChatPanelContainer diagramId={sharedDiagramId} />
+        )}
       </div>
     </aside>
   )

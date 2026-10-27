@@ -1,4 +1,4 @@
-import type { UMLModel } from "@umlstudio/core"
+import type { RoomAiPolicy, RoomChatMessage, UMLModel } from "@umlstudio/core"
 
 export type Diagram = UMLModel & {
   createdAt: string
@@ -71,4 +71,15 @@ export type ControlEvent =
   | { type: "DIAGRAM_DELETED" }
   | { type: "DIAGRAM_RENAMED"; title: string }
 
-export type Envelope = { kind: "control"; control: ControlEvent }
+export type RoomAiStatus = "thinking" | "idle"
+
+/** Room AI event broadcast by the relay as `{ kind: "room-ai", event }`. */
+export type RoomAiEvent =
+  | { type: "message.created"; message: RoomChatMessage }
+  | { type: "message.updated"; message: RoomChatMessage }
+  | { type: "ai.status"; status: RoomAiStatus; forUserName?: string; queueLength: number }
+  | { type: "policy.updated"; policy: RoomAiPolicy }
+
+export type Envelope =
+  | { kind: "control"; control: ControlEvent }
+  | { kind: "room-ai"; event: RoomAiEvent }
