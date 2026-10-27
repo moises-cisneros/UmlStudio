@@ -1,3 +1,5 @@
 export * from "./types"
 export * from "./diffEngine"
 export * from "./adapters/mockAdapter"
+export * from "./boardDsl"
+export * from "./roomTypes"
