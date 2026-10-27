@@ -4,6 +4,7 @@ Unified Multi-Adapter Architecture for OMG UML 2.5.
 """
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -11,8 +12,9 @@ import sys
 import time
 from contextlib import asynccontextmanager
 from typing import Dict, Any, List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import Depends, FastAPI, Header, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # Configure stdout logging so server logs are clearly visible in the console
 logging.basicConfig(
@@ -37,6 +39,8 @@ from .vision.validation import (
 from .models.uml import (
     ChatRequest,
     ChatResponse,
+    RoomRespondRequest,
+    RoomRespondResponse,
     TranscribeResponse,
     AuditRequest,
     AuditResponse,
@@ -46,6 +50,7 @@ from .models.uml import (
     ProductivityAuditResponse,
 )
 from .services.pipeline import AIPipeline
+from .services.room_response import RoomResponseService
 from .services.transcription import TranscriptionError, is_ready, transcribe_audio_bytes, warm_up
 
 
@@ -77,6 +82,54 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class InternalBrowserGuard:
+    """Keep the internal route outside the public browser CORS surface."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] == "/internal/v1/room/respond":
+            if any(name.lower() == b"origin" for name, _ in scope["headers"]):
+                response = JSONResponse(
+                    status_code=403, content={"detail": "Browser access is not allowed"}
+                )
+                await response(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
+# Added after CORSMiddleware so browser preflights are rejected before CORS runs.
+app.add_middleware(InternalBrowserGuard)
+
+
+def require_internal_token(
+    x_internal_token: Optional[str] = Header(default=None, alias="X-Internal-Token"),
+) -> None:
+    expected = settings.AI_INTERNAL_TOKEN
+    if not expected or not x_internal_token or not hmac.compare_digest(x_internal_token, expected):
+        raise HTTPException(status_code=401, detail="Invalid internal token")
+
+
+@app.post(
+    "/internal/v1/room/respond",
+    response_model=RoomRespondResponse,
+    dependencies=[Depends(require_internal_token)],
+)
+async def respond_to_room(request: RoomRespondRequest) -> RoomRespondResponse:
+    try:
+        return await RoomResponseService.respond(request)
+    except NotImplementedError as exc:
+        raise HTTPException(
+            status_code=502, detail="Selected provider does not support text completion"
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail="AI provider returned invalid output") from exc
+    except Exception as exc:
+        logger.error("Room inference failed (%s)", type(exc).__name__)
+        raise HTTPException(status_code=502, detail="AI provider failed to respond") from exc
 
 
 @app.get("/health")
