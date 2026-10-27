@@ -26,7 +26,7 @@ Branch: `feat/14-block-shared-ai`; delivery: `feature-branch-chain`; test runner
 ## Tasks
 
 - T1 — S2; delegated; complete; commit `6f37e57` (`feat(webapp): switch shared dock to room`).
-- T2 — S1, S3; delegated; implementation, focused/full checks, and independent verification complete; commit pending.
+- T2 — S1, S3; delegated; implementation, focused/full checks, and independent verification complete; commit `2312001` (`fix(webapp): block shared-mode AI requests`).
   - Focused check: `pnpm --config.verify-deps-before-run=false --filter @umlstudio/webapp exec vitest run src/components/modals/ProductivityModal.test.tsx src/components/vision/VisionImportDialog.test.tsx src/hooks/useImportDiagramFile.test.tsx` — 21 passed.
   - Suite: `pnpm --filter @umlstudio/webapp test` — 135 passed. Independent candidate probes: 24 passed; baseline preservation probes: 21 passed.
   - Runtime harness: N/A; the affected browser-to-AI calls and preservation behavior are covered through mocked service tests.
@@ -39,4 +39,4 @@ Branch: `feat/14-block-shared-ai`; delivery: `feature-branch-chain`; test runner
 - L3 — Delivery decision: user selected `feature-branch-chain`; remote operations remain unauthorized.
 - L4 — Review decision: user declined review of the first work-unit candidate. Exact decline was validated. Required status re-entry succeeded after escalation and offered the same target as fresh; skip START because the user explicitly declined that candidate.
 - L5 — Verification: focused candidate tests passed (21); the webapp suite passed (135); independent scratch verification passed the candidate probes (24) and baseline preservation probes (21 combined). Earlier full-feature lint, format check, and build passed; the build emitted a nonblocking large-chunk warning. No blockers were found.
-- L6 — Current state: first work-unit commit exists and its child branch points to `6f37e57`; the six-file S1/S3 slice remains staged on `feat/14-block-shared-ai`. No remote access, push, PR, or merge has occurred.
+- L6 — Current state: T1 branch `feat/14-block-shared-ai-01-agent-dock` points to `6f37e57`; T2 commit `2312001` is on `feat/14-block-shared-ai`. The tracker ref is `feat/14-block-shared-ai-tracker` at the base commit. No remote access, push, PR, or merge has occurred.
