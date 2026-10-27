@@ -4,6 +4,7 @@ import type {
   Assessment,
   InteractiveElements,
   UMLDiagramType,
+  RoomAiEvent,
 } from "@umlstudio/core"
 
 export interface Diagram {
@@ -82,4 +83,6 @@ export type ControlEvent =
   | { type: "DIAGRAM_DELETED" }
   | { type: "DIAGRAM_RENAMED"; title: string }
 
-export type Envelope = { kind: "control"; control: ControlEvent }
+export type Envelope =
+  | { kind: "control"; control: ControlEvent }
+  | { kind: "room-ai"; event: RoomAiEvent }

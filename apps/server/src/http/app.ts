@@ -29,10 +29,12 @@ import { createRoomAiService } from "../services/room-ai/room-ai-service.js"
 import { mountEmbedApiRoutes, mountEmbedRoutes } from "../routes/embed.js"
 import { ConversionResource } from "../resources/conversion-resource.js"
 import { SvgPreviewCache } from "../services/svg-preview-cache.js"
+import type { RoomAiEvent } from "@umlstudio/core"
 import type { ControlEvent } from "../types.js"
 
 export interface RelayHook {
   publishControl: (diagramId: string, control: ControlEvent) => void
+  publishRoomAi?: (diagramId: string, event: RoomAiEvent) => void
 }
 
 export interface AppDeps {
@@ -98,7 +100,11 @@ export function buildApp(deps: AppDeps): ServerType {
     "/api",
     mountRoomAiRoutes({
       auth,
-      roomAi: createRoomAiService({ redis, ttlSeconds: config.DIAGRAM_TTL_SECONDS }),
+      roomAi: createRoomAiService({
+        redis,
+        ttlSeconds: config.DIAGRAM_TTL_SECONDS,
+        ...(relay?.publishRoomAi ? { publish: relay.publishRoomAi } : {}),
+      }),
     })
   )
   app.route("/api", mountConversionRoutes({ getResource }))

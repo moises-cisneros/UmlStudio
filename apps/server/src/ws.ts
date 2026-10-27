@@ -2,6 +2,7 @@ import WebSocket, { WebSocketServer } from "ws"
 import type { IncomingMessage } from "http"
 import { URL } from "url"
 import { logger } from "./logger.js"
+import type { RoomAiEvent } from "@umlstudio/core"
 import type { ControlEvent, Envelope } from "./types.js"
 import {
   applyAwarenessUpdate,
@@ -45,6 +46,7 @@ interface SharedUserProfile {
 
 export interface RelayServer {
   publishControl: (diagramId: string, control: ControlEvent) => void
+  publishRoomAi: (diagramId: string, event: RoomAiEvent) => void
   close: () => Promise<void>
   roomCount: () => number
   /** Server-side replica of the room board, or undefined when the room is empty. */
@@ -450,6 +452,14 @@ export function startRelayServer(opts: StartOptions): RelayServer {
           )
           return
         }
+
+        if (parsed.kind === "room-ai") {
+          logger.warn(
+            { diagramId, type: (parsed as { event?: { type?: string } }).event?.type },
+            "ws room-ai envelope from client dropped"
+          )
+          return
+        }
       } catch {
         // Payload is not JSON or not a control envelope; ignore and treat as regular broadcast
       }
@@ -547,6 +557,11 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     broadcast(rooms, diagramId, message, null)
   }
 
+  function publishRoomAi(diagramId: string, event: RoomAiEvent): void {
+    const envelope: Envelope = { kind: "room-ai", event }
+    broadcast(rooms, diagramId, JSON.stringify(envelope), null)
+  }
+
   async function close(): Promise<void> {
     clearInterval(heartbeatInterval)
     for (const room of rooms.values()) {
@@ -570,6 +585,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
 
   return {
     publishControl,
+    publishRoomAi,
     close,
     roomCount: () => rooms.size,
     getBoardReplica: (diagramId) => boardReplicas.get(diagramId),
