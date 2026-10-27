@@ -1,4 +1,4 @@
-import type { UMLModel } from "@umlstudio/core"
+import type { RoomAiIntent, RoomChatMessage, UMLModel } from "@umlstudio/core"
 import { serverURL } from "@/constants"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { resolveShareOrigin } from "@/utils/sharedDiagramLinks"
@@ -79,7 +79,38 @@ async function request<T>(
   return { data: parsed as T, res }
 }
 
+export interface RoomAiMessagesPage {
+  messages: RoomChatMessage[]
+  hasMore: boolean
+}
+
 export const DiagramApiClient = {
+  async fetchRoomAiMessages(
+    diagramId: string,
+    opts: { before?: string; limit?: number; signal?: AbortSignal } = {}
+  ): Promise<RoomAiMessagesPage> {
+    const params = new URLSearchParams()
+    if (opts.before) params.set("before", opts.before)
+    if (opts.limit) params.set("limit", String(opts.limit))
+    const qs = params.size > 0 ? `?${params.toString()}` : ""
+    const { data, res } = await request<RoomChatMessage[]>(
+      `/api/rooms/${diagramId}/ai/messages${qs}`,
+      { signal: opts.signal }
+    )
+    return { messages: data, hasMore: res.headers.get("X-Has-More") === "true" }
+  },
+
+  async postRoomAiMessage(
+    diagramId: string,
+    input: { text: string; intent: RoomAiIntent }
+  ): Promise<{ messageId: string; queuePosition: number }> {
+    const { data } = await request<{ messageId: string; queuePosition: number }>(
+      `/api/rooms/${diagramId}/ai/messages`,
+      { method: "POST", body: input }
+    )
+    return data
+  },
+
   async fetchDiagram(diagramId: string, opts: { signal?: AbortSignal } = {}): Promise<Diagram> {
     const { data } = await request<Diagram>(`/api/diagrams/${diagramId}`, {
       signal: opts.signal,

@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-export type WorkbenchDockTab = "agent" | "inspector"
+export type WorkbenchDockTab = "agent" | "inspector" | "room"
 
 interface WorkbenchState {
   isAgentDockOpen: boolean

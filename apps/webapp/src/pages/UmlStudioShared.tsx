@@ -23,6 +23,7 @@ import { fetchVersionBody, prefetchVersions } from "@/queries/versionQueries"
 import { useVersionRepositoryKind } from "@/contexts/VersionRepositoryContext"
 import { useRestoreVersionMutation } from "@/queries/versionMutations"
 import { applyControlEventToCache } from "@/queries/versionCacheEvents"
+import { applyRoomAiEventToCache } from "@/queries/roomAiCache"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import { UndoRestoreToast, VersionDrawer, VersionPreviewBanner } from "@/components/versioning"
 import { useVersioningTranslation } from "@/components/versioning/strings"
@@ -237,6 +238,9 @@ export const UmlStudioShared: React.FC = () => {
           { mode: "shared", getToken: currentAccessToken }
         )
         wsManagerRef.current.startConnection()
+        wsManagerRef.current.onRoomAi((event) => {
+          applyRoomAiEventToCache(queryClient, diagramId, event)
+        })
         wsManagerRef.current.onControl((event) => {
           applyControlEventToCache(queryClient, diagramId, event)
           if (event.type === "VERSION_DELETED") {

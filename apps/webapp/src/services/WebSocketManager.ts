@@ -1,6 +1,6 @@
 import { UmlStudioEditor } from "@umlstudio/core"
 import { serverWSSUrl } from "@/constants"
-import { type ControlEvent, type Envelope, WebSocketMessage } from "@/types"
+import { type ControlEvent, type Envelope, type RoomAiEvent, WebSocketMessage } from "@/types"
 import { log } from "@/logger"
 
 interface ReconnectionStep {
@@ -9,6 +9,7 @@ interface ReconnectionStep {
 }
 
 type ControlListener = (event: ControlEvent) => void
+type RoomAiListener = (event: RoomAiEvent) => void
 
 export type CollaborationMode = "shared" | "local"
 
@@ -31,6 +32,7 @@ export class WebSocketManager {
   ]
   private reconnectStartTime = 0
   private controlListeners = new Set<ControlListener>()
+  private roomAiListeners = new Set<RoomAiListener>()
 
   constructor(
     private diagramId: string,
@@ -52,6 +54,11 @@ export class WebSocketManager {
   public onControl(listener: ControlListener): () => void {
     this.controlListeners.add(listener)
     return () => this.controlListeners.delete(listener)
+  }
+
+  public onRoomAi(listener: RoomAiListener): () => void {
+    this.roomAiListeners.add(listener)
+    return () => this.roomAiListeners.delete(listener)
   }
 
   public publishControl(event: ControlEvent): void {
@@ -98,6 +105,10 @@ export class WebSocketManager {
             this.dispatchControl(envelope.control)
             return
           }
+          if (envelope.kind === "room-ai") {
+            this.dispatchRoomAi(envelope.event)
+            return
+          }
         } catch {
           /* ignore */
         }
@@ -128,6 +139,16 @@ export class WebSocketManager {
         listener(event)
       } catch (err) {
         log.error("Control listener threw", err)
+      }
+    }
+  }
+
+  private dispatchRoomAi(event: RoomAiEvent) {
+    for (const listener of this.roomAiListeners) {
+      try {
+        listener(event)
+      } catch (err) {
+        log.error("Room AI listener threw", err)
       }
     }
   }
