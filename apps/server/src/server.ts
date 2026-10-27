@@ -3,6 +3,7 @@ import { logger } from "./logger.js"
 import { buildApp } from "./http/app.js"
 import { bootLoadFunction, createRedisClient, getJwtSecret } from "./redis.js"
 import { startRelayServer } from "./ws.js"
+import { createAuthorshipRepository } from "./services/room-ai/authorship-repository.js"
 import { createAuthService, createRedisUserRepository } from "./services/auth-service.js"
 import { seedDefaultUsers, revokeLegacySeedUsers } from "./auth/seed.js"
 
@@ -31,6 +32,7 @@ async function main() {
     )
   })
 
+  const authorship = createAuthorshipRepository(redis, config.DIAGRAM_TTL_SECONDS)
   const userRepo = createRedisUserRepository(redis)
   const auth = createAuthService({
     repo: userRepo,
@@ -80,12 +82,14 @@ async function main() {
     relay = startRelayServer({
       server: httpServer as import("http").Server,
       verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
+      authorship,
     })
   } else {
     relay = startRelayServer({
       port: config.WS_PORT,
       host: config.HOST,
       verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
+      authorship,
     })
     const app = buildApp({ config, redis, relay, auth })
     httpServer = app.listen(config.PORT, config.HOST, () => {

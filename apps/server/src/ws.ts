@@ -17,6 +17,7 @@ import {
   encodeSyncRequestFrame,
   type BoardReplica,
 } from "./services/room-ai/board-replica.js"
+import type { AuthorshipRepository } from "./services/room-ai/authorship-repository.js"
 
 const AWARENESS_MSG_TYPE = 3
 const DIAGRAM_ID_RE = /^[A-Za-z0-9_-]{1,64}$/
@@ -29,6 +30,8 @@ type RoomAwarenessState = {
 interface ExtendedWebSocket extends WebSocket {
   diagramId?: string
   userId?: string
+  /** User id from the verified JWT; unlike `userId` it is never derived from client-sent data. */
+  authenticatedUserId?: string
 }
 
 export interface RelayServer {
@@ -45,6 +48,8 @@ export interface StartOptions {
   server?: WebSocket.ServerOptions["server"]
   maxSocketsPerRoom?: number
   verifyToken?: (token: string) => Promise<string>
+  /** Where to record which authenticated user created or changed each board element. */
+  authorship?: AuthorshipRepository
 }
 
 /** Close code for rejected shared-room joins (app-level unauthorized). */
@@ -75,7 +80,13 @@ export function startRelayServer(opts: StartOptions): RelayServer {
   const rooms: Map<string, Set<ExtendedWebSocket>> = new Map()
   const roomAwarenessStates: Map<string, RoomAwarenessState> = new Map()
   const awarenessClientIdsBySocket = new WeakMap<ExtendedWebSocket, Set<number>>()
-  const boardReplicas = createBoardReplicaRegistry()
+  const boardReplicas = createBoardReplicaRegistry({
+    onElementsAuthored: ({ roomId, authorId, elementIds }) => {
+      opts.authorship?.record(roomId, elementIds, authorId).catch((err) => {
+        logger.error({ err, diagramId: roomId }, "ws authorship record failed")
+      })
+    },
+  })
 
   function getOrCreateAwarenessState(diagramId: string): RoomAwarenessState {
     const existing = roomAwarenessStates.get(diagramId)
@@ -184,6 +195,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
       }
       try {
         ws.userId = await opts.verifyToken(token)
+        ws.authenticatedUserId = ws.userId
       } catch {
         ws.close(WS_UNAUTHORIZED_CLOSE_CODE, "Authentication required")
         return
@@ -225,7 +237,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
         if (typeof parsed.diagramData === "string") {
           const roomState = roomAwarenessStates.get(diagramId)
           if (roomState) {
-            boardReplicas.applyFrame(diagramId, parsed.diagramData)
+            boardReplicas.applyFrame(diagramId, parsed.diagramData, ws.authenticatedUserId)
             const decoded = Buffer.from(parsed.diagramData, "base64")
             if (decoded.length > 0 && decoded[0] === AWARENESS_MSG_TYPE) {
               const awarenessUpdate = new Uint8Array(decoded.subarray(1))
