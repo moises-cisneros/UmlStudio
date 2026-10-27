@@ -70,7 +70,8 @@ function endpoint(multiplicity: unknown): string {
 function relationshipLine(edge: UmlStudioEdge, names: Map<string, string>): string {
   const source = names.get(edge.source) ?? edge.source
   const target = names.get(edge.target) ?? edge.target
-  const data = edge.data as Record<string, unknown>
+  // `data` is required by the type but the server replica builds edges from an unvalidated Y.Doc.
+  const data = (edge.data ?? {}) as Record<string, unknown>
   const label = EDGE_LABELS[edge.type] ?? String(edge.type)
   return `${source}${endpoint(data.sourceMultiplicity)} --${endpoint(data.targetMultiplicity)} ${target} : ${label}`
 }

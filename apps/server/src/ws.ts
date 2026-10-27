@@ -18,6 +18,7 @@ import {
   encodeSyncRequestFrame,
   type BoardReplica,
 } from "./services/room-ai/board-replica.js"
+import type { AuthorshipRepository } from "./services/room-ai/authorship-repository.js"
 
 const AWARENESS_MSG_TYPE = 3
 const DIAGRAM_ID_RE = /^[A-Za-z0-9_-]{1,64}$/
@@ -32,6 +33,8 @@ interface ExtendedWebSocket extends WebSocket {
   userId?: string
   clientUserId?: string
   sharedUserProfile?: SharedUserProfile
+  /** User id from the verified JWT; unlike `userId` it is never derived from client-sent data. */
+  authenticatedUserId?: string
 }
 
 interface SharedUserProfile {
@@ -55,6 +58,8 @@ export interface StartOptions {
   maxSocketsPerRoom?: number
   verifyToken?: (token: string) => Promise<string>
   resolveUserProfile?: (userId: string) => Promise<SharedUserProfile | undefined>
+  /** Where to record which authenticated user created or changed each board element. */
+  authorship?: AuthorshipRepository
 }
 
 /** Close code for rejected shared-room joins (app-level unauthorized). */
@@ -87,7 +92,13 @@ export function startRelayServer(opts: StartOptions): RelayServer {
   const rooms: Map<string, Set<ExtendedWebSocket>> = new Map()
   const roomAwarenessStates: Map<string, RoomAwarenessState> = new Map()
   const awarenessClientIdsBySocket = new WeakMap<ExtendedWebSocket, Set<number>>()
-  const boardReplicas = createBoardReplicaRegistry()
+  const boardReplicas = createBoardReplicaRegistry({
+    onElementsAuthored: ({ roomId, authorId, elementIds }) => {
+      opts.authorship?.record(roomId, elementIds, authorId).catch((err) => {
+        logger.error({ err, diagramId: roomId }, "ws authorship record failed")
+      })
+    },
+  })
 
   function getOrCreateAwarenessState(diagramId: string): RoomAwarenessState {
     const existing = roomAwarenessStates.get(diagramId)
@@ -240,6 +251,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
       try {
         const verifiedUserId = await opts.verifyToken(token)
         ws.userId = verifiedUserId
+        ws.authenticatedUserId = verifiedUserId
         let profileTimeout: ReturnType<typeof setTimeout> | undefined
         sharedUserProfileReady = Promise.race([
           Promise.resolve().then(() => opts.resolveUserProfile?.(verifiedUserId)),
@@ -300,7 +312,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
         if (typeof parsed.diagramData === "string") {
           const roomState = roomAwarenessStates.get(validDiagramId)
           if (roomState) {
-            boardReplicas.applyFrame(diagramId, parsed.diagramData)
+            boardReplicas.applyFrame(diagramId, parsed.diagramData, ws.authenticatedUserId)
             const decoded = Buffer.from(parsed.diagramData, "base64")
             if (decoded.length > 0 && decoded[0] === AWARENESS_MSG_TYPE) {
               const rawAwarenessUpdate = new Uint8Array(decoded.subarray(1))
