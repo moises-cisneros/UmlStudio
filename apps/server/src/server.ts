@@ -71,6 +71,9 @@ async function main() {
       publishControl: (diagramId: string, control: import("./types.js").ControlEvent) => {
         relay?.publishControl(diagramId, control)
       },
+      publishRoomAi: (diagramId: string, event: import("@umlstudio/core").RoomAiEvent) => {
+        relay?.publishRoomAi(diagramId, event)
+      },
     }
     const app = buildApp({ config, redis, relay: relayPublish, auth })
     httpServer = app.listen(config.PORT, config.HOST, () => {

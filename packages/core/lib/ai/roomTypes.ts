@@ -26,3 +26,12 @@ export type RoomAiPolicy = {
   applyMode: "confirm" | "auto"
   proactive: boolean
 }
+
+export type RoomAiStatus = "thinking" | "idle"
+
+/** Real-time room AI event, broadcast to every socket in the room as `{ kind: "room-ai", event }`. */
+export type RoomAiEvent =
+  | { type: "message.created"; message: RoomChatMessage }
+  | { type: "message.updated"; message: RoomChatMessage }
+  | { type: "ai.status"; status: RoomAiStatus; forUserName?: string; queueLength: number }
+  | { type: "policy.updated"; policy: RoomAiPolicy }
