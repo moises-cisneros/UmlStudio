@@ -12,6 +12,11 @@ import {
 import * as Y from "yjs"
 import * as decoding from "lib0/decoding"
 import { productivityCollector } from "./services/productivity-collector.js"
+import {
+  createBoardReplicaRegistry,
+  encodeSyncRequestFrame,
+  type BoardReplica,
+} from "./services/room-ai/board-replica.js"
 
 const AWARENESS_MSG_TYPE = 3
 const DIAGRAM_ID_RE = /^[A-Za-z0-9_-]{1,64}$/
@@ -30,6 +35,8 @@ export interface RelayServer {
   publishControl: (diagramId: string, control: ControlEvent) => void
   close: () => Promise<void>
   roomCount: () => number
+  /** Server-side replica of the room board, or undefined when the room is empty. */
+  getBoardReplica: (diagramId: string) => BoardReplica | undefined
 }
 
 export interface StartOptions {
@@ -68,6 +75,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
   const rooms: Map<string, Set<ExtendedWebSocket>> = new Map()
   const roomAwarenessStates: Map<string, RoomAwarenessState> = new Map()
   const awarenessClientIdsBySocket = new WeakMap<ExtendedWebSocket, Set<number>>()
+  const boardReplicas = createBoardReplicaRegistry()
 
   function getOrCreateAwarenessState(diagramId: string): RoomAwarenessState {
     const existing = roomAwarenessStates.get(diagramId)
@@ -204,6 +212,8 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     ws.diagramId = diagramId
     awarenessClientIdsBySocket.set(ws, new Set())
     getOrCreateAwarenessState(diagramId)
+    const isFirstSocketInRoom = room.size === 1
+    if (isFirstSocketInRoom) boardReplicas.open(diagramId)
 
     ws.on("message", (raw: WebSocket.RawData) => {
       const message =
@@ -215,6 +225,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
         if (typeof parsed.diagramData === "string") {
           const roomState = roomAwarenessStates.get(diagramId)
           if (roomState) {
+            boardReplicas.applyFrame(diagramId, parsed.diagramData)
             const decoded = Buffer.from(parsed.diagramData, "base64")
             if (decoded.length > 0 && decoded[0] === AWARENESS_MSG_TYPE) {
               const awarenessUpdate = new Uint8Array(decoded.subarray(1))
@@ -331,6 +342,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
 
         if (r.size === 0) {
           rooms.delete(diagramId)
+          boardReplicas.close(diagramId)
           const roomState = roomAwarenessStates.get(diagramId)
           if (roomState) {
             roomState.awareness.destroy()
@@ -344,6 +356,9 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     ws.on("error", (err: Error) => {
       logger.error({ err, diagramId }, "ws client error")
     })
+
+    // The replica starts empty: ask the first client of the room for the full board state.
+    if (isFirstSocketInRoom) ws.send(encodeSyncRequestFrame())
   }
 
   const heartbeatInterval = setInterval(() => {
@@ -382,6 +397,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
       }
     }
     rooms.clear()
+    boardReplicas.closeAll()
     await new Promise<void>((resolve) => wss.close(() => resolve()))
   }
 
@@ -394,6 +410,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     publishControl,
     close,
     roomCount: () => rooms.size,
+    getBoardReplica: (diagramId) => boardReplicas.get(diagramId),
   }
 }
 
