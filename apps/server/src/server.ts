@@ -82,6 +82,7 @@ async function main() {
     relay = startRelayServer({
       server: httpServer as import("http").Server,
       verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
+      resolveUserProfile: (userId) => auth.getProfile(userId),
       authorship,
     })
   } else {
@@ -89,6 +90,7 @@ async function main() {
       port: config.WS_PORT,
       host: config.HOST,
       verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
+      resolveUserProfile: (userId) => auth.getProfile(userId),
       authorship,
     })
     const app = buildApp({ config, redis, relay, auth })
