@@ -3,8 +3,8 @@ import type { RoomAiEvent, RoomAiIntent, RoomChatMessage } from "@umlstudio/core
 import { k, type Redis } from "../../redis.js"
 import type { AuthProfile } from "../auth-service.js"
 import {
-  CHAT_MAX_MESSAGES,
   createChatRepository,
+  enqueueChatMessage,
   type ChatPage,
   type ChatRepository,
   type ListChatOptions,
@@ -33,6 +33,13 @@ export class RoomNotFoundError extends Error {
   constructor() {
     super("room not found")
     this.name = "RoomNotFoundError"
+  }
+}
+
+export class RoomQueueFullError extends Error {
+  constructor() {
+    super("room AI queue is full")
+    this.name = "RoomQueueFullError"
   }
 }
 
@@ -71,11 +78,20 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
         status: "queued",
         createdAt: now().toISOString(),
       }
-      await chat.append(diagramId, message)
-
-      const { messages } = await chat.list(diagramId, { limit: CHAT_MAX_MESSAGES })
-      const queuePosition = messages.filter((m) => m.status === "queued").length
+      const { position: queuePosition, active } = await enqueueChatMessage(
+        redis,
+        diagramId,
+        message,
+        ttlSeconds
+      )
+      if (queuePosition === 0) throw new RoomQueueFullError()
       publish?.(diagramId, { type: "message.created", message })
+      publish?.(diagramId, {
+        type: "ai.status",
+        status: active ? "thinking" : "idle",
+        queueLength: queuePosition,
+        queuePosition,
+      })
       return { messageId: message.id, queuePosition }
     },
 

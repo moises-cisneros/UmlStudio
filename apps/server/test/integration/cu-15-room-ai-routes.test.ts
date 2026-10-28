@@ -75,6 +75,53 @@ describe("INT-CU15: room AI message routes", () => {
     expect((await res.json()).queuePosition).toBe(2)
   })
 
+  it("includes pending messages created before the queue was introduced", async () => {
+    const { token } = await register("legacy.room@example.com", "Legacy")
+    await redis.rPush(k.aiChat(DIAGRAM_ID), JSON.stringify({ id: "old-message", status: "queued" }))
+    const res = await post(token, { text: "new message", intent: "ask" })
+    expect(res.status).toBe(202)
+    expect((await res.json()).queuePosition).toBe(2)
+    expect(await redis.lRange(k.aiQueue(DIAGRAM_ID), 0, -1)).toHaveLength(2)
+  })
+
+  it("rejects the sixth pending message without adding it to the conversation", async () => {
+    const { token } = await register("capacity.room@example.com", "Capacity")
+    for (let n = 0; n < 5; n++) {
+      expect((await post(token, { text: `message ${n}`, intent: "ask" })).status).toBe(202)
+    }
+    expect((await post(token, { text: "overflow", intent: "ask" })).status).toBe(429)
+    const messages = await (await list(token)).json()
+    expect(messages).toHaveLength(5)
+    expect(messages.some((message: { text: string }) => message.text === "overflow")).toBe(false)
+  })
+
+  it("enforces capacity across concurrent service instances", async () => {
+    const { token } = await register("instances.room@example.com", "Instances")
+    const auth = createAuthService({
+      repo: createRedisUserRepository(redis),
+      jwtSecret: TEST_JWT_SECRET,
+    })
+    const second = new Hono<AppEnv>()
+    second.onError(errorHandler)
+    second.route(
+      "/api",
+      mountRoomAiRoutes({ auth, roomAi: createRoomAiService({ redis, ttlSeconds: 3600 }) })
+    )
+    const responses = await Promise.all(
+      Array.from({ length: 6 }, (_, n) =>
+        (n % 2 ? second : app).request(`/api/rooms/${DIAGRAM_ID}/ai/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ text: `message ${n}`, intent: "ask" }),
+        })
+      )
+    )
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      202, 202, 202, 202, 202, 429,
+    ])
+    expect(await (await list(token)).json()).toHaveLength(5)
+  })
+
   it("takes the author from the JWT, not from the body", async () => {
     const { token, id } = await register("author.room@example.com", "Real Author")
     await post(token, {
