@@ -12,17 +12,18 @@ Branch: `feat/17-room-ai-queue` · Delivery: `single-pr` · Tests: `pnpm --filte
 
 ## Tasks
 
-- [x] T1 (S1, S5): atomic shared per-room queue and admission; inline; complete.
-- [x] T2 (S2, S3, S5): shared inference coordination and failure handling; inline; complete.
-- [x] T3 (S4, S5): cross-instance Room AI events; inline; complete.
-- [x] T4 (S1–S5): integration verification and documentation; inline; complete.
+- [x] T1 (S1, S5): atomic shared per-room queue and admission; inline; complete; commit 8685e53.
+- [x] T2 (S2, S3, S5): shared inference coordination and failure handling; inline; complete; commit 8685e53.
+- [x] T3 (S4, S5): cross-instance Room AI events; inline; complete; commit 8685e53.
+- [x] T4 (S1–S5): integration verification and documentation; inline; complete; commit 8685e53.
 
 ## Log
 
+- Final status: the native review of target sha256:96a29a42ea5502956e34f610d6ac1624527a7754c6ab14f5ac755e55f76bf490 was approved and acknowledged (lineage review-aaeb631c50038c35). The reviewed implementation and tests are committed locally as 8685e53. No push or PR was created.
 - Final implementation/check status: T1–T4 complete. Repository checks passed after the RELEASE retry correction: `pnpm build`, `pnpm --filter @umlstudio/codegen run build`, `pnpm lint`, `pnpm format:check`, and `pnpm test:all` (541 tests: core 402, server 120, codegen 19). Independent verification passed the focused RELEASE retry test and 16 isolated dispatcher/retry/fencing tests.
 - Scope correction: the earlier note that #17 was incomplete because no production inference worker drained the queue was incorrect. #17 provides the queue/dispatcher infrastructure with injectable inference; wiring the real Room AI orchestrator/inference is issue #19 and is not required to complete #17.
-- Native review correction: lens `review-resilience` found that a transient Redis failure during RELEASE could permanently consume a slot. The dispatcher now retries the same token-fenced RELEASE with capped exponential backoff; inference is not repeated. A regression test observed RED before the fix and GREEN afterward. The one bounded correction is implemented; bound STATUS, targeted validation, and exact acknowledgement remain pending.
-- Delivery remains pending: the current candidate's four-lens native review is in its correction lifecycle, not approved yet. No commit, push, or PR was made.
+- Native review correction: lens `review-resilience` found that a transient Redis failure during RELEASE could permanently consume a slot. The dispatcher now retries the same token-fenced RELEASE with capped exponential backoff; inference is not repeated. A regression test observed RED before the fix and GREEN afterward. At this log point, bound STATUS, targeted validation, and acknowledgement were pending; they were completed as recorded above.
+- Delivery was still pending at this log point. The four-lens native review was later approved and acknowledged as recorded above. No push or PR was made.
 
 - The user authorized the confirmed-termination slot-leak fix. Regression tests observed RED then GREEN for persistence and publication failures. Dispatcher: 13 tests passed; full server: 119 tests passed, build and lint passed. Independent verification was unavailable because its assigned model was at capacity; the previous native review ended escalated and did not approve this candidate. Do not deliver yet.
 
