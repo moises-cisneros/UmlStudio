@@ -34,6 +34,26 @@ class AutoAdaptiveAdapter(BaseAIAdapter):
     def provider_name(self) -> str:
         return self._active_provider
 
+    async def complete_text(self, prompt: str) -> str:
+        """Use text-capable providers without changing the existing diff cascade."""
+        candidates = []
+        if self.mode not in ("local", "laptop") and settings.GEMINI_API_KEY:
+            candidates.append(GeminiAdapter())
+        if self.mode not in ("cloud", "remote"):
+            candidates.append(OllamaAdapter())
+
+        for adapter in candidates:
+            try:
+                if isinstance(adapter, OllamaAdapter) and not await adapter.is_available():
+                    continue
+                text = await adapter.complete_text(prompt)
+                self._active_provider = adapter.provider_name
+                return text
+            except Exception as exc:
+                logger.warning("Text completion via %s failed (%s)", adapter.provider_name, type(exc).__name__)
+
+        raise RuntimeError("No configured text-capable AI provider is available")
+
     async def generate_diff(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
         # MODE: LOCAL (Prioritize local models on user's machine)
         if self.mode in ("local", "laptop"):

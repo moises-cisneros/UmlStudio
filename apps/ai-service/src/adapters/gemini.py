@@ -19,6 +19,31 @@ class GeminiAdapter(BaseAIAdapter):
     def provider_name(self) -> str:
         return f"gemini ({self.model_name})"
 
+    async def complete_text(self, prompt: str) -> str:
+        if not self.api_key:
+            raise ValueError("GEMINI_API_KEY is not configured")
+
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{self.model_name}:generateContent?key={self.api_key}"
+        )
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.2},
+        }
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Gemini text completion failed ({resp.status_code})")
+            candidates = resp.json().get("candidates", [])
+            if not candidates:
+                raise ValueError("Gemini returned no text candidates")
+            parts = candidates[0].get("content", {}).get("parts", [])
+            content = "".join(part.get("text", "") for part in parts)
+            if not content.strip():
+                raise ValueError("Gemini returned an empty text completion")
+            return content.strip()
+
     async def generate_diff(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY no está configurada.")

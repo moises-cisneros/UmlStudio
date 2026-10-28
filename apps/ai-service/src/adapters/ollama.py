@@ -36,6 +36,22 @@ class OllamaAdapter(BaseAIAdapter):
         except Exception:
             return False
 
+    async def complete_text(self, prompt: str) -> str:
+        url = f"{self.endpoint_url}/chat/completions"
+        payload = {
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2,
+        }
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Ollama text completion failed ({resp.status_code})")
+            content = resp.json()["choices"][0]["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                raise ValueError("Ollama returned an empty text completion")
+            return content.strip()
+
     async def generate_diff(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
         system_prompt = build_uml_system_prompt(current_model)
         url = f"{self.endpoint_url}/chat/completions"
