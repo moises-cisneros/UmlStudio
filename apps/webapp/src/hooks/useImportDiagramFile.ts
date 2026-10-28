@@ -11,7 +11,7 @@ import { useTranslation } from "@/i18n"
 export function useImportDiagramFile() {
   const createModel = usePersistenceModelStore((state) => state.createModel)
   const navigate = useNavigate()
-  const { isCollaborativeBlocked } = useCollaborators()
+  const { isCollaborativeBlocked, isShared } = useCollaborators()
   const { t } = useTranslation()
 
   return useCallback(
@@ -36,6 +36,11 @@ export function useImportDiagramFile() {
           throw new Error(
             "Only UmlStudio JSON (.json), Enterprise Architect XMI (.xmi, .xml), and Images (.png, .jpg, .webp) are supported."
           )
+        }
+
+        if (isImage && isShared) {
+          toast.warning(t.collaborators.importBlockedToast)
+          return
         }
 
         let model: UMLModel
@@ -83,6 +88,6 @@ export function useImportDiagramFile() {
         )
       }
     },
-    [createModel, navigate, isCollaborativeBlocked, t]
+    [createModel, navigate, isCollaborativeBlocked, isShared, t]
   )
 }

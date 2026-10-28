@@ -13,6 +13,7 @@ import { Field, FieldLabel } from "@umlstudio/ui/components/field"
 import { Input } from "@umlstudio/ui/components/input"
 import type { UMLModel } from "@umlstudio/core"
 import { useEditorContext } from "@/contexts"
+import { useCollaborators } from "@/hooks/useCollaborators"
 import { useTranslation } from "@/i18n"
 import { log } from "@/logger"
 import {
@@ -58,6 +59,7 @@ export function VisionImportDialog({
   isCollaborativeBlocked = false,
 }: VisionImportDialogProps) {
   const { editor } = useEditorContext()
+  const { isShared } = useCollaborators()
   const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>("idle")
@@ -65,6 +67,7 @@ export function VisionImportDialog({
   const [preview, setPreview] = useState<VisionResponse | null>(null)
 
   const busy = phase === "uploading" || phase === "merging"
+  const visionImportBlocked = isShared || isCollaborativeBlocked
 
   const reset = useCallback(() => {
     setPhase("idle")
@@ -79,28 +82,35 @@ export function VisionImportDialog({
     onClose()
   }
 
-  const processFile = useCallback(async (file: File) => {
-    setFileName(file.name)
-    setPhase("uploading")
-    try {
-      const result = await uploadImageForVision(file)
-      const validation = validateVisionModel(result.model)
-      if (!validation.valid) {
-        toast.error(
-          `Import rejected: ${validation.errors[0]} Only UML class diagrams (OMG UML 2.5) are supported.`
-        )
-        setPhase("idle")
-        setPreview(null)
+  const processFile = useCallback(
+    async (file: File) => {
+      if (visionImportBlocked) {
+        toast.warning(t.collaborators.importBlockedToast)
         return
       }
-      setPreview(result)
-      setPhase("preview")
-    } catch (err) {
-      toastVisionError(err, file.name)
-      setPhase("idle")
-      setPreview(null)
-    }
-  }, [])
+      setFileName(file.name)
+      setPhase("uploading")
+      try {
+        const result = await uploadImageForVision(file)
+        const validation = validateVisionModel(result.model)
+        if (!validation.valid) {
+          toast.error(
+            `Import rejected: ${validation.errors[0]} Only UML class diagrams (OMG UML 2.5) are supported.`
+          )
+          setPhase("idle")
+          setPreview(null)
+          return
+        }
+        setPreview(result)
+        setPhase("preview")
+      } catch (err) {
+        toastVisionError(err, file.name)
+        setPhase("idle")
+        setPreview(null)
+      }
+    },
+    [visionImportBlocked, t]
+  )
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -115,6 +125,11 @@ export function VisionImportDialog({
       toast.error(
         `Import rejected: ${validation.errors[0]} Only UML class diagrams (OMG UML 2.5) are supported.`
       )
+      return
+    }
+
+    if (visionImportBlocked) {
+      toast.warning(t.collaborators.importBlockedToast)
       return
     }
 
@@ -145,11 +160,6 @@ export function VisionImportDialog({
       return
     }
 
-    if (isCollaborativeBlocked) {
-      toast.warning(t.collaborators.importBlockedToast)
-      return
-    }
-
     setPhase("merging")
     try {
       const current = editor.model
@@ -177,7 +187,7 @@ export function VisionImportDialog({
     busy,
     onCreateDiagram,
     editor,
-    isCollaborativeBlocked,
+    visionImportBlocked,
     t,
     fileName,
     reset,
@@ -210,8 +220,14 @@ export function VisionImportDialog({
               type="file"
               accept={[...VISION_ACCEPTED_MIME, ".jpg", ".jpeg", ".png", ".webp"].join(",")}
               onChange={handleFileChange}
-              disabled={busy}
+              disabled={busy || visionImportBlocked}
             />
+            {visionImportBlocked && (
+              <p className="text-xs text-muted-foreground" role="status">
+                Image import is unavailable in shared diagrams because it sends the image to the AI
+                service.
+              </p>
+            )}
             {phase === "uploading" && (
               <p className="text-xs text-muted-foreground" role="status">
                 Analyzing {fileName || "image"}…

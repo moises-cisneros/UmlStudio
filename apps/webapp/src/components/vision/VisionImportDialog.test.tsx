@@ -12,6 +12,12 @@ import {
   validateVisionModel,
 } from "./visionImport"
 
+const sharedMode = vi.hoisted(() => ({ value: false }))
+
+vi.mock("@/hooks/useCollaborators", () => ({
+  useCollaborators: () => ({ isShared: sharedMode.value }),
+}))
+
 function makeModel(overrides: Partial<UMLModel> = {}): UMLModel {
   return {
     version: "4.0.0",
@@ -50,6 +56,7 @@ function jsonResponse(status: number, body: unknown): Response {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  sharedMode.value = false
 })
 
 describe("validateImageFile", () => {
@@ -268,7 +275,11 @@ describe("mergeVisionModel (FA-01 / FA-02)", () => {
 })
 
 describe("VisionImportDialog", () => {
-  function renderDialog(current: UMLModel, onAssign: (model: UMLModel) => void) {
+  function renderDialog(
+    current: UMLModel,
+    onAssign: (model: UMLModel) => void,
+    isCollaborativeBlocked = false
+  ) {
     const editor = {
       get model(): UMLModel {
         return current
@@ -286,7 +297,11 @@ describe("VisionImportDialog", () => {
           setEditor: () => {},
         }}
       >
-        <VisionImportDialog open onClose={() => {}} />
+        <VisionImportDialog
+          open
+          onClose={() => {}}
+          isCollaborativeBlocked={isCollaborativeBlocked}
+        />
       </EditorContext>
     )
   }
@@ -328,5 +343,20 @@ describe("VisionImportDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }))
     expect(assigned).toHaveLength(0)
+  })
+
+  it("prevents image upload in a shared diagram and explains why", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    sharedMode.value = true
+    renderDialog(makeModel(), () => {}, false)
+
+    const input = screen.getByLabelText("Diagram photo", { selector: "input" })
+    expect((input as HTMLInputElement).disabled).toBe(true)
+    expect(screen.getByText(/image import is unavailable in shared diagrams/i)).toBeTruthy()
+
+    fireEvent.change(input, { target: { files: [pngFile()] } })
+    expect(fetchMock).not.toHaveBeenCalled()
+    sharedMode.value = false
   })
 })
