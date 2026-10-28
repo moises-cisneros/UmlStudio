@@ -1,4 +1,4 @@
-import { type FC } from "react"
+import { type FC, useEffect } from "react"
 import { SparklesIcon, ListTreeIcon, MessagesSquareIcon, XIcon } from "lucide-react"
 import { useWorkbenchStore } from "@/stores/useWorkbenchStore"
 import { useTranslation } from "@/i18n"
@@ -8,9 +8,47 @@ import { AgentChatStream } from "./AgentChatStream"
 import { ClassInspectorTab } from "./ClassInspectorTab"
 
 export const RightDockWorkspace: FC = () => {
-  const { isAgentDockOpen, activeDockTab, setActiveDockTab, toggleAgentDock } = useWorkbenchStore()
+  const {
+    isAgentDockOpen,
+    activeDockTab,
+    previousIndividualDockTab,
+    setActiveDockTab,
+    setActiveDockTabWithoutOpening,
+    setPreviousIndividualDockTab,
+    toggleAgentDock,
+  } = useWorkbenchStore()
   const { t } = useTranslation()
   const sharedDiagramId = useSharedDiagramId()
+  let selectedTab = activeDockTab
+  if (sharedDiagramId && (previousIndividualDockTab === null || activeDockTab === "agent")) {
+    selectedTab = "room"
+  } else if (!sharedDiagramId && previousIndividualDockTab !== null) {
+    selectedTab = previousIndividualDockTab
+  }
+
+  useEffect(() => {
+    if (sharedDiagramId) {
+      if (previousIndividualDockTab === null) {
+        setPreviousIndividualDockTab(activeDockTab === "room" ? "agent" : activeDockTab)
+        if (activeDockTab !== "room") setActiveDockTabWithoutOpening("room")
+      }
+      return
+    }
+
+    if (previousIndividualDockTab !== null) {
+      if (activeDockTab !== previousIndividualDockTab) {
+        setActiveDockTabWithoutOpening(previousIndividualDockTab)
+      }
+      setPreviousIndividualDockTab(null)
+    }
+  }, [
+    activeDockTab,
+    previousIndividualDockTab,
+    setActiveDockTab,
+    setActiveDockTabWithoutOpening,
+    setPreviousIndividualDockTab,
+    sharedDiagramId,
+  ])
 
   if (!isAgentDockOpen) return null
 
@@ -26,20 +64,22 @@ export const RightDockWorkspace: FC = () => {
     >
       {/* PESTAÑAS DEL DOCK */}
       <div className="workbench-dock-tabs">
-        <button
-          type="button"
-          className="workbench-dock-tab"
-          data-active={activeDockTab === "agent"}
-          onClick={() => setActiveDockTab("agent")}
-        >
-          <SparklesIcon className="size-3.5 text-(--umlstudio-primary)" />
-          <span>{t.agent.tabAgent}</span>
-        </button>
+        {!sharedDiagramId && (
+          <button
+            type="button"
+            className="workbench-dock-tab"
+            data-active={selectedTab === "agent"}
+            onClick={() => setActiveDockTab("agent")}
+          >
+            <SparklesIcon className="size-3.5 text-(--umlstudio-primary)" />
+            <span>{t.agent.tabAgent}</span>
+          </button>
+        )}
 
         <button
           type="button"
           className="workbench-dock-tab"
-          data-active={activeDockTab === "inspector"}
+          data-active={selectedTab === "inspector"}
           onClick={() => setActiveDockTab("inspector")}
         >
           <ListTreeIcon className="size-3.5" />
@@ -50,7 +90,7 @@ export const RightDockWorkspace: FC = () => {
           <button
             type="button"
             className="workbench-dock-tab"
-            data-active={activeDockTab === "room"}
+            data-active={selectedTab === "room"}
             onClick={() => setActiveDockTab("room")}
           >
             <MessagesSquareIcon className="size-3.5" />
@@ -70,9 +110,9 @@ export const RightDockWorkspace: FC = () => {
 
       {/* CONTENIDO DE LA PESTAÑA ACTIVA */}
       <div className="workbench-dock-body">
-        {activeDockTab === "agent" && <AgentChatStream />}
-        {activeDockTab === "inspector" && <ClassInspectorTab />}
-        {activeDockTab === "room" && sharedDiagramId && (
+        {!sharedDiagramId && selectedTab === "agent" && <AgentChatStream />}
+        {selectedTab === "inspector" && <ClassInspectorTab />}
+        {selectedTab === "room" && sharedDiagramId && (
           <RoomChatPanelContainer diagramId={sharedDiagramId} />
         )}
       </div>
