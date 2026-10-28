@@ -155,6 +155,8 @@ El navegador llama directamente a `ai-service` (`VITE_AI_SERVICE_URL`):
 3. `diff_quality.py` valida; se devuelve `{ provider, diff, message }`.
 4. La webapp revalida con `validateDiff` y muestra la propuesta antes de aplicarla.
 
+La IA de sala usa un flujo distinto: el servidor llama a `POST /internal/v1/room/respond` con el tablero y el contexto de la sala. El navegador no llama a este endpoint. `ai-service` exige un `X-Internal-Token` que coincida con `AI_INTERNAL_TOKEN`; si la variable está vacía, rechaza todas las llamadas. En modo `explain` devuelve texto sin `diff`; en modo `change` devuelve un `ModelDiff` validado. Los endpoints públicos del Ciclo 1 permanecen separados.
+
 ### 4.3 Generación de código
 
 Navegador → `POST /api/codegen/spring-boot` (server) → `apps/codegen` → `start.spring.io/starter.zip` → enriquecimiento del ZIP en memoria → descarga.

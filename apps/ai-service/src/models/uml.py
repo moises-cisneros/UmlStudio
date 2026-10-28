@@ -2,7 +2,7 @@
 UmlStudio AI Service — Data Models for OMG UML 2.5 Metamodel.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
 
@@ -134,6 +134,20 @@ class ChatResponse(BaseModel):
     diff: ModelDiff
     message: str
     transcript: Optional[str] = None
+
+
+class RoomRespondRequest(BaseModel):
+    mode: Literal["explain", "change"]
+    requester: Dict[str, Any]
+    question: str = Field(min_length=1)
+    board: Dict[str, Any]
+    context: Dict[str, Any]
+
+
+class RoomRespondResponse(BaseModel):
+    text: str
+    diff: Optional[ModelDiff]
+    provider: str
 
 
 class TranscribeResponse(BaseModel):

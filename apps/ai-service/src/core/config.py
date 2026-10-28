@@ -42,6 +42,8 @@ class Settings:
     # Server network settings
     PORT: int = int(os.getenv("AI_SERVICE_PORT", os.getenv("PORT", "8001")))
     HOST: str = os.getenv("AI_SERVICE_HOST", os.getenv("HOST", "0.0.0.0"))
+    # Shared only with the server; never expose this value to the webapp.
+    AI_INTERNAL_TOKEN: str = os.getenv("AI_INTERNAL_TOKEN", "").strip()
 
     # API Keys & Credentials
     CLOUDFLARE_ACCOUNT_ID: str = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
