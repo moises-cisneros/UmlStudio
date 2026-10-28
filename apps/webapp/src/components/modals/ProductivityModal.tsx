@@ -38,6 +38,8 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
     typeof window !== "undefined" &&
     (window.location.pathname.startsWith("/local") ||
       !window.location.pathname.startsWith("/shared"))
+  const isSharedDiagram =
+    typeof window !== "undefined" && window.location.pathname.startsWith("/shared")
 
   const [report, setReport] = useState<DiagramProductivityReport | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
@@ -122,7 +124,7 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
   }, [activeDiagramId, isLocalDiagram, model, user, editor])
 
   const handleAiAudit = async () => {
-    if (!report) return
+    if (isSharedDiagram || !report) return
     setLoadingAi(true)
     try {
       const result = await auditProductivityWithAi(report)
@@ -368,7 +370,7 @@ export const ProductivityModal: React.FC<ProductivityModalProps> = ({
                   size="sm"
                   variant="default"
                   onClick={() => void handleAiAudit()}
-                  disabled={loadingAi || !report}
+                  disabled={loadingAi || !report || isSharedDiagram}
                 >
                   {loadingAi ? "Analizando..." : "Analizar con IA"}
                 </Button>
