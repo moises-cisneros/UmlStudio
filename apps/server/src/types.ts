@@ -48,6 +48,7 @@ export type ApiErrorCode =
   | "NO_HEAD"
   | "REDIS_UNAVAILABLE"
   | "RENDERER_BUSY"
+  | "ROOM_AI_QUEUE_FULL"
   | "INTERNAL"
 
 export interface ApiErrorBody {

@@ -42,6 +42,51 @@ end
 return 0
 `
 
+const ENQUEUE = `
+local count = redis.call('LLEN', KEYS[1])
+local legacy = {}
+if redis.call('EXISTS', KEYS[1]) == 0 and redis.call('EXISTS', KEYS[3]) == 0 then
+  local items = redis.call('LRANGE', KEYS[2], 0, -1)
+  local active = redis.call('GET', KEYS[4])
+  for _, raw in ipairs(items) do
+    local ok, message = pcall(cjson.decode, raw)
+    if ok and type(message) == 'table' and message.status == 'queued' and type(message.id) == 'string' and message.id ~= active then
+      table.insert(legacy, message.id)
+    end
+  end
+  count = #legacy
+end
+if count >= 5 then return {0, 0} end
+for _, id in ipairs(legacy) do redis.call('RPUSH', KEYS[1], id) end
+redis.call('RPUSH', KEYS[1], ARGV[1])
+redis.call('RPUSH', KEYS[2], ARGV[2])
+redis.call('LTRIM', KEYS[2], -200, -1)
+redis.call('EXPIRE', KEYS[1], ARGV[3])
+redis.call('EXPIRE', KEYS[2], ARGV[3])
+redis.call('SET', KEYS[3], '1', 'EX', ARGV[3])
+return {count + 1, redis.call('EXISTS', KEYS[5])}
+`
+
+/** Atomically admits a queued message and records it in room history. */
+export async function enqueueChatMessage<T extends ChatRecord>(
+  redis: Redis,
+  diagramId: string,
+  message: T,
+  ttlSeconds: number
+): Promise<{ position: number; active: boolean }> {
+  const result = (await redis.eval(ENQUEUE, {
+    keys: [
+      k.aiQueue(diagramId),
+      k.aiChat(diagramId),
+      k.aiQueueInitialized(diagramId),
+      k.aiActiveMessage(diagramId),
+      k.aiActive(diagramId),
+    ],
+    arguments: [message.id, JSON.stringify(message), String(ttlSeconds)],
+  })) as [number, number]
+  return { position: Number(result[0]), active: Number(result[1]) === 1 }
+}
+
 /**
  * Room conversation stored server-side in `diagram:{id}:ai:chat`
  * (LIST of JSON messages, oldest first). The key shares the diagram TTL.

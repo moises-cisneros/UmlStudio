@@ -1,12 +1,16 @@
 import { Hono } from "hono"
 import { z } from "zod"
 import type { AppEnv } from "../http/env.js"
-import { Errors } from "../http/errors.js"
+import { ApiError, Errors } from "../http/errors.js"
 import { authGuard } from "../http/middleware/auth.js"
 import { validate } from "../http/middleware/validate.js"
 import type { AuthService } from "../services/auth-service.js"
 import { CHAT_MAX_MESSAGES } from "../services/room-ai/chat-repository.js"
-import { RoomNotFoundError, type RoomAiService } from "../services/room-ai/room-ai-service.js"
+import {
+  RoomNotFoundError,
+  RoomQueueFullError,
+  type RoomAiService,
+} from "../services/room-ai/room-ai-service.js"
 import { DiagramIdParams } from "./_schemas.js"
 
 interface Deps {
@@ -47,6 +51,8 @@ export function mountRoomAiRoutes({ auth, roomAi }: Deps): Hono<AppEnv> {
         return c.json(result, 202)
       } catch (err) {
         if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
+        if (err instanceof RoomQueueFullError)
+          throw new ApiError(429, "ROOM_AI_QUEUE_FULL", err.message)
         throw err
       }
     })

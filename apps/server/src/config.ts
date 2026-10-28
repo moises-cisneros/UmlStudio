@@ -8,6 +8,7 @@ const ConfigSchema = z.object({
   WS_PORT: intEnv(4444),
   CORS_ORIGIN: z.string().optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
+  AI_MAX_CONCURRENCY: intEnv(1),
   OWNER_SECRET: z.string().min(32).default("development-only-replace-in-prod"),
   MAX_VERSIONS_PER_DIAGRAM: intEnv(50),
   MAX_SNAPSHOT_BYTES: intEnv(5 * 1024 * 1024),

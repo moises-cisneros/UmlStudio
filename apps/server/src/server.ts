@@ -6,6 +6,7 @@ import { startRelayServer } from "./ws.js"
 import { createAuthorshipRepository } from "./services/room-ai/authorship-repository.js"
 import { createAuthService, createRedisUserRepository } from "./services/auth-service.js"
 import { seedDefaultUsers, revokeLegacySeedUsers } from "./auth/seed.js"
+import { createRoomAiEventBus } from "./services/room-ai/room-ai-event-bus.js"
 
 async function main() {
   if (process.env.NODE_ENV !== "production") {
@@ -65,16 +66,21 @@ async function main() {
 
   let relay: import("./ws.js").RelayServer
   let httpServer: ReturnType<ReturnType<typeof buildApp>["listen"]>
+  const roomAiBus = await createRoomAiEventBus(redis, (diagramId, event) => {
+    relay?.publishRoomAi(diagramId, event)
+  })
+  const relayPublish = {
+    publishControl: (diagramId: string, control: import("./types.js").ControlEvent) => {
+      relay?.publishControl(diagramId, control)
+    },
+    publishRoomAi: (diagramId: string, event: import("@umlstudio/core").RoomAiEvent) => {
+      roomAiBus
+        .publish(diagramId, event)
+        .catch((err) => logger.error({ err, diagramId }, "room AI event publish failed"))
+    },
+  }
 
   if (sharedPort) {
-    const relayPublish = {
-      publishControl: (diagramId: string, control: import("./types.js").ControlEvent) => {
-        relay?.publishControl(diagramId, control)
-      },
-      publishRoomAi: (diagramId: string, event: import("@umlstudio/core").RoomAiEvent) => {
-        relay?.publishRoomAi(diagramId, event)
-      },
-    }
     const app = buildApp({ config, redis, relay: relayPublish, auth })
     httpServer = app.listen(config.PORT, config.HOST, () => {
       logger.info(
@@ -96,7 +102,7 @@ async function main() {
       resolveUserProfile: (userId) => auth.getProfile(userId),
       authorship,
     })
-    const app = buildApp({ config, redis, relay, auth })
+    const app = buildApp({ config, redis, relay: relayPublish, auth })
     httpServer = app.listen(config.PORT, config.HOST, () => {
       logger.info(
         { event: "http.listen", host: config.HOST, port: config.PORT },
@@ -118,6 +124,11 @@ async function main() {
       await relay.close()
     } catch (err) {
       logger.error({ err }, "ws close failed")
+    }
+    try {
+      await roomAiBus.close()
+    } catch (err) {
+      logger.error({ err }, "room AI event bus close failed")
     }
     try {
       await redis.quit()

@@ -33,5 +33,11 @@ export type RoomAiStatus = "thinking" | "idle"
 export type RoomAiEvent =
   | { type: "message.created"; message: RoomChatMessage }
   | { type: "message.updated"; message: RoomChatMessage }
-  | { type: "ai.status"; status: RoomAiStatus; forUserName?: string; queueLength: number }
+  | {
+      type: "ai.status"
+      status: RoomAiStatus
+      forUserName?: string
+      queueLength: number
+      queuePosition?: number
+    }
   | { type: "policy.updated"; policy: RoomAiPolicy }
