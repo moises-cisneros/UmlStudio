@@ -12,6 +12,10 @@ type ControlListener = (event: ControlEvent) => void
 type RoomAiListener = (event: RoomAiEvent) => void
 
 export type CollaborationMode = "shared" | "local"
+export interface SharedReplicaRevision {
+  generation: string
+  revision: number
+}
 
 export interface WebSocketManagerOptions {
   /** Shared rooms require a token; local editing stays tokenless. */
@@ -33,6 +37,14 @@ export class WebSocketManager {
   private reconnectStartTime = 0
   private controlListeners = new Set<ControlListener>()
   private roomAiListeners = new Set<RoomAiListener>()
+  private flushSequence = 0
+  private pendingFlush: {
+    requestId: string
+    nonce?: string
+    timer: ReturnType<typeof setTimeout>
+    resolve: (revision: SharedReplicaRevision) => void
+    reject: (error: Error) => void
+  } | null = null
 
   constructor(
     private diagramId: string,
@@ -65,6 +77,32 @@ export class WebSocketManager {
     if (this.websocket?.readyState !== WebSocket.OPEN) return
     const envelope: Envelope = { kind: "control", control: event }
     this.websocket.send(JSON.stringify(envelope))
+  }
+
+  /** Wait until this socket's full board state has reached the single-server replica. */
+  public flushSharedReplica(timeoutMs = 10_000): Promise<SharedReplicaRevision> {
+    if (this.options.mode !== "shared" || this.websocket?.readyState !== WebSocket.OPEN) {
+      return Promise.reject(new Error("Shared collaboration socket is not connected"))
+    }
+    if (this.pendingFlush) return Promise.reject(new Error("A replica flush is already pending"))
+    const requestId = String(++this.flushSequence)
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => this.rejectFlush("Replica flush timed out"), timeoutMs)
+      this.pendingFlush = { requestId, timer, resolve, reject }
+      try {
+        this.websocket!.send(JSON.stringify({ kind: "replica-flush-request", requestId }))
+      } catch {
+        this.rejectFlush("Replica flush request failed")
+      }
+    })
+  }
+
+  private rejectFlush(message: string): void {
+    const pending = this.pendingFlush
+    if (!pending) return
+    this.pendingFlush = null
+    clearTimeout(pending.timer)
+    pending.reject(new Error(message))
   }
 
   private createWebSocket() {
@@ -101,6 +139,46 @@ export class WebSocketManager {
       if (raw.startsWith(ENVELOPE_PREFIX)) {
         try {
           const envelope = JSON.parse(raw) as Envelope
+          const frame = envelope as unknown as Record<string, unknown>
+          const pending = this.pendingFlush
+          if (frame.kind === "replica-flush-challenge") {
+            if (
+              pending &&
+              frame.requestId === pending.requestId &&
+              typeof frame.nonce === "string" &&
+              !pending.nonce
+            ) {
+              pending.nonce = frame.nonce
+              try {
+                this.instance.broadcastFullState()
+                if (this.websocket?.readyState !== WebSocket.OPEN) throw new Error("disconnected")
+                this.websocket.send(
+                  JSON.stringify({ kind: "replica-flush-marker", nonce: pending.nonce })
+                )
+              } catch {
+                this.rejectFlush("Replica flush failed")
+              }
+            }
+            return
+          }
+          if (frame.kind === "replica-flush-ack") {
+            if (
+              pending &&
+              pending.nonce &&
+              frame.requestId === pending.requestId &&
+              frame.nonce === pending.nonce &&
+              typeof frame.generation === "string" &&
+              /^[a-f0-9]{64}$/.test(frame.generation) &&
+              typeof frame.revision === "number" &&
+              Number.isSafeInteger(frame.revision) &&
+              frame.revision >= 0
+            ) {
+              this.pendingFlush = null
+              clearTimeout(pending.timer)
+              pending.resolve({ generation: frame.generation, revision: frame.revision })
+            }
+            return
+          }
           if (envelope.kind === "control") {
             this.dispatchControl(envelope.control)
             return
@@ -124,11 +202,13 @@ export class WebSocketManager {
     }
 
     this.websocket.onerror = (e) => {
+      this.rejectFlush("Collaboration socket error")
       this.onError(e)
       this.scheduleReconnect()
     }
 
     this.websocket.onclose = () => {
+      this.rejectFlush("Collaboration socket disconnected")
       this.scheduleReconnect()
     }
   }
@@ -181,6 +261,7 @@ export class WebSocketManager {
   }
 
   public cleanup() {
+    this.rejectFlush("Collaboration socket closed")
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout)
       this.reconnectTimeout = null

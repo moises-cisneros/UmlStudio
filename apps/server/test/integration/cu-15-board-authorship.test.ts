@@ -134,7 +134,7 @@ describe("INT-CU15: board authorship", () => {
     expect(await authorship.getAll("room-two")).toEqual({ a: "juan", b: "ana", e1: "ana" })
   })
 
-  it("does not attribute updates without an authenticated user", async () => {
+  it("isolates unauthenticated local updates from the shared board and authorship", async () => {
     const { authorship, port } = await boot()
     const anonymous = connectPeer(port, "room-anon")
     const juan = connectPeer(port, "room-anon", "token-juan")
@@ -149,7 +149,12 @@ describe("INT-CU15: board authorship", () => {
     await waitForAuthor(authorship, "room-anon", "a", "juan")
 
     const replica = relay!.getBoardReplica("room-anon")!
-    await waitFor(() => replica.getModel().nodes.length === 2, "replica missed the anonymous node")
+    await waitFor(
+      () => replica.getModel().nodes.some((node) => node.id === "a"),
+      "replica missed the authenticated node"
+    )
+    expect(replica.getModel().nodes.some((node) => node.id === "x")).toBe(false)
+    expect(anonymous.ydoc.getMap("nodes").has("a")).toBe(false)
     expect(await authorship.getAll("room-anon")).toEqual({ a: "juan" })
   })
 

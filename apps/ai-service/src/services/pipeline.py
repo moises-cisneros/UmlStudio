@@ -6,7 +6,7 @@ feeding directly into the auto-adaptive LLM diff generation pipeline.
 
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Callable, Optional
 
 from ..models.uml import ChatResponse, ModelDiff
 from .diff_quality import assess_diff, build_repair_feedback, score_diff, strip_example_copies
@@ -97,7 +97,14 @@ class AIPipeline:
         )
 
     @classmethod
-    async def _repair_if_needed(cls, adapter, prompt: str, current_model: Dict[str, Any], diff: ModelDiff) -> ModelDiff:
+    async def _repair_if_needed(
+        cls,
+        adapter,
+        prompt: str,
+        current_model: Dict[str, Any],
+        diff: ModelDiff,
+        before_retry: Optional[Callable[[str], None]] = None,
+    ) -> ModelDiff:
         """
         One bounded self-correction round: if the quality gate finds problems, ask the model again
         with explicit feedback and keep whichever diff scores better. Failures never lose the first diff.
@@ -109,6 +116,8 @@ class AIPipeline:
                 break
             logger.info("Diff con %d problema(s); reintentando con retroalimentación: %s", len(issues), issues)
             repair_prompt = f"{prompt}\n\n{build_repair_feedback(issues)}"
+            if before_retry is not None:
+                before_retry(repair_prompt)
             try:
                 candidate = await adapter.generate_diff(repair_prompt, current_model)
             except Exception as exc:

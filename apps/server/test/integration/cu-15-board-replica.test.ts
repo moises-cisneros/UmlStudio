@@ -5,6 +5,10 @@ import { createServer } from "node:net"
 import * as Y from "yjs"
 import { createHeadlessSync } from "@umlstudio/core/internals"
 import { startRelayServer } from "../../src/ws.js"
+import {
+  createBoardReplica,
+  createBoardReplicaRegistry,
+} from "../../src/services/room-ai/board-replica.js"
 
 function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -73,6 +77,36 @@ const classNode = (id: string, name: string) => ({
   data: { name, attributes: [], methods: [] },
 })
 
+describe("board replica update validation", () => {
+  it("rejects stale generations and invalid or unmet revisions after recreation", () => {
+    const registry = createBoardReplicaRegistry()
+    const first = registry.open("board")
+    const generation = first.generation
+    const revision = first.getRevision()
+    expect(registry.getAtLeast("board", generation, revision)).toBe(first)
+    expect(registry.getAtLeast("board", generation, revision + 1)).toBeUndefined()
+    expect(registry.getAtLeast("board", generation, -1)).toBeUndefined()
+    expect(registry.getAtLeast("board", generation, NaN)).toBeUndefined()
+    registry.close("board")
+    const next = registry.open("board")
+    expect(next.generation).not.toBe(generation)
+    expect(registry.getAtLeast("board", generation, revision)).toBeUndefined()
+    expect(registry.getAtLeast("board", next.generation, 0)).toBe(next)
+    registry.closeAll()
+  })
+
+  it("accepts an empty full state and rejects malformed updates", () => {
+    const replica = createBoardReplica("empty")
+    const doc = new Y.Doc()
+    const emptyFrame = Buffer.concat([Buffer.from([1]), Buffer.from(Y.encodeStateAsUpdate(doc))])
+    expect(replica.applyFrame(Buffer.from([1, 255]).toString("base64"))).toBe(false)
+    expect(replica.applyFrame(emptyFrame.toString("base64"))).toBe(true)
+    expect(replica.getModel().nodes).toEqual([])
+    doc.destroy()
+    replica.destroy()
+  })
+})
+
 describe("INT-CU15: server-side board replica", () => {
   let relay: ReturnType<typeof startRelayServer> | undefined
   const peers: Peer[] = []
@@ -82,6 +116,259 @@ describe("INT-CU15: server-side board replica", () => {
     peers.length = 0
     await relay?.close()
     relay = undefined
+  })
+
+  it("does not acknowledge an incomplete dependent update as a full flush", async () => {
+    const port = await getFreePort()
+    relay = startRelayServer({ port, host: "127.0.0.1", verifyToken: async () => "owner" })
+    const ws = new WebSocket(
+      `ws://127.0.0.1:${port}?diagramId=partial-flush&mode=shared&token=owner`
+    )
+    const messages: Array<Record<string, unknown>> = []
+    ws.on("message", (raw) => messages.push(JSON.parse(raw.toString())))
+    await new Promise<void>((resolve) => ws.once("open", resolve))
+    ws.send(JSON.stringify({ kind: "replica-flush-request", requestId: "partial" }))
+    await waitFor(() => messages.some((m) => m.kind === "replica-flush-challenge"), "challenge")
+    const nonce = messages.find((m) => m.kind === "replica-flush-challenge")!.nonce
+    const doc = new Y.Doc()
+    doc.getMap("nodes").set("a", classNode("a", "A"))
+    const vector = Y.encodeStateVector(doc)
+    doc.getMap("nodes").set("b", classNode("b", "B"))
+    const partial = Buffer.concat([
+      Buffer.from([1]),
+      Buffer.from(Y.encodeStateAsUpdate(doc, vector)),
+    ])
+    ws.send(JSON.stringify({ diagramData: partial.toString("base64") }))
+    ws.send(JSON.stringify({ kind: "replica-flush-marker", nonce }))
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    expect(messages.some((m) => m.kind === "replica-flush-ack")).toBe(false)
+    expect(relay.getSharedBoardReplica("partial-flush")).toBeUndefined()
+    doc.destroy()
+    await new Promise<void>((resolve) => {
+      ws.once("close", resolve)
+      ws.close()
+    })
+  })
+
+  it("never relays client-sent server-only flush envelopes", async () => {
+    const port = await getFreePort()
+    relay = startRelayServer({ port, host: "127.0.0.1", verifyToken: async () => "owner" })
+    const first = new WebSocket(
+      `ws://127.0.0.1:${port}?diagramId=spoof-flush&mode=shared&token=owner`
+    )
+    const second = new WebSocket(
+      `ws://127.0.0.1:${port}?diagramId=spoof-flush&mode=shared&token=owner`
+    )
+    const received: Array<Record<string, unknown>> = []
+    second.on("message", (raw) => received.push(JSON.parse(raw.toString())))
+    await Promise.all(
+      [first, second].map((ws) => new Promise<void>((resolve) => ws.once("open", resolve)))
+    )
+    first.send(JSON.stringify({ kind: "replica-flush-challenge", requestId: "1", nonce: "forged" }))
+    first.send(
+      JSON.stringify({
+        kind: "replica-flush-ack",
+        requestId: "1",
+        nonce: "forged",
+        generation: "a".repeat(64),
+        revision: 0,
+        diagramData: Buffer.from([1, 0, 0]).toString("base64"),
+      })
+    )
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    expect(
+      received.some((m) => m.kind === "replica-flush-challenge" || m.kind === "replica-flush-ack")
+    ).toBe(false)
+    await Promise.all(
+      [first, second].map(
+        (ws) =>
+          new Promise<void>((resolve) => {
+            ws.once("close", resolve)
+            ws.close()
+          })
+      )
+    )
+  })
+
+  it("never returns a local replica through the shared-only accessor", async () => {
+    const port = await getFreePort()
+    relay = startRelayServer({ port, host: "127.0.0.1", verifyToken: async () => "owner" })
+    const id = "replica-accessor-isolation"
+    const local = connectPeer(port, id)
+    peers.push(local)
+    await local.ready
+    expect(relay.getSharedBoardReplica(id)).toBeUndefined()
+    const shared = new WebSocket(`ws://127.0.0.1:${port}?diagramId=${id}&mode=shared&token=owner`)
+    await new Promise<void>((resolve, reject) => {
+      shared.once("open", resolve)
+      shared.once("error", reject)
+    })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(relay.getSharedBoardReplica(id)).toBeUndefined()
+    await new Promise<void>((resolve) => {
+      shared.once("close", resolve)
+      shared.close()
+    })
+    await waitFor(
+      () => relay!.getSharedBoardReplica(id) === undefined,
+      "shared replica still present"
+    )
+    expect(relay.getBoardReplica(id)).toBeDefined()
+  })
+
+  it("requires an authenticated challenge and a valid ordered update before readiness", async () => {
+    const port = await getFreePort()
+    relay = startRelayServer({ port, host: "127.0.0.1", verifyToken: async () => "owner" })
+    const ws = new WebSocket(`ws://127.0.0.1:${port}?diagramId=barrier&mode=shared&token=owner`)
+    const messages: Array<Record<string, unknown>> = []
+    ws.on("message", (raw) => messages.push(JSON.parse(raw.toString())))
+    await new Promise<void>((resolve) => ws.once("open", resolve))
+    ws.send(JSON.stringify({ kind: "replica-flush-request", requestId: "one" }))
+    await waitFor(() => messages.some((m) => m.kind === "replica-flush-challenge"), "challenge")
+    const challenge = messages.find((m) => m.kind === "replica-flush-challenge")!
+    expect(relay.getSharedBoardReplica("barrier")).toBeUndefined()
+    ws.send(JSON.stringify({ kind: "replica-flush-marker", nonce: challenge.nonce }))
+    ws.send(JSON.stringify({ diagramData: Buffer.from([1, 255]).toString("base64") }))
+    ws.send(JSON.stringify({ kind: "replica-flush-marker", nonce: "wrong" }))
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(relay.getSharedBoardReplica("barrier")).toBeUndefined()
+    const doc = new Y.Doc()
+    doc.getMap("nodes").set("a", classNode("a", "Course"))
+    const frame = Buffer.concat([Buffer.from([1]), Buffer.from(Y.encodeStateAsUpdate(doc))])
+    ws.send(JSON.stringify({ diagramData: frame.toString("base64") }))
+    ws.send(JSON.stringify({ kind: "replica-flush-marker", nonce: challenge.nonce }))
+    await waitFor(() => messages.some((m) => m.kind === "replica-flush-ack"), "ack")
+    const replica = relay.getSharedBoardReplica("barrier")!
+    expect(replica.getModel().nodes[0]).toMatchObject({ id: "a" })
+    expect(messages.find((m) => m.kind === "replica-flush-ack")?.generation).toBe(
+      replica.generation
+    )
+    expect(
+      relay.getSharedBoardReplicaAtLeast("barrier", replica.generation, replica.getRevision())
+    ).toBe(replica)
+    expect(
+      relay.getSharedBoardReplicaAtLeast("barrier", "stale", replica.getRevision())
+    ).toBeUndefined()
+    expect(messages.find((m) => m.kind === "replica-flush-ack")?.revision).toBe(
+      replica.getRevision()
+    )
+    const dependent = new Y.Doc()
+    dependent.getMap("nodes").set("first", classNode("first", "First"))
+    const firstUpdate = Y.encodeStateAsUpdate(dependent)
+    const vector = Y.encodeStateVector(dependent)
+    dependent.getMap("nodes").set("second", classNode("second", "Second"))
+    const partial = Buffer.concat([
+      Buffer.from([1]),
+      Buffer.from(Y.encodeStateAsUpdate(dependent, vector)),
+    ])
+    ws.send(JSON.stringify({ diagramData: partial.toString("base64") }))
+    await waitFor(() => !relay!.getBoardReplica("barrier")!.isComplete(), "pending Yjs dependency")
+    expect(relay.getSharedBoardReplica("barrier")).toBeUndefined()
+    expect(relay.getSharedBoardReplicaAtLeast("barrier", replica.generation, 0)).toBeUndefined()
+    ws.send(
+      JSON.stringify({
+        diagramData: Buffer.concat([Buffer.from([1]), Buffer.from(firstUpdate)]).toString("base64"),
+      })
+    )
+    await waitFor(
+      () => relay!.getSharedBoardReplica("barrier") !== undefined,
+      "dependencies resolved"
+    )
+    dependent.destroy()
+    doc.destroy()
+    await new Promise<void>((resolve) => {
+      ws.once("close", resolve)
+      ws.close()
+    })
+  })
+
+  it("rejects an acknowledgement from a prior replica lifetime", async () => {
+    const port = await getFreePort()
+    relay = startRelayServer({ port, host: "127.0.0.1", verifyToken: async () => "owner" })
+    async function synchronize() {
+      const ws = new WebSocket(`ws://127.0.0.1:${port}?diagramId=reborn&mode=shared&token=owner`)
+      const messages: Array<Record<string, unknown>> = []
+      ws.on("message", (raw) => messages.push(JSON.parse(raw.toString())))
+      await new Promise<void>((resolve) => ws.once("open", resolve))
+      ws.send(JSON.stringify({ kind: "replica-flush-request", requestId: "request" }))
+      await waitFor(
+        () => messages.some((message) => message.kind === "replica-flush-challenge"),
+        "challenge"
+      )
+      const nonce = messages.find((message) => message.kind === "replica-flush-challenge")!.nonce
+      const doc = new Y.Doc()
+      const frame = Buffer.concat([Buffer.from([1]), Buffer.from(Y.encodeStateAsUpdate(doc))])
+      ws.send(JSON.stringify({ diagramData: frame.toString("base64") }))
+      ws.send(JSON.stringify({ kind: "replica-flush-marker", nonce }))
+      await waitFor(() => messages.some((message) => message.kind === "replica-flush-ack"), "ack")
+      doc.destroy()
+      return { ws, ack: messages.find((message) => message.kind === "replica-flush-ack")! }
+    }
+    const first = await synchronize()
+    const oldGeneration = first.ack.generation as string
+    const oldRevision = first.ack.revision as number
+    await new Promise<void>((resolve) => {
+      first.ws.once("close", resolve)
+      first.ws.close()
+    })
+    await waitFor(() => relay!.getSharedBoardReplica("reborn") === undefined, "old replica closed")
+    const next = await synchronize()
+    expect(next.ack.generation).not.toBe(oldGeneration)
+    expect(relay.getSharedBoardReplicaAtLeast("reborn", oldGeneration, oldRevision)).toBeUndefined()
+    expect(
+      relay.getSharedBoardReplicaAtLeast(
+        "reborn",
+        next.ack.generation as string,
+        next.ack.revision as number
+      )
+    ).toBeDefined()
+    await new Promise<void>((resolve) => {
+      next.ws.once("close", resolve)
+      next.ws.close()
+    })
+  })
+
+  it("does not expose a shared replica or issue challenges to local sockets", async () => {
+    const port = await getFreePort()
+    relay = startRelayServer({ port, host: "127.0.0.1" })
+    const local = connectPeer(port, "local-barrier")
+    peers.push(local)
+    const messages: Array<Record<string, unknown>> = []
+    local.ws.on("message", (raw) => messages.push(JSON.parse(raw.toString())))
+    await local.ready
+    local.ws.send(JSON.stringify({ kind: "replica-flush-request", requestId: "local" }))
+    local.ws.send(JSON.stringify({ kind: "replica-flush-marker", nonce: "local" }))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(messages.some((message) => message.kind === "replica-flush-challenge")).toBe(false)
+    expect(relay.getSharedBoardReplica("local-barrier")).toBeUndefined()
+  })
+
+  it("accepts an empty full state before acknowledging readiness", async () => {
+    const port = await getFreePort()
+    relay = startRelayServer({ port, host: "127.0.0.1", verifyToken: async () => "owner" })
+    const ws = new WebSocket(
+      `ws://127.0.0.1:${port}?diagramId=empty-barrier&mode=shared&token=owner`
+    )
+    const messages: Array<Record<string, unknown>> = []
+    ws.on("message", (raw) => messages.push(JSON.parse(raw.toString())))
+    await new Promise<void>((resolve) => ws.once("open", resolve))
+    ws.send(JSON.stringify({ kind: "replica-flush-request", requestId: "empty" }))
+    await waitFor(
+      () => messages.some((message) => message.kind === "replica-flush-challenge"),
+      "challenge"
+    )
+    const nonce = messages.find((message) => message.kind === "replica-flush-challenge")!.nonce
+    const doc = new Y.Doc()
+    const frame = Buffer.concat([Buffer.from([1]), Buffer.from(Y.encodeStateAsUpdate(doc))])
+    ws.send(JSON.stringify({ diagramData: frame.toString("base64") }))
+    ws.send(JSON.stringify({ kind: "replica-flush-marker", nonce }))
+    await waitFor(() => messages.some((message) => message.kind === "replica-flush-ack"), "ack")
+    expect(relay.getSharedBoardReplica("empty-barrier")?.getModel().nodes).toEqual([])
+    doc.destroy()
+    await new Promise<void>((resolve) => {
+      ws.once("close", resolve)
+      ws.close()
+    })
   })
 
   it("reflects the nodes and edges edited by two clients", async () => {

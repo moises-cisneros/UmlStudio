@@ -49,6 +49,11 @@ export type ApiErrorCode =
   | "REDIS_UNAVAILABLE"
   | "RENDERER_BUSY"
   | "ROOM_AI_QUEUE_FULL"
+  | "ROOM_AI_BOARD_NOT_READY"
+  | "ROOM_AI_MEMORY_UNAVAILABLE"
+  | "ROOM_AI_PRIVATE_UNAVAILABLE"
+  | "ROOM_AI_BUSY"
+  | "ROOM_AI_CONTEXT_TOO_LARGE"
   | "INTERNAL"
 
 export interface ApiErrorBody {

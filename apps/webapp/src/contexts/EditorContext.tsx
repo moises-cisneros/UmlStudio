@@ -4,9 +4,13 @@ import { UmlStudioEditor } from "@umlstudio/core"
 interface EditorContextType {
   editor?: UmlStudioEditor
   diagramName: string
+  flushSharedReplica?: () => Promise<{ generation: string; revision: number }>
 
   setDiagramName: React.Dispatch<React.SetStateAction<string>>
   setEditor: React.Dispatch<React.SetStateAction<UmlStudioEditor | undefined>>
+  setFlushSharedReplica?: React.Dispatch<
+    React.SetStateAction<(() => Promise<{ generation: string; revision: number }>) | undefined>
+  >
 }
 
 export const EditorContext = createContext<EditorContextType | undefined>(undefined)
@@ -27,6 +31,9 @@ interface Props {
 export const EditorProvider: React.FC<Props> = ({ children }) => {
   const [editor, setEditor] = useState<UmlStudioEditor>()
   const [diagramName, setDiagramName] = useState("Default Diagram")
+  const [flushSharedReplica, setFlushSharedReplica] = useState<
+    (() => Promise<{ generation: string; revision: number }>) | undefined
+  >()
 
   const contextValue = useMemo(
     () => ({
@@ -34,8 +41,10 @@ export const EditorProvider: React.FC<Props> = ({ children }) => {
       setEditor,
       diagramName,
       setDiagramName,
+      flushSharedReplica,
+      setFlushSharedReplica,
     }),
-    [editor, setEditor, diagramName, setDiagramName]
+    [editor, setEditor, diagramName, setDiagramName, flushSharedReplica, setFlushSharedReplica]
   )
 
   return <EditorContext value={contextValue}>{children}</EditorContext>
