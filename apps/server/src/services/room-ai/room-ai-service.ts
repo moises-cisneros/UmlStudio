@@ -223,6 +223,7 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
       await assertRoomExists(diagramId)
       if (!deps.memory) throw new RoomAiMemoryUnavailableError()
       await deps.memory.pinDecision(diagramId, text)
+      publish?.(diagramId, { type: "memory.updated" })
     },
   }
 }

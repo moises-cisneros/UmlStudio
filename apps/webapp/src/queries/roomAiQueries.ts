@@ -13,7 +13,7 @@ export function roomAiMessagesQueryOptions(diagramId: string) {
 
 export function roomAiMemoryQueryOptions(diagramId: string) {
   return queryOptions({
-    queryKey: [...roomAiKeys.all, "memory", diagramId] as const,
+    queryKey: roomAiKeys.memory(diagramId),
     queryFn: ({ signal }) => DiagramApiClient.fetchRoomAiMemory(diagramId, { signal }),
     refetchOnWindowFocus: false,
   })
@@ -49,7 +49,7 @@ export function useRoomAi(
 
   const pin = useMutation({
     mutationFn: (text: string) => DiagramApiClient.pinRoomAiDecision(diagramId, text),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: roomAiKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: roomAiKeys.memory(diagramId) }),
   })
 
   return {

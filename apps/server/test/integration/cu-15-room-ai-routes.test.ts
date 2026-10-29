@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { Hono } from "hono"
+import type { RoomAiEvent } from "@umlstudio/core"
 import type { AppEnv } from "../../src/http/env.js"
 import { errorHandler } from "../../src/http/middleware/errors.js"
 import { getRedis } from "../../src/__tests__/setup.js"
@@ -18,10 +19,12 @@ describe("INT-CU15: room AI message routes", () => {
   let app: Hono<AppEnv>
   let redis: Redis
   let privateRequests: unknown[]
+  let roomAiEvents: Array<{ diagramId: string; event: RoomAiEvent }>
 
   beforeEach(async () => {
     redis = await getRedis()
     privateRequests = []
+    roomAiEvents = []
     const auth = createAuthService({
       repo: createRedisUserRepository(redis),
       jwtSecret: TEST_JWT_SECRET,
@@ -43,6 +46,7 @@ describe("INT-CU15: room AI message routes", () => {
             summarize: async (summary, messages) =>
               [summary, ...messages].filter(Boolean).join(" "),
           }),
+          publish: (diagramId, event) => roomAiEvents.push({ diagramId, event }),
           getSharedBoardReplicaAtLeast: (diagramId, generation, revision) => {
             if (diagramId !== DIAGRAM_ID || generation !== "a".repeat(64) || revision !== 3) {
               return undefined
@@ -128,6 +132,10 @@ describe("INT-CU15: room AI message routes", () => {
     })
     expect(pinned.status).toBe(201)
     expect(await pinned.json()).toEqual({ text: "Use a layered architecture" })
+    expect(roomAiEvents).toContainEqual({
+      diagramId: DIAGRAM_ID,
+      event: { type: "memory.updated" },
+    })
     expect(
       await (
         await app.request(`/api/rooms/${DIAGRAM_ID}/ai/memory`, {

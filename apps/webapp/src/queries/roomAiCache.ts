@@ -36,6 +36,12 @@ export function applyRoomAiEventToCache(
       queryClient.setQueryData<RoomAiMessagesPage>(roomAiKeys.messages(diagramId), (page) =>
         upsertMessage(page, event.message)
       )
+      if (event.type === "message.created" && event.message.author.kind === "ai") {
+        void queryClient.invalidateQueries({ queryKey: roomAiKeys.memory(diagramId) })
+      }
+      return
+    case "memory.updated":
+      void queryClient.invalidateQueries({ queryKey: roomAiKeys.memory(diagramId) })
       return
     case "ai.status":
       queryClient.setQueryData<RoomAiStatusState>(roomAiKeys.status(diagramId), {
