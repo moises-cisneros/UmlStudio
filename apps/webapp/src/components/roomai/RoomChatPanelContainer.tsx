@@ -126,6 +126,10 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
       personalMemoryDisabled={!personalMemoryLoaded}
       onPersonalMemoryChange={setPersonalMemory}
       onSavePersonalMemory={savePersonalMemory}
+      sharedMemory={mode === "room" ? room.sharedMemory : null}
+      hasSharedMemoryError={mode === "room" && Boolean(room.sharedMemoryError)}
+      hasPinError={mode === "room" && Boolean(room.pinError)}
+      onPinMessage={room.pinMessage}
     />
   )
 }

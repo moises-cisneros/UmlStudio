@@ -84,6 +84,10 @@ export interface RoomAiMessagesPage {
   hasMore: boolean
 }
 
+export interface SharedRoomAiMemory {
+  summary: string | null
+  pinnedDecisions: string[]
+}
 export interface RoomAiReplica {
   generation: string
   revision: number
@@ -125,6 +129,20 @@ export const DiagramApiClient = {
       { method: "POST", body: input }
     )
     return data
+  },
+
+  async fetchRoomAiMemory(diagramId: string, opts: { signal?: AbortSignal } = {}) {
+    const { data } = await request<SharedRoomAiMemory>(`/api/rooms/${diagramId}/ai/memory`, {
+      signal: opts.signal,
+    })
+    return data
+  },
+
+  async pinRoomAiDecision(diagramId: string, text: string): Promise<void> {
+    await request<void>(`/api/rooms/${diagramId}/ai/memory/pins`, {
+      method: "POST",
+      body: { text },
+    })
   },
 
   async fetchDiagram(diagramId: string, opts: { signal?: AbortSignal } = {}): Promise<Diagram> {

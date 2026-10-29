@@ -37,4 +37,37 @@ describe("Room AI routes", () => {
     expect(response.status).toBe(422)
     expect(postMessage).not.toHaveBeenCalled()
   })
+
+  it("exposes only shared memory through authenticated Room routes", async () => {
+    const getSharedMemory = vi.fn(async () => ({
+      summary: "Use a layered architecture",
+      decisions: ["Keep personal notes in the browser"],
+    }))
+    const pinSharedDecision = vi.fn(async () => {})
+    const roomAi = {
+      postMessage: vi.fn(),
+      postPrivateMessage: vi.fn(),
+      listMessages: vi.fn(),
+      getSharedMemory,
+      pinSharedDecision,
+    } as unknown as RoomAiService
+    const app = appWith(roomAi)
+
+    const memory = await app.request("/api/rooms/room-1/ai/memory", {
+      headers: { Authorization: "Bearer valid" },
+    })
+    expect(memory.status).toBe(200)
+    expect(await memory.json()).toEqual({
+      summary: "Use a layered architecture",
+      pinnedDecisions: ["Keep personal notes in the browser"],
+    })
+
+    const pin = await app.request("/api/rooms/room-1/ai/memory/pins", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid", "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "Use a layered architecture" }),
+    })
+    expect(pin.status).toBe(201)
+    expect(pinSharedDecision).toHaveBeenCalledWith("room-1", "Use a layered architecture")
+  })
 })

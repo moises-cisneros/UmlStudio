@@ -5,6 +5,7 @@ import type { AuthProfile } from "../auth-service.js"
 import type { BoardReplica } from "./board-replica.js"
 import { acquireRoomAiInferenceSlot, releaseRoomAiInferenceSlot } from "./inference-slots.js"
 import { InferenceNotStartedError } from "./inference-not-started.js"
+import type { RoomMemorySnapshot } from "./room-memory-repository.js"
 import {
   createChatRepository,
   enqueueChatMessage,
@@ -46,6 +47,8 @@ export interface RoomAiService {
   postMessage(input: PostRoomMessageInput): Promise<PostRoomMessageResult>
   postPrivateMessage(input: PostPrivateRoomMessageInput): Promise<PrivateRoomMessageResult>
   listMessages(diagramId: string, options?: ListChatOptions): Promise<ChatPage<RoomChatMessage>>
+  getSharedMemory(diagramId: string): Promise<RoomMemorySnapshot>
+  pinSharedDecision(diagramId: string, text: string): Promise<void>
 }
 
 /** Thrown when the room (diagram) does not exist; routes map it to a 404. */
@@ -77,11 +80,24 @@ export class PrivateRoomAiUnavailableError extends Error {
   }
 }
 
+export class RoomAiMemoryUnavailableError extends Error {
+  constructor() {
+    super("shared room memory is unavailable")
+    this.name = "RoomAiMemoryUnavailableError"
+  }
+}
+
+export interface RoomMemoryStore {
+  snapshot(diagramId: string): Promise<RoomMemorySnapshot>
+  pinDecision(diagramId: string, decision: string): Promise<void>
+}
+
 interface RoomAiServiceDeps {
   redis: Redis
   ttlSeconds: number
   maxConcurrency?: number
   chat?: ChatRepository<RoomChatMessage>
+  memory?: RoomMemoryStore
   now?: () => Date
   /** Broadcasts room AI events to every socket in the room. */
   publish?: (diagramId: string, event: RoomAiEvent) => void
@@ -195,6 +211,19 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
     async listMessages(diagramId, options) {
       await assertRoomExists(diagramId)
       return chat.list(diagramId, options)
+    },
+
+    async getSharedMemory(diagramId) {
+      await assertRoomExists(diagramId)
+      if (!deps.memory) throw new RoomAiMemoryUnavailableError()
+      return deps.memory.snapshot(diagramId)
+    },
+
+    async pinSharedDecision(diagramId, text) {
+      await assertRoomExists(diagramId)
+      if (!deps.memory) throw new RoomAiMemoryUnavailableError()
+      await deps.memory.pinDecision(diagramId, text)
+      publish?.(diagramId, { type: "memory.updated" })
     },
   }
 }

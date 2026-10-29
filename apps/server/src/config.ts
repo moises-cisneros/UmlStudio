@@ -9,6 +9,7 @@ const ConfigSchema = z.object({
   CORS_ORIGIN: z.string().optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   AI_MAX_CONCURRENCY: intEnv(1),
+  ROOM_AI_SUMMARY_EVERY: z.coerce.number().int().min(1).max(10).default(10),
   AI_SERVICE_URL: z.string().url().default("http://127.0.0.1:8001"),
   AI_INTERNAL_TOKEN: z.string().default(""),
   OWNER_SECRET: z.string().min(32).default("development-only-replace-in-prod"),

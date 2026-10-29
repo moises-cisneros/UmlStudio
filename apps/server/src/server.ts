@@ -11,6 +11,7 @@ import { createRoomAiService } from "./services/room-ai/room-ai-service.js"
 import { createRoomAiDispatcher } from "./services/room-ai/room-ai-dispatcher.js"
 import { createRoomAiOrchestrator } from "./services/room-ai/room-ai-orchestrator.js"
 import { createRoomAiResponder } from "./services/room-ai/room-ai-responder.js"
+import { createRoomMemoryRepository } from "./services/room-ai/room-memory-repository.js"
 import { getRoomAiReplicaRequirement } from "./services/room-ai/chat-repository.js"
 import { InferenceNotStartedError } from "./services/room-ai/inference-not-started.js"
 
@@ -92,6 +93,26 @@ async function main() {
     serviceUrl: config.AI_SERVICE_URL,
     internalToken: config.AI_INTERNAL_TOKEN,
   })
+  const roomMemory = createRoomMemoryRepository(redis, {
+    ttlSeconds: config.DIAGRAM_TTL_SECONDS,
+    every: config.ROOM_AI_SUMMARY_EVERY,
+    summarize: async (summary, messages, diagramId = "room") => {
+      const boundedMessages = messages.slice(-10).map((message) => message.slice(0, 200))
+      const result = await responder({
+        route: "shared",
+        requester: { id: "room-ai-memory", name: "Room AI" },
+        intent: "ask",
+        question:
+          "Update the concise shared-room summary using only the supplied public messages. Preserve confirmed decisions and unresolved questions. Do not add facts. Return only the summary.",
+        board: { id: diagramId, nodes: [], edges: [] } as never,
+        contextJson: JSON.stringify({
+          previousSummary: summary.slice(-1000),
+          publicMessages: boundedMessages,
+        }),
+      })
+      return result.text
+    },
+  })
   const roomAiOrchestrator = createRoomAiOrchestrator({
     redis,
     ttlSeconds: config.DIAGRAM_TTL_SECONDS,
@@ -110,10 +131,14 @@ async function main() {
       }
       return board
     },
-    getMemory: async () => ({ summary: "", decisions: [] }),
+    getMemory: async (diagramId) => {
+      const { summary, decisions } = await roomMemory.snapshot(diagramId)
+      return { summary, decisions }
+    },
     getAuthorship: (diagramId) => authorship.getAll(diagramId),
     respond: responder,
     publish: (diagramId, event) => roomAiBus.publish(diagramId, event),
+    recordPublicMessage: (diagramId, message) => roomMemory.recordPublicMessage(diagramId, message),
   })
   const dispatcher = createRoomAiDispatcher({
     redis,
@@ -129,6 +154,7 @@ async function main() {
     redis,
     ttlSeconds: config.DIAGRAM_TTL_SECONDS,
     maxConcurrency: config.AI_MAX_CONCURRENCY,
+    memory: roomMemory,
     getSharedBoardReplicaAtLeast: relayPublish.getSharedBoardReplicaAtLeast,
     publish: relayPublish.publishRoomAi,
     respondPrivately: (input) =>

@@ -12,4 +12,5 @@ export const roomAiKeys = {
   all: ["room-ai"] as const,
   messages: (diagramId: string) => [...roomAiKeys.all, "messages", diagramId] as const,
   status: (diagramId: string) => [...roomAiKeys.all, "status", diagramId] as const,
+  memory: (diagramId: string) => [...roomAiKeys.all, "memory", diagramId] as const,
 }

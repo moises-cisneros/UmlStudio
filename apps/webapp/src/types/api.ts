@@ -77,6 +77,7 @@ export type RoomAiStatus = "thinking" | "idle"
 export type RoomAiEvent =
   | { type: "message.created"; message: RoomChatMessage }
   | { type: "message.updated"; message: RoomChatMessage }
+  | { type: "memory.updated" }
   | { type: "ai.status"; status: RoomAiStatus; forUserName?: string; queueLength: number }
   | { type: "policy.updated"; policy: RoomAiPolicy }
 

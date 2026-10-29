@@ -28,12 +28,18 @@ Las llaves con `{id}` usan _hash tags_ para que todas las claves de un diagrama 
 | `diagram:{id}:version:<vid>:meta`                 | Nombre, descripción, tipo (`user`/`auto`), autor, fecha                                                                                  |
 | `diagram:{id}:auto-version-marker`                | Control de las versiones automáticas                                                                                                     |
 | `diagram:{id}:ai:chat`                            | Chat de la sala con la IA: LIST de mensajes JSON (el más antiguo primero), recortada a 200 con `LTRIM`, con el TTL del diagrama          |
+| `diagram:{id}:ai:summary`                         | Resumen compartido de la sala, actualizado por lotes de mensajes públicos                                                                |
+| `diagram:{id}:ai:decisions`                       | LIST de decisiones compartidas fijadas, sin duplicados                                                                                   |
+| `diagram:{id}:ai:summary:pending`                 | LIST acotada de mensajes públicos pendientes de resumir                                                                                  |
+| `diagram:{id}:ai:summary:revision`                | Revisión para comparar y confirmar resúmenes concurrentes                                                                                |
 | `diagram:{id}:ai:replica-requirement:<messageId>` | Generación y revisión confirmadas por el navegador para una solicitud compartida en cola; TTL máximo 15 minutos, se elimina al finalizar |
 | `diagram:{id}:ai:authorship`                      | Autoría del tablero: HASH `elementId -> userId` (último autor de cada elemento, solo usuarios autenticados), con el TTL del diagrama     |
 | `auth:user:{id}`                                  | Hash del usuario (email, hash de contraseña, nombre, avatar, color)                                                                      |
 | `auth:user:email:<email>`                         | Índice email → id                                                                                                                        |
 | `auth:user:{userId}:diagrams`                     | Diagramas del usuario                                                                                                                    |
 | `auth:refresh:<jti>`                              | Sesión de refresco (TTL 7 días, se consume al rotar)                                                                                     |
+
+La memoria compartida no guarda contexto personal. Cada lote contiene N mensajes públicos (configurable con `ROOM_AI_SUMMARY_EVERY`, por defecto 10); su resumen se calcula fuera de Redis y se confirma mediante comparación de revisión en Lua. Los mensajes pendientes se conservan si el resumidor falla y `flush` permite reintentar. El límite de pendientes rechaza nuevas entradas en vez de descartar mensajes; las claves tienen TTL. Las decisiones fijadas están limitadas y se agregan atómicamente.
 
 La clave de requisito de réplica solo guarda el identificador de generación y la revisión mínima, nunca el prompt. Si esa clave expira o el relay no puede servir una réplica completa en esa generación y revisión, la inferencia falla cerrada; no usa un snapshot local distinto.
 

@@ -7,7 +7,9 @@ import { buildRoomAiContext, type RoomAiContextInput } from "./context-builder.j
 import {
   ConfirmedInferenceNotStartedError,
   InferenceNotStartedError,
+  InferenceTerminationUnconfirmedError,
 } from "./inference-not-started.js"
+import { logger } from "../../logger.js"
 
 interface OrchestratorDeps {
   redis: Redis
@@ -25,6 +27,7 @@ interface OrchestratorDeps {
     privateContext?: string
   }) => Promise<{ text: string; provider: string }>
   publish?: (diagramId: string, event: RoomAiEvent) => void | Promise<void>
+  recordPublicMessage?: (diagramId: string, message: string, board: UMLModel) => Promise<void>
 }
 
 export interface PrivateRoomAiInput {
@@ -137,6 +140,17 @@ export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
         replyTo: message.id,
         provider: result.provider,
         createdAt: new Date().toISOString(),
+      }
+      if (deps.recordPublicMessage) {
+        for (const text of [message.text, answer.text]) {
+          try {
+            await deps.recordPublicMessage(diagramId, text, board)
+          } catch (err) {
+            logger.warn({ err, diagramId }, "shared Room AI memory update failed")
+            if (err instanceof InferenceTerminationUnconfirmedError) throw err
+            break
+          }
+        }
       }
       await chat.append(diagramId, answer)
       await deps.publish?.(diagramId, { type: "message.created", message: answer })

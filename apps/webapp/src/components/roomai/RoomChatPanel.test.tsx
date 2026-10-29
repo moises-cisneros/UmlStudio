@@ -81,6 +81,38 @@ describe("RoomChatPanel", () => {
     expect(screen.queryByRole("status")).toBeNull()
   })
 
+  it("shows when shared Room memory could not be loaded", () => {
+    render(
+      <RoomChatPanel
+        messages={[]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        hasSharedMemoryError
+        onSend={vi.fn()}
+      />
+    )
+    expect(screen.getByText("Shared room memory is unavailable.")).toBeTruthy()
+  })
+
+  it("shows when pinning a decision fails", () => {
+    render(
+      <RoomChatPanel messages={[]} aiStatus={IDLE_ROOM_AI_STATUS} hasPinError onSend={vi.fn()} />
+    )
+    expect(screen.getByText("Could not pin this message to shared memory.")).toBeTruthy()
+  })
+
+  it("shows the shared summary and pinned decisions in Room mode", () => {
+    render(
+      <RoomChatPanel
+        messages={[]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        sharedMemory={{ summary: "Use a layered architecture", pinnedDecisions: ["Use UUIDs"] }}
+        onSend={vi.fn()}
+      />
+    )
+    expect(screen.getByText("Use a layered architecture")).toBeTruthy()
+    expect(screen.getByText("Use UUIDs")).toBeTruthy()
+  })
+
   it("sends the trimmed draft and clears the input", async () => {
     const onSend = vi.fn()
     render(<RoomChatPanel messages={[]} aiStatus={IDLE_ROOM_AI_STATUS} onSend={onSend} />)

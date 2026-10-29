@@ -10,6 +10,7 @@ import {
   PrivateRoomAiUnavailableError,
   RoomNotFoundError,
   RoomQueueFullError,
+  RoomAiMemoryUnavailableError,
   SharedBoardSnapshotNotReadyError,
   type RoomAiService,
 } from "../services/room-ai/room-ai-service.js"
@@ -51,6 +52,10 @@ const ListMessagesQuery = z.object({
   limit: z.coerce.number().int().positive().max(CHAT_MAX_MESSAGES).optional(),
 })
 
+const PinDecisionBody = z.object({
+  text: z.string().trim().min(1, "text must not be empty").max(8000),
+})
+
 export function mountRoomAiRoutes({ auth, roomAi }: Deps): Hono<AppEnv> {
   const router = new Hono<AppEnv>()
 
@@ -77,6 +82,38 @@ export function mountRoomAiRoutes({ auth, roomAi }: Deps): Hono<AppEnv> {
           throw new ApiError(429, "ROOM_AI_QUEUE_FULL", err.message)
         if (err instanceof SharedBoardSnapshotNotReadyError) {
           throw new ApiError(409, "ROOM_AI_BOARD_NOT_READY", err.message)
+        }
+        throw err
+      }
+    })
+  )
+
+  router.get(
+    "/rooms/:diagramId/ai/memory",
+    validate({ params: DiagramIdParams }, async (c, { params }) => {
+      try {
+        const memory = await roomAi.getSharedMemory(params.diagramId)
+        return c.json({ summary: memory.summary || null, pinnedDecisions: memory.decisions }, 200)
+      } catch (err) {
+        if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
+        if (err instanceof RoomAiMemoryUnavailableError) {
+          throw new ApiError(503, "ROOM_AI_MEMORY_UNAVAILABLE", "Room AI memory is unavailable")
+        }
+        throw err
+      }
+    })
+  )
+
+  router.post(
+    "/rooms/:diagramId/ai/memory/pins",
+    validate({ params: DiagramIdParams, body: PinDecisionBody }, async (c, { params, body }) => {
+      try {
+        await roomAi.pinSharedDecision(params.diagramId, body.text)
+        return c.json({ text: body.text }, 201)
+      } catch (err) {
+        if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
+        if (err instanceof RoomAiMemoryUnavailableError) {
+          throw new ApiError(503, "ROOM_AI_MEMORY_UNAVAILABLE", "Room AI memory is unavailable")
         }
         throw err
       }

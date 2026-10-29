@@ -66,6 +66,22 @@ describe("applyRoomAiEventToCache", () => {
       queueLength: 3,
     })
   })
+
+  it("invalidates shared memory after an AI answer or a collaborator pin", () => {
+    const client = setup()
+    const memoryKey = [...roomAiKeys.all, "memory", "d1"]
+    client.setQueryData(memoryKey, { summary: "old summary", pinnedDecisions: [] })
+
+    applyRoomAiEventToCache(client, "d1", {
+      type: "message.created",
+      message: { ...message("answer"), author: { id: "room-ai", name: "Room AI", kind: "ai" } },
+    })
+    expect(client.getQueryState(memoryKey)?.isInvalidated).toBe(true)
+
+    client.setQueryData(memoryKey, { summary: "old summary", pinnedDecisions: [] })
+    applyRoomAiEventToCache(client, "d1", { type: "memory.updated" })
+    expect(client.getQueryState(memoryKey)?.isInvalidated).toBe(true)
+  })
 })
 
 describe("Room AI request privacy boundaries", () => {
