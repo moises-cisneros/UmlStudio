@@ -108,21 +108,23 @@ Mismo formato que el Ciclo 1: propósito, precondición, flujo principal, flujos
 - **Precondición**: sesión iniciada (CU-11); sala compartida abierta (CU-02); la IA de la sala está habilitada. Cualquier participante puede preguntar: no hay roles entre los desarrolladores de la sala.
 - **Flujo principal**:
   1. El participante escribe en el panel de la IA de sala y elige **Preguntar** (modo mentor) o **Pedir cambio** (modo ejecutor).
-  2. La webapp confirma primero que la réplica compartida alcanzó la revisión actual y envía su generación y revisión junto con `POST /api/rooms/:diagramId/ai/messages`. El servidor responde `202` con la posición en la cola.
-     Este endpoint es solo para el chat compartido: difunde la pregunta a toda la sala y rechaza `privateContext`. El modo **Privado** usa `POST /api/rooms/:diagramId/ai/private-messages`; responde únicamente al solicitante autenticado y no agrega la pregunta ni la respuesta al chat de Redis o a los eventos de sala. La memoria personal se conserva en IndexedDB y solo se envía por esa ruta.
-  3. El servidor guarda la pregunta con el autor tomado del JWT y la difunde: todos ven **"Juan → IA"** y el texto.
+  2. La webapp confirma primero que la réplica compartida alcanzó la revisión actual. Lee del navegador únicamente el perfil de enseñanza cerrado del participante (si existe) y envía el perfil y su revisión junto con `POST /api/rooms/:diagramId/ai/messages`. No recopila ni muestra una nota de texto libre ni ofrece controles para editar o restablecer memorias. En voz, la misma evaluación ocurre después de transcribir la pregunta.
+     Hay una sola conversación compartida; no existe un chat 1:1 **Privado** dentro de la sala. La interacción actual ya es pública: el servicio self-hosted compara esa interacción con el perfil previo y decide conservarlo o actualizar sus valores permitidos. Los perfiles admiten únicamente `detailLevel` (`concise`, `balanced`, `step_by_step`) y `exampleStyle` (`uml`, `code`, `analogy`, `none`).
+  3. El servidor guarda la pregunta con el autor tomado del JWT, la difunde como **"Juan → IA"** y responde `202` con la posición en la cola.
   4. Todos ven el estado **"IA pensando para Juan"** y la longitud de la cola.
-  5. Cuando llega su turno, el servidor arma el contexto: el tablero actual (réplica en el servidor), la memoria de la sala y el rastro propio del solicitante. Luego llama al servicio de inferencia.
+  5. Cuando llega su turno, el servidor arma el contexto con el tablero actual (réplica en el servidor), la memoria compartida, la conversación pública y únicamente el perfil cerrado del solicitante, asociado a esa pregunta en un dato temporal de Redis con vencimiento máximo de 15 minutos y consumo único. El perfil no aparece en el historial, eventos, resumen compartido ni decisiones fijadas. La inferencia usa el proveedor self-hosted configurado, sin recurrir a otro proveedor como respaldo.
   6. La respuesta **empieza con el nombre del solicitante**, se guarda como respuesta a esa pregunta y se difunde a todos. En modo mentor no modifica el tablero.
-  7. En modo ejecutor, la respuesta trae además una **propuesta de cambio** validada (continúa en CU-16).
+  7. Si el perfil cambió, el servidor devuelve la nueva versión solo al solicitante y el navegador la guarda localmente. Si el aprendizaje falla, conserva el perfil anterior; la pregunta pública continúa y se responde con ese perfil seguro.
+  8. En modo ejecutor, la respuesta trae además una **propuesta de cambio** validada (continúa en CU-16).
 - **FA**:
   - **FA-01 Voz**: el participante graba la pregunta; se transcribe y se publica como pregunta de ese autor. Sigue en el paso 3.
   - **FA-02 Consultas simultáneas**: se atienden en orden de llegada y cada respuesta se dirige a su autor, sin mezclar contextos. Con la cola llena → `429` y aviso al autor.
-  - **FA-03 Proveedor local no disponible**: el servidor usa el respaldo en la nube y lo rotula en la respuesta. Si ningún proveedor responde, la pregunta queda como **fallida** con la causa real, visible para todos. Nunca se simula una respuesta.
-  - **FA-04 Política**: si la IA está desactivada, o si se pide un cambio y la sala solo admite el modo mentor → `403` con el motivo, visible para el autor.
-  - **FA-05 Ingreso a la sala**: al entrar, el participante ve el historial de la conversación de la sala.
-  - **FA-06 Moderador proactivo** (si la política lo habilita): tras un periodo sin cambios, la IA publica como máximo una observación de diseño dirigida al autor del elemento observado.
-- **Postcondición**: la pregunta y la respuesta quedan en el historial de la sala y son visibles para todos; la memoria de la sala y el rastro del solicitante quedan actualizados.
+  - **FA-03 Aprendizaje del perfil no disponible**: la pregunta sigue su flujo público sin modificar el perfil local; no se usa texto libre ni un proveedor externo. La respuesta conserva el último perfil válido.
+  - **FA-04 Proveedor self-hosted no disponible**: la pregunta queda como **fallida**; el servidor no recurre a otro proveedor como respaldo ni simula una respuesta.
+  - **FA-05 Política**: si la IA está desactivada, o si se pide un cambio y la sala solo admite el modo mentor → `403` con el motivo, visible para el autor.
+  - **FA-06 Ingreso a la sala**: al entrar, el participante ve el historial de la conversación de la sala.
+  - **FA-07 Moderador proactivo** (si la política lo habilita): tras un periodo sin cambios, la IA publica como máximo una observación de diseño dirigida al autor del elemento observado.
+- **Postcondición**: la pregunta y la respuesta quedan en el historial público. El perfil cerrado actualizado, cuando cambia y el navegador confirma su guardado, permanece local al solicitante; nunca se mezcla con el perfil de otro colaborador. Los registros antiguos de notas libres del navegador permanecen inactivos: esta funcionalidad no los lee, muestra ni transmite.
 
 ### CU-16: Aplicar Propuesta de la IA de Sala
 

@@ -57,10 +57,15 @@ describe("room AI context", () => {
     expect(result.memory).toEqual({ summary: "summary", decisions: ["decision"] })
   })
 
-  it("includes private browser context only on the explicit private route", () => {
-    const value = { ...input(), privateContext: "secret" }
-    expect(JSON.stringify(buildRoomAiContext(value))).not.toContain("secret")
-    expect(buildRoomAiContext({ ...value, route: "private" }).privateContext).toBe("secret")
+  it("keeps request-specific personal memory outside the serialized shared context", () => {
+    const value = {
+      ...input(),
+      personalMemory: "Alice prefers small examples",
+    } as RoomAiContextInput
+    const result = buildRoomAiContext(value)
+    expect(JSON.stringify(result.publicMessages)).not.toContain("Alice prefers")
+    expect(JSON.stringify(result)).not.toContain("personalMemory")
+    expect(JSON.stringify(result)).not.toContain("Alice prefers small examples")
   })
 
   it("takes the last six public messages from this room", () => {

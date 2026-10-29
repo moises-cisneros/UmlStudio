@@ -116,8 +116,8 @@ class TestInternalRoomResponse(unittest.TestCase):
         self.assertNotIn("access-control-allow-origin", response.headers)
         self.assertNotIn("access-control-allow-origin", preflight.headers)
 
-    def test_private_context_rejects_shared_or_implicit_routes(self):
-        private = {"notes": "PRIVATE MEMORY"}
+    def test_legacy_private_context_is_rejected(self):
+        private = "PRIVATE MEMORY"
         for routing in ({}, {"provider": "self_hosted", "route": "shared"},
                         {"route": "private"}, {"provider": "external", "route": "private"}):
             with self.subTest(routing=routing), patch.object(
@@ -127,8 +127,10 @@ class TestInternalRoomResponse(unittest.TestCase):
                 self.assertEqual(response.status_code, 422)
                 default.assert_not_called()
 
-    def test_private_self_hosted_route_never_uses_default_provider(self):
+    def test_shared_response_receives_only_the_approved_closed_teaching_profile(self):
         adapter = StubAdapter()
+        profile = {"detailLevel": "concise", "exampleStyle": "uml"}
+        private_note = "PRIVATE_NOTE_CANARY: prefers concise examples"
         with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret"), patch.object(
             settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
         ), patch.object(settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True), patch(
@@ -136,14 +138,16 @@ class TestInternalRoomResponse(unittest.TestCase):
         ) as factory, patch("src.adapters.get_adapter") as default, patch(
             "src.services.room_response.count_room_ai_prompt_tokens", return_value=10
         ):
-            response = self.post({**REQUEST, "provider": "self_hosted", "route": "private",
-                                  "private_context": {"notes": "PRIVATE MEMORY"}})
+            response = self.post({**REQUEST, "provider": "self_hosted", "route": "shared",
+                                  "teaching_profile": profile})
         self.assertEqual(response.status_code, 200)
-        self.assertIn("PRIVATE MEMORY", adapter.text_prompts[0])
+        self.assertIn('"detailLevel": "concise"', adapter.text_prompts[0])
+        self.assertIn('"exampleStyle": "uml"', adapter.text_prompts[0])
+        self.assertNotIn(private_note, adapter.text_prompts[0])
         factory.assert_called_once_with(endpoint_url="https://model.invalid/v1", model_name="configured-model")
         default.assert_not_called()
 
-    def test_shared_self_hosted_route_does_not_receive_private_context(self):
+    def test_shared_self_hosted_route_works_without_personal_memory(self):
         adapter = StubAdapter()
         with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret"), patch.object(
             settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
@@ -154,7 +158,7 @@ class TestInternalRoomResponse(unittest.TestCase):
         ):
             response = self.post({**REQUEST, "provider": "self_hosted", "route": "shared"})
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("PRIVATE MEMORY", adapter.text_prompts[0])
+        self.assertNotIn("personal memory", adapter.text_prompts[0])
         default.assert_not_called()
 
     def test_self_hosted_requires_configuration_without_fallback(self):
@@ -163,13 +167,19 @@ class TestInternalRoomResponse(unittest.TestCase):
         ), patch.object(settings, "ROOM_AI_SELF_HOSTED_MODEL", "", create=True), patch(
             "src.adapters.get_adapter"
         ) as default:
-            response = self.post({**REQUEST, "provider": "self_hosted", "route": "private"})
+            response = self.post({**REQUEST, "provider": "self_hosted", "route": "shared"})
         self.assertEqual(response.status_code, 502)
         default.assert_not_called()
 
     def test_malformed_routing_is_rejected(self):
         for routing in ({"provider": "self_hosted"}, {"route": "shared"},
+                        {"provider": "self_hosted", "route": "private"},
                         {"provider": "self_hosted", "route": "unknown"},
+                        {"personal_memory": "x" * 16_001},
+                        {"personal_memory": "PRIVATE_NOTE_CANARY"},
+                        {"provider": "self_hosted", "route": "shared",
+                         "teaching_profile": {"detailLevel": "balanced", "exampleStyle": "uml",
+                                              "privateFact": "must be rejected"}},
                         {"privateContext": {"notes": "PRIVATE MEMORY"}}):
             with self.subTest(routing=routing), patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret"):
                 self.assertEqual(self.post({**REQUEST, **routing}).status_code, 422)

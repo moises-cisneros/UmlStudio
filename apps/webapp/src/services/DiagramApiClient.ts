@@ -3,6 +3,7 @@ import { serverURL } from "@/constants"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { resolveShareOrigin } from "@/utils/sharedDiagramLinks"
 import type { ApiErrorBody, ApiErrorCode, Diagram, VersionSummary } from "@/types"
+import type { PersonalRoomTeachingProfile } from "@/services/personalRoomMemory"
 
 export type StoredDiagram = Diagram
 
@@ -84,13 +85,21 @@ export interface RoomAiMessagesPage {
   hasMore: boolean
 }
 
-export interface SharedRoomAiMemory {
-  summary: string | null
-  pinnedDecisions: string[]
-}
 export interface RoomAiReplica {
   generation: string
   revision: number
+}
+
+export interface RoomAiProfileUpdate {
+  profile: PersonalRoomTeachingProfile
+  revision: string
+}
+
+export interface RoomAiMessageResult {
+  messageId: string
+  queuePosition: number
+  profileUpdate?: RoomAiProfileUpdate
+  profileLearningFailed?: boolean
 }
 
 export const DiagramApiClient = {
@@ -111,38 +120,50 @@ export const DiagramApiClient = {
 
   async postRoomAiMessage(
     diagramId: string,
-    input: { text: string; intent: RoomAiIntent; replica: RoomAiReplica }
-  ): Promise<{ messageId: string; queuePosition: number }> {
-    const { data } = await request<{ messageId: string; queuePosition: number }>(
-      `/api/rooms/${diagramId}/ai/messages`,
-      { method: "POST", body: input }
-    )
-    return data
-  },
-
-  async postPrivateRoomAiMessage(
-    diagramId: string,
-    input: { text: string; privateContext?: string; replica: RoomAiReplica }
-  ): Promise<{ text: string; provider: string }> {
-    const { data } = await request<{ text: string; provider: string }>(
-      `/api/rooms/${diagramId}/ai/private-messages`,
-      { method: "POST", body: input }
-    )
-    return data
-  },
-
-  async fetchRoomAiMemory(diagramId: string, opts: { signal?: AbortSignal } = {}) {
-    const { data } = await request<SharedRoomAiMemory>(`/api/rooms/${diagramId}/ai/memory`, {
-      signal: opts.signal,
-    })
-    return data
-  },
-
-  async pinRoomAiDecision(diagramId: string, text: string): Promise<void> {
-    await request<void>(`/api/rooms/${diagramId}/ai/memory/pins`, {
+    input: {
+      text: string
+      intent: RoomAiIntent
+      replica: RoomAiReplica
+      teachingProfile?: PersonalRoomTeachingProfile
+      profileRevision?: string
+    }
+  ): Promise<RoomAiMessageResult> {
+    const { data } = await request<RoomAiMessageResult>(`/api/rooms/${diagramId}/ai/messages`, {
       method: "POST",
-      body: { text },
+      body: input,
     })
+    return data
+  },
+
+  async postRoomAiVoiceMessage(
+    diagramId: string,
+    input: {
+      file: Blob
+      filename: string
+      replica: RoomAiReplica
+      teachingProfile?: PersonalRoomTeachingProfile
+      profileRevision?: string
+    }
+  ): Promise<RoomAiMessageResult> {
+    const body = new FormData()
+    body.append("file", input.file, input.filename)
+    body.append("replica", JSON.stringify(input.replica))
+    if (input.teachingProfile && input.profileRevision) {
+      body.append("teachingProfile", JSON.stringify(input.teachingProfile))
+      body.append("profileRevision", input.profileRevision)
+    }
+    const { data } = await request<RoomAiMessageResult>(`/api/rooms/${diagramId}/ai/voice`, {
+      method: "POST",
+      body,
+    })
+    return data
+  },
+
+  async fetchRoomAiPersonalProfileRevision(diagramId: string): Promise<string> {
+    const { data } = await request<{ revision: string }>(
+      `/api/rooms/${diagramId}/ai/personal-profile/revision`
+    )
+    return data.revision
   },
 
   async fetchDiagram(diagramId: string, opts: { signal?: AbortSignal } = {}): Promise<Diagram> {

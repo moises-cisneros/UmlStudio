@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 import type { RoomAiEvent, RoomChatMessage, UMLModel } from "@umlstudio/core"
 import type { Redis } from "../../redis.js"
-import { createChatRepository } from "./chat-repository.js"
+import { consumeRoomAiPersonalProfile, createChatRepository } from "./chat-repository.js"
 import type { RoomAiReplicaRequirement } from "./chat-repository.js"
 import { buildRoomAiContext, type RoomAiContextInput } from "./context-builder.js"
 import {
@@ -10,6 +10,10 @@ import {
   InferenceTerminationUnconfirmedError,
 } from "./inference-not-started.js"
 import { logger } from "../../logger.js"
+import type {
+  RoomAiPersonalProfileRevisionCoordinator,
+  RoomAiTeachingProfile,
+} from "./room-ai-personal-profile.js"
 
 interface OrchestratorDeps {
   redis: Redis
@@ -17,69 +21,23 @@ interface OrchestratorDeps {
   getBoard: (diagramId: string, replica: RoomAiReplicaRequirement) => UMLModel | Promise<UMLModel>
   getMemory: (diagramId: string) => Promise<{ summary: string; decisions: string[] }>
   getAuthorship: (diagramId: string) => Promise<Record<string, string>>
+  profileRevisions: RoomAiPersonalProfileRevisionCoordinator
   respond: (request: {
-    route: "private" | "shared"
+    route: "shared"
     requester: { id: string; name: string }
     intent: "ask" | "change"
     question: string
     board: UMLModel
     contextJson: string
-    privateContext?: string
+    teachingProfile?: RoomAiTeachingProfile
   }) => Promise<{ text: string; provider: string }>
   publish?: (diagramId: string, event: RoomAiEvent) => void | Promise<void>
   recordPublicMessage?: (diagramId: string, message: string, board: UMLModel) => Promise<void>
 }
 
-export interface PrivateRoomAiInput {
-  diagramId: string
-  author: { id: string; name: string }
-  text: string
-  privateContext?: string
-  board: UMLModel
-  onInferenceStart?: () => void
-}
-
 export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
   const chat = createChatRepository<RoomChatMessage>(deps.redis, deps.ttlSeconds)
   return {
-    async respondPrivately(input: PrivateRoomAiInput): Promise<{ text: string; provider: string }> {
-      const requesterName = input.author.name.trim()
-      if (!input.author.id.trim() || !requesterName) {
-        throw new Error("Room AI requester identity is unavailable")
-      }
-      const { messages } = await chat.list(input.diagramId, { limit: 200 })
-      const requester = { id: input.author.id, name: requesterName }
-      const contextInput: RoomAiContextInput = {
-        diagramId: input.diagramId,
-        model: input.board,
-        requester,
-        intent: "ask",
-        route: "private",
-        memory: await deps.getMemory(input.diagramId),
-        authorship: await deps.getAuthorship(input.diagramId),
-        publicMessages: messages,
-        threadMessages: messages,
-        ...(input.privateContext !== undefined ? { privateContext: input.privateContext } : {}),
-      }
-      const { privateContext, ...sharedContext } = buildRoomAiContext(contextInput)
-      input.onInferenceStart?.()
-      const result = await deps.respond({
-        route: "private",
-        requester,
-        intent: "ask",
-        question: input.text,
-        board: input.board,
-        contextJson: JSON.stringify(sharedContext),
-        ...(privateContext !== undefined ? { privateContext } : {}),
-      })
-      const text = result.text.trim()
-      if (!text || !result.provider.trim()) throw new Error("Room AI returned an empty answer")
-      return {
-        text: text.startsWith(requesterName) ? text : `${requesterName}: ${text}`,
-        provider: result.provider,
-      }
-    },
-
     async infer(
       diagramId: string,
       messageId: string,
@@ -94,6 +52,24 @@ export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
         !message.author.name.trim()
       )
         throw new Error("Room AI requester message is unavailable")
+      const intent = message.intent
+
+      const personalProfile = await consumeRoomAiPersonalProfile(
+        deps.redis,
+        diagramId,
+        messageId,
+        message.author.id
+      )
+      if (
+        personalProfile.teachingProfile &&
+        !(await deps.profileRevisions.isCurrentRevision(
+          diagramId,
+          message.author.id,
+          personalProfile.revision!
+        ))
+      ) {
+        throw new InferenceNotStartedError("Room AI teaching profile has been revoked")
+      }
 
       if (!replicaRequirement) {
         throw new InferenceNotStartedError("shared board synchronization metadata is unavailable")
@@ -103,7 +79,7 @@ export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
         diagramId,
         model: board,
         requester: { id: message.author.id, name: message.author.name },
-        intent: message.intent,
+        intent,
         route: "shared",
         memory: await deps.getMemory(diagramId),
         authorship: await deps.getAuthorship(diagramId),
@@ -112,21 +88,40 @@ export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
       }
       const sharedContext = buildRoomAiContext(input)
       const contextJson = JSON.stringify(sharedContext)
-      const result = await deps
-        .respond({
-          route: "shared",
-          requester: input.requester,
-          intent: message.intent,
-          question: message.text,
-          board,
-          contextJson,
-        })
-        .catch((error: unknown) => {
-          if (error instanceof ConfirmedInferenceNotStartedError) throw error
-          if (error instanceof InferenceNotStartedError)
-            throw new Error("Provider termination is unconfirmed", { cause: error })
-          throw error
-        })
+      const inference = await deps.profileRevisions.withRoomLock(diagramId, async () => {
+        if (
+          personalProfile.teachingProfile &&
+          !(await deps.profileRevisions.isCurrentRevision(
+            diagramId,
+            message.author.id,
+            personalProfile.revision!
+          ))
+        ) {
+          throw new InferenceNotStartedError("Room AI teaching profile has been revoked")
+        }
+
+        return {
+          completion: deps
+            .respond({
+              route: "shared",
+              requester: input.requester,
+              intent,
+              question: message.text,
+              board,
+              contextJson,
+              ...(personalProfile.teachingProfile
+                ? { teachingProfile: personalProfile.teachingProfile }
+                : {}),
+            })
+            .catch((error: unknown) => {
+              if (error instanceof ConfirmedInferenceNotStartedError) throw error
+              if (error instanceof InferenceNotStartedError)
+                throw new Error("Provider termination is unconfirmed", { cause: error })
+              throw error
+            }),
+        }
+      })
+      const result = await inference.completion
       const text = result.text.trim()
       if (!text || !result.provider.trim()) throw new Error("Room AI returned an empty answer")
       const name = message.author.name.trim()
@@ -135,25 +130,37 @@ export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
         id: randomUUID(),
         diagramId,
         author: { id: "room-ai", name: "Room AI", kind: "ai" },
-        intent: message.intent,
+        intent,
         text: answerText,
         replyTo: message.id,
         provider: result.provider,
         createdAt: new Date().toISOString(),
       }
-      if (deps.recordPublicMessage) {
-        for (const text of [message.text, answer.text]) {
-          try {
-            await deps.recordPublicMessage(diagramId, text, board)
-          } catch (err) {
-            logger.warn({ err, diagramId }, "shared Room AI memory update failed")
-            if (err instanceof InferenceTerminationUnconfirmedError) throw err
-            break
+      await deps.profileRevisions.withRoomLock(diagramId, async () => {
+        if (
+          personalProfile.teachingProfile &&
+          !(await deps.profileRevisions.isCurrentRevision(
+            diagramId,
+            message.author.id,
+            personalProfile.revision!
+          ))
+        ) {
+          throw new InferenceNotStartedError("Room AI teaching profile has been revoked")
+        }
+        if (deps.recordPublicMessage) {
+          for (const publicText of [message.text, answer.text]) {
+            try {
+              await deps.recordPublicMessage(diagramId, publicText, board)
+            } catch (err) {
+              logger.warn({ err, diagramId }, "shared Room AI memory update failed")
+              if (err instanceof InferenceTerminationUnconfirmedError) throw err
+              break
+            }
           }
         }
-      }
-      await chat.append(diagramId, answer)
-      await deps.publish?.(diagramId, { type: "message.created", message: answer })
+        await chat.append(diagramId, answer)
+        await deps.publish?.(diagramId, { type: "message.created", message: answer })
+      })
     },
   }
 }

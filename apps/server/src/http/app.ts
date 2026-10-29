@@ -27,6 +27,9 @@ import { mountHealthRoutes } from "../routes/health.js"
 import { mountRoomAiRoutes } from "../routes/room-ai.js"
 import { createRoomAiService } from "../services/room-ai/room-ai-service.js"
 import type { RoomAiService } from "../services/room-ai/room-ai-service.js"
+import { createRoomAiTranscriber } from "../services/room-ai/room-ai-transcriber.js"
+import { createRoomAiVoiceQuestionService } from "../services/room-ai/room-ai-voice-question.js"
+import { createRoomAiProfileDeriver } from "../services/room-ai/room-ai-profile-deriver.js"
 import type { BoardReplica } from "../services/room-ai/board-replica.js"
 import { mountEmbedApiRoutes, mountEmbedRoutes } from "../routes/embed.js"
 import { ConversionResource } from "../resources/conversion-resource.js"
@@ -112,21 +115,33 @@ export function buildApp(deps: AppDeps): ServerType {
   app.route("/api/users", mountUserRoutes({ auth }))
   app.route("/api", mountDiagramRoutes({ config, redis, auth }, relay))
   app.route("/api", mountVersionRoutes({ config, redis, auth }, relay))
+  const roomAi =
+    providedRoomAi ??
+    createRoomAiService({
+      redis,
+      ttlSeconds: config.DIAGRAM_TTL_SECONDS,
+      profileDeriver: createRoomAiProfileDeriver({
+        serviceUrl: config.AI_SERVICE_URL,
+        internalToken: config.AI_INTERNAL_TOKEN,
+      }),
+      ...(relay?.publishRoomAi ? { publish: relay.publishRoomAi } : {}),
+      ...(relay?.getSharedBoardReplicaAtLeast
+        ? { getSharedBoardReplicaAtLeast: relay.getSharedBoardReplicaAtLeast }
+        : {}),
+    })
+  const voiceQuestion = createRoomAiVoiceQuestionService({
+    transcribe: createRoomAiTranscriber({
+      serviceUrl: config.AI_SERVICE_URL,
+      internalToken: config.AI_INTERNAL_TOKEN,
+    }),
+    postMessage: (input) => roomAi.postMessage(input),
+  })
   app.route(
     "/api",
     mountRoomAiRoutes({
       auth,
-      roomAi:
-        providedRoomAi ??
-        createRoomAiService({
-          redis,
-          ttlSeconds: config.DIAGRAM_TTL_SECONDS,
-          maxConcurrency: config.AI_MAX_CONCURRENCY,
-          ...(relay?.publishRoomAi ? { publish: relay.publishRoomAi } : {}),
-          ...(relay?.getSharedBoardReplicaAtLeast
-            ? { getSharedBoardReplicaAtLeast: relay.getSharedBoardReplicaAtLeast }
-            : {}),
-        }),
+      roomAi,
+      voiceQuestion,
     })
   )
   app.route("/api", mountConversionRoutes({ getResource }))

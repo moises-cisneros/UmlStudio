@@ -96,17 +96,11 @@ export interface TranslationDictionary {
   roomAi: {
     tabRoom: string
     title: string
-    modeGroup: string
-    roomMode: string
-    privateMode: string
-    privateNotice: string
     empty: string
-    privateEmpty: string
     loading: string
     loadError: string
     sendError: string
     inputPlaceholder: string
-    privateInputPlaceholder: string
     send: string
     you: string
     aiAuthor: string
@@ -116,14 +110,18 @@ export interface TranslationDictionary {
     thinkingFor: (name: string) => string
     thinking: string
     queueLength: (count: number) => string
-    personalMemory: string
-    saveMemory: string
-    memorySaved: string
-    sharedSummary: string
-    pinnedDecisions: string
-    pinMessage: string
-    sharedMemoryError: string
-    pinMemoryError: string
+    profileSyncError: string
+    sharedConversation: string
+    voiceControls: string
+    recordVoice: string
+    stopRecording: string
+    cancelRecording: string
+    sendVoice: string
+    sendingVoice: string
+    recordedVoicePreview: string
+    recording: string
+    voiceUnavailable: string
+    voiceError: string
   }
   collaborators: {
     activeUsers: string

@@ -5,7 +5,7 @@ export interface RoomAiContextInput {
   model: UMLModel
   requester: { id: string; name: string }
   intent: RoomAiIntent
-  route: "shared" | "private"
+  route: "shared"
   memory: { summary: string; decisions: string[] }
   /** Element id -> authenticated user id, as recorded by the room relay. */
   authorship: Record<string, string>
@@ -13,7 +13,6 @@ export interface RoomAiContextInput {
   publicMessages: RoomChatMessage[]
   /** Messages in chronological order; AI replies must reference a preceding requester thread message. */
   threadMessages: RoomChatMessage[]
-  privateContext?: string
 }
 
 export interface RoomAiContextSnapshot {
@@ -24,7 +23,6 @@ export interface RoomAiContextSnapshot {
   authoredElementIds: string[]
   publicMessages: RoomChatMessage[]
   threadMessages: RoomChatMessage[]
-  privateContext?: string
 }
 
 /** Prompt size is enforced by ai-service after assembling the final model prompt. */
@@ -52,9 +50,6 @@ export function buildRoomAiContext(input: RoomAiContextInput): RoomAiContextSnap
       .filter((message) => message.diagramId === input.diagramId)
       .slice(-6),
     threadMessages,
-    ...(input.route === "private" && input.privateContext !== undefined
-      ? { privateContext: input.privateContext }
-      : {}),
   }
   return snapshot
 }

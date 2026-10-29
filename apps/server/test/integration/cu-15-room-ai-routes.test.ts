@@ -18,12 +18,10 @@ const DIAGRAM_ID = "room-1"
 describe("INT-CU15: room AI message routes", () => {
   let app: Hono<AppEnv>
   let redis: Redis
-  let privateRequests: unknown[]
   let roomAiEvents: Array<{ diagramId: string; event: RoomAiEvent }>
 
   beforeEach(async () => {
     redis = await getRedis()
-    privateRequests = []
     roomAiEvents = []
     const auth = createAuthService({
       repo: createRedisUserRepository(redis),
@@ -39,7 +37,10 @@ describe("INT-CU15: room AI message routes", () => {
         roomAi: createRoomAiService({
           redis,
           ttlSeconds: 3600,
-          maxConcurrency: 1,
+          profileDeriver: async () => ({
+            detailLevel: "balanced",
+            exampleStyle: "analogy",
+          }),
           memory: createRoomMemoryRepository(redis, {
             ttlSeconds: 3600,
             every: 10,
@@ -55,10 +56,6 @@ describe("INT-CU15: room AI message routes", () => {
               isComplete: () => true,
               getModel: () => ({ id: DIAGRAM_ID, nodes: [], edges: [] }),
             } as never
-          },
-          respondPrivately: async (request) => {
-            privateRequests.push(request)
-            return { text: "Private answer", provider: "self-hosted" }
           },
         }),
       })
@@ -93,16 +90,6 @@ describe("INT-CU15: room AI message routes", () => {
   const list = (token: string | undefined, query = "", diagramId = DIAGRAM_ID) =>
     app.request(`/api/rooms/${diagramId}/ai/messages${query}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-
-  const postPrivate = (token: string | undefined, body: unknown, diagramId = DIAGRAM_ID) =>
-    app.request(`/api/rooms/${diagramId}/ai/private-messages`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(body),
     })
 
   it("returns 202 with messageId and queuePosition for a valid JWT", async () => {
@@ -148,52 +135,88 @@ describe("INT-CU15: room AI message routes", () => {
     })
   })
 
-  it("rejects personal context on the shared room endpoint", async () => {
-    const { token } = await register("private-context.room@example.com", "Private Context")
-    const privateContext = "Only this collaborator's personal memory"
+  it("learns from a public interaction, returns the closed update only to its requester, and isolates the sidecar", async () => {
+    const { token, id } = await register("personal-context.room@example.com", "Personal Context")
+    const previousProfile = { detailLevel: "balanced", exampleStyle: "none" }
+    const revisionResponse = await app.request(
+      `/api/rooms/${DIAGRAM_ID}/ai/personal-profile/revision`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    const { revision } = await revisionResponse.json()
     const res = await post(token, {
+      text: "Please show an analogy for this diagram",
+      intent: "ask",
+      teachingProfile: previousProfile,
+      profileRevision: revision,
+    })
+
+    expect(res.status).toBe(202)
+    const result = await res.json()
+    const { messageId } = result
+    expect(result.profileUpdate.profile).toEqual({
+      detailLevel: "balanced",
+      exampleStyle: "analogy",
+    })
+    expect(result.profileUpdate.revision).not.toBe(revision)
+    const sidecar = await redis.get(k.aiPersonalProfile(DIAGRAM_ID, messageId))
+    expect(sidecar).toBe(
+      JSON.stringify({
+        requesterId: id,
+        teachingProfile: result.profileUpdate.profile,
+        revision: result.profileUpdate.revision,
+      })
+    )
+    expect(await redis.ttl(k.aiPersonalProfile(DIAGRAM_ID, messageId))).toBeLessThanOrEqual(900)
+    const publicHistory = await redis.lRange(k.aiChat(DIAGRAM_ID), 0, -1)
+    expect(publicHistory.join("\n")).toContain("Please show an analogy for this diagram")
+    expect(publicHistory.join("\n")).not.toContain("detailLevel")
+    expect(JSON.stringify(roomAiEvents)).not.toContain("detailLevel")
+  })
+
+  it("does not expose the removed free-text profile derivation endpoint", async () => {
+    const { token } = await register("removed-profile-route.room@example.com", "Route Removed")
+    const response = await app.request(`/api/rooms/${DIAGRAM_ID}/ai/personal-profile/derive`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ memory: "old free-text note" }),
+    })
+    expect(response.status).toBe(404)
+  })
+
+  it("rejects a stale profile after its authenticated revision changes", async () => {
+    const { token } = await register("profile-revoke.room@example.com", "Profile Revoke")
+    const { revision } = await (
+      await app.request(`/api/rooms/${DIAGRAM_ID}/ai/personal-profile/revision`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    ).json()
+    const profile = { detailLevel: "balanced", exampleStyle: "analogy" }
+    const revoked = await app.request(`/api/rooms/${DIAGRAM_ID}/ai/personal-profile/revoke`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const { revision: revokedRevision } = await revoked.json()
+    expect(revokedRevision).not.toBe(revision)
+
+    const stale = await post(token, {
       text: "help me with this diagram",
       intent: "ask",
-      privateContext,
+      teachingProfile: profile,
+      profileRevision: revision,
     })
-
-    expect(res.status).toBe(422)
-    expect(await redis.lRange(k.aiChat(DIAGRAM_ID), 0, -1)).toEqual([])
-    expect(await redis.keys(`diagram:{${DIAGRAM_ID}}:ai:private-context:*`)).toEqual([])
+    expect(stale.status).toBe(409)
+    expect(await redis.lLen(k.aiQueue(DIAGRAM_ID))).toBe(0)
   })
 
-  it("returns private answers only to the authenticated requester without persisting the exchange", async () => {
-    const { token, id } = await register("private.route@example.com", "Private User")
-    const secret = "only-in-this-private-request"
-    const response = await postPrivate(token, {
-      text: "Question that must not be shared",
-      privateContext: secret,
-      replica: { generation: "a".repeat(64), revision: 3 },
+  it("rejects the removed one-person Private Room endpoint", async () => {
+    const { token } = await register("private.route@example.com", "Private User")
+    const response = await app.request(`/api/rooms/${DIAGRAM_ID}/ai/private-messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "question" }),
     })
 
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ text: "Private answer", provider: "self-hosted" })
-    expect(privateRequests).toHaveLength(1)
-    expect(privateRequests[0]).toMatchObject({
-      author: { id, name: "Private User" },
-      text: "Question that must not be shared",
-      privateContext: secret,
-    })
-    expect(await redis.lRange(k.aiChat(DIAGRAM_ID), 0, -1)).toEqual([])
-    expect(await redis.keys(`diagram:{${DIAGRAM_ID}}:ai:private-context:*`)).toEqual([])
-    expect(await redis.keys(`diagram:{${DIAGRAM_ID}}:ai:private-required`)).toEqual([])
-  })
-
-  it("fails closed when the acknowledged shared-board revision is stale", async () => {
-    const { token } = await register("stale.private@example.com", "Stale")
-    const response = await postPrivate(token, {
-      text: "Question",
-      replica: { generation: "a".repeat(64), revision: 4 },
-    })
-
-    expect(response.status).toBe(409)
-    expect(privateRequests).toEqual([])
-    expect(await redis.lRange(k.aiChat(DIAGRAM_ID), 0, -1)).toEqual([])
+    expect(response.status).toBe(404)
   })
 
   it("increments queuePosition for consecutive queued messages", async () => {
@@ -226,6 +249,11 @@ describe("INT-CU15: room AI message routes", () => {
 
   it("enforces capacity across concurrent service instances", async () => {
     const { token } = await register("instances.room@example.com", "Instances")
+    const { revision: profileRevision } = await (
+      await app.request(`/api/rooms/${DIAGRAM_ID}/ai/personal-profile/revision`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    ).json()
     const auth = createAuthService({
       repo: createRedisUserRepository(redis),
       jwtSecret: TEST_JWT_SECRET,
@@ -255,6 +283,8 @@ describe("INT-CU15: room AI message routes", () => {
           body: JSON.stringify({
             text: `message ${n}`,
             intent: "ask",
+            teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy" },
+            profileRevision,
             replica: { generation: "a".repeat(64), revision: 3 },
           }),
         })
@@ -264,30 +294,29 @@ describe("INT-CU15: room AI message routes", () => {
       202, 202, 202, 202, 202, 429,
     ])
     expect(await (await list(token)).json()).toHaveLength(5)
+    const messages = await (await list(token)).json()
+    const profileKeys = await Promise.all(
+      messages.map((message: { id: string }) =>
+        redis.get(k.aiPersonalProfile(DIAGRAM_ID, message.id))
+      )
+    )
+    expect(profileKeys.filter(Boolean)).toHaveLength(5)
+    expect((await redis.lRange(k.aiChat(DIAGRAM_ID), 0, -1)).join("\n")).not.toContain(
+      "teachingProfile"
+    )
   })
 
   it("takes the author from the JWT, not from the body", async () => {
     const { token, id } = await register("author.room@example.com", "Real Author")
-    await post(token, {
-      text: "hello",
-      intent: "ask",
-      author: { id: "forged", name: "Mallory", kind: "ai" },
-    })
+    const response = await post(token, { text: "hello", intent: "ask" })
+    expect(response.status).toBe(202)
     const [message] = await (await list(token)).json()
     expect(message.author).toMatchObject({ id, name: "Real Author", kind: "user" })
     expect(message).toMatchObject({ diagramId: DIAGRAM_ID, intent: "ask", status: "queued" })
   })
 
-  it("returns 401 without a token for shared and private routes", async () => {
+  it("returns 401 without a token for shared Room AI routes", async () => {
     expect((await post(undefined, { text: "hi", intent: "ask" })).status).toBe(401)
-    expect(
-      (
-        await postPrivate(undefined, {
-          text: "hi",
-          replica: { generation: "a".repeat(64), revision: 3 },
-        })
-      ).status
-    ).toBe(401)
     expect((await list(undefined)).status).toBe(401)
   })
 

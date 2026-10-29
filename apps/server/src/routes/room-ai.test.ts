@@ -14,16 +14,108 @@ const auth = {
 function appWith(roomAi: RoomAiService) {
   const app = new Hono<AppEnv>()
   app.onError(errorHandler)
-  app.route("/api", mountRoomAiRoutes({ auth, roomAi }))
+  app.route(
+    "/api",
+    mountRoomAiRoutes({
+      auth,
+      roomAi,
+      voiceQuestion: vi.fn(async () => ({ messageId: "voice-message", queuePosition: 1 })),
+    })
+  )
   return app
 }
 
 describe("Room AI routes", () => {
+  it("passes only an approved teaching profile and revision to the shared queue", async () => {
+    const profileUpdate = {
+      profile: { detailLevel: "concise", exampleStyle: "uml" as const },
+      revision: "00000000-0000-4000-8000-000000000002",
+    }
+    const postMessage = vi.fn(async () => ({
+      messageId: "message-1",
+      queuePosition: 1,
+      profileUpdate,
+    }))
+    const roomAi = {
+      postMessage,
+      listMessages: vi.fn(),
+    } as unknown as RoomAiService
+    const app = appWith(roomAi)
+
+    const response = await app.request("/api/rooms/room-1/ai/messages", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "Explain this diagram",
+        intent: "ask",
+        teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy" },
+        profileRevision: "00000000-0000-4000-8000-000000000001",
+        replica: { generation: "a".repeat(64), revision: 3 },
+      }),
+    })
+
+    expect(response.status).toBe(202)
+    await expect(response.json()).resolves.toMatchObject({ profileUpdate })
+    expect(postMessage).toHaveBeenCalledWith({
+      diagramId: "room-1",
+      author: { id: "user-1", email: "user@example.test", name: "User" },
+      text: "Explain this diagram",
+      intent: "ask",
+      teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy" },
+      profileRevision: "00000000-0000-4000-8000-000000000001",
+      replica: { generation: "a".repeat(64), revision: 3 },
+    })
+  })
+
+  it("does not expose the former free-text profile derivation endpoint", async () => {
+    const app = appWith({} as unknown as RoomAiService)
+    const response = await app.request("/api/rooms/room-1/ai/personal-profile/derive", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid", "Content-Type": "application/json" },
+      body: JSON.stringify({ memory: "old free-text note" }),
+    })
+    expect(response.status).toBe(404)
+  })
+
+  it("rejects raw personal memory on the public Room question route", async () => {
+    const postMessage = vi.fn()
+    const app = appWith({ postMessage, listMessages: vi.fn() } as unknown as RoomAiService)
+
+    const response = await app.request("/api/rooms/room-1/ai/messages", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "Explain this diagram",
+        intent: "ask",
+        personalMemory: "private note",
+        replica: { generation: "a".repeat(64), revision: 3 },
+      }),
+    })
+
+    expect(response.status).toBe(422)
+    expect(postMessage).not.toHaveBeenCalled()
+  })
+
+  it("does not expose a one-person Private Room chat endpoint", async () => {
+    const roomAi = {} as unknown as RoomAiService
+    const app = appWith(roomAi)
+
+    const response = await app.request("/api/rooms/room-1/ai/private-messages", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "private question",
+        replica: { generation: "a".repeat(64), revision: 3 },
+      }),
+    })
+
+    expect(response.status).toBe(404)
+  })
+
   it("rejects shared requests without a synchronized replica acknowledgement", async () => {
     const postMessage = vi.fn(async () => ({ messageId: "message-1", queuePosition: 1 }))
     const roomAi = {
       postMessage,
-      postPrivateMessage: vi.fn(),
       listMessages: vi.fn(),
     } as unknown as RoomAiService
     const app = appWith(roomAi)
@@ -38,6 +130,28 @@ describe("Room AI routes", () => {
     expect(postMessage).not.toHaveBeenCalled()
   })
 
+  it("preserves the existing 4,000-character limit for typed public questions", async () => {
+    const postMessage = vi.fn()
+    const roomAi = {
+      postMessage,
+      listMessages: vi.fn(),
+    } as unknown as RoomAiService
+    const app = appWith(roomAi)
+
+    const response = await app.request("/api/rooms/room-1/ai/messages", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "x".repeat(4001),
+        intent: "ask",
+        replica: { generation: "a".repeat(64), revision: 3 },
+      }),
+    })
+
+    expect(response.status).toBe(422)
+    expect(postMessage).not.toHaveBeenCalled()
+  })
+
   it("exposes only shared memory through authenticated Room routes", async () => {
     const getSharedMemory = vi.fn(async () => ({
       summary: "Use a layered architecture",
@@ -46,7 +160,6 @@ describe("Room AI routes", () => {
     const pinSharedDecision = vi.fn(async () => {})
     const roomAi = {
       postMessage: vi.fn(),
-      postPrivateMessage: vi.fn(),
       listMessages: vi.fn(),
       getSharedMemory,
       pinSharedDecision,

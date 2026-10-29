@@ -1,4 +1,5 @@
 import { createClient } from "redis"
+import { createHash } from "node:crypto"
 import { gzipSync, gunzipSync } from "node:zlib"
 import { logger } from "./logger.js"
 
@@ -28,6 +29,10 @@ export const k = {
   aiSummaryRevision: (id: string) => `diagram:{${id}}:ai:summary:revision`,
   aiReplicaRequirement: (id: string, messageId: string) =>
     `diagram:{${id}}:ai:replica-requirement:${messageId}`,
+  aiPersonalProfile: (id: string, messageId: string) =>
+    `diagram:{${id}}:ai:personal-profile:${messageId}`,
+  aiPersonalProfileRevision: (id: string, userId: string) =>
+    `diagram:{${id}}:ai:personal-profile:revision:${createHash("sha256").update(userId).digest("hex")}`,
   aiQueue: (id: string) => `diagram:{${id}}:ai:queue`,
   aiQueueInitialized: (id: string) => `diagram:{${id}}:ai:queue-initialized`,
   aiActiveMessage: (id: string) => `diagram:{${id}}:ai:active-message`,

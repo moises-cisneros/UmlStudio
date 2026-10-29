@@ -167,7 +167,11 @@ export function createRoomAiDispatcher(deps: DispatcherDeps) {
             if (err instanceof InferenceNotStartedError) {
               try {
                 if (!timedOut) await update(diagramId, id, "failed", "Inference unavailable")
-                await deps.redis.multi().del(k.aiReplicaRequirement(diagramId, id)).exec()
+                await deps.redis
+                  .multi()
+                  .del(k.aiReplicaRequirement(diagramId, id))
+                  .del(k.aiPersonalProfile(diagramId, id))
+                  .exec()
                 await publishStatus(diagramId, "idle")
               } finally {
                 await releaseConfirmedSlot(diagramId, token, id)
@@ -182,6 +186,14 @@ export function createRoomAiDispatcher(deps: DispatcherDeps) {
                 "failed",
                 err instanceof Error ? err.message : String(err)
               )
+            await deps.redis
+              .del(k.aiPersonalProfile(diagramId, id))
+              .catch((cleanupError) =>
+                logger.error(
+                  { err: cleanupError, diagramId, messageId: id },
+                  "personal Room AI context cleanup failed"
+                )
+              )
             logger.error(
               { err, diagramId, messageId: id },
               "inference termination unconfirmed; slot retained"
@@ -190,7 +202,10 @@ export function createRoomAiDispatcher(deps: DispatcherDeps) {
           }
           clearTimeout(timer)
           await deps.redis
+            .multi()
             .del(k.aiReplicaRequirement(diagramId, id))
+            .del(k.aiPersonalProfile(diagramId, id))
+            .exec()
             .catch((err) =>
               logger.error({ err, diagramId, messageId: id }, "replica requirement cleanup failed")
             )

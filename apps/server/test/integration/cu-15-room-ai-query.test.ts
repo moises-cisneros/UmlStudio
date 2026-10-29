@@ -5,12 +5,12 @@ import { k } from "../../src/redis.js"
 import {
   createRoomAiTestDispatcher as createRoomAiDispatcher,
   createRoomAiTestService as createRoomAiService,
-  TEST_ROOM_AI_REPLICA,
 } from "./helpers/room-ai-test-support.js"
 import { createRoomAiOrchestrator } from "../../src/services/room-ai/room-ai-orchestrator.js"
 import { InferenceNotStartedError } from "../../src/services/room-ai/inference-not-started.js"
 import { createRoomAiResponder } from "../../src/services/room-ai/room-ai-responder.js"
 import { createRoomMemoryRepository } from "../../src/services/room-ai/room-memory-repository.js"
+import { createRoomAiPersonalProfileRevisionCoordinator } from "../../src/services/room-ai/room-ai-personal-profile.js"
 import { GLOBAL_SLOTS } from "../../src/services/room-ai/inference-slots.js"
 
 describe("Room AI query flow", () => {
@@ -30,6 +30,7 @@ describe("Room AI query flow", () => {
       const orchestrator = createRoomAiOrchestrator({
         redis,
         ttlSeconds: 3600,
+        profileRevisions: createRoomAiPersonalProfileRevisionCoordinator(redis, 3600),
         getBoard: () => ({ nodes: [], edges: [] }) as unknown as UMLModel,
         getMemory: async () => ({ summary: "", decisions: [] }),
         getAuthorship: async () => ({}),
@@ -94,6 +95,7 @@ describe("Room AI query flow", () => {
     const orchestrator = createRoomAiOrchestrator({
       redis,
       ttlSeconds: 3600,
+      profileRevisions: createRoomAiPersonalProfileRevisionCoordinator(redis, 3600),
       getBoard: () => ({ nodes: [], edges: [] }) as unknown as UMLModel,
       getMemory: async () => ({ summary: "", decisions: [] }),
       getAuthorship: async () => ({}),
@@ -129,6 +131,7 @@ describe("Room AI query flow", () => {
     const orchestrator = createRoomAiOrchestrator({
       redis,
       ttlSeconds: 3600,
+      profileRevisions: createRoomAiPersonalProfileRevisionCoordinator(redis, 3600),
       getBoard: () => ({ nodes: [], edges: [] }) as unknown as UMLModel,
       getMemory: async () => ({ summary: "", decisions: [] }),
       getAuthorship: async () => ({}),
@@ -146,33 +149,28 @@ describe("Room AI query flow", () => {
     expect(await redis.get(k.aiActive(diagramId))).not.toBeNull()
     await dispatcher.close()
   })
-  it("fails closed when direct private inference is unavailable without queueing the request", async () => {
+  it("sends only each requester's closed profile to shared inference", async () => {
     const redis = await getRedis()
-    const diagramId = "query-private-no-delivery"
+    const diagramId = "query-personal-memory-isolation"
     await redis.set(k.diagram(diagramId), "exists")
-    const service = createRoomAiService({ redis, ttlSeconds: 3600 })
-    await expect(
-      service.postPrivateMessage({
-        diagramId,
-        author: { id: "alice", name: "Alice" } as never,
-        text: "question",
-        replicaGeneration: TEST_ROOM_AI_REPLICA.generation,
-        replicaRevision: TEST_ROOM_AI_REPLICA.revision,
-      })
-    ).rejects.toThrow("private room AI is unavailable")
-    expect((await service.listMessages(diagramId)).messages).toEqual([])
-    expect(await redis.lLen(k.aiQueue(diagramId))).toBe(0)
-  })
-  it("keeps private questions and replies out of shared history and events", async () => {
-    const redis = await getRedis()
-    const diagramId = "query-private-room"
-    await redis.set(k.diagram(diagramId), "exists")
-    const secret = "personal-context-only"
-    const requests: { route: string; contextJson: string; privateContext?: string }[] = []
+    const aliceInteraction = "Explain inheritance with an example"
+    const bobInteraction = "What is an interface?"
+    const aliceProfile = { detailLevel: "step_by_step", exampleStyle: "uml" } as const
+    const bobProfile = { detailLevel: "concise", exampleStyle: "analogy" } as const
+    const requests: {
+      route: string
+      requester: { id: string; name: string }
+      contextJson: string
+      teachingProfile?: { detailLevel: string; exampleStyle: string }
+    }[] = []
+    const recordedMessages: string[] = []
+    const learningCalls: Array<{ profile: unknown; interaction: string }> = []
     const events: RoomAiEvent[] = []
+    const profileRevisions = createRoomAiPersonalProfileRevisionCoordinator(redis, 3600)
     const orchestrator = createRoomAiOrchestrator({
       redis,
       ttlSeconds: 3600,
+      profileRevisions,
       publish: (_, event) => {
         events.push(event)
       },
@@ -181,28 +179,42 @@ describe("Room AI query flow", () => {
       getAuthorship: async () => ({}),
       respond: async (request) => {
         requests.push(request)
-        return { text: request.privateContext ?? "answer", provider: "self-hosted" }
+        return {
+          text: `Answer for ${request.requester.name} using ${request.teachingProfile?.detailLevel} detail`,
+          provider: "self-hosted",
+        }
+      },
+      recordPublicMessage: async (_roomId, text) => {
+        recordedMessages.push(text)
       },
     })
     const service = createRoomAiService({
       redis,
       ttlSeconds: 3600,
+      profileRevisions,
+      profileDeriver: async (profile, interaction) => {
+        learningCalls.push({ profile, interaction })
+        return profile
+      },
       publish: (_, event) => events.push(event),
-      respondPrivately: orchestrator.respondPrivately,
     })
-    const privateReply = await service.postPrivateMessage({
+    const aliceRevision = await service.getPersonalProfileRevision(diagramId, "alice")
+    const bobRevision = await service.getPersonalProfileRevision(diagramId, "bob")
+    const alice = await service.postMessage({
       diagramId,
       author: { id: "alice", name: "Alice" } as never,
-      text: "private question",
-      privateContext: secret,
-      replicaGeneration: TEST_ROOM_AI_REPLICA.generation,
-      replicaRevision: TEST_ROOM_AI_REPLICA.revision,
+      text: aliceInteraction,
+      intent: "ask",
+      teachingProfile: aliceProfile,
+      profileRevision: aliceRevision,
     })
-    const shared = await service.postMessage({
+    const bob = await service.postMessage({
       diagramId,
       author: { id: "bob", name: "Bob" } as never,
-      text: "shared question",
+      text: bobInteraction,
       intent: "ask",
+      teachingProfile: bobProfile,
+      profileRevision: bobRevision,
     })
     const dispatcher = createRoomAiDispatcher({
       redis,
@@ -211,16 +223,73 @@ describe("Room AI query flow", () => {
     })
     await dispatcher.drainRoom(diagramId)
     await dispatcher.close()
-    expect(requests.map((request) => request.route)).toEqual(["private", "shared"])
-    expect(requests[0]?.privateContext).toBe(secret)
-    expect(requests[0]?.contextJson).not.toContain(secret)
-    expect(requests[1]?.contextJson).not.toContain(secret)
-    expect(requests[1]?.privateContext).toBeUndefined()
-    expect(privateReply.text).toBe("Alice: personal-context-only")
-    expect(JSON.stringify(events)).not.toContain(secret)
+    expect(learningCalls).toEqual([
+      { profile: aliceProfile, interaction: aliceInteraction },
+      { profile: bobProfile, interaction: bobInteraction },
+    ])
+    expect(requests.map((request) => [request.requester.id, request.teachingProfile])).toEqual([
+      ["alice", aliceProfile],
+      ["bob", bobProfile],
+    ])
+    expect(requests[0]?.contextJson).not.toContain(JSON.stringify(bobProfile))
+    expect(requests[1]?.contextJson).not.toContain(JSON.stringify(aliceProfile))
+    expect(JSON.stringify(events)).not.toContain("detailLevel")
+    expect(recordedMessages.join("\n")).not.toContain("detailLevel")
     const messages = (await service.listMessages(diagramId)).messages
-    expect(messages.map((message) => message.text)).not.toContain("private question")
-    expect(messages.some((message) => message.replyTo === shared.messageId)).toBe(true)
+    expect(messages.map((message) => message.text)).toEqual([
+      "Explain inheritance with an example",
+      "What is an interface?",
+      "Alice: Answer for Alice using step_by_step detail",
+      "Bob: Answer for Bob using concise detail",
+    ])
+    expect(JSON.stringify(messages)).not.toContain("detailLevel")
+    expect(messages.some((message) => message.replyTo === alice.messageId)).toBe(true)
+    expect(messages.some((message) => message.replyTo === bob.messageId)).toBe(true)
+    expect(await redis.exists(k.aiPersonalProfile(diagramId, alice.messageId))).toBe(0)
+    expect(await redis.exists(k.aiPersonalProfile(diagramId, bob.messageId))).toBe(0)
+  })
+
+  it("fails closed without starting inference when requester memory expires", async () => {
+    const redis = await getRedis()
+    const diagramId = "query-expired-personal-memory"
+    await redis.set(k.diagram(diagramId), "exists")
+    const profileRevisions = createRoomAiPersonalProfileRevisionCoordinator(redis, 3600)
+    const revision = await profileRevisions.getOrCreateRevision(diagramId, "alice")
+    const service = createRoomAiService({ redis, ttlSeconds: 3600, profileRevisions })
+    const queued = await service.postMessage({
+      diagramId,
+      author: { id: "alice", name: "Alice" } as never,
+      text: "Explain the board",
+      intent: "ask",
+      teachingProfile: { detailLevel: "balanced", exampleStyle: "uml" },
+      profileRevision: revision,
+    })
+    await redis.del(k.aiPersonalProfile(diagramId, queued.messageId))
+    const respond = vi.fn(async () => ({ text: "should not run", provider: "self-hosted" }))
+    const orchestrator = createRoomAiOrchestrator({
+      redis,
+      ttlSeconds: 3600,
+      profileRevisions,
+      getBoard: () => ({ nodes: [], edges: [] }) as unknown as UMLModel,
+      getMemory: async () => ({ summary: "", decisions: [] }),
+      getAuthorship: async () => ({}),
+      respond,
+    })
+    const dispatcher = createRoomAiDispatcher({
+      redis,
+      maxConcurrency: 1,
+      infer: orchestrator.infer,
+    })
+
+    await dispatcher.drainRoom(diagramId)
+    await dispatcher.close()
+
+    expect(respond).not.toHaveBeenCalled()
+    expect(await redis.sCard(GLOBAL_SLOTS)).toBe(0)
+    const { messages } = await service.listMessages(diagramId)
+    expect(messages).toHaveLength(1)
+    expect(messages[0]).toMatchObject({ status: "failed", failureReason: "Inference unavailable" })
+    expect(JSON.stringify(messages)).not.toContain("teachingProfile")
   })
   it("persists and broadcasts a named answer for each requester", async () => {
     const redis = await getRedis()
@@ -249,6 +318,7 @@ describe("Room AI query flow", () => {
     const orchestrator = createRoomAiOrchestrator({
       redis,
       ttlSeconds: 3600,
+      profileRevisions: createRoomAiPersonalProfileRevisionCoordinator(redis, 3600),
       publish,
       getBoard: () => ({ nodes: [], edges: [] }) as unknown as UMLModel,
       getMemory: async () => ({ summary: "shared", decisions: [] }),
