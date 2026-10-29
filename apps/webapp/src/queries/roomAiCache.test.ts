@@ -85,71 +85,33 @@ describe("applyRoomAiEventToCache", () => {
 })
 
 describe("Room AI request privacy boundaries", () => {
-  it("sends personal context only to the authenticated private endpoint", async () => {
+  it("sends only the approved profile with a public Room question", async () => {
+    const client = setup({ messages: [message("shared")], hasMore: false })
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ text: "private answer", provider: "self_hosted" }), {
-        status: 200,
+      new Response(JSON.stringify({ messageId: "m1", queuePosition: 1 }), {
+        status: 202,
         headers: { "content-type": "application/json" },
       })
     )
     try {
-      await DiagramApiClient.postPrivateRoomAiMessage("d1", {
+      await DiagramApiClient.postRoomAiMessage("d1", {
         text: "question",
-        privateContext: "personal notes",
+        intent: "ask",
+        teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy" },
+        profileRevision: "00000000-0000-4000-8000-000000000001",
         replica: { generation: "a".repeat(64), revision: 3 },
       })
       const [url, init] = fetchMock.mock.calls[0]
-      expect(String(url)).toContain("/api/rooms/d1/ai/private-messages")
+      expect(String(url)).toContain("/api/rooms/d1/ai/messages")
       expect(JSON.parse(String(init?.body))).toEqual({
         text: "question",
-        privateContext: "personal notes",
+        intent: "ask",
         replica: { generation: "a".repeat(64), revision: 3 },
+        teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy" },
+        profileRevision: "00000000-0000-4000-8000-000000000001",
       })
-
-      fetchMock.mockResolvedValueOnce(
-        new Response(JSON.stringify({ messageId: "m1", queuePosition: 1 }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        })
-      )
-      await DiagramApiClient.postRoomAiMessage("d1", {
-        text: "shared question",
-        intent: "ask",
-        replica: { generation: "a".repeat(64), revision: 4 },
-      })
-      const [, sharedInit] = fetchMock.mock.calls[1]
-      expect(String(fetchMock.mock.calls[1][0])).toContain("/api/rooms/d1/ai/messages")
-      expect(JSON.parse(String(sharedInit?.body))).toEqual({
-        text: "shared question",
-        intent: "ask",
-        replica: { generation: "a".repeat(64), revision: 4 },
-      })
-      expect(JSON.stringify(sharedInit?.body)).not.toContain("personal notes")
-    } finally {
-      fetchMock.mockRestore()
-    }
-  })
-
-  it("does not put private replies into shared room query cache", async () => {
-    const client = setup({ messages: [message("shared")], hasMore: false })
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ text: "personal reply", provider: "self_hosted" }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      })
-    )
-    try {
-      await DiagramApiClient.postPrivateRoomAiMessage("d1", {
-        text: "private",
-        replica: { generation: "b".repeat(64), revision: 9 },
-      })
-      expect(page(client)?.messages.map((item) => item.id)).toEqual(["shared"])
-      expect(
-        client
-          .getQueryCache()
-          .getAll()
-          .map((query) => query.queryKey)
-      ).toEqual([roomAiKeys.messages("d1")])
+      expect(JSON.stringify(page(client))).not.toContain("teachingProfile")
+      expect(JSON.stringify(page(client))).not.toContain("personal notes")
     } finally {
       fetchMock.mockRestore()
       client.clear()

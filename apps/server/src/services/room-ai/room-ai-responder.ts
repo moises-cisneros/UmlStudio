@@ -1,4 +1,5 @@
 import type { RoomAiIntent, UMLModel } from "@umlstudio/core"
+import type { RoomAiTeachingProfile } from "./room-ai-personal-profile.js"
 import {
   ConfirmedInferenceNotStartedError,
   InferenceTerminationUnconfirmedError,
@@ -19,13 +20,13 @@ export class RoomAiTokenizerUnavailableError extends ConfirmedInferenceNotStarte
 }
 
 export interface RoomAiInferenceRequest {
-  route: "shared" | "private"
+  route: "shared"
   requester: { id: string; name: string }
   intent: RoomAiIntent
   question: string
   board: UMLModel
   contextJson: string
-  privateContext?: string
+  teachingProfile?: RoomAiTeachingProfile
 }
 
 interface RoomAiServiceResponse {
@@ -40,12 +41,16 @@ interface RoomAiResponderOptions {
   fetcher?: typeof fetch
 }
 
-function containsPrivateContext(value: unknown): boolean {
-  if (Array.isArray(value)) return value.some(containsPrivateContext)
+function containsPrivateData(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(containsPrivateData)
   if (!value || typeof value !== "object") return false
   return Object.entries(value).some(
     ([key, nested]) =>
-      key === "private_context" || key === "privateContext" || containsPrivateContext(nested)
+      key === "private_context" ||
+      key === "privateContext" ||
+      key === "personal_memory" ||
+      key === "personalMemory" ||
+      containsPrivateData(nested)
   )
 }
 
@@ -65,12 +70,6 @@ export function createRoomAiResponder(options: RoomAiResponderOptions) {
     if (!options.internalToken.trim() || !options.serviceUrl.trim()) {
       throw new ConfirmedInferenceNotStartedError("Room AI service is not configured")
     }
-    if (request.route === "shared" && request.privateContext !== undefined) {
-      throw new ConfirmedInferenceNotStartedError(
-        "Private context cannot use the shared Room AI route"
-      )
-    }
-
     let context: unknown
     try {
       context = JSON.parse(request.contextJson)
@@ -80,12 +79,8 @@ export function createRoomAiResponder(options: RoomAiResponderOptions) {
     if (context === null || typeof context !== "object" || Array.isArray(context)) {
       throw new ConfirmedInferenceNotStartedError("Room AI context is invalid")
     }
-    if (containsPrivateContext(context)) {
-      throw new ConfirmedInferenceNotStartedError(
-        request.route === "shared"
-          ? "Private context cannot use the shared Room AI route"
-          : "Room AI context is invalid"
-      )
+    if (containsPrivateData(context)) {
+      throw new ConfirmedInferenceNotStartedError("Room AI context is invalid")
     }
 
     let endpoint: URL
@@ -113,8 +108,8 @@ export function createRoomAiResponder(options: RoomAiResponderOptions) {
       context,
       provider: "self_hosted",
       route: request.route,
-      ...(request.route === "private" && request.privateContext !== undefined
-        ? { private_context: request.privateContext }
+      ...(request.teachingProfile !== undefined
+        ? { teaching_profile: request.teachingProfile }
         : {}),
     }
 

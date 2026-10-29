@@ -16,25 +16,38 @@ BASE = {
 
 class TestRoomContextPrivacy(unittest.TestCase):
     def test_private_fields_cannot_be_hidden_inside_shared_context(self):
-        for key in ("private_context", "privateContext"):
+        for key in ("private_context", "privateContext", "personal_memory", "personalMemory"):
             with self.subTest(key=key), self.assertRaises(ValidationError):
                 RoomRespondRequest.model_validate({
                     **BASE, "context": {"nested": [{key: "secret"}]},
                 })
 
-    def test_private_memory_requires_explicit_private_self_hosted_route(self):
-        for routing in ({}, {"provider": "self_hosted", "route": "shared"}):
+    def test_raw_personal_memory_is_rejected_from_shared_inference(self):
+        with self.assertRaises(ValidationError):
+            RoomRespondRequest.model_validate({**BASE, "personal_memory": "private note"})
+
+    def test_teaching_profile_requires_the_shared_self_hosted_route(self):
+        profile = {"detailLevel": "balanced", "exampleStyle": "analogy"}
+        request = RoomRespondRequest.model_validate({
+            **BASE, "provider": "self_hosted", "route": "shared",
+            "teaching_profile": profile,
+        })
+        self.assertEqual(request.teaching_profile.model_dump(), profile)
+        for routing in ({}, {"provider": "self_hosted", "route": "private"}):
             with self.subTest(routing=routing), self.assertRaises(ValidationError):
-                RoomRespondRequest.model_validate({**BASE, **routing, "private_context": "secret"})
+                RoomRespondRequest.model_validate({
+                    **BASE, **routing, "teaching_profile": profile,
+                })
 
 
 class TestSelfHostedRoomProvider(unittest.IsolatedAsyncioTestCase):
-    async def test_private_request_uses_configured_self_hosted_adapter_without_fallback(self):
+    async def test_shared_request_uses_only_the_approved_profile_without_fallback(self):
         adapter = AsyncMock()
         adapter.provider_name = "self-hosted"
         adapter.complete_text.return_value = "answer"
         request = RoomRespondRequest.model_validate({
-            **BASE, "provider": "self_hosted", "route": "private", "private_context": "secret",
+            **BASE, "provider": "self_hosted", "route": "shared",
+            "teaching_profile": {"detailLevel": "balanced", "exampleStyle": "analogy"},
         })
         with patch.object(settings, "ROOM_AI_SELF_HOSTED_URL", "http://model.invalid/v1"), \
              patch.object(settings, "ROOM_AI_SELF_HOSTED_MODEL", "test-model"), \
@@ -43,7 +56,9 @@ class TestSelfHostedRoomProvider(unittest.IsolatedAsyncioTestCase):
              patch("src.adapters.get_adapter") as fallback:
             result = await RoomResponseService.respond(request)
         self.assertEqual(result.provider, "self-hosted")
-        self.assertIn("secret", adapter.complete_text.await_args.args[0])
+        self.assertIn('"detailLevel": "balanced"', adapter.complete_text.await_args.args[0])
+        self.assertIn('"exampleStyle": "analogy"', adapter.complete_text.await_args.args[0])
+        self.assertNotIn("private note", adapter.complete_text.await_args.args[0])
         self_hosted.assert_called_once_with(endpoint_url="http://model.invalid/v1", model_name="test-model")
         fallback.assert_not_called()
 

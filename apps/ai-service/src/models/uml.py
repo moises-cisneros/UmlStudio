@@ -136,6 +136,13 @@ class ChatResponse(BaseModel):
     transcript: Optional[str] = None
 
 
+class RoomAiTeachingProfile(BaseModel):
+    detailLevel: Literal["concise", "balanced", "step_by_step"]
+    exampleStyle: Literal["uml", "code", "analogy", "none"]
+
+    model_config = {"extra": "forbid"}
+
+
 class RoomRespondRequest(BaseModel):
     mode: Literal["explain", "change"]
     requester: Dict[str, Any]
@@ -143,8 +150,8 @@ class RoomRespondRequest(BaseModel):
     board: Dict[str, Any]
     context: Dict[str, Any]
     provider: Optional[Literal["self_hosted"]] = None
-    route: Optional[Literal["shared", "private"]] = None
-    private_context: Optional[str | Dict[str, Any]] = None
+    route: Optional[Literal["shared"]] = None
+    teaching_profile: Optional[RoomAiTeachingProfile] = None
 
     model_config = {"extra": "forbid"}
 
@@ -154,19 +161,52 @@ class RoomRespondRequest(BaseModel):
         while pending:
             value = pending.pop()
             if isinstance(value, dict):
-                if any(key in ("private_context", "privateContext") for key in value):
-                    raise ValueError("Private context must be supplied separately")
+                if any(
+                    key in (
+                        "private_context",
+                        "privateContext",
+                        "personal_memory",
+                        "personalMemory",
+                        "teaching_profile",
+                        "teachingProfile",
+                    )
+                    for key in value
+                ):
+                    raise ValueError("Requester memory must be supplied separately")
                 pending.extend(value.values())
             elif isinstance(value, list):
                 pending.extend(value)
         if (self.provider is None) != (self.route is None):
             raise ValueError("Provider and route must be specified together")
-        if "private_context" in self.model_fields_set and (
-            self.provider != "self_hosted" or self.route != "private"
-            or self.private_context is None
+        if "teaching_profile" in self.model_fields_set and (
+            self.provider != "self_hosted" or self.route != "shared"
+            or self.teaching_profile is None
         ):
-            raise ValueError("Private context requires the self-hosted private route")
+            raise ValueError("A teaching profile requires the self-hosted shared route")
         return self
+
+
+class RoomProfileDeriveRequest(BaseModel):
+    profile: RoomAiTeachingProfile
+    interaction: str = Field(min_length=1, max_length=16_000)
+
+    model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def validate_interaction(self):
+        if not self.interaction.strip():
+            raise ValueError("Room interaction must not be blank")
+        return self
+
+
+class RoomProfileProviderOutput(BaseModel):
+    profile: RoomAiTeachingProfile
+
+    model_config = {"extra": "forbid"}
+
+
+class RoomProfileDeriveResponse(BaseModel):
+    profile: RoomAiTeachingProfile
 
 
 class RoomRespondResponse(BaseModel):

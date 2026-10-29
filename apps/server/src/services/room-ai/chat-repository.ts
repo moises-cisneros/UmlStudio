@@ -1,5 +1,10 @@
 import type { Redis } from "../../redis.js"
 import { k } from "../../redis.js"
+import { ConfirmedInferenceNotStartedError } from "./inference-not-started.js"
+import {
+  RoomAiPersonalProfileSidecarSchema,
+  type RoomAiPersonalProfileSidecar,
+} from "./room-ai-personal-profile.js"
 
 /** Maximum number of messages kept per room; older ones are trimmed on append. */
 export const CHAT_MAX_MESSAGES = 200
@@ -67,6 +72,7 @@ redis.call('RPUSH', KEYS[1], ARGV[1])
 redis.call('RPUSH', KEYS[2], ARGV[2])
 redis.call('LTRIM', KEYS[2], -200, -1)
 if ARGV[4] ~= '' then redis.call('SET', KEYS[6], ARGV[4], 'EX', ARGV[5]) end
+redis.call('SET', KEYS[7], ARGV[6], 'EX', ARGV[5])
 redis.call('EXPIRE', KEYS[1], ARGV[3])
 redis.call('EXPIRE', KEYS[2], ARGV[3])
 redis.call('SET', KEYS[3], '1', 'EX', ARGV[3])
@@ -79,7 +85,8 @@ export async function enqueueChatMessage<T extends ChatRecord>(
   diagramId: string,
   message: T,
   ttlSeconds: number,
-  replica: RoomAiReplicaRequirement
+  replica: RoomAiReplicaRequirement,
+  personalProfile: RoomAiPersonalProfileSidecar
 ): Promise<{ position: number; active: boolean }> {
   const result = (await redis.eval(ENQUEUE, {
     keys: [
@@ -89,6 +96,7 @@ export async function enqueueChatMessage<T extends ChatRecord>(
       k.aiActiveMessage(diagramId),
       k.aiActive(diagramId),
       k.aiReplicaRequirement(diagramId, message.id),
+      k.aiPersonalProfile(diagramId, message.id),
     ],
     arguments: [
       message.id,
@@ -96,9 +104,42 @@ export async function enqueueChatMessage<T extends ChatRecord>(
       String(ttlSeconds),
       JSON.stringify(replica),
       String(Math.min(ttlSeconds, 15 * 60)),
+      JSON.stringify(personalProfile),
     ],
   })) as [number, number]
   return { position: Number(result[0]), active: Number(result[1]) === 1 }
+}
+
+const CONSUME_PERSONAL_MEMORY = `
+local value = redis.call('GET', KEYS[1])
+if not value then return false end
+redis.call('DEL', KEYS[1])
+return value
+`
+
+/** Atomically consumes the requester's short-lived approved-profile sidecar exactly once. */
+export async function consumeRoomAiPersonalProfile(
+  redis: Redis,
+  diagramId: string,
+  messageId: string,
+  expectedRequesterId: string
+): Promise<RoomAiPersonalProfileSidecar> {
+  const raw = await redis.eval(CONSUME_PERSONAL_MEMORY, {
+    keys: [k.aiPersonalProfile(diagramId, messageId)],
+    arguments: [],
+  })
+  if (typeof raw !== "string") {
+    throw new ConfirmedInferenceNotStartedError("Room AI request context is unavailable")
+  }
+  try {
+    const value = RoomAiPersonalProfileSidecarSchema.parse(JSON.parse(raw))
+    if (value.requesterId !== expectedRequesterId) {
+      throw new ConfirmedInferenceNotStartedError("Room AI request context is unavailable")
+    }
+    return value
+  } catch {
+    throw new ConfirmedInferenceNotStartedError("Room AI request context is unavailable")
+  }
 }
 
 export async function getRoomAiReplicaRequirement(

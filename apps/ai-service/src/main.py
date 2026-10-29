@@ -41,6 +41,8 @@ from .models.uml import (
     ChatResponse,
     RoomRespondRequest,
     RoomRespondResponse,
+    RoomProfileDeriveRequest,
+    RoomProfileDeriveResponse,
     TranscribeResponse,
     AuditRequest,
     AuditResponse,
@@ -51,6 +53,10 @@ from .models.uml import (
 )
 from .services.pipeline import AIPipeline
 from .services.room_response import RoomPromptTooLongError, RoomResponseService
+from .services.room_profile import (
+    RoomProfilePromptTooLongError,
+    RoomProfileService,
+)
 from .services.room_tokenizer import RoomTokenizerUnavailableError
 from .services.transcription import TranscriptionError, is_ready, transcribe_audio_bytes, warm_up
 
@@ -88,11 +94,17 @@ app.add_middleware(
 class InternalBrowserGuard:
     """Keep the internal route outside the public browser CORS surface."""
 
+    blocked_paths = {
+        "/internal/v1/room/respond",
+        "/internal/v1/room/profile",
+        "/internal/v1/transcribe",
+    }
+
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] == "http" and scope["path"] == "/internal/v1/room/respond":
+        if scope["type"] == "http" and scope["path"] in self.blocked_paths:
             if any(name.lower() == b"origin" for name, _ in scope["headers"]):
                 response = JSONResponse(
                     status_code=403, content={"detail": "Browser access is not allowed"}
@@ -137,6 +149,25 @@ async def respond_to_room(request: RoomRespondRequest) -> RoomRespondResponse:
     except Exception as exc:
         logger.error("Room inference failed (%s)", type(exc).__name__)
         raise HTTPException(status_code=502, detail="AI provider failed to respond") from exc
+
+
+@app.post(
+    "/internal/v1/room/profile",
+    response_model=RoomProfileDeriveResponse,
+    dependencies=[Depends(require_internal_token)],
+)
+async def derive_room_profile(request: RoomProfileDeriveRequest) -> RoomProfileDeriveResponse:
+    try:
+        return await RoomProfileService.derive(request)
+    except RoomProfilePromptTooLongError as exc:
+        raise HTTPException(status_code=413, detail="Room AI profile prompt exceeds the token limit") from exc
+    except RoomTokenizerUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="Room AI tokenizer is not configured") from exc
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=502, detail="AI provider returned an invalid profile") from exc
+    except Exception as exc:
+        logger.error("Room profile derivation failed (%s)", type(exc).__name__)
+        raise HTTPException(status_code=502, detail="AI provider failed to derive a profile") from exc
 
 
 @app.get("/health")
@@ -253,11 +284,7 @@ async def process_voice_chat(
         )
 
 
-@app.post("/api/transcribe", response_model=TranscribeResponse)
-async def transcribe_audio(file: UploadFile = File(...)) -> TranscribeResponse:
-    """
-    Audio transcription endpoint (Whisper).
-    """
+async def _transcribe_upload(file: UploadFile) -> TranscribeResponse:
     if not file:
         raise HTTPException(status_code=400, detail="Archivo de audio requerido.")
 
@@ -277,6 +304,22 @@ async def transcribe_audio(file: UploadFile = File(...)) -> TranscribeResponse:
         text=text,
         confidence=confidence,
     )
+
+
+@app.post("/api/transcribe", response_model=TranscribeResponse)
+async def transcribe_audio(file: UploadFile = File(...)) -> TranscribeResponse:
+    """Public transcription endpoint retained for individual-mode clients."""
+    return await _transcribe_upload(file)
+
+
+@app.post(
+    "/internal/v1/transcribe",
+    response_model=TranscribeResponse,
+    dependencies=[Depends(require_internal_token)],
+)
+async def transcribe_room_voice(file: UploadFile = File(...)) -> TranscribeResponse:
+    """Server-only transcription endpoint for authenticated public Room questions."""
+    return await _transcribe_upload(file)
 
 
 @app.post("/api/audit", response_model=AuditResponse)

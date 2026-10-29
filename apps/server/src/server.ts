@@ -12,6 +12,8 @@ import { createRoomAiDispatcher } from "./services/room-ai/room-ai-dispatcher.js
 import { createRoomAiOrchestrator } from "./services/room-ai/room-ai-orchestrator.js"
 import { createRoomAiResponder } from "./services/room-ai/room-ai-responder.js"
 import { createRoomMemoryRepository } from "./services/room-ai/room-memory-repository.js"
+import { createRoomAiProfileDeriver } from "./services/room-ai/room-ai-profile-deriver.js"
+import { createRoomAiPersonalProfileRevisionCoordinator } from "./services/room-ai/room-ai-personal-profile.js"
 import { getRoomAiReplicaRequirement } from "./services/room-ai/chat-repository.js"
 import { InferenceNotStartedError } from "./services/room-ai/inference-not-started.js"
 
@@ -113,6 +115,10 @@ async function main() {
       return result.text
     },
   })
+  const personalProfileRevisions = createRoomAiPersonalProfileRevisionCoordinator(
+    redis,
+    config.DIAGRAM_TTL_SECONDS
+  )
   const roomAiOrchestrator = createRoomAiOrchestrator({
     redis,
     ttlSeconds: config.DIAGRAM_TTL_SECONDS,
@@ -136,6 +142,7 @@ async function main() {
       return { summary, decisions }
     },
     getAuthorship: (diagramId) => authorship.getAll(diagramId),
+    profileRevisions: personalProfileRevisions,
     respond: responder,
     publish: (diagramId, event) => roomAiBus.publish(diagramId, event),
     recordPublicMessage: (diagramId, message) => roomMemory.recordPublicMessage(diagramId, message),
@@ -153,19 +160,14 @@ async function main() {
   const queuedRoomAi = createRoomAiService({
     redis,
     ttlSeconds: config.DIAGRAM_TTL_SECONDS,
-    maxConcurrency: config.AI_MAX_CONCURRENCY,
+    profileRevisions: personalProfileRevisions,
+    profileDeriver: createRoomAiProfileDeriver({
+      serviceUrl: config.AI_SERVICE_URL,
+      internalToken: config.AI_INTERNAL_TOKEN,
+    }),
     memory: roomMemory,
     getSharedBoardReplicaAtLeast: relayPublish.getSharedBoardReplicaAtLeast,
     publish: relayPublish.publishRoomAi,
-    respondPrivately: (input) =>
-      roomAiOrchestrator.respondPrivately({
-        diagramId: input.diagramId,
-        author: { id: input.author.id, name: input.author.name },
-        text: input.text,
-        ...(input.privateContext !== undefined ? { privateContext: input.privateContext } : {}),
-        board: input.board,
-        ...(input.onInferenceStart ? { onInferenceStart: input.onInferenceStart } : {}),
-      }),
   })
   const roomAi = {
     ...queuedRoomAi,

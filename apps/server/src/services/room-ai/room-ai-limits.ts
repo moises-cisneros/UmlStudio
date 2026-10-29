@@ -1,0 +1,1 @@
+export const MAX_ROOM_AI_MESSAGE_CHARS = 4000

@@ -36,16 +36,18 @@ describe("Room AI internal responder", () => {
     )
   })
 
-  it("sends personal context only to the explicit private self-hosted route", async () => {
+  it("sends only the approved teaching profile to the shared self-hosted route", async () => {
     const fetcher = vi.fn(async (_input: string | URL, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body))
       expect(body).toMatchObject({
         provider: "self_hosted",
-        route: "private",
-        private_context: "personal",
+        route: "shared",
+        teaching_profile: { detailLevel: "balanced", exampleStyle: "analogy" },
       })
+      expect(body.context).not.toHaveProperty("personal_memory")
       expect(body.context).not.toHaveProperty("private_context")
-      return Response.json({ text: "Private answer", diff: null, provider: "self-hosted" })
+      expect(body).not.toHaveProperty("personal_memory")
+      return Response.json({ text: "Room answer", diff: null, provider: "self-hosted" })
     })
     const respond = createRoomAiResponder({
       serviceUrl: "https://ai.internal",
@@ -53,23 +55,13 @@ describe("Room AI internal responder", () => {
       fetcher,
     })
     await expect(
-      respond({ ...request, route: "private", privateContext: "personal" })
+      respond({
+        ...request,
+        teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy" },
+      })
     ).resolves.toMatchObject({
-      text: "Private answer",
+      text: "Room answer",
     })
-  })
-
-  it("rejects private data on the shared route before making a request", async () => {
-    const fetcher = vi.fn()
-    const respond = createRoomAiResponder({
-      serviceUrl: "https://ai.internal",
-      internalToken: "secret",
-      fetcher,
-    })
-    await expect(respond({ ...request, privateContext: "personal" })).rejects.toThrow(
-      "Private context cannot use the shared Room AI route"
-    )
-    expect(fetcher).not.toHaveBeenCalled()
   })
 
   it("rejects nested personal fields in shared context", async () => {
@@ -81,7 +73,7 @@ describe("Room AI internal responder", () => {
     })
     await expect(
       respond({ ...request, contextJson: JSON.stringify({ room: { privateContext: "personal" } }) })
-    ).rejects.toThrow("Private context cannot use the shared Room AI route")
+    ).rejects.toThrow("Room AI context is invalid")
     expect(fetcher).not.toHaveBeenCalled()
   })
 

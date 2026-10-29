@@ -35,6 +35,16 @@ function mapMicError(err: unknown): string {
   return "No se pudo acceder al micrófono para grabar el audio."
 }
 
+function stopMediaStream(stream: MediaStream): void {
+  stream.getTracks().forEach((track) => {
+    try {
+      track.stop()
+    } catch {
+      // Ignore track stopping errors
+    }
+  })
+}
+
 export function formatElapsed(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
@@ -58,6 +68,8 @@ export function useVoiceRecorder({ onError, maxSeconds = 120 }: UseVoiceRecorder
   const timerRef = useRef<number | null>(null)
   const startedAtRef = useRef(0)
   const cancelledRef = useRef(false)
+  const startRequestIdRef = useRef(0)
+  const isStartingRef = useRef(false)
   const audioUrlRef = useRef<string | null>(null)
   const onErrorRef = useRef(onError)
 
@@ -95,6 +107,8 @@ export function useVoiceRecorder({ onError, maxSeconds = 120 }: UseVoiceRecorder
   // Release mic, timer and object URL on unmount
   useEffect(() => {
     return () => {
+      startRequestIdRef.current += 1
+      isStartingRef.current = false
       cancelledRef.current = true
       if (timerRef.current !== null) window.clearInterval(timerRef.current)
       const staleRecorder = recorderRef.current
@@ -105,13 +119,7 @@ export function useVoiceRecorder({ onError, maxSeconds = 120 }: UseVoiceRecorder
           // Ignore stopping errors during unmount
         }
       }
-      streamRef.current?.getTracks().forEach((track) => {
-        try {
-          track.stop()
-        } catch {
-          // Ignore track stopping errors
-        }
-      })
+      if (streamRef.current) stopMediaStream(streamRef.current)
       if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
     }
   }, [])
@@ -126,7 +134,9 @@ export function useVoiceRecorder({ onError, maxSeconds = 120 }: UseVoiceRecorder
       fail("Grabación de audio no soportada en este navegador (probá Chrome o Edge).")
       return
     }
-    if (recorderRef.current?.state === "recording") return
+    if (recorderRef.current?.state === "recording" || isStartingRef.current) return
+    const requestId = ++startRequestIdRef.current
+    isStartingRef.current = true
     cancelledRef.current = false
     revokeAudioUrl()
     setAudioBlob(null)
@@ -137,9 +147,17 @@ export function useVoiceRecorder({ onError, maxSeconds = 120 }: UseVoiceRecorder
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch (err) {
-      fail(mapMicError(err))
+      if (requestId === startRequestIdRef.current) {
+        isStartingRef.current = false
+        fail(mapMicError(err))
+      }
       return
     }
+    if (requestId !== startRequestIdRef.current || cancelledRef.current) {
+      stopMediaStream(stream)
+      return
+    }
+    isStartingRef.current = false
     streamRef.current = stream
 
     const mimeType = pickMimeType()
@@ -219,6 +237,8 @@ export function useVoiceRecorder({ onError, maxSeconds = 120 }: UseVoiceRecorder
   }, [])
 
   const cancelRecording = useCallback(() => {
+    startRequestIdRef.current += 1
+    isStartingRef.current = false
     cancelledRef.current = true
     const recorder = recorderRef.current
     if (recorder && recorder.state !== "inactive") {

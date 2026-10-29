@@ -7,45 +7,49 @@ import { validate } from "../http/middleware/validate.js"
 import type { AuthService } from "../services/auth-service.js"
 import { CHAT_MAX_MESSAGES } from "../services/room-ai/chat-repository.js"
 import {
-  PrivateRoomAiUnavailableError,
   RoomNotFoundError,
   RoomQueueFullError,
   RoomAiMemoryUnavailableError,
   SharedBoardSnapshotNotReadyError,
   type RoomAiService,
 } from "../services/room-ai/room-ai-service.js"
+import { RoomAiPersonalProfileStaleError } from "../services/room-ai/room-ai-personal-profile.js"
 import { DiagramIdParams } from "./_schemas.js"
-import { RoomAiInferenceCapacityError } from "../services/room-ai/inference-slots.js"
+import { RoomAiTeachingProfileSchema } from "../services/room-ai/room-ai-personal-profile.js"
+import { MAX_ROOM_AI_MESSAGE_CHARS } from "../services/room-ai/room-ai-limits.js"
 import {
-  RoomAiPromptTooLargeError,
-  RoomAiTokenizerUnavailableError,
-} from "../services/room-ai/room-ai-responder.js"
+  RoomAiVoiceQuestionTooLongError,
+  RoomAiVoiceQuestionUnclearError,
+  type RoomAiVoiceQuestionHandler,
+} from "../services/room-ai/room-ai-voice-question.js"
+import { RoomAiTranscriptionUnavailableError } from "../services/room-ai/room-ai-transcriber.js"
 
 interface Deps {
   auth: AuthService
   roomAi: RoomAiService
+  voiceQuestion: RoomAiVoiceQuestionHandler
 }
 
-const MAX_MESSAGE_CHARS = 4000
-
-const PostMessageBody = z.object({
-  text: z.string().trim().min(1, "text must not be empty").max(MAX_MESSAGE_CHARS),
-  intent: z.enum(["ask", "change"]),
-  replica: z.object({
-    generation: z.string().regex(/^[a-f0-9]{64}$/),
-    revision: z.number().int().nonnegative().safe(),
-  }),
-  privateContext: z.never().optional(),
+const VoiceQuestionReplica = z.object({
+  generation: z.string().regex(/^[a-f0-9]{64}$/),
+  revision: z.number().int().nonnegative().safe(),
 })
 
-const PostPrivateMessageBody = z.object({
-  text: z.string().trim().min(1, "text must not be empty").max(MAX_MESSAGE_CHARS),
-  privateContext: z.string().max(16_000).optional(),
-  replica: z.object({
-    generation: z.string().regex(/^[a-f0-9]{64}$/),
-    revision: z.number().int().nonnegative().safe(),
-  }),
-})
+const PostMessageBody = z
+  .object({
+    text: z.string().trim().min(1, "text must not be empty").max(MAX_ROOM_AI_MESSAGE_CHARS),
+    intent: z.enum(["ask", "change"]),
+    replica: z.object({
+      generation: z.string().regex(/^[a-f0-9]{64}$/),
+      revision: z.number().int().nonnegative().safe(),
+    }),
+    teachingProfile: RoomAiTeachingProfileSchema.optional(),
+    profileRevision: z.string().uuid().optional(),
+    personalMemory: z.never().optional(),
+    privateContext: z.never().optional(),
+  })
+  .strict()
+  .refine((body) => (body.teachingProfile === undefined) === (body.profileRevision === undefined))
 
 const ListMessagesQuery = z.object({
   before: z.string().min(1).optional(),
@@ -56,10 +60,40 @@ const PinDecisionBody = z.object({
   text: z.string().trim().min(1, "text must not be empty").max(8000),
 })
 
-export function mountRoomAiRoutes({ auth, roomAi }: Deps): Hono<AppEnv> {
+export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<AppEnv> {
   const router = new Hono<AppEnv>()
 
   router.use("/rooms/*", authGuard({ auth }))
+
+  router.get(
+    "/rooms/:diagramId/ai/personal-profile/revision",
+    validate({ params: DiagramIdParams }, async (c, { params }) => {
+      const user = c.get("user")
+      if (!user) throw Errors.unauthorized()
+      try {
+        return c.json({
+          revision: await roomAi.getPersonalProfileRevision(params.diagramId, user.id),
+        })
+      } catch (err) {
+        if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
+        throw err
+      }
+    })
+  )
+
+  router.post(
+    "/rooms/:diagramId/ai/personal-profile/revoke",
+    validate({ params: DiagramIdParams }, async (c, { params }) => {
+      const user = c.get("user")
+      if (!user) throw Errors.unauthorized()
+      try {
+        return c.json({ revision: await roomAi.revokePersonalProfile(params.diagramId, user.id) })
+      } catch (err) {
+        if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
+        throw err
+      }
+    })
+  )
 
   // POST /api/rooms/:diagramId/ai/messages — enqueue a message; the author is the JWT user.
   router.post(
@@ -74,6 +108,8 @@ export function mountRoomAiRoutes({ auth, roomAi }: Deps): Hono<AppEnv> {
           text: body.text,
           intent: body.intent,
           replica: body.replica,
+          ...(body.teachingProfile ? { teachingProfile: body.teachingProfile } : {}),
+          ...(body.profileRevision ? { profileRevision: body.profileRevision } : {}),
         })
         return c.json(result, 202)
       } catch (err) {
@@ -83,10 +119,105 @@ export function mountRoomAiRoutes({ auth, roomAi }: Deps): Hono<AppEnv> {
         if (err instanceof SharedBoardSnapshotNotReadyError) {
           throw new ApiError(409, "ROOM_AI_BOARD_NOT_READY", err.message)
         }
+        if (err instanceof RoomAiPersonalProfileStaleError) {
+          throw new ApiError(409, "ROOM_AI_PROFILE_STALE", err.message)
+        }
         throw err
       }
     })
   )
+
+  router.post("/rooms/:diagramId/ai/voice", async (c) => {
+    const user = c.get("user")
+    if (!user) throw Errors.unauthorized()
+
+    let form: FormData
+    try {
+      form = await c.req.formData()
+    } catch {
+      throw Errors.badRequest("Voice question must use multipart form data")
+    }
+
+    const file = form.get("file")
+    if (!(file instanceof File)) throw Errors.badRequest("Audio file is required")
+    if (file.size === 0) throw Errors.badRequest("Audio file is empty")
+    if (file.type && !file.type.toLowerCase().startsWith("audio/")) {
+      throw Errors.badRequest("Uploaded file must be audio")
+    }
+
+    const rawReplica = form.get("replica")
+    if (typeof rawReplica !== "string") throw Errors.invalidParams("Room replica is required")
+    let decodedReplica: unknown
+    try {
+      decodedReplica = JSON.parse(rawReplica)
+    } catch {
+      throw Errors.invalidParams("Room replica is invalid")
+    }
+    const replicaResult = VoiceQuestionReplica.safeParse(decodedReplica)
+    if (!replicaResult.success) throw Errors.invalidParams("Room replica is invalid")
+    if (form.has("personalMemory")) throw Errors.invalidParams("Raw Room memory is not accepted")
+    const rawProfile = form.get("teachingProfile")
+    const rawProfileRevision = form.get("profileRevision")
+    let teachingProfile: z.infer<typeof RoomAiTeachingProfileSchema> | undefined
+    let profileRevision: string | undefined
+    if (rawProfile !== null || rawProfileRevision !== null) {
+      if (typeof rawProfile !== "string" || typeof rawProfileRevision !== "string") {
+        throw Errors.invalidParams("Room teaching profile is invalid")
+      }
+      let decodedProfile: unknown
+      try {
+        decodedProfile = JSON.parse(rawProfile)
+      } catch {
+        throw Errors.invalidParams("Room teaching profile is invalid")
+      }
+      const profileResult = RoomAiTeachingProfileSchema.safeParse(decodedProfile)
+      const revisionResult = z.string().uuid().safeParse(rawProfileRevision)
+      if (!profileResult.success || !revisionResult.success) {
+        throw Errors.invalidParams("Room teaching profile is invalid")
+      }
+      teachingProfile = profileResult.data
+      profileRevision = revisionResult.data
+    }
+
+    try {
+      const result = await voiceQuestion({
+        diagramId: c.req.param("diagramId"),
+        author: user,
+        bytes: new Uint8Array(await file.arrayBuffer()),
+        filename: file.name.split(/[\\/]/).pop()?.slice(0, 255) || "voice-input.webm",
+        contentType: file.type,
+        replica: replicaResult.data,
+        ...(teachingProfile ? { teachingProfile } : {}),
+        ...(profileRevision ? { profileRevision } : {}),
+      })
+      return c.json(result, 202)
+    } catch (err) {
+      if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
+      if (err instanceof RoomQueueFullError) {
+        throw new ApiError(429, "ROOM_AI_QUEUE_FULL", err.message)
+      }
+      if (err instanceof SharedBoardSnapshotNotReadyError) {
+        throw new ApiError(409, "ROOM_AI_BOARD_NOT_READY", err.message)
+      }
+      if (err instanceof RoomAiVoiceQuestionUnclearError) {
+        throw Errors.invalidParams("Could not transcribe clear speech")
+      }
+      if (err instanceof RoomAiVoiceQuestionTooLongError) {
+        throw Errors.invalidParams("Transcribed Room question exceeds 4,000 characters")
+      }
+      if (err instanceof RoomAiPersonalProfileStaleError) {
+        throw new ApiError(409, "ROOM_AI_PROFILE_STALE", err.message)
+      }
+      if (err instanceof RoomAiTranscriptionUnavailableError) {
+        throw new ApiError(
+          503,
+          "ROOM_AI_TRANSCRIPTION_UNAVAILABLE",
+          "Room voice transcription is unavailable"
+        )
+      }
+      throw err
+    }
+  })
 
   router.get(
     "/rooms/:diagramId/ai/memory",
@@ -118,47 +249,6 @@ export function mountRoomAiRoutes({ auth, roomAi }: Deps): Hono<AppEnv> {
         throw err
       }
     })
-  )
-
-  // Private input and response exist only for this authenticated HTTP exchange.
-  router.post(
-    "/rooms/:diagramId/ai/private-messages",
-    validate(
-      { params: DiagramIdParams, body: PostPrivateMessageBody },
-      async (c, { params, body }) => {
-        const user = c.get("user")
-        if (!user) throw Errors.unauthorized()
-        try {
-          const result = await roomAi.postPrivateMessage({
-            diagramId: params.diagramId,
-            author: user,
-            text: body.text,
-            ...(body.privateContext !== undefined ? { privateContext: body.privateContext } : {}),
-            replicaGeneration: body.replica.generation,
-            replicaRevision: body.replica.revision,
-          })
-          return c.json(result, 200)
-        } catch (err) {
-          if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
-          if (err instanceof SharedBoardSnapshotNotReadyError) {
-            throw new ApiError(409, "ROOM_AI_BOARD_NOT_READY", err.message)
-          }
-          if (err instanceof PrivateRoomAiUnavailableError) {
-            throw new ApiError(503, "ROOM_AI_PRIVATE_UNAVAILABLE", err.message)
-          }
-          if (err instanceof RoomAiInferenceCapacityError) {
-            throw new ApiError(429, "ROOM_AI_BUSY", "Room AI is at capacity")
-          }
-          if (err instanceof RoomAiPromptTooLargeError) {
-            throw new ApiError(413, "ROOM_AI_CONTEXT_TOO_LARGE", err.message)
-          }
-          if (err instanceof RoomAiTokenizerUnavailableError) {
-            throw new ApiError(503, "ROOM_AI_PRIVATE_UNAVAILABLE", err.message)
-          }
-          throw err
-        }
-      }
-    )
   )
 
   // GET /api/rooms/:diagramId/ai/messages?before&limit — chronological history page.

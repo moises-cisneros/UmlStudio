@@ -81,36 +81,23 @@ describe("RoomChatPanel", () => {
     expect(screen.queryByRole("status")).toBeNull()
   })
 
-  it("shows when shared Room memory could not be loaded", () => {
+  it("does not show memory content or controls in the shared conversation", () => {
+    render(<RoomChatPanel messages={[]} aiStatus={IDLE_ROOM_AI_STATUS} onSend={vi.fn()} />)
+    expect(screen.getByText("Visible to everyone in this room")).toBeTruthy()
+    expect(screen.queryByText(/memory/i)).toBeNull()
+    expect(screen.queryByRole("button", { name: /memory|profile|pin/i })).toBeNull()
+  })
+
+  it("shows an honest inline status when profile learning or local saving fails", () => {
     render(
       <RoomChatPanel
         messages={[]}
         aiStatus={IDLE_ROOM_AI_STATUS}
-        hasSharedMemoryError
+        hasProfileSyncError
         onSend={vi.fn()}
       />
     )
-    expect(screen.getByText("Shared room memory is unavailable.")).toBeTruthy()
-  })
-
-  it("shows when pinning a decision fails", () => {
-    render(
-      <RoomChatPanel messages={[]} aiStatus={IDLE_ROOM_AI_STATUS} hasPinError onSend={vi.fn()} />
-    )
-    expect(screen.getByText("Could not pin this message to shared memory.")).toBeTruthy()
-  })
-
-  it("shows the shared summary and pinned decisions in Room mode", () => {
-    render(
-      <RoomChatPanel
-        messages={[]}
-        aiStatus={IDLE_ROOM_AI_STATUS}
-        sharedMemory={{ summary: "Use a layered architecture", pinnedDecisions: ["Use UUIDs"] }}
-        onSend={vi.fn()}
-      />
-    )
-    expect(screen.getByText("Use a layered architecture")).toBeTruthy()
-    expect(screen.getByText("Use UUIDs")).toBeTruthy()
+    expect(screen.getByRole("alert").textContent).toContain("teaching preferences")
   })
 
   it("sends the trimmed draft and clears the input", async () => {
@@ -123,20 +110,58 @@ describe("RoomChatPanel", () => {
     expect((input as HTMLInputElement).value).toBe("")
   })
 
-  it("lets the collaborator switch between shared Room and private chat", async () => {
-    const onModeChange = vi.fn()
+  it("exposes voice recording in the shared Room conversation", async () => {
+    const onStartRecording = vi.fn()
+    const voiceControls = {
+      status: "idle" as const,
+      elapsed: 0,
+      audioUrl: null,
+      hasSupport: true,
+      isSending: false,
+      hasError: false,
+      onStartRecording,
+      onStopRecording: vi.fn(),
+      onCancelRecording: vi.fn(),
+      onSendRecording: vi.fn(),
+    }
     render(
       <RoomChatPanel
         messages={[]}
         aiStatus={IDLE_ROOM_AI_STATUS}
-        mode="room"
-        onModeChange={onModeChange}
         onSend={vi.fn()}
+        voiceControls={voiceControls}
       />
     )
 
-    await userEvent.click(screen.getByRole("button", { name: "Private" }))
+    await userEvent.click(screen.getByRole("button", { name: "Record voice question" }))
+    expect(onStartRecording).toHaveBeenCalledOnce()
+    expect(screen.queryByRole("button", { name: "Private" })).toBeNull()
+  })
 
-    expect(onModeChange).toHaveBeenCalledWith("private")
+  it("sends the recorded voice only when the collaborator confirms it", async () => {
+    const onSendRecording = vi.fn()
+    render(
+      <RoomChatPanel
+        messages={[]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        onSend={vi.fn()}
+        voiceControls={{
+          status: "recorded",
+          elapsed: 4,
+          audioUrl: "blob:voice",
+          hasSupport: true,
+          isSending: false,
+          hasError: false,
+          onStartRecording: vi.fn(),
+          onStopRecording: vi.fn(),
+          onCancelRecording: vi.fn(),
+          onSendRecording,
+        }}
+      />
+    )
+
+    expect(screen.getByLabelText("Recorded voice question preview")).toBeTruthy()
+    await userEvent.click(screen.getByRole("button", { name: "Send voice question" }))
+    expect(onSendRecording).toHaveBeenCalledOnce()
   })
 })
