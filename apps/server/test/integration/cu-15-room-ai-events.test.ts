@@ -4,7 +4,7 @@ import { createServer } from "node:net"
 import { getRedis } from "../../src/__tests__/setup.js"
 import { gzipJson, k } from "../../src/redis.js"
 import { startRelayServer, type RelayServer } from "../../src/ws.js"
-import { createRoomAiService } from "../../src/services/room-ai/room-ai-service.js"
+import { createRoomAiTestService as createRoomAiService } from "./helpers/room-ai-test-support.js"
 import { createRoomAiEventBus } from "../../src/services/room-ai/room-ai-event-bus.js"
 
 const DIAGRAM_ID = "room-events-1"
@@ -21,9 +21,15 @@ function getFreePort(): Promise<number> {
   })
 }
 
-function connect(port: number, diagramId: string): Promise<{ ws: WebSocket; frames: string[] }> {
+function connect(
+  port: number,
+  diagramId: string,
+  mode: "shared" | "local" = "shared"
+): Promise<{ ws: WebSocket; frames: string[] }> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`ws://127.0.0.1:${port}?diagramId=${diagramId}`)
+    const ws = new WebSocket(
+      `ws://127.0.0.1:${port}?diagramId=${diagramId}&mode=${mode}&token=test`
+    )
     const frames: string[] = []
     ws.on("message", (raw) => frames.push(raw.toString()))
     ws.once("open", () => resolve({ ws, frames }))
@@ -43,7 +49,7 @@ describe("INT-CU15: room AI events over WebSocket", () => {
 
   beforeEach(async () => {
     port = await getFreePort()
-    relay = startRelayServer({ port, host: "127.0.0.1" })
+    relay = startRelayServer({ port, host: "127.0.0.1", verifyToken: async () => "test-user" })
   })
 
   afterEach(async () => {
@@ -102,6 +108,15 @@ describe("INT-CU15: room AI events over WebSocket", () => {
     })
   })
 
+  it("does not send shared Room AI events to an unauthenticated local-mode socket", async () => {
+    const local = await connect(port, DIAGRAM_ID, "local")
+    sockets.push(local.ws)
+    await settle()
+    relay.publishRoomAi(DIAGRAM_ID, { type: "ai.status", status: "thinking", queueLength: 1 })
+    await settle()
+    expect(roomAiFrames(local.frames)).toEqual([])
+  })
+
   it("broadcasts ai.status and policy.updated to every socket in the room", async () => {
     const ana = await connect(port, DIAGRAM_ID)
     const luis = await connect(port, DIAGRAM_ID)
@@ -146,7 +161,11 @@ describe("INT-CU15: room AI events over WebSocket", () => {
   it("delivers a policy update to a socket on another relay", async () => {
     const redis = await getRedis()
     const otherPort = await getFreePort()
-    const otherRelay = startRelayServer({ port: otherPort, host: "127.0.0.1" })
+    const otherRelay = startRelayServer({
+      port: otherPort,
+      host: "127.0.0.1",
+      verifyToken: async () => "test-user",
+    })
     const firstBus = await createRoomAiEventBus(redis, relay.publishRoomAi)
     const secondBus = await createRoomAiEventBus(redis, otherRelay.publishRoomAi)
     try {

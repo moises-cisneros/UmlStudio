@@ -26,6 +26,8 @@ import { mountProductivityRoutes } from "../routes/productivity.js"
 import { mountHealthRoutes } from "../routes/health.js"
 import { mountRoomAiRoutes } from "../routes/room-ai.js"
 import { createRoomAiService } from "../services/room-ai/room-ai-service.js"
+import type { RoomAiService } from "../services/room-ai/room-ai-service.js"
+import type { BoardReplica } from "../services/room-ai/board-replica.js"
 import { mountEmbedApiRoutes, mountEmbedRoutes } from "../routes/embed.js"
 import { ConversionResource } from "../resources/conversion-resource.js"
 import { SvgPreviewCache } from "../services/svg-preview-cache.js"
@@ -35,6 +37,11 @@ import type { ControlEvent } from "../types.js"
 export interface RelayHook {
   publishControl: (diagramId: string, control: ControlEvent) => void
   publishRoomAi?: (diagramId: string, event: RoomAiEvent) => void
+  getSharedBoardReplicaAtLeast?: (
+    diagramId: string,
+    generation: string,
+    revision: number
+  ) => BoardReplica | undefined
 }
 
 export interface AppDeps {
@@ -44,10 +51,19 @@ export interface AppDeps {
   autoLogging?: boolean
   conversionResource?: ConversionResource
   auth?: AuthService
+  roomAi?: RoomAiService
 }
 
 export function buildApp(deps: AppDeps): ServerType {
-  const { config, redis, relay, autoLogging = true, conversionResource, auth: providedAuth } = deps
+  const {
+    config,
+    redis,
+    relay,
+    autoLogging = true,
+    conversionResource,
+    auth: providedAuth,
+    roomAi: providedRoomAi,
+  } = deps
 
   const app = new Hono<AppEnv>()
 
@@ -100,11 +116,17 @@ export function buildApp(deps: AppDeps): ServerType {
     "/api",
     mountRoomAiRoutes({
       auth,
-      roomAi: createRoomAiService({
-        redis,
-        ttlSeconds: config.DIAGRAM_TTL_SECONDS,
-        ...(relay?.publishRoomAi ? { publish: relay.publishRoomAi } : {}),
-      }),
+      roomAi:
+        providedRoomAi ??
+        createRoomAiService({
+          redis,
+          ttlSeconds: config.DIAGRAM_TTL_SECONDS,
+          maxConcurrency: config.AI_MAX_CONCURRENCY,
+          ...(relay?.publishRoomAi ? { publish: relay.publishRoomAi } : {}),
+          ...(relay?.getSharedBoardReplicaAtLeast
+            ? { getSharedBoardReplicaAtLeast: relay.getSharedBoardReplicaAtLeast }
+            : {}),
+        }),
     })
   )
   app.route("/api", mountConversionRoutes({ getResource }))

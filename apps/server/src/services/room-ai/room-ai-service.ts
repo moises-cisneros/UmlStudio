@@ -1,13 +1,17 @@
 import { randomUUID } from "node:crypto"
-import type { RoomAiEvent, RoomAiIntent, RoomChatMessage } from "@umlstudio/core"
+import type { RoomAiEvent, RoomAiIntent, RoomChatMessage, UMLModel } from "@umlstudio/core"
 import { k, type Redis } from "../../redis.js"
 import type { AuthProfile } from "../auth-service.js"
+import type { BoardReplica } from "./board-replica.js"
+import { acquireRoomAiInferenceSlot, releaseRoomAiInferenceSlot } from "./inference-slots.js"
+import { InferenceNotStartedError } from "./inference-not-started.js"
 import {
   createChatRepository,
   enqueueChatMessage,
   type ChatPage,
   type ChatRepository,
   type ListChatOptions,
+  type RoomAiReplicaRequirement,
 } from "./chat-repository.js"
 
 export interface PostRoomMessageInput {
@@ -15,6 +19,7 @@ export interface PostRoomMessageInput {
   author: AuthProfile
   text: string
   intent: RoomAiIntent
+  replica: RoomAiReplicaRequirement
 }
 
 export interface PostRoomMessageResult {
@@ -23,8 +28,23 @@ export interface PostRoomMessageResult {
   queuePosition: number
 }
 
+export interface PostPrivateRoomMessageInput {
+  diagramId: string
+  author: AuthProfile
+  text: string
+  privateContext?: string
+  replicaGeneration: string
+  replicaRevision: number
+}
+
+export interface PrivateRoomMessageResult {
+  text: string
+  provider: string
+}
+
 export interface RoomAiService {
   postMessage(input: PostRoomMessageInput): Promise<PostRoomMessageResult>
+  postPrivateMessage(input: PostPrivateRoomMessageInput): Promise<PrivateRoomMessageResult>
   listMessages(diagramId: string, options?: ListChatOptions): Promise<ChatPage<RoomChatMessage>>
 }
 
@@ -43,17 +63,45 @@ export class RoomQueueFullError extends Error {
   }
 }
 
+export class SharedBoardSnapshotNotReadyError extends Error {
+  constructor() {
+    super("shared board snapshot is not ready")
+    this.name = "SharedBoardSnapshotNotReadyError"
+  }
+}
+
+export class PrivateRoomAiUnavailableError extends Error {
+  constructor() {
+    super("private room AI is unavailable")
+    this.name = "PrivateRoomAiUnavailableError"
+  }
+}
+
 interface RoomAiServiceDeps {
   redis: Redis
   ttlSeconds: number
+  maxConcurrency?: number
   chat?: ChatRepository<RoomChatMessage>
   now?: () => Date
   /** Broadcasts room AI events to every socket in the room. */
   publish?: (diagramId: string, event: RoomAiEvent) => void
+  getSharedBoardReplicaAtLeast?: (
+    diagramId: string,
+    generation: string,
+    revision: number
+  ) => BoardReplica | undefined
+  respondPrivately?: (input: {
+    diagramId: string
+    author: AuthProfile
+    text: string
+    privateContext?: string
+    board: UMLModel
+    onInferenceStart?: () => void
+  }) => Promise<PrivateRoomMessageResult>
 }
 
 export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
-  const { redis, ttlSeconds, now = () => new Date(), publish } = deps
+  const { redis, ttlSeconds, maxConcurrency = 1, now = () => new Date(), publish } = deps
   const chat = deps.chat ?? createChatRepository<RoomChatMessage>(redis, ttlSeconds)
 
   async function assertRoomExists(diagramId: string): Promise<void> {
@@ -61,8 +109,15 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
   }
 
   return {
-    async postMessage({ diagramId, author, text, intent }) {
+    async postMessage({ diagramId, author, text, intent, replica: requirement }) {
       await assertRoomExists(diagramId)
+      const replica = deps.getSharedBoardReplicaAtLeast?.(
+        diagramId,
+        requirement.generation,
+        requirement.revision
+      )
+      if (!replica?.isComplete()) throw new SharedBoardSnapshotNotReadyError()
+      if (!replica.isComplete()) throw new SharedBoardSnapshotNotReadyError()
 
       const message: RoomChatMessage = {
         id: randomUUID(),
@@ -82,7 +137,8 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
         redis,
         diagramId,
         message,
-        ttlSeconds
+        ttlSeconds,
+        requirement
       )
       if (queuePosition === 0) throw new RoomQueueFullError()
       publish?.(diagramId, { type: "message.created", message })
@@ -93,6 +149,47 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
         queuePosition,
       })
       return { messageId: message.id, queuePosition }
+    },
+
+    async postPrivateMessage({
+      diagramId,
+      author,
+      text,
+      privateContext,
+      replicaGeneration,
+      replicaRevision,
+    }) {
+      await assertRoomExists(diagramId)
+      const replica = deps.getSharedBoardReplicaAtLeast?.(
+        diagramId,
+        replicaGeneration,
+        replicaRevision
+      )
+      if (!replica?.isComplete()) throw new SharedBoardSnapshotNotReadyError()
+      if (!deps.respondPrivately) throw new PrivateRoomAiUnavailableError()
+      const board = replica.getModel()
+      if (!replica.isComplete()) throw new SharedBoardSnapshotNotReadyError()
+      const slot = await acquireRoomAiInferenceSlot(redis, maxConcurrency)
+      let inferenceStarted = false
+      try {
+        const result = await deps.respondPrivately({
+          diagramId,
+          author,
+          text,
+          ...(privateContext !== undefined ? { privateContext } : {}),
+          board,
+          onInferenceStart: () => {
+            inferenceStarted = true
+          },
+        })
+        await releaseRoomAiInferenceSlot(redis, slot)
+        return result
+      } catch (error) {
+        if (!inferenceStarted || error instanceof InferenceNotStartedError) {
+          await releaseRoomAiInferenceSlot(redis, slot)
+        }
+        throw error
+      }
     },
 
     async listMessages(diagramId, options) {

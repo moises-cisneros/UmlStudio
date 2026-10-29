@@ -2,10 +2,9 @@ import { randomUUID } from "node:crypto"
 import type { RoomAiEvent, RoomChatMessage } from "@umlstudio/core"
 import { logger } from "../../logger.js"
 import { k, type Redis } from "../../redis.js"
-import { createChatRepository } from "./chat-repository.js"
-
-const GLOBAL_SLOTS = "umlstudio:room-ai:inference-slots"
-const GLOBAL_LIMIT = "umlstudio:room-ai:inference-limit"
+import { createChatRepository, type RoomAiReplicaRequirement } from "./chat-repository.js"
+import { InferenceNotStartedError } from "./inference-not-started.js"
+import { GLOBAL_LIMIT, GLOBAL_SLOTS } from "./inference-slots.js"
 
 // No lease expiry: a crashed worker must not silently free an unconfirmed inference.
 const CLAIM = `
@@ -53,7 +52,11 @@ interface DispatcherDeps {
   timeoutMs?: number
   ttlSeconds?: number
   /** Resolve only after the provider confirms the inference has terminated. */
-  infer: (diagramId: string, messageId: string) => Promise<void>
+  infer: (diagramId: string, messageId: string, replica: RoomAiReplicaRequirement) => Promise<void>
+  getReplicaRequirement: (
+    diagramId: string,
+    messageId: string
+  ) => Promise<RoomAiReplicaRequirement | undefined>
   publish?: (diagramId: string, event: RoomAiEvent) => void | Promise<void>
 }
 
@@ -150,10 +153,27 @@ export function createRoomAiDispatcher(deps: DispatcherDeps) {
             )
           }, deps.timeoutMs ?? 90_000)
           try {
+            const replica = await deps.getReplicaRequirement(diagramId, id)
+            if (!replica) {
+              throw new InferenceNotStartedError(
+                "shared board synchronization metadata is unavailable"
+              )
+            }
             markStarted()
-            await deps.infer(diagramId, id)
+            await deps.infer(diagramId, id, replica)
           } catch (err) {
+            markStarted()
             clearTimeout(timer)
+            if (err instanceof InferenceNotStartedError) {
+              try {
+                if (!timedOut) await update(diagramId, id, "failed", "Inference unavailable")
+                await deps.redis.multi().del(k.aiReplicaRequirement(diagramId, id)).exec()
+                await publishStatus(diagramId, "idle")
+              } finally {
+                await releaseConfirmedSlot(diagramId, token, id)
+              }
+              return
+            }
             // A rejected request is not proof that the remote model stopped.
             if (!timedOut)
               await update(
@@ -169,6 +189,11 @@ export function createRoomAiDispatcher(deps: DispatcherDeps) {
             return
           }
           clearTimeout(timer)
+          await deps.redis
+            .del(k.aiReplicaRequirement(diagramId, id))
+            .catch((err) =>
+              logger.error({ err, diagramId, messageId: id }, "replica requirement cleanup failed")
+            )
           if (!timedOut) {
             await update(diagramId, id, "answered").catch((err) =>
               logger.error(

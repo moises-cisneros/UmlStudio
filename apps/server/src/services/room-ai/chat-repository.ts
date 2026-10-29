@@ -9,6 +9,11 @@ export interface ChatRecord {
   id: string
 }
 
+export interface RoomAiReplicaRequirement {
+  generation: string
+  revision: number
+}
+
 export interface ListChatOptions {
   /** Return messages older than the message with this id. */
   before?: string
@@ -61,6 +66,7 @@ for _, id in ipairs(legacy) do redis.call('RPUSH', KEYS[1], id) end
 redis.call('RPUSH', KEYS[1], ARGV[1])
 redis.call('RPUSH', KEYS[2], ARGV[2])
 redis.call('LTRIM', KEYS[2], -200, -1)
+if ARGV[4] ~= '' then redis.call('SET', KEYS[6], ARGV[4], 'EX', ARGV[5]) end
 redis.call('EXPIRE', KEYS[1], ARGV[3])
 redis.call('EXPIRE', KEYS[2], ARGV[3])
 redis.call('SET', KEYS[3], '1', 'EX', ARGV[3])
@@ -72,7 +78,8 @@ export async function enqueueChatMessage<T extends ChatRecord>(
   redis: Redis,
   diagramId: string,
   message: T,
-  ttlSeconds: number
+  ttlSeconds: number,
+  replica: RoomAiReplicaRequirement
 ): Promise<{ position: number; active: boolean }> {
   const result = (await redis.eval(ENQUEUE, {
     keys: [
@@ -81,10 +88,40 @@ export async function enqueueChatMessage<T extends ChatRecord>(
       k.aiQueueInitialized(diagramId),
       k.aiActiveMessage(diagramId),
       k.aiActive(diagramId),
+      k.aiReplicaRequirement(diagramId, message.id),
     ],
-    arguments: [message.id, JSON.stringify(message), String(ttlSeconds)],
+    arguments: [
+      message.id,
+      JSON.stringify(message),
+      String(ttlSeconds),
+      JSON.stringify(replica),
+      String(Math.min(ttlSeconds, 15 * 60)),
+    ],
   })) as [number, number]
   return { position: Number(result[0]), active: Number(result[1]) === 1 }
+}
+
+export async function getRoomAiReplicaRequirement(
+  redis: Redis,
+  diagramId: string,
+  messageId: string
+): Promise<RoomAiReplicaRequirement | undefined> {
+  const raw = await redis.get(k.aiReplicaRequirement(diagramId, messageId))
+  if (!raw) return undefined
+  try {
+    const value = JSON.parse(raw) as Partial<RoomAiReplicaRequirement>
+    if (
+      typeof value.generation === "string" &&
+      /^[a-f0-9]{64}$/.test(value.generation) &&
+      Number.isSafeInteger(value.revision) &&
+      (value.revision as number) >= 0
+    ) {
+      return { generation: value.generation, revision: value.revision as number }
+    }
+  } catch {
+    // Malformed queue metadata fails closed at dispatch.
+  }
+  return undefined
 }
 
 /**

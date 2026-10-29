@@ -16,9 +16,11 @@ const DIAGRAM_ID = "room-1"
 describe("INT-CU15: room AI message routes", () => {
   let app: Hono<AppEnv>
   let redis: Redis
+  let privateRequests: unknown[]
 
   beforeEach(async () => {
     redis = await getRedis()
+    privateRequests = []
     const auth = createAuthService({
       repo: createRedisUserRepository(redis),
       jwtSecret: TEST_JWT_SECRET,
@@ -28,7 +30,27 @@ describe("INT-CU15: room AI message routes", () => {
     app.route("/api/auth", mountAuthRoutes({ redis, auth }))
     app.route(
       "/api",
-      mountRoomAiRoutes({ auth, roomAi: createRoomAiService({ redis, ttlSeconds: 3600 }) })
+      mountRoomAiRoutes({
+        auth,
+        roomAi: createRoomAiService({
+          redis,
+          ttlSeconds: 3600,
+          maxConcurrency: 1,
+          getSharedBoardReplicaAtLeast: (diagramId, generation, revision) => {
+            if (diagramId !== DIAGRAM_ID || generation !== "a".repeat(64) || revision !== 3) {
+              return undefined
+            }
+            return {
+              isComplete: () => true,
+              getModel: () => ({ id: DIAGRAM_ID, nodes: [], edges: [] }),
+            } as never
+          },
+          respondPrivately: async (request) => {
+            privateRequests.push(request)
+            return { text: "Private answer", provider: "self-hosted" }
+          },
+        }),
+      })
     )
     await redis.set(k.diagram(DIAGRAM_ID), gzipJson({ id: DIAGRAM_ID }))
   })
@@ -51,12 +73,25 @@ describe("INT-CU15: room AI message routes", () => {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        replica: { generation: "a".repeat(64), revision: 3 },
+        ...(body as Record<string, unknown>),
+      }),
     })
 
   const list = (token: string | undefined, query = "", diagramId = DIAGRAM_ID) =>
     app.request(`/api/rooms/${diagramId}/ai/messages${query}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+
+  const postPrivate = (token: string | undefined, body: unknown, diagramId = DIAGRAM_ID) =>
+    app.request(`/api/rooms/${diagramId}/ai/private-messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
     })
 
   it("returns 202 with messageId and queuePosition for a valid JWT", async () => {
@@ -66,6 +101,57 @@ describe("INT-CU15: room AI message routes", () => {
     const body = await res.json()
     expect(typeof body.messageId).toBe("string")
     expect(body.queuePosition).toBe(1)
+    expect(await redis.get(k.aiReplicaRequirement(DIAGRAM_ID, body.messageId))).toBe(
+      JSON.stringify({ generation: "a".repeat(64), revision: 3 })
+    )
+  })
+
+  it("rejects personal context on the shared room endpoint", async () => {
+    const { token } = await register("private-context.room@example.com", "Private Context")
+    const privateContext = "Only this collaborator's personal memory"
+    const res = await post(token, {
+      text: "help me with this diagram",
+      intent: "ask",
+      privateContext,
+    })
+
+    expect(res.status).toBe(422)
+    expect(await redis.lRange(k.aiChat(DIAGRAM_ID), 0, -1)).toEqual([])
+    expect(await redis.keys(`diagram:{${DIAGRAM_ID}}:ai:private-context:*`)).toEqual([])
+  })
+
+  it("returns private answers only to the authenticated requester without persisting the exchange", async () => {
+    const { token, id } = await register("private.route@example.com", "Private User")
+    const secret = "only-in-this-private-request"
+    const response = await postPrivate(token, {
+      text: "Question that must not be shared",
+      privateContext: secret,
+      replica: { generation: "a".repeat(64), revision: 3 },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ text: "Private answer", provider: "self-hosted" })
+    expect(privateRequests).toHaveLength(1)
+    expect(privateRequests[0]).toMatchObject({
+      author: { id, name: "Private User" },
+      text: "Question that must not be shared",
+      privateContext: secret,
+    })
+    expect(await redis.lRange(k.aiChat(DIAGRAM_ID), 0, -1)).toEqual([])
+    expect(await redis.keys(`diagram:{${DIAGRAM_ID}}:ai:private-context:*`)).toEqual([])
+    expect(await redis.keys(`diagram:{${DIAGRAM_ID}}:ai:private-required`)).toEqual([])
+  })
+
+  it("fails closed when the acknowledged shared-board revision is stale", async () => {
+    const { token } = await register("stale.private@example.com", "Stale")
+    const response = await postPrivate(token, {
+      text: "Question",
+      replica: { generation: "a".repeat(64), revision: 4 },
+    })
+
+    expect(response.status).toBe(409)
+    expect(privateRequests).toEqual([])
+    expect(await redis.lRange(k.aiChat(DIAGRAM_ID), 0, -1)).toEqual([])
   })
 
   it("increments queuePosition for consecutive queued messages", async () => {
@@ -90,6 +176,7 @@ describe("INT-CU15: room AI message routes", () => {
       expect((await post(token, { text: `message ${n}`, intent: "ask" })).status).toBe(202)
     }
     expect((await post(token, { text: "overflow", intent: "ask" })).status).toBe(429)
+    expect(await redis.keys(`diagram:{${DIAGRAM_ID}}:ai:private-context:*`)).toEqual([])
     const messages = await (await list(token)).json()
     expect(messages).toHaveLength(5)
     expect(messages.some((message: { text: string }) => message.text === "overflow")).toBe(false)
@@ -105,14 +192,29 @@ describe("INT-CU15: room AI message routes", () => {
     second.onError(errorHandler)
     second.route(
       "/api",
-      mountRoomAiRoutes({ auth, roomAi: createRoomAiService({ redis, ttlSeconds: 3600 }) })
+      mountRoomAiRoutes({
+        auth,
+        roomAi: createRoomAiService({
+          redis,
+          ttlSeconds: 3600,
+          getSharedBoardReplicaAtLeast: () =>
+            ({
+              isComplete: () => true,
+              getModel: () => ({ id: DIAGRAM_ID, nodes: [], edges: [] }),
+            }) as never,
+        }),
+      })
     )
     const responses = await Promise.all(
       Array.from({ length: 6 }, (_, n) =>
         (n % 2 ? second : app).request(`/api/rooms/${DIAGRAM_ID}/ai/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ text: `message ${n}`, intent: "ask" }),
+          body: JSON.stringify({
+            text: `message ${n}`,
+            intent: "ask",
+            replica: { generation: "a".repeat(64), revision: 3 },
+          }),
         })
       )
     )
@@ -134,8 +236,16 @@ describe("INT-CU15: room AI message routes", () => {
     expect(message).toMatchObject({ diagramId: DIAGRAM_ID, intent: "ask", status: "queued" })
   })
 
-  it("returns 401 without a token on both routes", async () => {
+  it("returns 401 without a token for shared and private routes", async () => {
     expect((await post(undefined, { text: "hi", intent: "ask" })).status).toBe(401)
+    expect(
+      (
+        await postPrivate(undefined, {
+          text: "hi",
+          replica: { generation: "a".repeat(64), revision: 3 },
+        })
+      ).status
+    ).toBe(401)
     expect((await list(undefined)).status).toBe(401)
   })
 

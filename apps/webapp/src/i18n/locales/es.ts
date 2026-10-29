@@ -98,12 +98,19 @@ export const es: TranslationDictionary = {
   roomAi: {
     tabRoom: "IA de sala",
     title: "Conversación de la sala",
+    modeGroup: "Modo de conversación",
+    roomMode: "Sala",
+    privateMode: "Privado",
+    privateNotice:
+      "Solo vos podés ver esta conversación. Tu memoria personal se envía temporalmente.",
     empty:
       "Aún no hay mensajes. Pregunta algo a la IA sobre este diagrama; todos en la sala lo verán.",
+    privateEmpty: "Esta conversación es privada y solo vos podés verla.",
     loading: "Cargando conversación...",
     loadError: "No se pudo cargar la conversación de la sala.",
     sendError: "No se pudo enviar tu mensaje.",
     inputPlaceholder: "Pregunta a la IA sobre este diagrama...",
+    privateInputPlaceholder: "Pregunta en privado sobre este diagrama...",
     send: "Enviar",
     you: "Tú",
     aiAuthor: "IA",
@@ -113,6 +120,9 @@ export const es: TranslationDictionary = {
     thinkingFor: (name) => `La IA está pensando para ${name}`,
     thinking: "La IA está pensando",
     queueLength: (count) => `${count} en cola`,
+    personalMemory: "Memoria personal (solo se envía en modo privado)",
+    saveMemory: "Guardar memoria",
+    memorySaved: "Memoria personal guardada en este navegador.",
   },
   collaborators: {
     activeUsers: "Integrantes Activos",

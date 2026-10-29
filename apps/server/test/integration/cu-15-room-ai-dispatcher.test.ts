@@ -1,14 +1,71 @@
 import { describe, expect, it, vi } from "vitest"
 import { getRedis } from "../../src/__tests__/setup.js"
 import { k } from "../../src/redis.js"
-import { createRoomAiDispatcher } from "../../src/services/room-ai/room-ai-dispatcher.js"
+import { getRoomAiReplicaRequirement } from "../../src/services/room-ai/chat-repository.js"
+import { TEST_ROOM_AI_REPLICA } from "./helpers/room-ai-test-support.js"
 import {
-  createRoomAiService,
-  RoomQueueFullError,
-} from "../../src/services/room-ai/room-ai-service.js"
+  createRoomAiTestDispatcher as createRoomAiDispatcher,
+  createRoomAiTestService as createRoomAiService,
+} from "./helpers/room-ai-test-support.js"
+import { RoomQueueFullError } from "../../src/services/room-ai/room-ai-service.js"
 import type { RoomAiEvent } from "@umlstudio/core"
 
 describe("Room AI distributed dispatcher", () => {
+  it("passes the acknowledged board revision to inference and removes its queue metadata", async () => {
+    const redis = await getRedis()
+    const diagramId = "replica-requirement-dispatch"
+    await redis.set(k.diagram(diagramId), "exists")
+    const service = createRoomAiService({ redis, ttlSeconds: 3600 })
+    const { messageId } = await service.postMessage({
+      diagramId,
+      author: { id: "u1", name: "User" } as never,
+      text: "question",
+      intent: "ask",
+    })
+    const infer = vi.fn(async () => {})
+    const dispatcher = createRoomAiDispatcher({
+      redis,
+      maxConcurrency: 1,
+      getReplicaRequirement: (id, queuedId) => getRoomAiReplicaRequirement(redis, id, queuedId),
+      infer,
+    })
+
+    await dispatcher.processRoom(diagramId)
+    await dispatcher.waitForIdle()
+
+    expect(infer).toHaveBeenCalledWith(diagramId, messageId, TEST_ROOM_AI_REPLICA)
+    expect(await redis.get(k.aiReplicaRequirement(diagramId, messageId))).toBeNull()
+    await dispatcher.close()
+  })
+
+  it("fails queued inference closed when replica acknowledgement metadata expires", async () => {
+    const redis = await getRedis()
+    const diagramId = "replica-requirement-expired"
+    await redis.set(k.diagram(diagramId), "exists")
+    const service = createRoomAiService({ redis, ttlSeconds: 3600 })
+    const { messageId } = await service.postMessage({
+      diagramId,
+      author: { id: "u1", name: "User" } as never,
+      text: "question",
+      intent: "ask",
+    })
+    await redis.del(k.aiReplicaRequirement(diagramId, messageId))
+    const infer = vi.fn(async () => {})
+    const dispatcher = createRoomAiDispatcher({
+      redis,
+      maxConcurrency: 1,
+      getReplicaRequirement: (id, queuedId) => getRoomAiReplicaRequirement(redis, id, queuedId),
+      infer,
+    })
+
+    await dispatcher.processRoom(diagramId)
+    await dispatcher.waitForIdle()
+
+    expect(infer).not.toHaveBeenCalled()
+    expect((await service.listMessages(diagramId)).messages[0]?.status).toBe("failed")
+    await dispatcher.close()
+  })
+
   it.each(["persist", "publish", "release"] as const)(
     "releases a confirmed inference slot when %s fails",
     async (failure) => {

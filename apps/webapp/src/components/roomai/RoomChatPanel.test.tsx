@@ -90,4 +90,21 @@ describe("RoomChatPanel", () => {
     expect(onSend).toHaveBeenCalledWith("hello")
     expect((input as HTMLInputElement).value).toBe("")
   })
+
+  it("lets the collaborator switch between shared Room and private chat", async () => {
+    const onModeChange = vi.fn()
+    render(
+      <RoomChatPanel
+        messages={[]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        mode="room"
+        onModeChange={onModeChange}
+        onSend={vi.fn()}
+      />
+    )
+
+    await userEvent.click(screen.getByRole("button", { name: "Private" }))
+
+    expect(onModeChange).toHaveBeenCalledWith("private")
+  })
 })

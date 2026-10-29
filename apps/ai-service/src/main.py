@@ -50,7 +50,8 @@ from .models.uml import (
     ProductivityAuditResponse,
 )
 from .services.pipeline import AIPipeline
-from .services.room_response import RoomResponseService
+from .services.room_response import RoomPromptTooLongError, RoomResponseService
+from .services.room_tokenizer import RoomTokenizerUnavailableError
 from .services.transcription import TranscriptionError, is_ready, transcribe_audio_bytes, warm_up
 
 
@@ -121,6 +122,12 @@ def require_internal_token(
 async def respond_to_room(request: RoomRespondRequest) -> RoomRespondResponse:
     try:
         return await RoomResponseService.respond(request)
+    except RoomPromptTooLongError as exc:
+        raise HTTPException(
+            status_code=413, detail="Room AI prompt exceeds the 10,000-token limit"
+        ) from exc
+    except RoomTokenizerUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="Room AI tokenizer is not configured") from exc
     except NotImplementedError as exc:
         raise HTTPException(
             status_code=502, detail="Selected provider does not support text completion"

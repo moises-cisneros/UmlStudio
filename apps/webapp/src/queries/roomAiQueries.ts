@@ -15,7 +15,10 @@ export function roomAiMessagesQueryOptions(diagramId: string) {
  * Shared room conversation: history over REST, live updates pushed into the
  * query cache by `applyRoomAiEventToCache` (fed from the room WebSocket).
  */
-export function useRoomAi(diagramId: string) {
+export function useRoomAi(
+  diagramId: string,
+  flushSharedReplica: () => Promise<{ generation: string; revision: number }>
+) {
   const queryClient = useQueryClient()
 
   const history = useQuery(roomAiMessagesQueryOptions(diagramId))
@@ -27,8 +30,10 @@ export function useRoomAi(diagramId: string) {
   })
 
   const send = useMutation({
-    mutationFn: (text: string) =>
-      DiagramApiClient.postRoomAiMessage(diagramId, { text, intent: "ask" }),
+    mutationFn: async (text: string) => {
+      const replica = await flushSharedReplica()
+      return DiagramApiClient.postRoomAiMessage(diagramId, { text, intent: "ask", replica })
+    },
     // The broadcast normally delivers the message; refetch covers a dropped socket.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: roomAiKeys.messages(diagramId) }),
   })

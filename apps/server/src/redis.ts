@@ -22,6 +22,8 @@ export const k = {
   versionMeta: (id: string, vid: string) => `diagram:{${id}}:version:${vid}:meta`,
   autoVersionMarker: (id: string) => `diagram:{${id}}:auto-version-marker`,
   aiChat: (id: string) => `diagram:{${id}}:ai:chat`,
+  aiReplicaRequirement: (id: string, messageId: string) =>
+    `diagram:{${id}}:ai:replica-requirement:${messageId}`,
   aiQueue: (id: string) => `diagram:{${id}}:ai:queue`,
   aiQueueInitialized: (id: string) => `diagram:{${id}}:ai:queue-initialized`,
   aiActiveMessage: (id: string) => `diagram:{${id}}:ai:active-message`,

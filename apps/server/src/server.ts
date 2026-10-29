@@ -2,11 +2,17 @@ import { loadConfig } from "./config.js"
 import { logger } from "./logger.js"
 import { buildApp } from "./http/app.js"
 import { bootLoadFunction, createRedisClient, getJwtSecret } from "./redis.js"
-import { startRelayServer } from "./ws.js"
+import { startRelayServer, type RelayServer } from "./ws.js"
 import { createAuthorshipRepository } from "./services/room-ai/authorship-repository.js"
 import { createAuthService, createRedisUserRepository } from "./services/auth-service.js"
 import { seedDefaultUsers, revokeLegacySeedUsers } from "./auth/seed.js"
 import { createRoomAiEventBus } from "./services/room-ai/room-ai-event-bus.js"
+import { createRoomAiService } from "./services/room-ai/room-ai-service.js"
+import { createRoomAiDispatcher } from "./services/room-ai/room-ai-dispatcher.js"
+import { createRoomAiOrchestrator } from "./services/room-ai/room-ai-orchestrator.js"
+import { createRoomAiResponder } from "./services/room-ai/room-ai-responder.js"
+import { getRoomAiReplicaRequirement } from "./services/room-ai/chat-repository.js"
+import { InferenceNotStartedError } from "./services/room-ai/inference-not-started.js"
 
 async function main() {
   if (process.env.NODE_ENV !== "production") {
@@ -64,7 +70,7 @@ async function main() {
     config.WS_PORT === config.PORT ||
     (process.env.NODE_ENV === "production" && !process.env.WS_PORT)
 
-  let relay: import("./ws.js").RelayServer
+  let relay: RelayServer | undefined
   let httpServer: ReturnType<ReturnType<typeof buildApp>["listen"]>
   const roomAiBus = await createRoomAiEventBus(redis, (diagramId, event) => {
     relay?.publishRoomAi(diagramId, event)
@@ -78,10 +84,78 @@ async function main() {
         .publish(diagramId, event)
         .catch((err) => logger.error({ err, diagramId }, "room AI event publish failed"))
     },
+    getSharedBoardReplicaAtLeast: (diagramId: string, generation: string, revision: number) =>
+      relay?.getSharedBoardReplicaAtLeast(diagramId, generation, revision),
+  }
+
+  const responder = createRoomAiResponder({
+    serviceUrl: config.AI_SERVICE_URL,
+    internalToken: config.AI_INTERNAL_TOKEN,
+  })
+  const roomAiOrchestrator = createRoomAiOrchestrator({
+    redis,
+    ttlSeconds: config.DIAGRAM_TTL_SECONDS,
+    getBoard: (diagramId, requirement) => {
+      const replica = relay?.getSharedBoardReplicaAtLeast(
+        diagramId,
+        requirement.generation,
+        requirement.revision
+      )
+      if (!replica?.isComplete()) {
+        throw new InferenceNotStartedError("shared board snapshot is not ready")
+      }
+      const board = replica.getModel()
+      if (!replica.isComplete()) {
+        throw new InferenceNotStartedError("shared board snapshot is not ready")
+      }
+      return board
+    },
+    getMemory: async () => ({ summary: "", decisions: [] }),
+    getAuthorship: (diagramId) => authorship.getAll(diagramId),
+    respond: responder,
+    publish: (diagramId, event) => roomAiBus.publish(diagramId, event),
+  })
+  const dispatcher = createRoomAiDispatcher({
+    redis,
+    maxConcurrency: config.AI_MAX_CONCURRENCY,
+    ttlSeconds: config.DIAGRAM_TTL_SECONDS,
+    getReplicaRequirement: (diagramId, messageId) =>
+      getRoomAiReplicaRequirement(redis, diagramId, messageId),
+    infer: (diagramId, messageId, replica) =>
+      roomAiOrchestrator.infer(diagramId, messageId, replica),
+    publish: (diagramId, event) => roomAiBus.publish(diagramId, event),
+  })
+  const queuedRoomAi = createRoomAiService({
+    redis,
+    ttlSeconds: config.DIAGRAM_TTL_SECONDS,
+    maxConcurrency: config.AI_MAX_CONCURRENCY,
+    getSharedBoardReplicaAtLeast: relayPublish.getSharedBoardReplicaAtLeast,
+    publish: relayPublish.publishRoomAi,
+    respondPrivately: (input) =>
+      roomAiOrchestrator.respondPrivately({
+        diagramId: input.diagramId,
+        author: { id: input.author.id, name: input.author.name },
+        text: input.text,
+        ...(input.privateContext !== undefined ? { privateContext: input.privateContext } : {}),
+        board: input.board,
+        ...(input.onInferenceStart ? { onInferenceStart: input.onInferenceStart } : {}),
+      }),
+  })
+  const roomAi = {
+    ...queuedRoomAi,
+    async postMessage(input: Parameters<typeof queuedRoomAi.postMessage>[0]) {
+      const result = await queuedRoomAi.postMessage(input)
+      void dispatcher
+        .drainRoom(input.diagramId)
+        .catch((err) =>
+          logger.error({ err, diagramId: input.diagramId }, "Room AI queue drain failed")
+        )
+      return result
+    },
   }
 
   if (sharedPort) {
-    const app = buildApp({ config, redis, relay: relayPublish, auth })
+    const app = buildApp({ config, redis, relay: relayPublish, auth, roomAi })
     httpServer = app.listen(config.PORT, config.HOST, () => {
       logger.info(
         { event: "http.listen", host: config.HOST, port: config.PORT },
@@ -102,7 +176,7 @@ async function main() {
       resolveUserProfile: (userId) => auth.getProfile(userId),
       authorship,
     })
-    const app = buildApp({ config, redis, relay: relayPublish, auth })
+    const app = buildApp({ config, redis, relay: relayPublish, auth, roomAi })
     httpServer = app.listen(config.PORT, config.HOST, () => {
       logger.info(
         { event: "http.listen", host: config.HOST, port: config.PORT },
@@ -121,7 +195,13 @@ async function main() {
       logger.error({ err }, "http server close failed")
     }
     try {
-      await relay.close()
+      await dispatcher.close()
+      await dispatcher.waitForIdle()
+    } catch (err) {
+      logger.error({ err }, "Room AI dispatcher close failed")
+    }
+    try {
+      await relay?.close()
     } catch (err) {
       logger.error({ err }, "ws close failed")
     }
