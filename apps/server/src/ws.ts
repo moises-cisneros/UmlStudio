@@ -1,4 +1,5 @@
 import WebSocket, { WebSocketServer } from "ws"
+import { randomBytes } from "node:crypto"
 import type { IncomingMessage } from "http"
 import { URL } from "url"
 import { logger } from "./logger.js"
@@ -16,6 +17,7 @@ import * as decoding from "lib0/decoding"
 import { productivityCollector } from "./services/productivity-collector.js"
 import {
   createBoardReplicaRegistry,
+  isCompleteDocumentFrame,
   encodeSyncRequestFrame,
   type BoardReplica,
 } from "./services/room-ai/board-replica.js"
@@ -51,6 +53,14 @@ export interface RelayServer {
   roomCount: () => number
   /** Server-side replica of the room board, or undefined when the room is empty. */
   getBoardReplica: (diagramId: string) => BoardReplica | undefined
+  /** Authenticated shared-room replica only; never falls back to a local-mode board. */
+  getSharedBoardReplica: (diagramId: string) => BoardReplica | undefined
+  /** Resolve a ready shared replica only if its lifetime and minimum revision match. */
+  getSharedBoardReplicaAtLeast: (
+    diagramId: string,
+    generation: string,
+    revision: number
+  ) => BoardReplica | undefined
 }
 
 export interface StartOptions {
@@ -101,6 +111,8 @@ export function startRelayServer(opts: StartOptions): RelayServer {
       })
     },
   })
+  const localBoardReplicas = createBoardReplicaRegistry()
+  const readySharedRooms = new Set<string>()
 
   function getOrCreateAwarenessState(diagramId: string): RoomAwarenessState {
     const existing = roomAwarenessStates.get(diagramId)
@@ -244,6 +256,8 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     const validDiagramId = diagramId
 
     const mode = url.searchParams.get("mode") ?? "local"
+    const roomKey = `${mode === "shared" ? "shared" : "local"}:${validDiagramId}`
+    const roomReplicas = mode === "shared" ? boardReplicas : localBoardReplicas
     if (mode === "shared") {
       const token = url.searchParams.get("token")
       if (!token || !opts.verifyToken) {
@@ -288,10 +302,10 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     ws.on("pong", () => {
       ws.isAlive = true
     })
-    let room = rooms.get(diagramId)
+    let room = rooms.get(roomKey)
     if (!room) {
       room = new Set()
-      rooms.set(diagramId, room)
+      rooms.set(roomKey, room)
     }
     if (room.size >= maxSocketsPerRoom) {
       logger.warn({ diagramId, size: room.size }, "ws room over capacity, rejecting connection")
@@ -301,9 +315,11 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     room.add(ws)
     ws.diagramId = diagramId
     awarenessClientIdsBySocket.set(ws, new Set())
-    getOrCreateAwarenessState(diagramId)
+    getOrCreateAwarenessState(roomKey)
     const isFirstSocketInRoom = room.size === 1
-    if (isFirstSocketInRoom) boardReplicas.open(diagramId)
+    if (isFirstSocketInRoom) roomReplicas.open(diagramId)
+
+    let challenge: { nonce: string; requestId: string; receivedUpdate: boolean } | undefined
 
     function processMessage(message: string): void {
       let broadcastMessage = message
@@ -311,10 +327,66 @@ export function startRelayServer(opts: StartOptions): RelayServer {
       try {
         const parsed = JSON.parse(message) as Record<string, unknown>
 
+        // These envelopes are server-to-client only, including when mixed with diagram data.
+        if (parsed.kind === "replica-flush-challenge" || parsed.kind === "replica-flush-ack") return
+
+        if (parsed.kind === "replica-flush-request") {
+          if (
+            mode === "shared" &&
+            ws.authenticatedUserId &&
+            typeof parsed.requestId === "string" &&
+            parsed.requestId.length <= 128 &&
+            parsed.requestId.length > 0
+          ) {
+            challenge = {
+              nonce: randomBytes(32).toString("hex"),
+              requestId: parsed.requestId,
+              receivedUpdate: false,
+            }
+            ws.send(
+              JSON.stringify({
+                kind: "replica-flush-challenge",
+                requestId: challenge.requestId,
+                nonce: challenge.nonce,
+              })
+            )
+          }
+          return
+        }
+        if (parsed.kind === "replica-flush-marker") {
+          if (
+            mode === "shared" &&
+            ws.authenticatedUserId &&
+            challenge?.receivedUpdate &&
+            parsed.nonce === challenge.nonce
+          ) {
+            const replica = boardReplicas.get(validDiagramId)
+            if (replica?.isComplete()) {
+              readySharedRooms.add(validDiagramId)
+              ws.send(
+                JSON.stringify({
+                  kind: "replica-flush-ack",
+                  requestId: challenge.requestId,
+                  nonce: challenge.nonce,
+                  generation: replica.generation,
+                  revision: replica.getRevision(),
+                })
+              )
+              challenge = undefined
+            }
+          }
+          return
+        }
         if (typeof parsed.diagramData === "string") {
-          const roomState = roomAwarenessStates.get(validDiagramId)
+          const roomState = roomAwarenessStates.get(roomKey)
           if (roomState) {
-            boardReplicas.applyFrame(validDiagramId, parsed.diagramData, ws.authenticatedUserId)
+            const validUpdate = roomReplicas.applyFrame(
+              validDiagramId,
+              parsed.diagramData,
+              ws.authenticatedUserId
+            )
+            if (challenge && validUpdate && isCompleteDocumentFrame(parsed.diagramData))
+              challenge.receivedUpdate = true
             const decoded = Buffer.from(parsed.diagramData, "base64")
             if (decoded.length > 0 && decoded[0] === AWARENESS_MSG_TYPE) {
               const rawAwarenessUpdate = new Uint8Array(decoded.subarray(1))
@@ -464,7 +536,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
         // Payload is not JSON or not a control envelope; ignore and treat as regular broadcast
       }
 
-      broadcast(rooms, validDiagramId, broadcastMessage, ws)
+      broadcast(rooms, roomKey, broadcastMessage, ws)
     }
 
     let pendingMessageBytes = 0
@@ -502,24 +574,25 @@ export function startRelayServer(opts: StartOptions): RelayServer {
       if (userId) {
         productivityCollector.recordDisconnection(validDiagramId, userId)
       }
-      const r = rooms.get(validDiagramId)
+      const r = rooms.get(roomKey)
       if (r) {
         r.delete(ws)
 
         // Broadcast awareness removal for this socket's tracked clients
         const socketIds = awarenessClientIdsBySocket.get(ws)
         if (socketIds && socketIds.size > 0) {
-          broadcastAwarenessRemoval(validDiagramId, ws, Array.from(socketIds))
+          broadcastAwarenessRemoval(roomKey, ws, Array.from(socketIds))
         }
 
         if (r.size === 0) {
-          rooms.delete(validDiagramId)
-          boardReplicas.close(validDiagramId)
-          const roomState = roomAwarenessStates.get(validDiagramId)
+          rooms.delete(roomKey)
+          roomReplicas.close(validDiagramId)
+          if (mode === "shared") readySharedRooms.delete(validDiagramId)
+          const roomState = roomAwarenessStates.get(roomKey)
           if (roomState) {
             roomState.awareness.destroy()
             roomState.doc.destroy()
-            roomAwarenessStates.delete(validDiagramId)
+            roomAwarenessStates.delete(roomKey)
           }
         }
       }
@@ -554,12 +627,12 @@ export function startRelayServer(opts: StartOptions): RelayServer {
   function publishControl(diagramId: string, control: ControlEvent): void {
     const envelope: Envelope = { kind: "control", control }
     const message = JSON.stringify(envelope)
-    broadcast(rooms, diagramId, message, null)
+    broadcast(rooms, `shared:${diagramId}`, message, null)
   }
 
   function publishRoomAi(diagramId: string, event: RoomAiEvent): void {
     const envelope: Envelope = { kind: "room-ai", event }
-    broadcast(rooms, diagramId, JSON.stringify(envelope), null)
+    broadcast(rooms, `shared:${diagramId}`, JSON.stringify(envelope), null)
   }
 
   async function close(): Promise<void> {
@@ -575,6 +648,7 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     }
     rooms.clear()
     boardReplicas.closeAll()
+    localBoardReplicas.closeAll()
     await new Promise<void>((resolve) => wss.close(() => resolve()))
   }
 
@@ -588,7 +662,18 @@ export function startRelayServer(opts: StartOptions): RelayServer {
     publishRoomAi,
     close,
     roomCount: () => rooms.size,
-    getBoardReplica: (diagramId) => boardReplicas.get(diagramId),
+    getBoardReplica: (diagramId) =>
+      boardReplicas.get(diagramId) ?? localBoardReplicas.get(diagramId),
+    getSharedBoardReplica: (diagramId) => {
+      const replica = readySharedRooms.has(diagramId) ? boardReplicas.get(diagramId) : undefined
+      return replica?.isComplete() ? replica : undefined
+    },
+    getSharedBoardReplicaAtLeast: (diagramId, generation, revision) => {
+      const replica = readySharedRooms.has(diagramId)
+        ? boardReplicas.getAtLeast(diagramId, generation, revision)
+        : undefined
+      return replica?.isComplete() ? replica : undefined
+    },
   }
 }
 

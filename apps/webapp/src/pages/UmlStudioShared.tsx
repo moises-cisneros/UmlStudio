@@ -50,7 +50,7 @@ export const UmlStudioShared: React.FC = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const kind = useVersionRepositoryKind()
-  const { setEditor, editor } = useEditorContext()
+  const { setEditor, editor, setFlushSharedReplica } = useEditorContext()
   const { locale, t: tr } = useTranslation()
   const t = useVersioningTranslation()
 
@@ -237,6 +237,8 @@ export const UmlStudioShared: React.FC = () => {
           () => toast.error("WebSocket error"),
           { mode: "shared", getToken: currentAccessToken }
         )
+        const replicaSocket = wsManagerRef.current
+        setFlushSharedReplica?.(() => () => replicaSocket.flushSharedReplica())
         wsManagerRef.current.startConnection()
         wsManagerRef.current.onRoomAi((event) => {
           applyRoomAiEventToCache(queryClient, diagramId, event)
@@ -309,6 +311,7 @@ export const UmlStudioShared: React.FC = () => {
       peerRefreshAbort.abort()
       setEditor(undefined)
       wsManagerRef.current?.cleanup()
+      setFlushSharedReplica?.(undefined)
       if (instance && selectScopedPreview(useVersionStore.getState(), diagramId) !== null) {
         instance.setPreviewMode(false)
         useVersionStore.getState().exitPreview()
@@ -335,6 +338,7 @@ export const UmlStudioShared: React.FC = () => {
     navigate,
     queryClient,
     setEditor,
+    setFlushSharedReplica,
     viewType,
   ])
 

@@ -3,7 +3,7 @@ UmlStudio AI Service — Data Models for OMG UML 2.5 Metamodel.
 """
 
 from typing import List, Optional, Dict, Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class DiffAttribute(BaseModel):
@@ -142,6 +142,31 @@ class RoomRespondRequest(BaseModel):
     question: str = Field(min_length=1)
     board: Dict[str, Any]
     context: Dict[str, Any]
+    provider: Optional[Literal["self_hosted"]] = None
+    route: Optional[Literal["shared", "private"]] = None
+    private_context: Optional[str | Dict[str, Any]] = None
+
+    model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def validate_privacy_route(self):
+        pending = [self.context]
+        while pending:
+            value = pending.pop()
+            if isinstance(value, dict):
+                if any(key in ("private_context", "privateContext") for key in value):
+                    raise ValueError("Private context must be supplied separately")
+                pending.extend(value.values())
+            elif isinstance(value, list):
+                pending.extend(value)
+        if (self.provider is None) != (self.route is None):
+            raise ValueError("Provider and route must be specified together")
+        if "private_context" in self.model_fields_set and (
+            self.provider != "self_hosted" or self.route != "private"
+            or self.private_context is None
+        ):
+            raise ValueError("Private context requires the self-hosted private route")
+        return self
 
 
 class RoomRespondResponse(BaseModel):

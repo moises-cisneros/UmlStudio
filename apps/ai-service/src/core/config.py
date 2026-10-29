@@ -67,6 +67,12 @@ class Settings:
     OLLAMA_URL: str = os.getenv("OLLAMA_URL", os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")).strip()
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", os.getenv("LOCAL_LLM_MODEL", "gemma:2b")).strip()
 
+    # Dedicated Room AI endpoint; no default or provider fallback.
+    ROOM_AI_SELF_HOSTED_URL: str = os.getenv("ROOM_AI_SELF_HOSTED_URL", "").strip()
+    ROOM_AI_SELF_HOSTED_MODEL: str = os.getenv("ROOM_AI_SELF_HOSTED_MODEL", "").strip()
+    ROOM_AI_TOKENIZER_FILE: str = os.getenv("ROOM_AI_TOKENIZER_FILE", "").strip()
+    ROOM_AI_TOKENIZER_MODEL: str = os.getenv("ROOM_AI_TOKENIZER_MODEL", "").strip()
+
     # Whisper STT settings (Local faster-whisper)
     WHISPER_ENGINE: str = os.getenv("WHISPER_ENGINE", "local").strip()
     WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "base").strip()

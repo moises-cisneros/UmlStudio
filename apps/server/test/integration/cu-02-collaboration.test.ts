@@ -158,6 +158,29 @@ describe("INT-CU02: Case of Use CU-02 Real-Time Collaboration Integration", () =
     }
   })
 
+  it("does not expose a shared room to an unauthenticated local-mode socket with the same id", async () => {
+    const port = await getFreePort()
+    relay = startRelayServer({ port, host: "127.0.0.1", verifyToken: async () => "owner" })
+    const roomId = "shared-local-isolation"
+    const owner = connectPeer(port, roomId, { mode: "shared", token: "owner" })
+    const collaborator = connectPeer(port, roomId, { mode: "shared", token: "collaborator" })
+    const local = connectPeer(port, roomId, { mode: "local" })
+    peers.push(owner, collaborator, local)
+    await Promise.all(peers.map((peer) => peer.ready))
+    await flushNetwork()
+    storeWrite(owner.ydoc, () =>
+      owner.ydoc.getMap("nodes").set("private-shared-node", {
+        id: "private-shared-node",
+        type: "class",
+        data: { name: "Shared" },
+        position: { x: 0, y: 0 },
+      })
+    )
+    await waitFor(() => collaborator.ydoc.getMap("nodes").has("private-shared-node"))
+    await flushNetwork()
+    expect(local.ydoc.getMap("nodes").has("private-shared-node")).toBe(false)
+  })
+
   it("synchronizes concurrent peers with awareness object locking and CRDT convergence", async () => {
     const port = await getFreePort()
     relay = startRelayServer({ port, host: "127.0.0.1" })

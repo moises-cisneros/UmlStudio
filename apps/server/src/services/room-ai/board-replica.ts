@@ -1,4 +1,5 @@
 import * as Y from "yjs"
+import { randomBytes } from "node:crypto"
 import type { UMLModel } from "@umlstudio/core"
 
 /** Sync message types of the client protocol (see `packages/core/lib/sync/yjsSync.ts`). */
@@ -9,10 +10,14 @@ const REMOTE_ORIGIN = "relay"
 
 export interface BoardReplica {
   readonly roomId: string
+  /** Unpredictable identity of this in-memory replica lifetime. */
+  readonly generation: string
   /** Current board as a `UMLModel` snapshot. */
   getModel: () => UMLModel
   /** Monotonic counter, incremented each time the board changes. */
   getRevision: () => number
+  /** False while Yjs is waiting for missing dependencies. */
+  isComplete: () => boolean
   /**
    * Apply a base64 relay frame; returns true when it was a document update.
    * `authorId` is the authenticated user behind the frame; without it the
@@ -37,6 +42,7 @@ export interface BoardReplicaRegistry {
   /** Create the replica for a room if missing and return it. */
   open: (roomId: string) => BoardReplica
   get: (roomId: string) => BoardReplica | undefined
+  getAtLeast: (roomId: string, generation: string, revision: number) => BoardReplica | undefined
   /** Feed a relayed frame to the room replica; ignores unknown rooms. */
   applyFrame: (roomId: string, base64Frame: string, authorId?: string) => boolean
   close: (roomId: string) => void
@@ -48,6 +54,21 @@ export function encodeSyncRequestFrame(): string {
   return JSON.stringify({
     diagramData: Buffer.from(Uint8Array.of(SYNC_REQUEST_MSG_TYPE)).toString("base64"),
   })
+}
+
+/** A flush response must be independently complete, not an incremental update with missing dependencies. */
+export function isCompleteDocumentFrame(base64Frame: string): boolean {
+  const frame = Buffer.from(base64Frame, "base64")
+  if (frame.length < 2 || frame[0] !== DOC_UPDATE_MSG_TYPE) return false
+  const doc = new Y.Doc()
+  try {
+    Y.applyUpdate(doc, new Uint8Array(frame.subarray(1)))
+    return !doc.store.pendingStructs && !doc.store.pendingDs
+  } catch {
+    return false
+  } finally {
+    doc.destroy()
+  }
 }
 
 function buildModel(roomId: string, doc: Y.Doc): UMLModel {
@@ -86,8 +107,10 @@ export function createBoardReplica(
 
   return {
     roomId,
+    generation: randomBytes(32).toString("hex"),
     getModel: () => buildModel(roomId, doc),
     getRevision: () => revision,
+    isComplete: () => !doc.store.pendingStructs && !doc.store.pendingDs,
     applyFrame: (base64Frame, authorId) => {
       const frame = Buffer.from(base64Frame, "base64")
       if (frame.length === 0 || frame[0] !== DOC_UPDATE_MSG_TYPE) return false
@@ -121,6 +144,13 @@ export function createBoardReplicaRegistry(
       return replica
     },
     get: (roomId) => replicas.get(roomId),
+    getAtLeast: (roomId, generation, revision) => {
+      if (!Number.isSafeInteger(revision) || revision < 0) return undefined
+      const replica = replicas.get(roomId)
+      return replica && replica.generation === generation && replica.getRevision() >= revision
+        ? replica
+        : undefined
+    },
     applyFrame: (roomId, base64Frame, authorId) =>
       replicas.get(roomId)?.applyFrame(base64Frame, authorId) ?? false,
     close: (roomId) => {
