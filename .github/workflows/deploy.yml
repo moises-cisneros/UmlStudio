@@ -81,13 +81,17 @@ jobs:
           VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
           VITE_SERVER_URL_WSS: ${{ vars.VITE_SERVER_URL_WSS }}
           VITE_AI_SERVICE_URL: ${{ vars.VITE_AI_SERVICE_URL }}
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: >-
-            pages deploy apps/webapp/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }}
-            --branch=main --commit-hash=${{ needs.changes.outputs.sha }}
+      - name: Deploy webapp to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          DEPLOY_SHA: ${{ needs.changes.outputs.sha }}
+        run: |
+          pnpm dlx wrangler@3.90.0 pages deploy apps/webapp/dist \
+            --project-name="$PAGES_PROJECT" \
+            --branch=main \
+            --commit-hash="$DEPLOY_SHA"
 
   render:
     name: Deploy ${{ matrix.service }} (Render)
