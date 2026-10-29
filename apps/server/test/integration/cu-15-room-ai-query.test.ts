@@ -10,6 +10,7 @@ import {
 import { createRoomAiOrchestrator } from "../../src/services/room-ai/room-ai-orchestrator.js"
 import { InferenceNotStartedError } from "../../src/services/room-ai/inference-not-started.js"
 import { createRoomAiResponder } from "../../src/services/room-ai/room-ai-responder.js"
+import { createRoomMemoryRepository } from "../../src/services/room-ai/room-memory-repository.js"
 import { GLOBAL_SLOTS } from "../../src/services/room-ai/inference-slots.js"
 
 describe("Room AI query flow", () => {
@@ -55,6 +56,64 @@ describe("Room AI query flow", () => {
       await dispatcher.close()
     }
   )
+
+  it("retains the slot and stops follow-up summaries after an unconfirmed failure", async () => {
+    const redis = await getRedis()
+    const diagramId = "query-summary-unconfirmed"
+    await redis.set(k.diagram(diagramId), "exists")
+    const fetcher = vi.fn(async () => {
+      throw new Error("network failure")
+    })
+    const summarize = createRoomAiResponder({
+      serviceUrl: "https://ai.internal",
+      internalToken: "test-token",
+      fetcher,
+    })
+    const memory = createRoomMemoryRepository(redis, {
+      ttlSeconds: 3600,
+      every: 1,
+      summarize: async (summary, messages, roomId = diagramId) => {
+        const result = await summarize({
+          route: "shared",
+          requester: { id: "room-ai-memory", name: "Room AI" },
+          intent: "ask",
+          question: "Update the shared summary",
+          board: { id: roomId, nodes: [], edges: [] } as unknown as UMLModel,
+          contextJson: JSON.stringify({ summary, messages }),
+        })
+        return result.text
+      },
+    })
+    const service = createRoomAiService({ redis, ttlSeconds: 3600 })
+    await service.postMessage({
+      diagramId,
+      author: { id: "alice", name: "Alice" } as never,
+      text: "shared question",
+      intent: "ask",
+    })
+    const orchestrator = createRoomAiOrchestrator({
+      redis,
+      ttlSeconds: 3600,
+      getBoard: () => ({ nodes: [], edges: [] }) as unknown as UMLModel,
+      getMemory: async () => ({ summary: "", decisions: [] }),
+      getAuthorship: async () => ({}),
+      respond: async () => ({ text: "shared answer", provider: "self-hosted" }),
+      recordPublicMessage: (roomId, text) => memory.recordPublicMessage(roomId, text),
+    })
+    const dispatcher = createRoomAiDispatcher({
+      redis,
+      maxConcurrency: 1,
+      infer: orchestrator.infer,
+    })
+
+    await dispatcher.drainRoom(diagramId)
+
+    expect(fetcher).toHaveBeenCalledOnce()
+    expect(await redis.sCard(GLOBAL_SLOTS)).toBe(1)
+    const { messages } = await service.listMessages(diagramId)
+    expect(messages.some((message) => message.author.kind === "ai")).toBe(false)
+    await dispatcher.close()
+  })
 
   it("retains the slot if the provider throws a pre-inference error after it was called", async () => {
     const redis = await getRedis()

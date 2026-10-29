@@ -8,6 +8,7 @@ import { createAuthService, createRedisUserRepository } from "../../src/services
 import { mountAuthRoutes } from "../../src/routes/auth.js"
 import { mountRoomAiRoutes } from "../../src/routes/room-ai.js"
 import { createRoomAiService } from "../../src/services/room-ai/room-ai-service.js"
+import { createRoomMemoryRepository } from "../../src/services/room-ai/room-memory-repository.js"
 
 const TEST_JWT_SECRET = "cu15-room-ai-test-jwt-secret-32-chars!!"
 const PASSWORD = "Password123!"
@@ -36,6 +37,12 @@ describe("INT-CU15: room AI message routes", () => {
           redis,
           ttlSeconds: 3600,
           maxConcurrency: 1,
+          memory: createRoomMemoryRepository(redis, {
+            ttlSeconds: 3600,
+            every: 10,
+            summarize: async (summary, messages) =>
+              [summary, ...messages].filter(Boolean).join(" "),
+          }),
           getSharedBoardReplicaAtLeast: (diagramId, generation, revision) => {
             if (diagramId !== DIAGRAM_ID || generation !== "a".repeat(64) || revision !== 3) {
               return undefined
@@ -104,6 +111,33 @@ describe("INT-CU15: room AI message routes", () => {
     expect(await redis.get(k.aiReplicaRequirement(DIAGRAM_ID, body.messageId))).toBe(
       JSON.stringify({ generation: "a".repeat(64), revision: 3 })
     )
+  })
+
+  it("returns shared room memory and accepts authenticated pinned decisions", async () => {
+    const { token } = await register("memory.room@example.com", "Memory")
+    const empty = await app.request(`/api/rooms/${DIAGRAM_ID}/ai/memory`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    expect(empty.status).toBe(200)
+    expect(await empty.json()).toEqual({ summary: null, pinnedDecisions: [] })
+
+    const pinned = await app.request(`/api/rooms/${DIAGRAM_ID}/ai/memory/pins`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "Use a layered architecture" }),
+    })
+    expect(pinned.status).toBe(201)
+    expect(await pinned.json()).toEqual({ text: "Use a layered architecture" })
+    expect(
+      await (
+        await app.request(`/api/rooms/${DIAGRAM_ID}/ai/memory`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ).json()
+    ).toEqual({
+      summary: null,
+      pinnedDecisions: ["Use a layered architecture"],
+    })
   })
 
   it("rejects personal context on the shared room endpoint", async () => {
