@@ -11,6 +11,14 @@ export function roomAiMessagesQueryOptions(diagramId: string) {
   })
 }
 
+export function roomAiMemoryQueryOptions(diagramId: string) {
+  return queryOptions({
+    queryKey: [...roomAiKeys.all, "memory", diagramId] as const,
+    queryFn: ({ signal }) => DiagramApiClient.fetchRoomAiMemory(diagramId, { signal }),
+    refetchOnWindowFocus: false,
+  })
+}
+
 /**
  * Shared room conversation: history over REST, live updates pushed into the
  * query cache by `applyRoomAiEventToCache` (fed from the room WebSocket).
@@ -28,6 +36,7 @@ export function useRoomAi(
     initialData: IDLE_ROOM_AI_STATUS,
     staleTime: Infinity,
   })
+  const sharedMemory = useQuery(roomAiMemoryQueryOptions(diagramId))
 
   const send = useMutation({
     mutationFn: async (text: string) => {
@@ -38,12 +47,21 @@ export function useRoomAi(
     onSuccess: () => queryClient.invalidateQueries({ queryKey: roomAiKeys.messages(diagramId) }),
   })
 
+  const pin = useMutation({
+    mutationFn: (text: string) => DiagramApiClient.pinRoomAiDecision(diagramId, text),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: roomAiKeys.all }),
+  })
+
   return {
     messages: history.data?.messages ?? [],
     isLoading: history.isPending,
     loadError: history.error,
     aiStatus: status.data,
     sendMessage: send.mutateAsync,
+    sharedMemory: sharedMemory.data ?? null,
+    pinMessage: pin.mutate,
+    pinError: pin.error,
+    sharedMemoryError: sharedMemory.error,
     isSending: send.isPending,
     sendError: send.error,
   }

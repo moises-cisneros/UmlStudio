@@ -3,6 +3,7 @@ import { SendIcon, SparklesIcon } from "lucide-react"
 import type { RoomChatMessage } from "@umlstudio/core"
 import { useTranslation } from "@/i18n"
 import type { RoomAiStatusState } from "@/queries/roomAiCache"
+import type { SharedRoomAiMemory } from "@/services/DiagramApiClient"
 
 export interface RoomChatPanelProps {
   messages: RoomChatMessage[]
@@ -19,6 +20,10 @@ export interface RoomChatPanelProps {
   personalMemoryDisabled?: boolean
   onPersonalMemoryChange?: (value: string) => void
   onSavePersonalMemory?: () => void
+  sharedMemory?: SharedRoomAiMemory | null
+  hasSharedMemoryError?: boolean
+  hasPinError?: boolean
+  onPinMessage?: (text: string) => void
 }
 
 export const RoomChatPanel: FC<RoomChatPanelProps> = ({
@@ -36,6 +41,10 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   personalMemoryDisabled = false,
   onPersonalMemoryChange,
   onSavePersonalMemory,
+  sharedMemory,
+  hasSharedMemoryError = false,
+  hasPinError = false,
+  onPinMessage,
 }) => {
   const { t } = useTranslation()
   const [draft, setDraft] = useState("")
@@ -113,6 +122,15 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
                 </blockquote>
               )}
               <p className="mt-1 text-sm whitespace-pre-wrap">{message.text}</p>
+              {mode === "room" && onPinMessage && (
+                <button
+                  type="button"
+                  className="mt-1 text-xs underline"
+                  onClick={() => onPinMessage(message.text)}
+                >
+                  {t.roomAi.pinMessage}
+                </button>
+              )}
               {message.status === "queued" && !isAi && (
                 <span className="text-xs opacity-60">{t.roomAi.queued}</span>
               )}
@@ -126,6 +144,31 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
         })}
       </ol>
 
+      {mode === "room" && hasPinError && (
+        <p role="alert" className="border-t px-3 py-2 text-xs text-red-500">
+          {t.roomAi.pinMemoryError}
+        </p>
+      )}
+
+      {mode === "room" && (sharedMemory || hasSharedMemoryError) && (
+        <section className="border-t px-3 py-2 text-xs" aria-label={t.roomAi.sharedSummary}>
+          <h3 className="font-medium">{t.roomAi.sharedSummary}</h3>
+          {hasSharedMemoryError && (
+            <p role="alert" className="mt-1 text-red-500">
+              {t.roomAi.sharedMemoryError}
+            </p>
+          )}
+          {sharedMemory?.summary && (
+            <p className="mt-1 whitespace-pre-wrap">{sharedMemory.summary}</p>
+          )}
+          {sharedMemory?.pinnedDecisions.length ? (
+            <h4 className="mt-2 font-medium">{t.roomAi.pinnedDecisions}</h4>
+          ) : null}
+          {sharedMemory?.pinnedDecisions.map((decision) => (
+            <p key={decision}>{decision}</p>
+          ))}
+        </section>
+      )}
       {mode === "private" && onPersonalMemoryChange && (
         <section className="border-t p-3">
           <label className="mb-1 block text-xs" htmlFor="room-ai-personal-memory">

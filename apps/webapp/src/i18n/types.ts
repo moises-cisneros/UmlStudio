@@ -119,6 +119,11 @@ export interface TranslationDictionary {
     personalMemory: string
     saveMemory: string
     memorySaved: string
+    sharedSummary: string
+    pinnedDecisions: string
+    pinMessage: string
+    sharedMemoryError: string
+    pinMemoryError: string
   }
   collaborators: {
     activeUsers: string

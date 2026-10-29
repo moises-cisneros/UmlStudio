@@ -123,6 +123,11 @@ export const es: TranslationDictionary = {
     personalMemory: "Memoria personal (solo se envía en modo privado)",
     saveMemory: "Guardar memoria",
     memorySaved: "Memoria personal guardada en este navegador.",
+    sharedSummary: "Memoria compartida de la sala",
+    pinnedDecisions: "Decisiones fijadas",
+    pinMessage: "Fijar en memoria compartida",
+    sharedMemoryError: "La memoria compartida de la sala no está disponible.",
+    pinMemoryError: "No se pudo fijar este mensaje en la memoria compartida.",
   },
   collaborators: {
     activeUsers: "Integrantes Activos",

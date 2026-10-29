@@ -122,6 +122,11 @@ export const en: TranslationDictionary = {
     personalMemory: "Personal memory (only sent in Private mode)",
     saveMemory: "Save memory",
     memorySaved: "Personal memory saved in this browser.",
+    sharedSummary: "Shared room memory",
+    pinnedDecisions: "Pinned decisions",
+    pinMessage: "Pin to shared memory",
+    sharedMemoryError: "Shared room memory is unavailable.",
+    pinMemoryError: "Could not pin this message to shared memory.",
   },
   collaborators: {
     activeUsers: "Active Members",
