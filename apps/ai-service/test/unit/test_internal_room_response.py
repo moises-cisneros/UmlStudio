@@ -116,6 +116,64 @@ class TestInternalRoomResponse(unittest.TestCase):
         self.assertNotIn("access-control-allow-origin", response.headers)
         self.assertNotIn("access-control-allow-origin", preflight.headers)
 
+    def test_private_context_rejects_shared_or_implicit_routes(self):
+        private = {"notes": "PRIVATE MEMORY"}
+        for routing in ({}, {"provider": "self_hosted", "route": "shared"},
+                        {"route": "private"}, {"provider": "external", "route": "private"}):
+            with self.subTest(routing=routing), patch.object(
+                settings, "AI_INTERNAL_TOKEN", "test-secret"
+            ), patch("src.adapters.get_adapter") as default:
+                response = self.post({**REQUEST, **routing, "private_context": private})
+                self.assertEqual(response.status_code, 422)
+                default.assert_not_called()
+
+    def test_private_self_hosted_route_never_uses_default_provider(self):
+        adapter = StubAdapter()
+        with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret"), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True), patch(
+            "src.adapters.OllamaAdapter", return_value=adapter
+        ) as factory, patch("src.adapters.get_adapter") as default, patch(
+            "src.services.room_response.count_room_ai_prompt_tokens", return_value=10
+        ):
+            response = self.post({**REQUEST, "provider": "self_hosted", "route": "private",
+                                  "private_context": {"notes": "PRIVATE MEMORY"}})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("PRIVATE MEMORY", adapter.text_prompts[0])
+        factory.assert_called_once_with(endpoint_url="https://model.invalid/v1", model_name="configured-model")
+        default.assert_not_called()
+
+    def test_shared_self_hosted_route_does_not_receive_private_context(self):
+        adapter = StubAdapter()
+        with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret"), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True), patch(
+            "src.adapters.OllamaAdapter", return_value=adapter
+        ), patch("src.adapters.get_adapter") as default, patch(
+            "src.services.room_response.count_room_ai_prompt_tokens", return_value=10
+        ):
+            response = self.post({**REQUEST, "provider": "self_hosted", "route": "shared"})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("PRIVATE MEMORY", adapter.text_prompts[0])
+        default.assert_not_called()
+
+    def test_self_hosted_requires_configuration_without_fallback(self):
+        with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret"), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "", create=True
+        ), patch.object(settings, "ROOM_AI_SELF_HOSTED_MODEL", "", create=True), patch(
+            "src.adapters.get_adapter"
+        ) as default:
+            response = self.post({**REQUEST, "provider": "self_hosted", "route": "private"})
+        self.assertEqual(response.status_code, 502)
+        default.assert_not_called()
+
+    def test_malformed_routing_is_rejected(self):
+        for routing in ({"provider": "self_hosted"}, {"route": "shared"},
+                        {"provider": "self_hosted", "route": "unknown"},
+                        {"privateContext": {"notes": "PRIVATE MEMORY"}}):
+            with self.subTest(routing=routing), patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret"):
+                self.assertEqual(self.post({**REQUEST, **routing}).status_code, 422)
+
     def test_invalid_change_diff_is_never_returned(self):
         adapter = StubAdapter(diff={"unexpected": "value"})
         with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret", create=True), patch(

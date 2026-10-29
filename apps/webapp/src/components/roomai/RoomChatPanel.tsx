@@ -3,9 +3,12 @@ import { SendIcon, SparklesIcon } from "lucide-react"
 import type { RoomChatMessage } from "@umlstudio/core"
 import { useTranslation } from "@/i18n"
 import type { RoomAiStatusState } from "@/queries/roomAiCache"
+import type { SharedRoomAiMemory } from "@/services/DiagramApiClient"
 
 export interface RoomChatPanelProps {
   messages: RoomChatMessage[]
+  mode?: "room" | "private"
+  onModeChange?: (mode: "room" | "private") => void
   aiStatus: RoomAiStatusState
   currentUserId?: string
   isLoading?: boolean
@@ -13,10 +16,20 @@ export interface RoomChatPanelProps {
   hasSendError?: boolean
   isSending?: boolean
   onSend: (text: string) => void
+  personalMemory?: string
+  personalMemoryDisabled?: boolean
+  onPersonalMemoryChange?: (value: string) => void
+  onSavePersonalMemory?: () => void
+  sharedMemory?: SharedRoomAiMemory | null
+  hasSharedMemoryError?: boolean
+  hasPinError?: boolean
+  onPinMessage?: (text: string) => void
 }
 
 export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   messages,
+  mode = "room",
+  onModeChange,
   aiStatus,
   currentUserId,
   isLoading = false,
@@ -24,6 +37,14 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   hasSendError = false,
   isSending = false,
   onSend,
+  personalMemory = "",
+  personalMemoryDisabled = false,
+  onPersonalMemoryChange,
+  onSavePersonalMemory,
+  sharedMemory,
+  hasSharedMemoryError = false,
+  hasPinError = false,
+  onPinMessage,
 }) => {
   const { t } = useTranslation()
   const [draft, setDraft] = useState("")
@@ -39,6 +60,27 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
 
   return (
     <section className="flex h-full flex-col" aria-label={t.roomAi.title}>
+      <div role="group" aria-label={t.roomAi.modeGroup} className="flex gap-1 border-b px-3 py-2">
+        <button
+          type="button"
+          aria-pressed={mode === "room"}
+          onClick={() => onModeChange?.("room")}
+          className="rounded px-3 py-1 text-sm"
+        >
+          {t.roomAi.roomMode}
+        </button>
+        <button
+          type="button"
+          aria-pressed={mode === "private"}
+          onClick={() => onModeChange?.("private")}
+          className="rounded px-3 py-1 text-sm"
+        >
+          {t.roomAi.privateMode}
+        </button>
+      </div>
+      {mode === "private" && (
+        <p className="px-3 pt-2 text-xs opacity-70">{t.roomAi.privateNotice}</p>
+      )}
       <ol className="flex-1 space-y-3 overflow-y-auto p-3" aria-live="polite">
         {isLoading && <li className="text-sm opacity-70">{t.roomAi.loading}</li>}
         {hasLoadError && (
@@ -47,7 +89,9 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
           </li>
         )}
         {!isLoading && !hasLoadError && messages.length === 0 && (
-          <li className="text-sm opacity-70">{t.roomAi.empty}</li>
+          <li className="text-sm opacity-70">
+            {mode === "private" ? t.roomAi.privateEmpty : t.roomAi.empty}
+          </li>
         )}
         {messages.map((message) => {
           const isAi = message.author.kind === "ai"
@@ -78,6 +122,15 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
                 </blockquote>
               )}
               <p className="mt-1 text-sm whitespace-pre-wrap">{message.text}</p>
+              {mode === "room" && onPinMessage && (
+                <button
+                  type="button"
+                  className="mt-1 text-xs underline"
+                  onClick={() => onPinMessage(message.text)}
+                >
+                  {t.roomAi.pinMessage}
+                </button>
+              )}
               {message.status === "queued" && !isAi && (
                 <span className="text-xs opacity-60">{t.roomAi.queued}</span>
               )}
@@ -90,6 +143,55 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
           )
         })}
       </ol>
+
+      {mode === "room" && hasPinError && (
+        <p role="alert" className="border-t px-3 py-2 text-xs text-red-500">
+          {t.roomAi.pinMemoryError}
+        </p>
+      )}
+
+      {mode === "room" && (sharedMemory || hasSharedMemoryError) && (
+        <section className="border-t px-3 py-2 text-xs" aria-label={t.roomAi.sharedSummary}>
+          <h3 className="font-medium">{t.roomAi.sharedSummary}</h3>
+          {hasSharedMemoryError && (
+            <p role="alert" className="mt-1 text-red-500">
+              {t.roomAi.sharedMemoryError}
+            </p>
+          )}
+          {sharedMemory?.summary && (
+            <p className="mt-1 whitespace-pre-wrap">{sharedMemory.summary}</p>
+          )}
+          {sharedMemory?.pinnedDecisions.length ? (
+            <h4 className="mt-2 font-medium">{t.roomAi.pinnedDecisions}</h4>
+          ) : null}
+          {sharedMemory?.pinnedDecisions.map((decision) => (
+            <p key={decision}>{decision}</p>
+          ))}
+        </section>
+      )}
+      {mode === "private" && onPersonalMemoryChange && (
+        <section className="border-t p-3">
+          <label className="mb-1 block text-xs" htmlFor="room-ai-personal-memory">
+            {t.roomAi.personalMemory}
+          </label>
+          <textarea
+            id="room-ai-personal-memory"
+            value={personalMemory}
+            onChange={(event) => onPersonalMemoryChange(event.target.value)}
+            disabled={personalMemoryDisabled}
+            className="w-full rounded border bg-transparent p-2 text-xs"
+            rows={3}
+          />
+          <button
+            type="button"
+            onClick={onSavePersonalMemory}
+            disabled={personalMemoryDisabled}
+            className="mt-1 rounded border px-2 py-1 text-xs"
+          >
+            {t.roomAi.saveMemory}
+          </button>
+        </section>
+      )}
 
       {aiStatus.status === "thinking" && (
         <p role="status" className="flex items-center gap-1.5 px-3 pb-2 text-xs">
@@ -111,8 +213,12 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={t.roomAi.inputPlaceholder}
-          aria-label={t.roomAi.inputPlaceholder}
+          placeholder={
+            mode === "private" ? t.roomAi.privateInputPlaceholder : t.roomAi.inputPlaceholder
+          }
+          aria-label={
+            mode === "private" ? t.roomAi.privateInputPlaceholder : t.roomAi.inputPlaceholder
+          }
           className="min-w-0 flex-1 rounded border bg-transparent px-2 py-1 text-sm"
         />
         <button

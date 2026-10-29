@@ -1,9 +1,10 @@
 import { QueryClient } from "@tanstack/react-query"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import type { RoomChatMessage } from "@umlstudio/core"
 import type { RoomAiMessagesPage } from "@/services/DiagramApiClient"
 import { roomAiKeys } from "./keys"
 import { applyRoomAiEventToCache, type RoomAiStatusState } from "./roomAiCache"
+import { DiagramApiClient } from "@/services/DiagramApiClient"
 
 const message = (id: string, text = id): RoomChatMessage => ({
   id,
@@ -64,5 +65,94 @@ describe("applyRoomAiEventToCache", () => {
       forUserName: "Juan",
       queueLength: 3,
     })
+  })
+
+  it("invalidates shared memory after an AI answer or a collaborator pin", () => {
+    const client = setup()
+    const memoryKey = [...roomAiKeys.all, "memory", "d1"]
+    client.setQueryData(memoryKey, { summary: "old summary", pinnedDecisions: [] })
+
+    applyRoomAiEventToCache(client, "d1", {
+      type: "message.created",
+      message: { ...message("answer"), author: { id: "room-ai", name: "Room AI", kind: "ai" } },
+    })
+    expect(client.getQueryState(memoryKey)?.isInvalidated).toBe(true)
+
+    client.setQueryData(memoryKey, { summary: "old summary", pinnedDecisions: [] })
+    applyRoomAiEventToCache(client, "d1", { type: "memory.updated" })
+    expect(client.getQueryState(memoryKey)?.isInvalidated).toBe(true)
+  })
+})
+
+describe("Room AI request privacy boundaries", () => {
+  it("sends personal context only to the authenticated private endpoint", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ text: "private answer", provider: "self_hosted" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    )
+    try {
+      await DiagramApiClient.postPrivateRoomAiMessage("d1", {
+        text: "question",
+        privateContext: "personal notes",
+        replica: { generation: "a".repeat(64), revision: 3 },
+      })
+      const [url, init] = fetchMock.mock.calls[0]
+      expect(String(url)).toContain("/api/rooms/d1/ai/private-messages")
+      expect(JSON.parse(String(init?.body))).toEqual({
+        text: "question",
+        privateContext: "personal notes",
+        replica: { generation: "a".repeat(64), revision: 3 },
+      })
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ messageId: "m1", queuePosition: 1 }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      await DiagramApiClient.postRoomAiMessage("d1", {
+        text: "shared question",
+        intent: "ask",
+        replica: { generation: "a".repeat(64), revision: 4 },
+      })
+      const [, sharedInit] = fetchMock.mock.calls[1]
+      expect(String(fetchMock.mock.calls[1][0])).toContain("/api/rooms/d1/ai/messages")
+      expect(JSON.parse(String(sharedInit?.body))).toEqual({
+        text: "shared question",
+        intent: "ask",
+        replica: { generation: "a".repeat(64), revision: 4 },
+      })
+      expect(JSON.stringify(sharedInit?.body)).not.toContain("personal notes")
+    } finally {
+      fetchMock.mockRestore()
+    }
+  })
+
+  it("does not put private replies into shared room query cache", async () => {
+    const client = setup({ messages: [message("shared")], hasMore: false })
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ text: "personal reply", provider: "self_hosted" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    )
+    try {
+      await DiagramApiClient.postPrivateRoomAiMessage("d1", {
+        text: "private",
+        replica: { generation: "b".repeat(64), revision: 9 },
+      })
+      expect(page(client)?.messages.map((item) => item.id)).toEqual(["shared"])
+      expect(
+        client
+          .getQueryCache()
+          .getAll()
+          .map((query) => query.queryKey)
+      ).toEqual([roomAiKeys.messages("d1")])
+    } finally {
+      fetchMock.mockRestore()
+      client.clear()
+    }
   })
 })

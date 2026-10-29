@@ -84,6 +84,15 @@ export interface RoomAiMessagesPage {
   hasMore: boolean
 }
 
+export interface SharedRoomAiMemory {
+  summary: string | null
+  pinnedDecisions: string[]
+}
+export interface RoomAiReplica {
+  generation: string
+  revision: number
+}
+
 export const DiagramApiClient = {
   async fetchRoomAiMessages(
     diagramId: string,
@@ -102,13 +111,38 @@ export const DiagramApiClient = {
 
   async postRoomAiMessage(
     diagramId: string,
-    input: { text: string; intent: RoomAiIntent }
+    input: { text: string; intent: RoomAiIntent; replica: RoomAiReplica }
   ): Promise<{ messageId: string; queuePosition: number }> {
     const { data } = await request<{ messageId: string; queuePosition: number }>(
       `/api/rooms/${diagramId}/ai/messages`,
       { method: "POST", body: input }
     )
     return data
+  },
+
+  async postPrivateRoomAiMessage(
+    diagramId: string,
+    input: { text: string; privateContext?: string; replica: RoomAiReplica }
+  ): Promise<{ text: string; provider: string }> {
+    const { data } = await request<{ text: string; provider: string }>(
+      `/api/rooms/${diagramId}/ai/private-messages`,
+      { method: "POST", body: input }
+    )
+    return data
+  },
+
+  async fetchRoomAiMemory(diagramId: string, opts: { signal?: AbortSignal } = {}) {
+    const { data } = await request<SharedRoomAiMemory>(`/api/rooms/${diagramId}/ai/memory`, {
+      signal: opts.signal,
+    })
+    return data
+  },
+
+  async pinRoomAiDecision(diagramId: string, text: string): Promise<void> {
+    await request<void>(`/api/rooms/${diagramId}/ai/memory/pins`, {
+      method: "POST",
+      body: { text },
+    })
   },
 
   async fetchDiagram(diagramId: string, opts: { signal?: AbortSignal } = {}): Promise<Diagram> {

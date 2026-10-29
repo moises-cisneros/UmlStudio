@@ -108,7 +108,8 @@ Mismo formato que el Ciclo 1: propósito, precondición, flujo principal, flujos
 - **Precondición**: sesión iniciada (CU-11); sala compartida abierta (CU-02); la IA de la sala está habilitada. Cualquier participante puede preguntar: no hay roles entre los desarrolladores de la sala.
 - **Flujo principal**:
   1. El participante escribe en el panel de la IA de sala y elige **Preguntar** (modo mentor) o **Pedir cambio** (modo ejecutor).
-  2. La webapp envía `POST /api/rooms/:diagramId/ai/messages` con el JWT. El servidor responde `202` con la posición en la cola.
+  2. La webapp confirma primero que la réplica compartida alcanzó la revisión actual y envía su generación y revisión junto con `POST /api/rooms/:diagramId/ai/messages`. El servidor responde `202` con la posición en la cola.
+     Este endpoint es solo para el chat compartido: difunde la pregunta a toda la sala y rechaza `privateContext`. El modo **Privado** usa `POST /api/rooms/:diagramId/ai/private-messages`; responde únicamente al solicitante autenticado y no agrega la pregunta ni la respuesta al chat de Redis o a los eventos de sala. La memoria personal se conserva en IndexedDB y solo se envía por esa ruta.
   3. El servidor guarda la pregunta con el autor tomado del JWT y la difunde: todos ven **"Juan → IA"** y el texto.
   4. Todos ven el estado **"IA pensando para Juan"** y la longitud de la cola.
   5. Cuando llega su turno, el servidor arma el contexto: el tablero actual (réplica en el servidor), la memoria de la sala y el rastro propio del solicitante. Luego llama al servicio de inferencia.

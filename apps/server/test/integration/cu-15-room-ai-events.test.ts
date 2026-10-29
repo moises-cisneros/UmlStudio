@@ -4,7 +4,7 @@ import { createServer } from "node:net"
 import { getRedis } from "../../src/__tests__/setup.js"
 import { gzipJson, k } from "../../src/redis.js"
 import { startRelayServer, type RelayServer } from "../../src/ws.js"
-import { createRoomAiService } from "../../src/services/room-ai/room-ai-service.js"
+import { createRoomAiTestService as createRoomAiService } from "./helpers/room-ai-test-support.js"
 import { createRoomAiEventBus } from "../../src/services/room-ai/room-ai-event-bus.js"
 
 const DIAGRAM_ID = "room-events-1"
