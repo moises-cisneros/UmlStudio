@@ -14,4 +14,20 @@ describe("Room AI configuration", () => {
       loadConfig({ AI_SERVICE_URL: "http://ai.internal:8001", AI_INTERNAL_TOKEN: "test-only" })
     ).toMatchObject({ AI_SERVICE_URL: "http://ai.internal:8001", AI_INTERNAL_TOKEN: "test-only" })
   })
+
+  it("targets the selected local AI-service port when the server port shifts", () => {
+    expect(loadConfig({ PORT: "8001", UMLSTUDIO_AI_PORT: "8002" }).AI_SERVICE_URL).toBe(
+      "http://127.0.0.1:8002"
+    )
+  })
+
+  it("preserves an explicitly configured non-default AI-service URL", () => {
+    expect(
+      loadConfig({
+        PORT: "8001",
+        UMLSTUDIO_AI_PORT: "8002",
+        AI_SERVICE_URL: "https://ai.example.test",
+      }).AI_SERVICE_URL
+    ).toBe("https://ai.example.test")
+  })
 })

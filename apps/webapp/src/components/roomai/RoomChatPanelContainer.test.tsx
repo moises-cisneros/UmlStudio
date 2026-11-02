@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { RoomChatMessage } from "@umlstudio/core"
+import { ApiError } from "@/services/DiagramApiClient"
 import { RoomChatPanelContainer } from "./RoomChatPanelContainer"
 
 const mocks = vi.hoisted(() => ({
@@ -93,6 +94,27 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     expect(screen.queryByLabelText(/personal memory/i)).toBeNull()
     expect(screen.queryByRole("button", { name: /memory|profile|pin/i })).toBeNull()
     expect(screen.getByText("Shared room message")).toBeTruthy()
+  })
+
+  it("explains when the Room AI queue is full and the message was rejected", async () => {
+    mocks.useRoomAi.mockReturnValue({
+      ...mocks.useRoomAi(),
+      sendError: new ApiError(429, "ROOM_AI_QUEUE_FULL", "room AI queue is full"),
+    })
+
+    render(<RoomChatPanelContainer diagramId="diagram-1" />)
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Room AI queue is full; your message was not added."
+    )
+  })
+
+  it("keeps the generic send error for failures unrelated to queue capacity", async () => {
+    mocks.useRoomAi.mockReturnValue({ ...mocks.useRoomAi(), sendError: new Error("network error") })
+
+    render(<RoomChatPanelContainer diagramId="diagram-1" />)
+
+    expect((await screen.findByRole("alert")).textContent).toContain("Could not send your message.")
   })
 
   it("learns automatically from a typed public interaction and saves only the closed result locally", async () => {

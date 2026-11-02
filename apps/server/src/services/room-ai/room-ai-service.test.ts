@@ -32,7 +32,12 @@ describe("Room AI service privacy boundary", () => {
     const publish = vi.fn()
     const previousProfile = { detailLevel: "balanced", exampleStyle: "none" } as const
     const learnedProfile = { detailLevel: "balanced", exampleStyle: "uml" } as const
-    const profileDeriver = vi.fn(async () => learnedProfile)
+    const profileDeriver = vi.fn(
+      async (_profile: typeof previousProfile, _interaction: string, messageId: string) => {
+        expect(messageId).toMatch(/^[0-9a-f-]{36}$/i)
+        return learnedProfile
+      }
+    )
     const service = createRoomAiService({
       redis,
       ttlSeconds: 3600,
@@ -53,7 +58,11 @@ describe("Room AI service privacy boundary", () => {
       profileRevision,
     })
 
-    expect(profileDeriver).toHaveBeenCalledWith(previousProfile, "Please use a UML example")
+    expect(profileDeriver).toHaveBeenCalledWith(
+      previousProfile,
+      "Please use a UML example",
+      result.messageId
+    )
     const [, options] = vi.mocked(redis.eval).mock.calls[0]!
     const sidecar = JSON.parse(options.arguments[5]!)
     expect(sidecar).toMatchObject({ requesterId: "user-1", teachingProfile: learnedProfile })
@@ -200,5 +209,128 @@ describe("Room AI service privacy boundary", () => {
       })
     ).rejects.toMatchObject({ name: "RoomAiPersonalProfileStaleError" })
     expect(redis.eval).not.toHaveBeenCalled()
+  })
+
+  it("does not emit [ROOM AI: QUEUE REJECTED] dev diagnostic when ROOM_AI_DEV_LOGS is disabled", async () => {
+    const previousDevLogs = process.env.ROOM_AI_DEV_LOGS
+    process.env.ROOM_AI_DEV_LOGS = ""
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+    try {
+      const redis = createRedis([0, 0])
+      const service = createRoomAiService({
+        redis,
+        ttlSeconds: 3600,
+        getSharedBoardReplicaAtLeast: () => replica as never,
+      })
+
+      await expect(
+        service.postMessage({
+          diagramId: "room-1",
+          author: { id: "user-1", email: "user@example.test", name: "SENSITIVE_AUTHOR_CANARY" },
+          text: "SENSITIVE_QUESTION_CANARY",
+          intent: "ask",
+          replica: { generation: "a".repeat(64), revision: 3 },
+        })
+      ).rejects.toMatchObject({ name: "RoomQueueFullError" })
+
+      expect(logSpy).not.toHaveBeenCalled()
+    } finally {
+      logSpy.mockRestore()
+      if (previousDevLogs === undefined) delete process.env.ROOM_AI_DEV_LOGS
+      else process.env.ROOM_AI_DEV_LOGS = previousDevLogs
+    }
+  })
+
+  it("emits a readable [ROOM AI: QUEUE REJECTED] diagnostic behind ROOM_AI_DEV_LOGS=1 without leaking sensitive fields", async () => {
+    const previousDevLogs = process.env.ROOM_AI_DEV_LOGS
+    process.env.ROOM_AI_DEV_LOGS = "1"
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+    try {
+      const redis = {
+        ...createRedis([0, 0]),
+        lLen: vi.fn(async () => 5),
+        sCard: vi.fn(async () => 1),
+        get: vi.fn(async (key: string) =>
+          key === "umlstudio:room-ai:inference-limit" ? "1" : null
+        ),
+      } as unknown as Redis
+      const service = createRoomAiService({
+        redis,
+        ttlSeconds: 3600,
+        getSharedBoardReplicaAtLeast: () =>
+          ({
+            isComplete: () => true,
+            getModel: () => ({ id: "SENSITIVE_BOARD_CANARY", nodes: [], edges: [] }),
+          }) as never,
+      })
+
+      await expect(
+        service.postMessage({
+          diagramId: "room-1",
+          author: { id: "user-1", email: "secret@example.test", name: "SENSITIVE_AUTHOR_CANARY" },
+          text: "SENSITIVE_QUESTION_CANARY",
+          intent: "ask",
+          replica: { generation: "a".repeat(64), revision: 3 },
+        })
+      ).rejects.toMatchObject({ name: "RoomQueueFullError" })
+
+      await vi.waitFor(() => {
+        expect(logSpy).toHaveBeenCalledOnce()
+      })
+      const output = String(logSpy.mock.calls[0]?.[0] ?? "")
+      expect(output).toContain("[ROOM AI: QUEUE REJECTED]")
+      expect(output).toContain("ROOM_AI_QUEUE_FULL")
+      expect(output).toMatch(/Message ID:\s+[0-9a-f-]{36}/i)
+      expect(output).toContain("Queue depth: 5 / 5")
+      expect(output).toContain("Room active lock: present")
+      expect(output).toContain("Global inference slots: 1 / 1")
+      expect(output).not.toContain("SENSITIVE_QUESTION_CANARY")
+      expect(output).not.toContain("SENSITIVE_AUTHOR_CANARY")
+      expect(output).not.toContain("secret@example.test")
+      expect(output).not.toContain("SENSITIVE_BOARD_CANARY")
+    } finally {
+      logSpy.mockRestore()
+      if (previousDevLogs === undefined) delete process.env.ROOM_AI_DEV_LOGS
+      else process.env.ROOM_AI_DEV_LOGS = previousDevLogs
+    }
+  })
+
+  it("promptly rejects with RoomQueueFullError even when a diagnostic-only Redis read never resolves", async () => {
+    const previousDevLogs = process.env.ROOM_AI_DEV_LOGS
+    process.env.ROOM_AI_DEV_LOGS = "1"
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+    try {
+      const lLen = vi.fn(() => new Promise<number>(() => {}))
+      const redis = {
+        ...createRedis([0, 0]),
+        lLen,
+      } as unknown as Redis
+      const service = createRoomAiService({
+        redis,
+        ttlSeconds: 3600,
+        getSharedBoardReplicaAtLeast: () =>
+          ({
+            isComplete: () => true,
+            getModel: () => ({ id: "room-1", nodes: [], edges: [] }),
+          }) as never,
+      })
+
+      await expect(
+        service.postMessage({
+          diagramId: "room-1",
+          author: { id: "user-1", email: "user@example.test", name: "User" },
+          text: "Explain this diagram",
+          intent: "ask",
+          replica: { generation: "a".repeat(64), revision: 3 },
+        })
+      ).rejects.toMatchObject({ name: "RoomQueueFullError" })
+
+      expect(lLen).toHaveBeenCalledOnce()
+      expect(logSpy).not.toHaveBeenCalled()
+    } finally {
+      logSpy.mockRestore()
+      if (previousDevLogs === undefined) delete process.env.ROOM_AI_DEV_LOGS
+      else process.env.ROOM_AI_DEV_LOGS = previousDevLogs
+    }
   })
 })

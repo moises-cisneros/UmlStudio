@@ -33,7 +33,8 @@ export function createRoomAiProfileDeriver(options: RoomAiProfileDeriverOptions)
   const fetcher = options.fetcher ?? fetch
   return async function derive(
     profile: RoomAiProfileInput,
-    interaction: string
+    interaction: string,
+    messageId?: string
   ): Promise<RoomAiTeachingProfile> {
     if (!options.internalToken.trim() || !options.serviceUrl.trim()) {
       throw new Error("Room AI profile derivation is not configured")
@@ -61,6 +62,7 @@ export function createRoomAiProfileDeriver(options: RoomAiProfileDeriverOptions)
         headers: {
           "Content-Type": "application/json",
           "X-Internal-Token": options.internalToken,
+          ...(messageId ? { "X-Room-AI-Message-ID": messageId } : {}),
         },
         body: JSON.stringify({ profile, interaction }),
         signal: AbortSignal.timeout(options.timeoutMs ?? 60_000),

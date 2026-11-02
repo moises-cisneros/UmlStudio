@@ -36,6 +36,7 @@ export const k = {
   aiQueue: (id: string) => `diagram:{${id}}:ai:queue`,
   aiQueueInitialized: (id: string) => `diagram:{${id}}:ai:queue-initialized`,
   aiActiveMessage: (id: string) => `diagram:{${id}}:ai:active-message`,
+  aiActiveLease: (id: string) => `diagram:{${id}}:ai:active-lease`,
   aiActive: (id: string) => `diagram:{${id}}:ai:active`,
   aiAuthorship: (id: string) => `diagram:{${id}}:ai:authorship`,
   authUser: (id: string) => `auth:user:{${id}}`,

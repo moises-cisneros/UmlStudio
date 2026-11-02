@@ -506,6 +506,7 @@ async function main() {
         WS_PORT: String(websocketPort),
         REDIS_URL: redis.url,
         JWT_SECRET: process.env.JWT_SECRET || "umlstudio-development-jwt-secret-min-32-chars-2026!",
+        ROOM_AI_DEV_LOGS: "1",
       },
     }),
     spawnManagedProcess({
@@ -543,6 +544,7 @@ async function main() {
         ...coloredEnv,
         AI_SERVICE_PORT: String(aiPort),
         AI_SERVICE_HOST: "127.0.0.1",
+        ROOM_AI_DEV_LOGS: "1",
       },
     }),
     spawnManagedProcess({

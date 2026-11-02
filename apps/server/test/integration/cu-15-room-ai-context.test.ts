@@ -68,21 +68,14 @@ describe("room AI context", () => {
     expect(JSON.stringify(result)).not.toContain("Alice prefers small examples")
   })
 
-  it("takes the last six public messages from this room", () => {
+  it("takes the bounded recent public messages from this room", () => {
     const value = input()
     value.publicMessages = Array.from({ length: 8 }, (_, i) => message(String(i), "alice"))
     value.publicMessages.push({ ...message("9", "bob"), diagramId: "other" })
-    expect(buildRoomAiContext(value).publicMessages.map((m) => m.id)).toEqual([
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-    ])
+    expect(buildRoomAiContext(value).publicMessages.map((m) => m.id)).toEqual(["5", "6", "7"])
   })
 
-  it("leaves the full prompt budget to the model-aware AI service", () => {
+  it("serializes board context within the server budget", () => {
     const value = input()
     value.model = {
       ...value.model,

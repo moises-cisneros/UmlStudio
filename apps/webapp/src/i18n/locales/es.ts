@@ -103,6 +103,7 @@ export const es: TranslationDictionary = {
     loading: "Cargando conversación...",
     loadError: "No se pudo cargar la conversación de la sala.",
     sendError: "No se pudo enviar tu mensaje.",
+    queueFullError: "La cola de Room AI está llena; tu mensaje no se agregó.",
     inputPlaceholder: "Pregunta a la IA sobre este diagrama...",
     send: "Enviar",
     you: "Tú",

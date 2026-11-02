@@ -6,6 +6,7 @@ describe("Room AI private profile deriver", () => {
     const profile = { detailLevel: "balanced", exampleStyle: "none" } as const
     const fetcher = vi.fn(async (_input: string | URL, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({ "X-Internal-Token": "internal-secret" })
+      expect(init?.headers).toMatchObject({ "X-Room-AI-Message-ID": "message-123" })
       expect(JSON.parse(String(init?.body))).toEqual({
         profile,
         interaction: "Explain this with a UML example",
@@ -20,7 +21,9 @@ describe("Room AI private profile deriver", () => {
       fetcher,
     })
 
-    await expect(derive(profile, "Explain this with a UML example")).resolves.toEqual({
+    await expect(
+      derive(profile, "Explain this with a UML example", "message-123")
+    ).resolves.toEqual({
       detailLevel: "balanced",
       exampleStyle: "analogy",
     })

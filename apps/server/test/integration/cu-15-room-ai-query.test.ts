@@ -58,7 +58,7 @@ describe("Room AI query flow", () => {
     }
   )
 
-  it("retains the slot and stops follow-up summaries after an unconfirmed failure", async () => {
+  it("keeps the committed answer, retains the slot, and stops follow-up summaries after memory failure", async () => {
     const redis = await getRedis()
     const diagramId = "query-summary-unconfirmed"
     await redis.set(k.diagram(diagramId), "exists")
@@ -113,7 +113,9 @@ describe("Room AI query flow", () => {
     expect(fetcher).toHaveBeenCalledOnce()
     expect(await redis.sCard(GLOBAL_SLOTS)).toBe(1)
     const { messages } = await service.listMessages(diagramId)
-    expect(messages.some((message) => message.author.kind === "ai")).toBe(false)
+    expect(
+      messages.filter((message) => message.author.kind === "ai").map((message) => message.text)
+    ).toEqual(["shared answer"])
     await dispatcher.close()
   })
 
@@ -239,8 +241,8 @@ describe("Room AI query flow", () => {
     expect(messages.map((message) => message.text)).toEqual([
       "Explain inheritance with an example",
       "What is an interface?",
-      "Alice: Answer for Alice using step_by_step detail",
-      "Bob: Answer for Bob using concise detail",
+      "Answer for Alice using step_by_step detail",
+      "Answer for Bob using concise detail",
     ])
     expect(JSON.stringify(messages)).not.toContain("detailLevel")
     expect(messages.some((message) => message.replyTo === alice.messageId)).toBe(true)
@@ -337,10 +339,10 @@ describe("Room AI query flow", () => {
     const answers = messages.filter((message) => message.author.kind === "ai")
     expect(answers).toHaveLength(2)
     expect(answers.find((message) => message.replyTo === alice.messageId)?.text).toBe(
-      "Alice: Here is the answer"
+      "Here is the answer"
     )
     expect(answers.find((message) => message.replyTo === bob.messageId)?.text).toBe(
-      "Bob: Here is the answer"
+      "Here is the answer"
     )
     expect(answers.every((message) => message.provider === "self-hosted")).toBe(true)
     expect(events.filter((event) => event.type === "message.created")).toHaveLength(4)
