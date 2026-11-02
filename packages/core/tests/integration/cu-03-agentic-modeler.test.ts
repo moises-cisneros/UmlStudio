@@ -690,4 +690,24 @@ describe("INT-CU03: Case of Use CU-03 Agentic AI Modeling Integration", () => {
     // Edge connected to Producto must cascade delete
     expect(updated.edges.find((e) => e.id === "edge-vp")).toBeUndefined()
   })
+
+  it("removes every duplicate-name node when the diff repeats its name", () => {
+    const baseModel = createInitialModel()
+    baseModel.nodes.push(
+      ...[1, 2, 3].map((index) => ({
+        id: `node-package-${index}`,
+        type: "package",
+        position: { x: index * 100, y: 100 },
+        width: 160,
+        height: 100,
+        data: { name: "Package", attributes: [], methods: [] },
+      }))
+    )
+
+    const updated = applyDiff(baseModel, {
+      remove: { elementIds: ["Package", "Package", "Package"] },
+    })
+
+    expect(updated.nodes.filter((node) => node.data.name === "Package")).toHaveLength(0)
+  })
 })

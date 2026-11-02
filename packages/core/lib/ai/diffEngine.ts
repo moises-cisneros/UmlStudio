@@ -450,11 +450,23 @@ export function applyDiff(currentModel: UMLModel, diff: ModelDiff): UMLModel {
     const removedElementIds = new Set<string>()
     for (const rawId of Array.isArray(rawElementIds) ? rawElementIds : [rawElementIds]) {
       if (!rawId || typeof rawId !== "string") continue
-      const matched = findTargetNode(nodes, rawId)
+
+      const query = rawId.trim()
+      // Prefer an explicit ID. If the diff uses a name, resolve repeated
+      // occurrences to distinct nodes with that name instead of reusing the
+      // first match for every entry.
+      const matchedById = nodes.find((node) => node.id === query)
+      if (matchedById) {
+        removedElementIds.add(matchedById.id)
+        continue
+      }
+
+      const availableNodes = nodes.filter((node) => !removedElementIds.has(node.id))
+      const matched = findTargetNode(availableNodes, query)
       if (matched) {
         removedElementIds.add(matched.id)
       } else {
-        removedElementIds.add(rawId.trim())
+        removedElementIds.add(query)
       }
     }
     const rawRelIds =
