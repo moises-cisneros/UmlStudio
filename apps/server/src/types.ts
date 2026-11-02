@@ -42,6 +42,7 @@ export type ApiErrorCode =
   | "INVALID_PARAMS"
   | "NOT_FOUND"
   | "UNAUTHORIZED"
+  | "FORBIDDEN"
   | "CONFLICT"
   | "REVISION_MISMATCH"
   | "BODY_TOO_LARGE"

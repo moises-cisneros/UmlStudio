@@ -39,6 +39,7 @@ export const k = {
   aiActiveLease: (id: string) => `diagram:{${id}}:ai:active-lease`,
   aiActive: (id: string) => `diagram:{${id}}:ai:active`,
   aiAuthorship: (id: string) => `diagram:{${id}}:ai:authorship`,
+  aiPolicy: (id: string) => `diagram:{${id}}:ai:policy`,
   authUser: (id: string) => `auth:user:{${id}}`,
   authUserByEmail: (email: string) => `auth:user:email:${email.toLowerCase()}`,
   authRefresh: (jti: string) => `auth:refresh:${jti}`,

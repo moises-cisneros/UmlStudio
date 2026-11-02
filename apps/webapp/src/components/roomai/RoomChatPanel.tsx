@@ -5,20 +5,12 @@ import { useTranslation } from "@/i18n"
 import type { RoomAiStatusState } from "@/queries/roomAiCache"
 import { formatElapsed, type VoiceRecorderStatus } from "@/hooks/useVoiceRecorder"
 
-const CAMBIO_COMMAND_RE = /^\/cambio(?:\s+(.*))?$/is
-
 function resolveDraftSubmission(
   rawDraft: string,
   selectedIntent: RoomAiIntent,
   allowChanges: boolean
 ): { text: string; intent: RoomAiIntent } {
-  const trimmed = rawDraft.trim()
-  const match = CAMBIO_COMMAND_RE.exec(trimmed)
-  const hasCambioPrefix = match !== null
-  const text = (match ? (match[1] ?? "") : trimmed).trim()
-  const requestedIntent: RoomAiIntent = hasCambioPrefix ? "change" : selectedIntent
-  const intent: RoomAiIntent = allowChanges ? requestedIntent : "ask"
-  return { text, intent }
+  return { text: rawDraft.trim(), intent: allowChanges ? selectedIntent : "ask" }
 }
 
 export interface RoomVoiceControls {
@@ -39,6 +31,8 @@ export interface RoomChatPanelProps {
   aiStatus: RoomAiStatusState
   currentUserId?: string
   allowChanges?: boolean
+  canConfigurePolicy?: boolean
+  isUpdatingPolicy?: boolean
   isLoading?: boolean
   hasLoadError?: boolean
   sendErrorKind?: "generic" | "queueFull" | null
@@ -46,6 +40,7 @@ export interface RoomChatPanelProps {
   hasVoiceError?: boolean
   isSending?: boolean
   onSend: (text: string, intent: RoomAiIntent) => void
+  onChangeRequestsChange?: (allowChanges: boolean) => void
   voiceControls?: RoomVoiceControls
 }
 
@@ -54,6 +49,8 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   aiStatus,
   currentUserId,
   allowChanges = true,
+  canConfigurePolicy = false,
+  isUpdatingPolicy = false,
   isLoading = false,
   hasLoadError = false,
   sendErrorKind = null,
@@ -61,6 +58,7 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   hasVoiceError = false,
   isSending = false,
   onSend,
+  onChangeRequestsChange,
   voiceControls,
 }) => {
   const { t } = useTranslation()
@@ -72,9 +70,6 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
 
   const selectAskIntent = () => {
     setSelectedIntent("ask")
-    if (CAMBIO_COMMAND_RE.test(draft.trim())) {
-      setDraft((prev) => prev.replace(/^\s*\/cambio\s*/i, ""))
-    }
   }
 
   const selectChangeIntent = () => {
@@ -326,8 +321,17 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
               {t.roomAi.changeIntent}
             </button>
           </div>
-          <span className="text-[10px] text-muted-foreground">{t.roomAi.changeShortcutHint}</span>
         </div>
+        {canConfigurePolicy && onChangeRequestsChange && (
+          <button
+            type="button"
+            onClick={() => onChangeRequestsChange(!allowChanges)}
+            disabled={isUpdatingPolicy}
+            className="mb-1.5 text-[10px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {allowChanges ? t.roomAi.disableChangeRequests : t.roomAi.enableChangeRequests}
+          </button>
+        )}
         <form
           onSubmit={submit}
           className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-raised p-1.5 shadow-sm"
@@ -337,9 +341,6 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
             onChange={(e) => {
               const nextDraft = e.target.value
               setDraft(nextDraft)
-              if (allowChanges && CAMBIO_COMMAND_RE.test(nextDraft.trim())) {
-                setSelectedIntent("change")
-              }
             }}
             placeholder={t.roomAi.inputPlaceholder}
             aria-label={t.roomAi.inputPlaceholder}

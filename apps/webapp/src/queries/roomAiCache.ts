@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query"
 import type { RoomChatMessage } from "@umlstudio/core"
 import type { RoomAiEvent, RoomAiStatus } from "@/types"
-import type { RoomAiMessagesPage } from "@/services/DiagramApiClient"
+import type { RoomAiMessagesPage, RoomAiPolicyView } from "@/services/DiagramApiClient"
 import { roomAiKeys } from "./keys"
 
 export interface RoomAiStatusState {
@@ -50,8 +50,12 @@ export function applyRoomAiEventToCache(
         ...(event.forUserName ? { forUserName: event.forUserName } : {}),
       })
       return
+    case "policy.updated":
+      queryClient.setQueryData<RoomAiPolicyView>(roomAiKeys.policy(diagramId), (current) =>
+        current ? { ...event.policy, canConfigure: current.canConfigure } : undefined
+      )
+      return
     default:
-      // policy.updated is handled by the policy UI (separate issue).
       return
   }
 }
