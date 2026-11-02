@@ -1,5 +1,6 @@
 import { useCallback } from "react"
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { RoomAiIntent } from "@umlstudio/core"
 import { DiagramApiClient } from "@/services/DiagramApiClient"
 import type { PersonalRoomTeachingProfile } from "@/services/personalRoomMemory"
 import { roomAiKeys } from "./keys"
@@ -34,11 +35,16 @@ export function useRoomAi(
   const send = useMutation({
     mutationFn: async (input: {
       text: string
+      intent?: RoomAiIntent
       teachingProfile?: PersonalRoomTeachingProfile
       profileRevision?: string
     }) => {
       const replica = await flushSharedReplica()
-      return DiagramApiClient.postRoomAiMessage(diagramId, { ...input, intent: "ask", replica })
+      return DiagramApiClient.postRoomAiMessage(diagramId, {
+        ...input,
+        intent: input.intent ?? "ask",
+        replica,
+      })
     },
     // The broadcast normally delivers the message; refetch covers a dropped socket.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: roomAiKeys.messages(diagramId) }),

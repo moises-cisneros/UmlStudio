@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FC } from "react"
+import type { RoomAiIntent } from "@umlstudio/core"
 import { useRoomAi } from "@/queries/roomAiQueries"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useEditorContext } from "@/contexts"
@@ -141,10 +142,10 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
     }
   }
 
-  const sendQuestion = async (text: string) => {
+  const sendQuestion = async (text: string, intent: RoomAiIntent = "ask") => {
     const profile = await getProfileForInteraction()
     try {
-      const result = await room.sendMessage({ text, ...(profile ?? {}) })
+      const result = await room.sendMessage({ text, intent, ...(profile ?? {}) })
       await applyProfileUpdate(result.profileUpdate, result.profileLearningFailed, profile !== null)
     } catch (error) {
       await reconcileAfterRequestFailure(profile?.profileRevision)
@@ -181,7 +182,7 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
       sendErrorKind={sendErrorKind}
       hasProfileSyncError={profileSyncError}
       isSending={room.isSending || room.isSendingVoice || !profileReady}
-      onSend={(text) => void sendQuestion(text).catch(() => undefined)}
+      onSend={(text, intent) => void sendQuestion(text, intent).catch(() => undefined)}
       hasVoiceError={voiceError}
       voiceControls={{
         status: recorder.status,
