@@ -21,6 +21,7 @@ export const Errors = {
     new ApiError(413, "BODY_TOO_LARGE", msg),
   notFound: (msg = "Not found") => new ApiError(404, "NOT_FOUND", msg),
   unauthorized: (msg = "Invalid credentials") => new ApiError(401, "UNAUTHORIZED", msg),
+  forbidden: (msg = "Forbidden") => new ApiError(403, "FORBIDDEN", msg),
   noHead: (msg = "Diagram does not exist") => new ApiError(404, "NO_HEAD", msg),
   revisionMismatch: (currentHeadRev: number) =>
     new ApiError(409, "REVISION_MISMATCH", "If-Match revision does not match current headRev", {

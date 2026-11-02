@@ -67,6 +67,37 @@ describe("applyRoomAiEventToCache", () => {
     })
   })
 
+  it("does not seed a policy cache before the panel can fetch viewer access", () => {
+    const client = setup()
+    applyRoomAiEventToCache(client, "d1", {
+      type: "policy.updated",
+      policy: { enabled: true, allowChanges: true, applyMode: "confirm", proactive: false },
+    })
+    expect(client.getQueryData(roomAiKeys.policy("d1"))).toBeUndefined()
+  })
+
+  it("updates a loaded policy without losing viewer access", () => {
+    const client = setup()
+    client.setQueryData(roomAiKeys.policy("d1"), {
+      enabled: true,
+      allowChanges: false,
+      applyMode: "confirm",
+      proactive: false,
+      canConfigure: true,
+    })
+    applyRoomAiEventToCache(client, "d1", {
+      type: "policy.updated",
+      policy: { enabled: true, allowChanges: true, applyMode: "confirm", proactive: false },
+    })
+    expect(client.getQueryData(roomAiKeys.policy("d1"))).toEqual({
+      enabled: true,
+      allowChanges: true,
+      applyMode: "confirm",
+      proactive: false,
+      canConfigure: true,
+    })
+  })
+
   it("invalidates shared memory after an AI answer or a collaborator pin", () => {
     const client = setup()
     const memoryKey = [...roomAiKeys.all, "memory", "d1"]

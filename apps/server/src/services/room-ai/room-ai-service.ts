@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import type { RoomAiEvent, RoomAiIntent, RoomChatMessage } from "@umlstudio/core"
+import type { RoomAiEvent, RoomAiIntent, RoomAiPolicy, RoomChatMessage } from "@umlstudio/core"
 import { k, type Redis } from "../../redis.js"
 import type { AuthProfile } from "../auth-service.js"
 import type { BoardReplica } from "./board-replica.js"
@@ -11,6 +11,7 @@ import {
   type RoomAiPersonalProfileRevisionCoordinator,
   type RoomAiTeachingProfile,
 } from "./room-ai-personal-profile.js"
+import { createRoomAiPolicyRepository, type RoomAiPolicyRepository } from "./room-ai-policy.js"
 import {
   createChatRepository,
   enqueueChatMessage,
@@ -136,11 +137,15 @@ export interface PostRoomMessageResult {
 
 export interface RoomAiService {
   postMessage(input: PostRoomMessageInput): Promise<PostRoomMessageResult>
+  assertRequestAllowed(diagramId: string, intent: RoomAiIntent): Promise<void>
   getPersonalProfileRevision(diagramId: string, userId: string): Promise<string>
   revokePersonalProfile(diagramId: string, userId: string): Promise<string>
   listMessages(diagramId: string, options?: ListChatOptions): Promise<ChatPage<RoomChatMessage>>
   getSharedMemory(diagramId: string): Promise<RoomMemorySnapshot>
   pinSharedDecision(diagramId: string, text: string): Promise<void>
+  getPolicy(diagramId: string): Promise<RoomAiPolicy>
+  canConfigurePolicy(diagramId: string, userId: string): Promise<boolean>
+  updatePolicy(diagramId: string, userId: string, policy: RoomAiPolicy): Promise<RoomAiPolicy>
 }
 
 /** Thrown when the room (diagram) does not exist; routes map it to a 404. */
@@ -172,6 +177,27 @@ export class RoomAiMemoryUnavailableError extends Error {
   }
 }
 
+export class RoomAiDisabledError extends Error {
+  constructor() {
+    super("Room AI is disabled by the room owner")
+    this.name = "RoomAiDisabledError"
+  }
+}
+
+export class RoomAiChangesDisabledError extends Error {
+  constructor() {
+    super("Room AI change proposals are disabled by the room owner")
+    this.name = "RoomAiChangesDisabledError"
+  }
+}
+
+export class RoomAiPolicyOwnerRequiredError extends Error {
+  constructor() {
+    super("Only the diagram owner can update Room AI policy")
+    this.name = "RoomAiPolicyOwnerRequiredError"
+  }
+}
+
 export interface RoomMemoryStore {
   snapshot(diagramId: string): Promise<RoomMemorySnapshot>
   pinDecision(diagramId: string, decision: string): Promise<void>
@@ -188,6 +214,7 @@ interface RoomAiServiceDeps {
     messageId: string
   ) => Promise<RoomAiTeachingProfile>
   profileRevisions?: RoomAiPersonalProfileRevisionCoordinator
+  policyRepository?: RoomAiPolicyRepository
   now?: () => Date
   /** Broadcasts room AI events to every socket in the room. */
   publish?: (diagramId: string, event: RoomAiEvent) => void
@@ -205,9 +232,17 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
   const chat = deps.chat ?? createChatRepository<RoomChatMessage>(redis, ttlSeconds)
   const profileRevisions =
     deps.profileRevisions ?? createRoomAiPersonalProfileRevisionCoordinator(redis, ttlSeconds)
+  const policyRepository = deps.policyRepository ?? createRoomAiPolicyRepository(redis, ttlSeconds)
 
   async function assertRoomExists(diagramId: string): Promise<void> {
     if ((await redis.exists(k.diagram(diagramId))) === 0) throw new RoomNotFoundError()
+  }
+
+  async function assertRequestAllowed(diagramId: string, intent: RoomAiIntent): Promise<void> {
+    await assertRoomExists(diagramId)
+    const policy = await policyRepository.get(diagramId)
+    if (!policy.enabled) throw new RoomAiDisabledError()
+    if (intent === "change" && !policy.allowChanges) throw new RoomAiChangesDisabledError()
   }
 
   return {
@@ -220,7 +255,7 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
       teachingProfile: rawTeachingProfile,
       profileRevision,
     }) {
-      await assertRoomExists(diagramId)
+      await assertRequestAllowed(diagramId, intent)
       const teachingProfile =
         rawTeachingProfile === undefined
           ? null
@@ -358,6 +393,8 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
       return profileRevisions.getOrCreateRevision(diagramId, userId)
     },
 
+    assertRequestAllowed,
+
     async revokePersonalProfile(diagramId, userId) {
       await assertRoomExists(diagramId)
       return profileRevisions.revokeRevision(diagramId, userId)
@@ -379,6 +416,25 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
       if (!deps.memory) throw new RoomAiMemoryUnavailableError()
       await deps.memory.pinDecision(diagramId, text)
       publish?.(diagramId, { type: "memory.updated" })
+    },
+
+    async getPolicy(diagramId) {
+      await assertRoomExists(diagramId)
+      return policyRepository.get(diagramId)
+    },
+
+    async canConfigurePolicy(diagramId, userId) {
+      await assertRoomExists(diagramId)
+      return (await redis.hGet(k.diagramMeta(diagramId), "userId")) === userId
+    },
+
+    async updatePolicy(diagramId, userId, rawPolicy) {
+      await assertRoomExists(diagramId)
+      const ownerId = await redis.hGet(k.diagramMeta(diagramId), "userId")
+      if (!ownerId || ownerId !== userId) throw new RoomAiPolicyOwnerRequiredError()
+      const policy = await policyRepository.set(diagramId, rawPolicy)
+      publish?.(diagramId, { type: "policy.updated", policy })
+      return policy
     },
   }
 }

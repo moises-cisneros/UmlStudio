@@ -94,7 +94,7 @@ describe("INT-CU15: room AI message routes", () => {
 
   it("returns 202 with messageId and queuePosition for a valid JWT", async () => {
     const { token } = await register("ada.room@example.com", "Ada")
-    const res = await post(token, { text: "add a User class", intent: "change" })
+    const res = await post(token, { text: "explain the User class", intent: "ask" })
     expect(res.status).toBe(202)
     const body = await res.json()
     expect(typeof body.messageId).toBe("string")

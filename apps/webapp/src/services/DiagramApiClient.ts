@@ -1,4 +1,4 @@
-import type { RoomAiIntent, RoomChatMessage, UMLModel } from "@umlstudio/core"
+import type { RoomAiIntent, RoomAiPolicy, RoomChatMessage, UMLModel } from "@umlstudio/core"
 import { serverURL } from "@/constants"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { resolveShareOrigin } from "@/utils/sharedDiagramLinks"
@@ -85,6 +85,8 @@ export interface RoomAiMessagesPage {
   hasMore: boolean
 }
 
+export type RoomAiPolicyView = RoomAiPolicy & { canConfigure: boolean }
+
 export interface RoomAiReplica {
   generation: string
   revision: number
@@ -103,6 +105,20 @@ export interface RoomAiMessageResult {
 }
 
 export const DiagramApiClient = {
+  async fetchRoomAiPolicy(
+    diagramId: string,
+    opts: { signal?: AbortSignal } = {}
+  ): Promise<RoomAiPolicyView> {
+    const { data } = await request<RoomAiPolicyView>(`/api/rooms/${diagramId}/ai/policy`, opts)
+    return data
+  },
+  async updateRoomAiPolicy(diagramId: string, policy: RoomAiPolicy): Promise<RoomAiPolicy> {
+    const { data } = await request<RoomAiPolicy>(`/api/rooms/${diagramId}/ai/policy`, {
+      method: "PUT",
+      body: policy,
+    })
+    return data
+  },
   async fetchRoomAiMessages(
     diagramId: string,
     opts: { before?: string; limit?: number; signal?: AbortSignal } = {}

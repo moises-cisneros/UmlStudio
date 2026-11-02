@@ -105,8 +105,9 @@ export interface TranslationDictionary {
     intentModeLabel: string
     askIntent: string
     changeIntent: string
-    changeShortcutHint: string
     mentorOnlyHint: string
+    enableChangeRequests: string
+    disableChangeRequests: string
     send: string
     you: string
     aiAuthor: string

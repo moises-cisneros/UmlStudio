@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   writePersonalRoomProfile: vi.fn(),
   getPersonalProfileRevision: vi.fn(),
   sendSharedMessage: vi.fn(),
+  updatePolicy: vi.fn(),
   sendVoiceMessage: vi.fn(),
   flushSharedReplica: vi.fn(),
   useVoiceRecorder: vi.fn(),
@@ -59,6 +60,12 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
       queuePosition: 1,
       profileUpdate: { profile: updatedProfile, revision: updatedRevision },
     })
+    mocks.updatePolicy.mockResolvedValue({
+      enabled: true,
+      allowChanges: true,
+      applyMode: "confirm",
+      proactive: false,
+    })
     mocks.useVoiceRecorder.mockReturnValue({
       status: "idle",
       elapsed: 0,
@@ -82,6 +89,8 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
       sendVoiceError: null,
       sendError: null,
       isSending: false,
+      updatePolicy: mocks.updatePolicy,
+      isUpdatingPolicy: false,
     })
   })
 
@@ -141,12 +150,16 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     expect(JSON.stringify(mocks.sendSharedMessage.mock.calls)).not.toContain("personal notes")
   })
 
-  it("forwards the selected Request change intent or /cambio shortcut to room.sendMessage", async () => {
+  it("forwards the selected Changes intent to room.sendMessage", async () => {
+    mocks.useRoomAi.mockReturnValue({
+      ...mocks.useRoomAi(),
+      policy: { enabled: true, allowChanges: true, applyMode: "confirm", proactive: false },
+    })
     const user = userEvent.setup()
     render(<RoomChatPanelContainer diagramId="diagram-1" />)
     await waitFor(() => expect(mocks.getPersonalProfileRevision).toHaveBeenCalled())
 
-    await user.click(screen.getByRole("button", { name: "Request change" }))
+    await user.click(screen.getByRole("button", { name: "Changes" }))
     await user.type(
       screen.getByPlaceholderText("Ask the AI about this diagram..."),
       "Add Customer class"
@@ -161,22 +174,30 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
         profileRevision: currentRevision,
       })
     )
+  })
 
-    await user.click(screen.getByRole("button", { name: "Ask" }))
-    await user.type(
-      screen.getByPlaceholderText("Ask the AI about this diagram..."),
-      "/cambio Rename Customer to Client"
-    )
-    await user.click(screen.getByRole("button", { name: "Send" }))
+  it("lets the diagram owner enable change requests", async () => {
+    mocks.useRoomAi.mockReturnValue({
+      ...mocks.useRoomAi(),
+      policy: {
+        enabled: true,
+        allowChanges: false,
+        applyMode: "confirm",
+        proactive: false,
+        canConfigure: true,
+      },
+    })
+    const user = userEvent.setup()
+    render(<RoomChatPanelContainer diagramId="diagram-1" />)
 
-    await waitFor(() =>
-      expect(mocks.sendSharedMessage).toHaveBeenLastCalledWith({
-        text: "Rename Customer to Client",
-        intent: "change",
-        teachingProfile: initialProfile,
-        profileRevision: currentRevision,
-      })
-    )
+    await user.click(screen.getByRole("button", { name: "Enable change requests" }))
+
+    expect(mocks.updatePolicy).toHaveBeenCalledWith({
+      enabled: true,
+      allowChanges: true,
+      applyMode: "confirm",
+      proactive: false,
+    })
   })
 
   it("keeps the saved profile when automatic learning fails", async () => {

@@ -10,6 +10,9 @@ import {
   RoomNotFoundError,
   RoomQueueFullError,
   RoomAiMemoryUnavailableError,
+  RoomAiChangesDisabledError,
+  RoomAiDisabledError,
+  RoomAiPolicyOwnerRequiredError,
   SharedBoardSnapshotNotReadyError,
   type RoomAiService,
 } from "../services/room-ai/room-ai-service.js"
@@ -23,6 +26,7 @@ import {
   type RoomAiVoiceQuestionHandler,
 } from "../services/room-ai/room-ai-voice-question.js"
 import { RoomAiTranscriptionUnavailableError } from "../services/room-ai/room-ai-transcriber.js"
+import { RoomAiPolicySchema } from "../services/room-ai/room-ai-policy.js"
 
 interface Deps {
   auth: AuthService
@@ -60,10 +64,45 @@ const PinDecisionBody = z.object({
   text: z.string().trim().min(1, "text must not be empty").max(8000),
 })
 
+const UpdatePolicyBody = RoomAiPolicySchema
+
 export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<AppEnv> {
   const router = new Hono<AppEnv>()
 
   router.use("/rooms/*", authGuard({ auth }))
+
+  router.get(
+    "/rooms/:diagramId/ai/policy",
+    validate({ params: DiagramIdParams }, async (c, { params }) => {
+      const user = c.get("user")
+      if (!user) throw Errors.unauthorized()
+      try {
+        const [policy, canConfigure] = await Promise.all([
+          roomAi.getPolicy(params.diagramId),
+          roomAi.canConfigurePolicy(params.diagramId, user.id),
+        ])
+        return c.json({ ...policy, canConfigure })
+      } catch (err) {
+        if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
+        throw err
+      }
+    })
+  )
+
+  router.put(
+    "/rooms/:diagramId/ai/policy",
+    validate({ params: DiagramIdParams, body: UpdatePolicyBody }, async (c, { params, body }) => {
+      const user = c.get("user")
+      if (!user) throw Errors.unauthorized()
+      try {
+        return c.json(await roomAi.updatePolicy(params.diagramId, user.id, body))
+      } catch (err) {
+        if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
+        if (err instanceof RoomAiPolicyOwnerRequiredError) throw Errors.forbidden(err.message)
+        throw err
+      }
+    })
+  )
 
   router.get(
     "/rooms/:diagramId/ai/personal-profile/revision",
@@ -121,6 +160,9 @@ export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<A
         }
         if (err instanceof RoomAiPersonalProfileStaleError) {
           throw new ApiError(409, "ROOM_AI_PROFILE_STALE", err.message)
+        }
+        if (err instanceof RoomAiDisabledError || err instanceof RoomAiChangesDisabledError) {
+          throw Errors.forbidden(err.message)
         }
         throw err
       }
@@ -180,6 +222,7 @@ export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<A
     }
 
     try {
+      await roomAi.assertRequestAllowed(c.req.param("diagramId"), "ask")
       const result = await voiceQuestion({
         diagramId: c.req.param("diagramId"),
         author: user,
@@ -207,6 +250,9 @@ export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<A
       }
       if (err instanceof RoomAiPersonalProfileStaleError) {
         throw new ApiError(409, "ROOM_AI_PROFILE_STALE", err.message)
+      }
+      if (err instanceof RoomAiDisabledError || err instanceof RoomAiChangesDisabledError) {
+        throw Errors.forbidden(err.message)
       }
       if (err instanceof RoomAiTranscriptionUnavailableError) {
         throw new ApiError(

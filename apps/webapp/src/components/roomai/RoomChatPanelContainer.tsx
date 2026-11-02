@@ -172,17 +172,34 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
     }
   }
 
+  const setChangeRequestsAllowed = (allowChanges: boolean) => {
+    const policy = room.policy
+    if (!policy?.canConfigure) return
+    void room
+      .updatePolicy({
+        enabled: policy.enabled,
+        allowChanges,
+        applyMode: policy.applyMode,
+        proactive: policy.proactive,
+      })
+      .catch(() => undefined)
+  }
+
   return (
     <RoomChatPanel
       messages={room.messages}
       aiStatus={room.aiStatus}
       currentUserId={user?.id}
+      allowChanges={room.policy?.allowChanges ?? false}
+      canConfigurePolicy={room.policy?.canConfigure ?? false}
+      isUpdatingPolicy={room.isUpdatingPolicy}
       isLoading={room.isLoading}
       hasLoadError={room.loadError !== null}
       sendErrorKind={sendErrorKind}
       hasProfileSyncError={profileSyncError}
       isSending={room.isSending || room.isSendingVoice || !profileReady}
       onSend={(text, intent) => void sendQuestion(text, intent).catch(() => undefined)}
+      onChangeRequestsChange={setChangeRequestsAllowed}
       hasVoiceError={voiceError}
       voiceControls={{
         status: recorder.status,
