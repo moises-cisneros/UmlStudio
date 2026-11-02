@@ -103,6 +103,7 @@ export const en: TranslationDictionary = {
     loading: "Loading conversation...",
     loadError: "Could not load the room conversation.",
     sendError: "Could not send your message.",
+    queueFullError: "Room AI queue is full; your message was not added.",
     inputPlaceholder: "Ask the AI about this diagram...",
     send: "Send",
     you: "You",

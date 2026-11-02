@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FC } from "react"
 import { useRoomAi } from "@/queries/roomAiQueries"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useEditorContext } from "@/contexts"
+import { ApiError } from "@/services/DiagramApiClient"
 import {
   readPersonalRoomProfile,
   writePersonalRoomProfile,
@@ -31,6 +32,12 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
     return flushSharedReplica()
   }, [flushSharedReplica])
   const room = useRoomAi(diagramId, flush)
+  const sendErrorKind =
+    room.sendError === null
+      ? null
+      : room.sendError instanceof ApiError && room.sendError.code === "ROOM_AI_QUEUE_FULL"
+        ? "queueFull"
+        : "generic"
   const getPersonalProfileRevision = room.getPersonalProfileRevision
   const [profileRecord, setProfileRecord] = useState<PersonalRoomProfileRecord | null>(null)
   const [profileReady, setProfileReady] = useState(() => !user?.id)
@@ -171,7 +178,7 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
       currentUserId={user?.id}
       isLoading={room.isLoading}
       hasLoadError={room.loadError !== null}
-      hasSendError={room.sendError !== null}
+      sendErrorKind={sendErrorKind}
       hasProfileSyncError={profileSyncError}
       isSending={room.isSending || room.isSendingVoice || !profileReady}
       onSend={(text) => void sendQuestion(text).catch(() => undefined)}

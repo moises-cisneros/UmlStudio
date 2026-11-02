@@ -100,6 +100,7 @@ export interface TranslationDictionary {
     loading: string
     loadError: string
     sendError: string
+    queueFullError: string
     inputPlaceholder: string
     send: string
     you: string

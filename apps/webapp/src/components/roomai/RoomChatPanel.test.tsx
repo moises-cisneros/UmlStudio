@@ -138,6 +138,42 @@ describe("RoomChatPanel", () => {
     expect(screen.queryByRole("button", { name: "Private" })).toBeNull()
   })
 
+  it("places the idle voice button in the composer between the input and send button", () => {
+    render(
+      <RoomChatPanel
+        messages={[]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        onSend={vi.fn()}
+        voiceControls={{
+          status: "idle",
+          elapsed: 0,
+          audioUrl: null,
+          hasSupport: true,
+          isSending: false,
+          hasError: false,
+          onStartRecording: vi.fn(),
+          onStopRecording: vi.fn(),
+          onCancelRecording: vi.fn(),
+          onSendRecording: vi.fn(),
+        }}
+      />
+    )
+
+    const input = screen.getByPlaceholderText("Ask the AI about this diagram...")
+    const recordButton = screen.getByRole("button", { name: "Record voice question" })
+    const sendButton = screen.getByRole("button", { name: "Send" })
+    const composer = sendButton.closest("form")
+
+    expect(composer).not.toBeNull()
+    expect(composer?.contains(input)).toBe(true)
+    expect(composer?.contains(recordButton)).toBe(true)
+    expect(Array.from(composer!.querySelectorAll("input, button"))).toEqual([
+      input,
+      recordButton,
+      sendButton,
+    ])
+  })
+
   it("sends the recorded voice only when the collaborator confirms it", async () => {
     const onSendRecording = vi.fn()
     render(

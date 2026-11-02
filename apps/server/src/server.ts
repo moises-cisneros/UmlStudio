@@ -102,6 +102,7 @@ async function main() {
       const boundedMessages = messages.slice(-10).map((message) => message.slice(0, 200))
       const result = await responder({
         route: "shared",
+        messageId: "room-ai-summary",
         requester: { id: "room-ai-memory", name: "Room AI" },
         intent: "ask",
         question:
@@ -129,11 +130,17 @@ async function main() {
         requirement.revision
       )
       if (!replica?.isComplete()) {
-        throw new InferenceNotStartedError("shared board snapshot is not ready")
+        throw new InferenceNotStartedError("shared board snapshot is not ready", {
+          stage: "orchestrator_board_snapshot",
+          reasonCode: replica ? "board_replica_incomplete" : "board_replica_not_ready",
+        })
       }
       const board = replica.getModel()
       if (!replica.isComplete()) {
-        throw new InferenceNotStartedError("shared board snapshot is not ready")
+        throw new InferenceNotStartedError("shared board snapshot is not ready", {
+          stage: "orchestrator_board_snapshot",
+          reasonCode: "board_replica_incomplete_after_read",
+        })
       }
       return board
     },
@@ -156,6 +163,8 @@ async function main() {
     infer: (diagramId, messageId, replica) =>
       roomAiOrchestrator.infer(diagramId, messageId, replica),
     publish: (diagramId, event) => roomAiBus.publish(diagramId, event),
+    publishStatusIfCurrentClaim: (diagramId, status, token) =>
+      roomAiBus.publishStatusIfCurrentClaim(diagramId, status, token),
   })
   const queuedRoomAi = createRoomAiService({
     redis,
@@ -168,6 +177,13 @@ async function main() {
     memory: roomMemory,
     getSharedBoardReplicaAtLeast: relayPublish.getSharedBoardReplicaAtLeast,
     publish: relayPublish.publishRoomAi,
+    onQueueFull: (diagramId) => {
+      void dispatcher
+        .drainRoom(diagramId)
+        .catch((err) =>
+          logger.error({ err, diagramId }, "Room AI queue drain failed after queue-full rejection")
+        )
+    },
   })
   const roomAi = {
     ...queuedRoomAi,

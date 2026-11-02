@@ -1,14 +1,19 @@
 """Contract tests for the server-only room inference endpoint."""
 
+import asyncio
+import io
+import os
 import unittest
 import warnings
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from src.core.config import settings
 from src.main import app
-from src.models.uml import DiffAddBlock, DiffElementAdd, ModelDiff
+from src.models.uml import DiffAddBlock, DiffElementAdd, ModelDiff, RoomRespondRequest
+from src.services.room_response import RoomResponseService, _safe_provider_http_status
 
 
 PATH = "/internal/v1/room/respond"
@@ -50,6 +55,51 @@ class TestInternalRoomResponse(unittest.TestCase):
         request_headers.update(headers or {})
         return self.client.post(PATH, json=body, headers=request_headers)
 
+    def test_failure_log_reports_safe_provider_status_without_exception_body(self):
+        class FailingAdapter(StubAdapter):
+            async def complete_text(self, prompt):
+                raise RuntimeError(
+                    "Ollama text completion failed (401): PROVIDER_BODY_SECRET_CANARY"
+                )
+
+        request = RoomRespondRequest.model_validate(
+            {**REQUEST, "provider": "self_hosted", "route": "shared"}
+        )
+        buf = io.StringIO()
+        with patch.dict(os.environ, {"ROOM_AI_DEV_LOGS": "1"}, clear=False), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "http://127.0.0.1:8765/v1", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True
+        ), patch("src.adapters.OllamaAdapter", return_value=FailingAdapter()), patch(
+            "src.services.room_response.count_room_ai_prompt_tokens", return_value=42
+        ), redirect_stdout(buf), self.assertRaisesRegex(
+            RuntimeError, "Ollama text completion failed"
+        ):
+            asyncio.run(RoomResponseService.respond(request, message_id="message-123"))
+        output = buf.getvalue()
+        self.assertEqual(
+            _safe_provider_http_status(
+                RuntimeError("Ollama text completion failed (401): PROVIDER_BODY_SECRET_CANARY")
+            ),
+            401,
+        )
+        self.assertEqual(
+            _safe_provider_http_status(
+                RuntimeError("Ollama error (502): PROVIDER_BODY_SECRET_CANARY")
+            ),
+            502,
+        )
+        self.assertEqual(
+            _safe_provider_http_status(RuntimeError("LM Studio error (503): body")),
+            503,
+        )
+        self.assertIsNone(_safe_provider_http_status(RuntimeError("unrelated 503 detail")))
+        self.assertIn("* Failure stage: provider_inference", output)
+        self.assertIn("* Failure reason: provider_inference_failed", output)
+        self.assertIn("* Failure type: RuntimeError", output)
+        self.assertIn("* Provider HTTP status: 401", output)
+        self.assertNotIn("PROVIDER_BODY_SECRET_CANARY", output)
+
     def test_explain_returns_text_without_a_diff_and_uses_room_context(self):
         adapter = StubAdapter()
         with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret", create=True), patch(
@@ -67,6 +117,68 @@ class TestInternalRoomResponse(unittest.TestCase):
         self.assertIn("Order", adapter.text_prompts[0])
         self.assertIn("The room is modeling orders.", adapter.text_prompts[0])
         self.assertEqual(adapter.diff_prompts, [])
+
+    def test_explain_prompt_requires_a_direct_concise_scannable_answer(self):
+        adapter = StubAdapter()
+        request = RoomRespondRequest.model_validate(
+            {
+                **REQUEST,
+                "provider": "self_hosted",
+                "route": "shared",
+                "teaching_profile": {
+                    "detailLevel": "balanced",
+                    "exampleStyle": "uml",
+                },
+            }
+        )
+        with patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True
+        ), patch("src.adapters.OllamaAdapter", return_value=adapter), patch(
+            "src.services.room_response.count_room_ai_prompt_tokens", return_value=10
+        ):
+            response = asyncio.run(RoomResponseService.respond(request))
+
+        self.assertEqual(response.text, "An interface defines a contract.")
+        prompt = adapter.text_prompts[0]
+        self.assertIn("Answer the current question directly", prompt)
+        self.assertIn("Do not greet or re-introduce yourself", prompt)
+        self.assertIn("concise and scannable", prompt)
+        self.assertIn("one concise clarifying question", prompt)
+        self.assertIn("Do not use Markdown syntax", prompt)
+        self.assertIn("Never prefix the answer with the requester's name", prompt)
+        self.assertIn("hyphen bullets", prompt)
+        self.assertIn("detailLevel", prompt)
+        self.assertIn("exampleStyle", prompt)
+
+    def test_explain_uses_compact_semantic_context_not_duplicate_raw_board_json(self):
+        adapter = StubAdapter()
+        request = RoomRespondRequest.model_validate(
+            {
+                **REQUEST,
+                "board": {
+                    "nodes": [
+                        {
+                            "id": "raw",
+                            "data": {
+                                "name": "RAW_BOARD_CANARY",
+                                "editorPayload": "RAW_BOARD_PAYLOAD_CANARY",
+                            },
+                        }
+                    ],
+                    "edges": [],
+                },
+                "context": {"boardDsl": "class Order { number: String }"},
+            }
+        )
+        with patch("src.adapters.get_adapter", return_value=adapter):
+            response = asyncio.run(RoomResponseService.respond(request))
+
+        self.assertEqual(response.text, "An interface defines a contract.")
+        self.assertIn("class Order { number: String }", adapter.text_prompts[0])
+        self.assertNotIn("RAW_BOARD_CANARY", adapter.text_prompts[0])
+        self.assertNotIn("RAW_BOARD_PAYLOAD_CANARY", adapter.text_prompts[0])
 
     def test_change_returns_a_validated_diff_and_no_unrelated_public_change(self):
         adapter = StubAdapter()
@@ -212,5 +324,142 @@ class TestInternalRoomResponse(unittest.TestCase):
         self.assertEqual(response.status_code, 502)
         self.assertNotIn("PROVIDER_SECRET", response.text)
         self.assertFalse(any("PROVIDER_SECRET" in str(item.message) for item in caught))
+
+    def test_room_response_logs_are_disabled_by_default_in_production(self):
+        adapter = StubAdapter()
+        buf = io.StringIO()
+        with patch.dict(os.environ, {"ROOM_AI_DEV_LOGS": ""}, clear=False), patch.object(
+            settings, "AI_INTERNAL_TOKEN", "test-secret", create=True
+        ), patch("src.adapters.get_adapter", return_value=adapter), redirect_stdout(buf):
+            response = self.post(
+                {**REQUEST, "question": "PROD_QUESTION_CANARY: how does inheritance work?"}
+            )
+        self.assertEqual(response.status_code, 200)
+        output = buf.getvalue()
+        self.assertNotIn("PROD_QUESTION_CANARY", output)
+        self.assertNotIn("ROOM AI:", output)
+        self.assertNotIn("Question:", output)
+
+    def test_room_response_dev_logs_include_lifecycle_and_question_without_leaking_sensitive_data(self):
+        adapter = StubAdapter()
+        buf = io.StringIO()
+        payload = {
+            "mode": "explain",
+            "requester": {"id": "user-99", "name": "AUTHOR_CANARY_ADA"},
+            "question": "DEV_QUESTION_CANARY: Explain polymorphism?",
+            "board": {"nodes": [{"id": "n1", "data": {"name": "BOARD_CLASS_CANARY"}}], "edges": []},
+            "context": {"summary": "CONTEXT_SUMMARY_CANARY"},
+            "provider": "self_hosted",
+            "route": "shared",
+            "teaching_profile": {"detailLevel": "concise", "exampleStyle": "analogy"},
+        }
+        with patch.dict(os.environ, {"ROOM_AI_DEV_LOGS": "1"}, clear=False), patch.object(
+            settings, "AI_INTERNAL_TOKEN", "SECRET_TOKEN_CANARY", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True
+        ), patch("src.adapters.OllamaAdapter", return_value=adapter), patch(
+            "src.services.room_response.count_room_ai_prompt_tokens", return_value=10
+        ), redirect_stdout(buf):
+            response = self.post(
+                payload,
+                token="SECRET_TOKEN_CANARY",
+                headers={
+                    "X-Custom-Header": "HEADER_VALUE_CANARY",
+                    "X-Room-AI-Message-ID": "message-123",
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        output = buf.getvalue()
+        self.assertIn("[ROOM AI: RESPONSE START]", output)
+        self.assertIn("[ROOM AI: RESPONSE SUCCESS]", output)
+        self.assertIn("* Mode: explain", output)
+        self.assertIn("* Provider: self_hosted", output)
+        self.assertIn("* Provider: stub", output)
+        self.assertIn("* Status: success", output)
+        self.assertIn("* Message ID: message-123", output)
+        self.assertIn("* Prompt tokens: 10 / 10,000", output)
+        self.assertIn("* Tokenization:", output)
+        self.assertIn("* Inference:", output)
+        self.assertIn("* Total:", output)
+        self.assertIn("* Output tokens: unavailable", output)
+        self.assertIn("* Question: \"DEV_QUESTION_CANARY: Explain polymorphism?\"", output)
+        for forbidden in (
+            "AUTHOR_CANARY_ADA",
+            "user-99",
+            "BOARD_CLASS_CANARY",
+            "CONTEXT_SUMMARY_CANARY",
+            "concise",
+            "analogy",
+            "detailLevel",
+            "exampleStyle",
+            "An interface defines a contract.",
+            "SECRET_TOKEN_CANARY",
+            "HEADER_VALUE_CANARY",
+            "X-Internal-Token",
+        ):
+            self.assertNotIn(forbidden, output)
+
+    def test_room_response_dev_logs_escape_control_chars_and_truncate_long_questions(self):
+        adapter = StubAdapter()
+        buf = io.StringIO()
+        injected = "Line1\r\n[FAKE BANNER]\t\x00\x1b[31m" + ("Q" * 300) + "TAIL_MARKER_CANARY"
+        with patch.dict(os.environ, {"ROOM_AI_DEV_LOGS": "1"}, clear=False), patch.object(
+            settings, "AI_INTERNAL_TOKEN", "test-secret", create=True
+        ), patch("src.adapters.get_adapter", return_value=adapter), redirect_stdout(buf):
+            response = self.post({**REQUEST, "question": injected})
+        self.assertEqual(response.status_code, 200)
+        output = buf.getvalue()
+        question_lines = [line for line in output.splitlines() if "* Question:" in line]
+        self.assertEqual(len(question_lines), 1)
+        q_line = question_lines[0]
+        self.assertIn("Line1\\r\\n[FAKE BANNER]\\t\\x00\\x1b[31m", q_line)
+        self.assertIn("... [truncated]", q_line)
+        self.assertNotIn("TAIL_MARKER_CANARY", output)
+        self.assertNotIn("\x00", output)
+        self.assertNotIn("\x1b", output)
+
+    def test_room_response_dev_logs_record_failure_without_leaking_raw_exceptions_or_diffs(self):
+        class FailingAdapter(StubAdapter):
+            async def generate_diff(self, prompt, current_model):
+                raise RuntimeError("Ollama error (401): RAW_EXCEPTION_SECRET_DETAIL_CANARY")
+
+        buf = io.StringIO()
+        with patch.dict(os.environ, {"ROOM_AI_DEV_LOGS": "1"}, clear=False), patch.object(
+            settings, "AI_INTERNAL_TOKEN", "test-secret", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True
+        ), patch("src.adapters.OllamaAdapter", return_value=FailingAdapter()), patch(
+            "src.services.room_response.count_room_ai_prompt_tokens", return_value=10
+        ), redirect_stdout(buf):
+            response = self.post(
+                {
+                    **REQUEST,
+                    "mode": "change",
+                    "question": "Add OrderItem",
+                    "provider": "self_hosted",
+                    "route": "shared",
+                }
+            )
+        self.assertEqual(response.status_code, 502)
+        output = buf.getvalue()
+        self.assertIn("[ROOM AI: RESPONSE START]", output)
+        self.assertIn("[ROOM AI: RESPONSE FAILURE]", output)
+        self.assertIn("* Status: failure", output)
+        self.assertIn("* Mode: change", output)
+        self.assertIn("* Provider: stub", output)
+        self.assertIn("* Failure stage: provider_inference", output)
+        self.assertIn("* Failure reason: provider_inference_failed", output)
+        self.assertIn("* Failure type: RuntimeError", output)
+        self.assertIn("* Provider HTTP status: 401", output)
+        self.assertIn("* Prompt tokens: 10 / 10,000", output)
+        self.assertIn("* Total:", output)
+        self.assertNotIn("RAW_EXCEPTION_SECRET_DETAIL_CANARY", output)
+        self.assertNotIn("Invoice", output)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
+import { logger } from "../../logger.js"
 import type { Redis } from "../../redis.js"
-import { InferenceNotStartedError } from "./inference-not-started.js"
+import * as chatRepositoryModule from "./chat-repository.js"
+import { StaleInferenceClaimError } from "./inference-not-started.js"
 import { createRoomAiPersonalProfileRevisionCoordinator } from "./room-ai-personal-profile.js"
 import { createRoomAiOrchestrator } from "./room-ai-orchestrator.js"
 
@@ -43,6 +45,16 @@ function createHarness(
     lRange: vi.fn(async () => [JSON.stringify(requesterMessage)]),
     multi: vi.fn(() => multi),
   } as unknown as Redis
+  const rawChat = chatRepositoryModule.createChatRepository(redis, 3600)
+  const chat = {
+    append: vi.fn(rawChat.append),
+    update: vi.fn(rawChat.update),
+    commitAnswer: vi.fn(async () => true),
+    list: vi.fn(rawChat.list),
+  }
+  const createChatRepositorySpy = vi
+    .spyOn(chatRepositoryModule, "createChatRepository")
+    .mockReturnValueOnce(chat as never)
   const profileRevisions = createRoomAiPersonalProfileRevisionCoordinator(redis, 3600)
   const recordPublicMessage = vi.fn(async () => undefined)
   const publish = vi.fn(async () => undefined)
@@ -57,7 +69,16 @@ function createHarness(
     recordPublicMessage,
     publish,
   })
-  return { redis, profileRevisions, orchestrator, recordPublicMessage, publish, multi }
+  createChatRepositorySpy.mockRestore()
+  return {
+    redis,
+    profileRevisions,
+    orchestrator,
+    recordPublicMessage,
+    publish,
+    multi,
+    chat,
+  }
 }
 
 describe("Room AI public publication boundary", () => {
@@ -67,6 +88,14 @@ describe("Room AI public publication boundary", () => {
       provider: "local",
     }))
     const harness = createHarness(respond)
+    const callOrder: string[] = []
+    harness.chat.commitAnswer.mockImplementation(async () => {
+      callOrder.push("commitAnswer")
+      return true
+    })
+    harness.publish.mockImplementation(async () => {
+      callOrder.push("publish")
+    })
     await harness.profileRevisions.revokeRevision("room-1", "user-1")
     const currentRevision = await harness.profileRevisions.getOrCreateRevision("room-1", "user-1")
     harness.redis.eval = vi.fn(async () =>
@@ -85,10 +114,54 @@ describe("Room AI public publication boundary", () => {
     expect(respond).toHaveBeenCalledWith(expect.objectContaining({ teachingProfile: profile }))
     expect(JSON.stringify(respond.mock.calls)).not.toContain("PRIVATE_NOTE_CANARY")
     expect(JSON.stringify(harness.redis.multi.mock.calls)).not.toContain("PRIVATE_NOTE_CANARY")
+    expect(harness.chat.append).not.toHaveBeenCalled()
+    expect(harness.chat.commitAnswer).toHaveBeenCalledOnce()
+    expect(harness.chat.commitAnswer).toHaveBeenCalledWith(
+      "room-1",
+      requesterMessage,
+      expect.objectContaining({
+        diagramId: "room-1",
+        author: { id: "room-ai", name: "Room AI", kind: "ai" },
+        intent: "ask",
+        text: "Here is a step-by-step explanation.",
+        replyTo: requesterMessage.id,
+        provider: "local",
+      })
+    )
     expect(harness.publish).toHaveBeenCalledWith(
       "room-1",
       expect.objectContaining({ type: "message.created" })
     )
+    expect(callOrder).toEqual(["commitAnswer", "publish"])
+  })
+
+  it("does not publish an assistant answer event or return success when commitAnswer returns false", async () => {
+    const respond = vi.fn(async () => ({
+      text: "Here is a step-by-step explanation.",
+      provider: "local",
+    }))
+    const harness = createHarness(respond)
+    harness.chat.commitAnswer.mockResolvedValueOnce(false)
+    await harness.profileRevisions.revokeRevision("room-1", "user-1")
+    const currentRevision = await harness.profileRevisions.getOrCreateRevision("room-1", "user-1")
+    harness.redis.eval = vi.fn(async () =>
+      JSON.stringify({
+        requesterId: "user-1",
+        teachingProfile: profile,
+        revision: currentRevision,
+      })
+    ) as never
+
+    await expect(
+      harness.orchestrator.infer("room-1", requesterMessage.id, {
+        generation: "a".repeat(64),
+        revision: 1,
+      })
+    ).rejects.toThrow(StaleInferenceClaimError)
+
+    expect(harness.chat.append).not.toHaveBeenCalled()
+    expect(harness.chat.commitAnswer).toHaveBeenCalledOnce()
+    expect(harness.publish).not.toHaveBeenCalled()
   })
 
   it("suppresses every shared sink when revocation wins before the publication lock", async () => {
@@ -113,7 +186,10 @@ describe("Room AI public publication boundary", () => {
         generation: "a".repeat(64),
         revision: 1,
       })
-    ).rejects.toBeInstanceOf(InferenceNotStartedError)
+    ).rejects.toMatchObject({
+      stage: "orchestrator_profile_revision_before_commit",
+      reasonCode: "teaching_profile_revoked",
+    })
     expect(harness.recordPublicMessage).not.toHaveBeenCalled()
     expect(harness.redis.multi).not.toHaveBeenCalled()
     expect(harness.publish).not.toHaveBeenCalled()
@@ -148,10 +224,76 @@ describe("Room AI public publication boundary", () => {
     await harness.profileRevisions.revokeRevision("room-1", "user-1")
     releaseBoard()
 
-    await expect(inference).rejects.toBeInstanceOf(InferenceNotStartedError)
+    await expect(inference).rejects.toMatchObject({
+      stage: "orchestrator_profile_revision_pre_inference",
+      reasonCode: "teaching_profile_revoked",
+    })
     expect(respond).not.toHaveBeenCalled()
     expect(harness.recordPublicMessage).not.toHaveBeenCalled()
     expect(harness.redis.multi).not.toHaveBeenCalled()
     expect(harness.publish).not.toHaveBeenCalled()
+  })
+
+  it("emits safe structured lifecycle logs and pre-board revocation codes without sensitive content", async () => {
+    const infoSpy = vi.spyOn(logger, "info")
+    const respond = vi.fn(async () => ({
+      text: "Here is a step-by-step explanation.",
+      provider: "self_hosted",
+    }))
+    const harness = createHarness(respond)
+
+    await expect(
+      harness.orchestrator.infer("room-1", requesterMessage.id, {
+        generation: "a".repeat(64),
+        revision: 1,
+      })
+    ).rejects.toMatchObject({
+      stage: "orchestrator_profile_revision_pre_board",
+      reasonCode: "teaching_profile_revoked",
+    })
+
+    const currentRevision = await harness.profileRevisions.getOrCreateRevision("room-1", "user-1")
+    harness.redis.eval = vi.fn(async () =>
+      JSON.stringify({
+        requesterId: "user-1",
+        teachingProfile: profile,
+        revision: currentRevision,
+      })
+    ) as never
+
+    infoSpy.mockClear()
+    await harness.orchestrator.infer("room-1", requesterMessage.id, {
+      generation: "a".repeat(64),
+      revision: 1,
+    })
+
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "room_ai.inference.request_starting",
+        diagramId: "room-1",
+        messageId: requesterMessage.id,
+        intent: "ask",
+        route: "shared",
+        hasTeachingProfile: true,
+      }),
+      "starting downstream Room AI inference request"
+    )
+    expect(respond).toHaveBeenCalledWith(
+      expect.objectContaining({ messageId: requesterMessage.id })
+    )
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "room_ai.inference.response_received",
+        diagramId: "room-1",
+        messageId: requesterMessage.id,
+        provider: "self_hosted",
+      }),
+      "received downstream Room AI inference response"
+    )
+    const serializedLogs = JSON.stringify(infoSpy.mock.calls)
+    expect(serializedLogs).not.toContain(requesterMessage.text)
+    expect(serializedLogs).not.toContain("step_by_step")
+    expect(serializedLogs).not.toContain("Shared")
+    infoSpy.mockRestore()
   })
 })

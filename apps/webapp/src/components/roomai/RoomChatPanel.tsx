@@ -24,7 +24,7 @@ export interface RoomChatPanelProps {
   currentUserId?: string
   isLoading?: boolean
   hasLoadError?: boolean
-  hasSendError?: boolean
+  sendErrorKind?: "generic" | "queueFull" | null
   hasProfileSyncError?: boolean
   hasVoiceError?: boolean
   isSending?: boolean
@@ -38,7 +38,7 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   currentUserId,
   isLoading = false,
   hasLoadError = false,
-  hasSendError = false,
+  sendErrorKind = null,
   hasProfileSyncError = false,
   hasVoiceError = false,
   isSending = false,
@@ -167,12 +167,12 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
       </ol>
 
       <div className="shrink-0 border-t border-border-subtle/60 bg-surface-subtle/30 px-2.5 pb-2.5 pt-2">
-        {hasSendError && (
+        {sendErrorKind && (
           <p
             role="alert"
             className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-[11px] text-destructive"
           >
-            {t.roomAi.sendError}
+            {sendErrorKind === "queueFull" ? t.roomAi.queueFullError : t.roomAi.sendError}
           </p>
         )}
         {hasProfileSyncError && (
@@ -185,7 +185,13 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
         )}
         {voiceControls && (
           <div
-            className="mb-2 flex min-w-0 items-center gap-1.5"
+            className={
+              (voiceControls.status === "idle" ||
+                (voiceControls.status === "recorded" && !voiceControls.audioUrl)) &&
+              !hasVoiceError
+                ? "hidden"
+                : "mb-2 flex min-w-0 items-center gap-1.5"
+            }
             aria-label={t.roomAi.voiceControls}
           >
             {hasVoiceError && (
@@ -251,19 +257,7 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
                   <XCircleIcon className="size-3.5" aria-hidden />
                 </button>
               </>
-            ) : (
-              <button
-                type="button"
-                onClick={voiceControls.onStartRecording}
-                disabled={!voiceControls.hasSupport || voiceControls.isSending || isSending}
-                aria-label={t.roomAi.recordVoice}
-                title={voiceControls.hasSupport ? t.roomAi.recordVoice : t.roomAi.voiceUnavailable}
-                className="flex h-7 items-center gap-1 rounded-md border border-border-subtle bg-surface-raised px-2 text-[10px] font-medium text-secondary-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <MicIcon className="size-3.5" aria-hidden />
-                <span>{t.roomAi.recordVoice}</span>
-              </button>
-            )}
+            ) : null}
           </div>
         )}
         <form
@@ -277,6 +271,20 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
             aria-label={t.roomAi.inputPlaceholder}
             className="min-w-0 flex-1 bg-transparent px-1.5 py-1 text-xs text-foreground outline-none placeholder:text-muted-foreground"
           />
+          {voiceControls &&
+            voiceControls.status !== "recording" &&
+            !(voiceControls.status === "recorded" && voiceControls.audioUrl) && (
+              <button
+                type="button"
+                onClick={voiceControls.onStartRecording}
+                disabled={!voiceControls.hasSupport || voiceControls.isSending || isSending}
+                aria-label={t.roomAi.recordVoice}
+                title={voiceControls.hasSupport ? t.roomAi.recordVoice : t.roomAi.voiceUnavailable}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface-raised text-secondary-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <MicIcon className="size-3.5" aria-hidden />
+              </button>
+            )}
           <button
             type="submit"
             disabled={!draft.trim() || isSending}

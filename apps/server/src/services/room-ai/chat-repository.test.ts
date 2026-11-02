@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import type { Redis } from "../../redis.js"
 import {
+  consumeRoomAiPersonalProfile,
   enqueueChatMessage,
   type ChatRecord,
   type RoomAiReplicaRequirement,
@@ -60,5 +61,38 @@ describe("Room AI chat queue script", () => {
       JSON.stringify({ requesterId: "user-1", teachingProfile, revision })
     )
     expect(options.arguments[4]).toBe("900")
+  })
+
+  it("tags personal profile sidecar pre-inference rejections with bounded stage and reason codes", async () => {
+    const missingRedis = { eval: vi.fn(async () => null) } as unknown as Redis
+    await expect(
+      consumeRoomAiPersonalProfile(missingRedis, "room-1", "message-1", "user-1")
+    ).rejects.toMatchObject({
+      message: "Room AI request context is unavailable",
+      stage: "orchestrator_personal_profile",
+      reasonCode: "personal_profile_sidecar_missing",
+    })
+
+    const invalidRedis = { eval: vi.fn(async () => "{not-json") } as unknown as Redis
+    await expect(
+      consumeRoomAiPersonalProfile(invalidRedis, "room-1", "message-1", "user-1")
+    ).rejects.toMatchObject({
+      message: "Room AI request context is unavailable",
+      stage: "orchestrator_personal_profile",
+      reasonCode: "personal_profile_sidecar_invalid",
+    })
+
+    const mismatchRedis = {
+      eval: vi.fn(async () =>
+        JSON.stringify({ requesterId: "other-user", teachingProfile: null, revision: null })
+      ),
+    } as unknown as Redis
+    await expect(
+      consumeRoomAiPersonalProfile(mismatchRedis, "room-1", "message-1", "user-1")
+    ).rejects.toMatchObject({
+      message: "Room AI request context is unavailable",
+      stage: "orchestrator_personal_profile",
+      reasonCode: "personal_profile_requester_mismatch",
+    })
   })
 })

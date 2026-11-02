@@ -1,6 +1,9 @@
 """Contract tests for private, closed-schema Room teaching-profile derivation."""
 
+from contextlib import redirect_stdout
+import io
 import json
+import os
 import unittest
 from unittest.mock import patch
 
@@ -123,6 +126,108 @@ class TestInternalRoomProfile(unittest.TestCase):
             self.assertEqual(self.client.post(PATH, json={"profile": profile, "interaction": "x", "extra": "no"}, headers={
                 "X-Internal-Token": "test-secret"
             }).status_code, 422)
+
+    def test_room_profile_logs_are_disabled_by_default_in_production(self):
+        adapter = StubAdapter('{"profile":{"detailLevel":"step_by_step","exampleStyle":"uml"}}')
+        buf = io.StringIO()
+        with patch.dict(os.environ, {"ROOM_AI_DEV_LOGS": ""}, clear=False), patch.object(
+            settings, "AI_INTERNAL_TOKEN", "test-secret", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True
+        ), patch("src.adapters.OllamaAdapter", return_value=adapter), patch(
+            "src.services.room_profile.count_room_ai_prompt_tokens", return_value=10
+        ), redirect_stdout(buf):
+            response = self.post("PROD_PROFILE_INTERACTION_CANARY")
+        self.assertEqual(response.status_code, 200)
+        output = buf.getvalue()
+        self.assertNotIn("PROD_PROFILE_INTERACTION_CANARY", output)
+        self.assertNotIn("ROOM AI:", output)
+        self.assertNotIn("Question:", output)
+
+    def test_room_profile_dev_logs_include_lifecycle_without_leaking_interaction_or_profile_values(self):
+        adapter = StubAdapter('{"profile":{"detailLevel":"step_by_step","exampleStyle":"uml"}}')
+        buf = io.StringIO()
+        with patch.dict(os.environ, {"ROOM_AI_DEV_LOGS": "1"}, clear=False), patch.object(
+            settings, "AI_INTERNAL_TOKEN", "PROFILE_SECRET_TOKEN_CANARY", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True
+        ), patch("src.adapters.OllamaAdapter", return_value=adapter), patch(
+            "src.services.room_profile.count_room_ai_prompt_tokens", return_value=10
+        ), redirect_stdout(buf):
+            response = self.post(
+                interaction="PRIVATE_INTERACTION_TEXT_CANARY: explain with code examples",
+                profile={"detailLevel": "concise", "exampleStyle": "analogy"},
+                token="PROFILE_SECRET_TOKEN_CANARY",
+                headers={
+                    "X-Custom-Header": "PROFILE_HEADER_CANARY",
+                    "X-Room-AI-Message-ID": "message-123",
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        output = buf.getvalue()
+        self.assertIn("[ROOM AI: PROFILE START]", output)
+        self.assertIn("[ROOM AI: PROFILE SUCCESS]", output)
+        self.assertIn("* Mode: profile", output)
+        self.assertIn("* Provider: self_hosted", output)
+        self.assertIn("* Provider: stub-self-hosted", output)
+        self.assertIn("* Status: success", output)
+        self.assertIn("* Message ID: message-123", output)
+        self.assertIn("* Prompt tokens: 10 / 10,000", output)
+        self.assertIn("* Tokenization:", output)
+        self.assertIn("* Inference:", output)
+        self.assertIn("* Total:", output)
+        self.assertIn("* Output tokens: unavailable", output)
+        for forbidden in (
+            "Question:",
+            "PRIVATE_INTERACTION_TEXT_CANARY",
+            "explain with code examples",
+            "detailLevel",
+            "exampleStyle",
+            "concise",
+            "analogy",
+            "step_by_step",
+            "uml",
+            "PROFILE_SECRET_TOKEN_CANARY",
+            "PROFILE_HEADER_CANARY",
+            "X-Internal-Token",
+        ):
+            self.assertNotIn(forbidden, output)
+
+    def test_room_profile_dev_logs_record_failure_without_leaking_raw_exceptions_or_output(self):
+        class FailingAdapter:
+            provider_name = "stub-self-hosted"
+
+            async def complete_text(self, prompt):
+                raise RuntimeError("RAW_PROFILE_EXCEPTION_SECRET_CANARY")
+
+        buf = io.StringIO()
+        with patch.dict(os.environ, {"ROOM_AI_DEV_LOGS": "1"}, clear=False), patch.object(
+            settings, "AI_INTERNAL_TOKEN", "test-secret", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True
+        ), patch("src.adapters.OllamaAdapter", return_value=FailingAdapter()), patch(
+            "src.services.room_profile.count_room_ai_prompt_tokens", return_value=10
+        ), redirect_stdout(buf):
+            response = self.post("PRIVATE_FAILURE_INTERACTION_CANARY")
+        self.assertEqual(response.status_code, 502)
+        output = buf.getvalue()
+        self.assertIn("[ROOM AI: PROFILE START]", output)
+        self.assertIn("[ROOM AI: PROFILE FAILURE]", output)
+        self.assertIn("* Status: failure", output)
+        self.assertIn("* Mode: profile", output)
+        self.assertIn("* Provider: stub-self-hosted", output)
+        self.assertIn("* Failure stage: provider_inference", output)
+        self.assertIn("* Failure reason: provider_inference_failed", output)
+        self.assertIn("* Prompt tokens: 10 / 10,000", output)
+        self.assertIn("* Total:", output)
+        self.assertNotIn("RAW_PROFILE_EXCEPTION_SECRET_CANARY", output)
+        self.assertNotIn("PRIVATE_FAILURE_INTERACTION_CANARY", output)
 
 
 if __name__ == "__main__":

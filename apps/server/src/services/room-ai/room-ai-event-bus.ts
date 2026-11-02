@@ -1,8 +1,23 @@
 import type { RoomAiEvent } from "@umlstudio/core"
-import type { Redis } from "../../redis.js"
+import { k, type Redis } from "../../redis.js"
 import { logger } from "../../logger.js"
 
 const CHANNEL = "umlstudio:room-ai:events"
+const PUBLISH_STATUS_IF_CURRENT_CLAIM = `
+-- room_ai_status_publish_fenced
+if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+local leaseExpiry = tonumber(redis.call('GET', KEYS[2]))
+local redisTime = redis.call('TIME')
+local nowMs = tonumber(redisTime[1]) * 1000 + math.floor(tonumber(redisTime[2]) / 1000)
+if not leaseExpiry or leaseExpiry <= nowMs then return 0 end
+local queueLength = redis.call('LLEN', KEYS[3])
+local payload = cjson.encode({
+  diagramId = ARGV[3],
+  event = { type = 'ai.status', status = ARGV[2], queueLength = queueLength }
+})
+redis.call('PUBLISH', ARGV[4], payload)
+return 1
+`
 
 /** Redis fans each event out to the relay attached to every server process. */
 export async function createRoomAiEventBus(
@@ -35,6 +50,17 @@ export async function createRoomAiEventBus(
   return {
     async publish(diagramId: string, event: RoomAiEvent): Promise<void> {
       await redis.publish(CHANNEL, JSON.stringify({ diagramId, event }))
+    },
+    async publishStatusIfCurrentClaim(
+      diagramId: string,
+      status: "thinking" | "idle",
+      token: string
+    ): Promise<boolean> {
+      const result = await redis.eval(PUBLISH_STATUS_IF_CURRENT_CLAIM, {
+        keys: [k.aiActive(diagramId), k.aiActiveLease(diagramId), k.aiQueue(diagramId)],
+        arguments: [token, status, diagramId, CHANNEL],
+      })
+      return Number(result) === 1
     },
     async close(): Promise<void> {
       await subscriber.unsubscribe(CHANNEL)

@@ -1,6 +1,10 @@
 import type { Redis } from "../../redis.js"
 import { k } from "../../redis.js"
-import { ConfirmedInferenceNotStartedError } from "./inference-not-started.js"
+import {
+  ConfirmedInferenceNotStartedError,
+  getActiveRoomAiDispatchClaimContext,
+  StaleInferenceClaimError,
+} from "./inference-not-started.js"
 import {
   RoomAiPersonalProfileSidecarSchema,
   type RoomAiPersonalProfileSidecar,
@@ -36,11 +40,21 @@ export interface ChatRepository<T extends ChatRecord = ChatRecord> {
   append(diagramId: string, message: T): Promise<void>
   /** Replaces the message with the same id. Returns false when it no longer exists. */
   update(diagramId: string, message: T): Promise<boolean>
+  /**
+   * Atomically marks the requester message as answered and appends the assistant answer once
+   * under an active, unexpired dispatch claim. Returns false when the requester no longer exists.
+   */
+  commitAnswer(diagramId: string, requester: T, answer: T): Promise<boolean>
   list(diagramId: string, options?: ListChatOptions): Promise<ChatPage<T>>
 }
 
 // Finds the entry whose JSON `id` matches ARGV[1] and replaces it with ARGV[2].
 const UPDATE_BY_ID = `
+if ARGV[3] and ARGV[3] ~= '' then
+  if redis.call('GET', KEYS[2]) ~= ARGV[3] then return -1 end
+  local leaseExpiry = tonumber(redis.call('GET', KEYS[3]))
+  if not leaseExpiry or leaseExpiry <= tonumber(ARGV[4]) then return -1 end
+end
 local items = redis.call('LRANGE', KEYS[1], 0, -1)
 for i, raw in ipairs(items) do
   local ok, decoded = pcall(cjson.decode, raw)
@@ -50,6 +64,66 @@ for i, raw in ipairs(items) do
   end
 end
 return 0
+`
+
+const APPEND_CHAT = `
+if ARGV[4] and ARGV[4] ~= '' then
+  if redis.call('GET', KEYS[2]) ~= ARGV[4] then return -1 end
+  local leaseExpiry = tonumber(redis.call('GET', KEYS[3]))
+  if not leaseExpiry or leaseExpiry <= tonumber(ARGV[5]) then return -1 end
+end
+redis.call('RPUSH', KEYS[1], ARGV[1])
+redis.call('LTRIM', KEYS[1], -tonumber(ARGV[3]), -1)
+redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))
+return 1
+`
+
+const COMMIT_ANSWER = `
+if not ARGV[7] or ARGV[7] == '' then return -1 end
+if redis.call('GET', KEYS[2]) ~= ARGV[7] then return -1 end
+local leaseExpiry = tonumber(redis.call('GET', KEYS[3]))
+if not leaseExpiry or leaseExpiry <= tonumber(ARGV[8]) then return -1 end
+local items = redis.call('LRANGE', KEYS[1], 0, -1)
+local requesterIndex = nil
+local requesterStatus = nil
+local answerExists = false
+for i, raw in ipairs(items) do
+  local ok, decoded = pcall(cjson.decode, raw)
+  if ok and type(decoded) == 'table' then
+    if decoded.id == ARGV[1] and not requesterIndex then
+      requesterIndex = i - 1
+      requesterStatus = decoded.status
+    end
+    if decoded.id == ARGV[3] then
+      answerExists = true
+    end
+  end
+end
+if requesterIndex == nil then
+  return 0
+end
+if requesterStatus == 'answered' and answerExists then
+  redis.call('EXPIRE', KEYS[1], tonumber(ARGV[5]))
+  return 1
+end
+if requesterStatus ~= 'queued' then
+  return 0
+end
+redis.call('LSET', KEYS[1], requesterIndex, ARGV[2])
+if not answerExists then
+  redis.call('RPUSH', KEYS[1], ARGV[4])
+  local maxMessages = tonumber(ARGV[6])
+  local total = #items + 1
+  if total > maxMessages then
+    local excess = total - maxMessages
+    if requesterIndex < excess then
+      redis.call('LSET', KEYS[1], excess, ARGV[2])
+    end
+    redis.call('LTRIM', KEYS[1], -maxMessages, -1)
+  end
+end
+redis.call('EXPIRE', KEYS[1], tonumber(ARGV[5]))
+return 1
 `
 
 const ENQUEUE = `
@@ -117,29 +191,47 @@ redis.call('DEL', KEYS[1])
 return value
 `
 
-/** Atomically consumes the requester's short-lived approved-profile sidecar exactly once. */
+/**
+ * Reads the requester's short-lived approved-profile sidecar.
+ * When `consume` is true (default), atomically deletes the sidecar.
+ */
 export async function consumeRoomAiPersonalProfile(
   redis: Redis,
   diagramId: string,
   messageId: string,
-  expectedRequesterId: string
+  expectedRequesterId: string,
+  options?: { consume?: boolean }
 ): Promise<RoomAiPersonalProfileSidecar> {
-  const raw = await redis.eval(CONSUME_PERSONAL_MEMORY, {
-    keys: [k.aiPersonalProfile(diagramId, messageId)],
-    arguments: [],
-  })
+  const key = k.aiPersonalProfile(diagramId, messageId)
+  const raw =
+    options?.consume === false
+      ? await redis.get(key)
+      : await redis.eval(CONSUME_PERSONAL_MEMORY, {
+          keys: [key],
+          arguments: [],
+        })
   if (typeof raw !== "string") {
-    throw new ConfirmedInferenceNotStartedError("Room AI request context is unavailable")
+    throw new ConfirmedInferenceNotStartedError("Room AI request context is unavailable", {
+      stage: "orchestrator_personal_profile",
+      reasonCode: "personal_profile_sidecar_missing",
+    })
   }
+  let value: RoomAiPersonalProfileSidecar
   try {
-    const value = RoomAiPersonalProfileSidecarSchema.parse(JSON.parse(raw))
-    if (value.requesterId !== expectedRequesterId) {
-      throw new ConfirmedInferenceNotStartedError("Room AI request context is unavailable")
-    }
-    return value
+    value = RoomAiPersonalProfileSidecarSchema.parse(JSON.parse(raw))
   } catch {
-    throw new ConfirmedInferenceNotStartedError("Room AI request context is unavailable")
+    throw new ConfirmedInferenceNotStartedError("Room AI request context is unavailable", {
+      stage: "orchestrator_personal_profile",
+      reasonCode: "personal_profile_sidecar_invalid",
+    })
   }
+  if (value.requesterId !== expectedRequesterId) {
+    throw new ConfirmedInferenceNotStartedError("Room AI request context is unavailable", {
+      stage: "orchestrator_personal_profile",
+      reasonCode: "personal_profile_requester_mismatch",
+    })
+  }
+  return value
 }
 
 export async function getRoomAiReplicaRequirement(
@@ -176,21 +268,67 @@ export function createChatRepository<T extends ChatRecord = ChatRecord>(
   return {
     async append(diagramId, message) {
       const key = k.aiChat(diagramId)
-      await redis
-        .multi()
-        .rPush(key, JSON.stringify(message))
-        .lTrim(key, -CHAT_MAX_MESSAGES, -1)
-        .expire(key, ttlSeconds)
-        .exec()
+      const activeClaim = getActiveRoomAiDispatchClaimContext()
+      if (!activeClaim && typeof redis.multi === "function") {
+        await redis
+          .multi()
+          .rPush(key, JSON.stringify(message))
+          .lTrim(key, -CHAT_MAX_MESSAGES, -1)
+          .expire(key, ttlSeconds)
+          .exec()
+        return
+      }
+      const res = await redis.eval(APPEND_CHAT, {
+        keys: [key, k.aiActive(diagramId), k.aiActiveLease(diagramId)],
+        arguments: [
+          JSON.stringify(message),
+          String(ttlSeconds),
+          String(CHAT_MAX_MESSAGES),
+          activeClaim?.claimToken ?? "",
+          String(Date.now()),
+        ],
+      })
+      if (Number(res) === -1) throw new StaleInferenceClaimError()
     },
 
     async update(diagramId, message) {
       const key = k.aiChat(diagramId)
+      const activeClaim = getActiveRoomAiDispatchClaimContext()
       const updated = await redis.eval(UPDATE_BY_ID, {
-        keys: [key],
-        arguments: [message.id, JSON.stringify(message)],
+        keys: [key, k.aiActive(diagramId), k.aiActiveLease(diagramId)],
+        arguments: [
+          message.id,
+          JSON.stringify(message),
+          activeClaim?.claimToken ?? "",
+          String(Date.now()),
+        ],
       })
+      if (Number(updated) === -1) throw new StaleInferenceClaimError()
       return Number(updated) === 1
+    },
+
+    async commitAnswer(diagramId, requester, answer) {
+      const key = k.aiChat(diagramId)
+      const activeClaim = getActiveRoomAiDispatchClaimContext()
+      if (!activeClaim?.claimToken) {
+        throw new StaleInferenceClaimError()
+      }
+      const answeredRequester = { ...requester, status: "answered" as const }
+      const committed = await redis.eval(COMMIT_ANSWER, {
+        keys: [key, k.aiActive(diagramId), k.aiActiveLease(diagramId)],
+        arguments: [
+          requester.id,
+          JSON.stringify(answeredRequester),
+          answer.id,
+          JSON.stringify(answer),
+          String(ttlSeconds),
+          String(CHAT_MAX_MESSAGES),
+          activeClaim.claimToken,
+          String(Date.now()),
+        ],
+      })
+      if (Number(committed) === -1) throw new StaleInferenceClaimError()
+      return Number(committed) === 1
     },
 
     async list(diagramId, options = {}) {

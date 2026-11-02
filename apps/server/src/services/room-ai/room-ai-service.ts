@@ -19,6 +19,101 @@ import {
   type ListChatOptions,
   type RoomAiReplicaRequirement,
 } from "./chat-repository.js"
+import { GLOBAL_LIMIT, GLOBAL_SLOTS } from "./inference-slots.js"
+
+const ROOM_AI_QUEUE_CAPACITY = 5
+
+function isRoomAiDevLoggingEnabled(): boolean {
+  if (process.env.NODE_ENV === "production") return false
+  const raw = (process.env.ROOM_AI_DEV_LOGS ?? "").trim().toLowerCase()
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on"
+}
+
+function safeMessageId(messageId: string | undefined): string {
+  if (!messageId || messageId.length > 64 || !/^[A-Za-z0-9_-]+$/.test(messageId)) {
+    return "unavailable"
+  }
+  return messageId
+}
+
+async function logRoomAiQueueRejected(
+  redis: Redis,
+  diagramId: string,
+  messageId?: string
+): Promise<void> {
+  if (!isRoomAiDevLoggingEnabled()) return
+
+  let queueDepth = String(ROOM_AI_QUEUE_CAPACITY)
+  try {
+    if (typeof redis.lLen === "function") {
+      const len = await redis.lLen(k.aiQueue(diagramId))
+      if (typeof len === "number" && Number.isFinite(len) && len >= 0) {
+        queueDepth = String(len > 0 ? len : ROOM_AI_QUEUE_CAPACITY)
+      }
+    }
+  } catch {
+    queueDepth = "unavailable"
+  }
+
+  let roomActiveLock = "unavailable"
+  try {
+    if (typeof redis.exists === "function") {
+      const exists = await redis.exists(k.aiActive(diagramId))
+      roomActiveLock = Number(exists) > 0 ? "present" : "absent"
+    }
+  } catch {
+    roomActiveLock = "unavailable"
+  }
+
+  let globalSlotsUsed = "unavailable"
+  try {
+    if (typeof redis.sCard === "function") {
+      const used = await redis.sCard(GLOBAL_SLOTS)
+      if (typeof used === "number" && Number.isFinite(used) && used >= 0) {
+        globalSlotsUsed = String(used)
+      }
+    }
+  } catch {
+    globalSlotsUsed = "unavailable"
+  }
+
+  let globalSlotsLimit = "unavailable"
+  try {
+    if (typeof redis.get === "function") {
+      const rawLimit = await redis.get(GLOBAL_LIMIT)
+      if (typeof rawLimit === "string" && /^[1-9]\d*$/.test(rawLimit.trim())) {
+        globalSlotsLimit = rawLimit.trim()
+      }
+    }
+    if (globalSlotsLimit === "unavailable") {
+      const envLimit = (process.env.AI_MAX_CONCURRENCY ?? "").trim()
+      if (/^[1-9]\d*$/.test(envLimit)) {
+        globalSlotsLimit = envLimit
+      } else if (globalSlotsUsed !== "unavailable") {
+        globalSlotsLimit = "1"
+      }
+    }
+  } catch {
+    globalSlotsLimit = "unavailable"
+  }
+
+  try {
+    // eslint-disable-next-line no-console -- concise local Room AI diagnostic behind ROOM_AI_DEV_LOGS.
+    console.log(
+      [
+        `\n${"=".repeat(25)} [ROOM AI: QUEUE REJECTED] ${"=".repeat(25)}`,
+        "  * Error code: ROOM_AI_QUEUE_FULL",
+        `  * Message ID: ${safeMessageId(messageId)}`,
+        `  * Queue depth: ${queueDepth} / ${ROOM_AI_QUEUE_CAPACITY}`,
+        `  * Room active lock: ${roomActiveLock}`,
+        `  * Global inference slots: ${globalSlotsUsed} / ${globalSlotsLimit}`,
+        `${"=".repeat(77)}\n`,
+      ].join("\n")
+    )
+  } catch {
+    // Best-effort dev diagnostic only.
+  }
+}
 
 export interface PostRoomMessageInput {
   diagramId: string
@@ -89,12 +184,15 @@ interface RoomAiServiceDeps {
   memory?: RoomMemoryStore
   profileDeriver?: (
     profile: RoomAiTeachingProfile,
-    interaction: string
+    interaction: string,
+    messageId: string
   ) => Promise<RoomAiTeachingProfile>
   profileRevisions?: RoomAiPersonalProfileRevisionCoordinator
   now?: () => Date
   /** Broadcasts room AI events to every socket in the room. */
   publish?: (diagramId: string, event: RoomAiEvent) => void
+  /** Wakes the dispatcher when enqueue rejects because the room queue is full. */
+  onQueueFull?: (diagramId: string) => void
   getSharedBoardReplicaAtLeast?: (
     diagramId: string,
     generation: string,
@@ -167,11 +265,23 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
         ) {
           throw new RoomAiPersonalProfileStaleError()
         }
-        return enqueueChatMessage(redis, diagramId, message, ttlSeconds, requirement, {
-          requesterId: author.id,
-          teachingProfile: sidecarProfile,
-          revision: sidecarProfile ? sidecarRevision! : null,
-        })
+        const queued = await enqueueChatMessage(
+          redis,
+          diagramId,
+          message,
+          ttlSeconds,
+          requirement,
+          {
+            requesterId: author.id,
+            teachingProfile: sidecarProfile,
+            revision: sidecarProfile ? sidecarRevision! : null,
+          }
+        )
+        if (queued.position === 0) {
+          void logRoomAiQueueRejected(redis, diagramId, message.id).catch(() => {})
+          deps.onQueueFull?.(diagramId)
+        }
+        return queued
       }
       let profileUpdate: PostRoomMessageResult["profileUpdate"]
       let profileLearningFailed = false
@@ -187,7 +297,7 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
         try {
           if (!deps.profileDeriver) throw new RoomAiMemoryUnavailableError()
           learnedProfile = RoomAiTeachingProfileSchema.parse(
-            await deps.profileDeriver(teachingProfile, text)
+            await deps.profileDeriver(teachingProfile, text, message.id)
           )
         } catch {
           // A failed learner must not block the public question or replace the prior profile.

@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 const intEnv = (fallback: number) => z.coerce.number().int().positive().default(fallback)
+const DEFAULT_AI_SERVICE_URL = "http://127.0.0.1:8001"
 
 const ConfigSchema = z.object({
   HOST: z.string().default("localhost"),
@@ -10,7 +11,7 @@ const ConfigSchema = z.object({
   REDIS_URL: z.string().default("redis://localhost:6379"),
   AI_MAX_CONCURRENCY: intEnv(1),
   ROOM_AI_SUMMARY_EVERY: z.coerce.number().int().min(1).max(10).default(10),
-  AI_SERVICE_URL: z.string().url().default("http://127.0.0.1:8001"),
+  AI_SERVICE_URL: z.string().url().default(DEFAULT_AI_SERVICE_URL),
   AI_INTERNAL_TOKEN: z.string().default(""),
   OWNER_SECRET: z.string().min(32).default("development-only-replace-in-prod"),
   MAX_VERSIONS_PER_DIAGRAM: intEnv(50),
@@ -46,6 +47,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       "OWNER_SECRET is set to the development default. " +
         "Set OWNER_SECRET to a unique, high-entropy value (≥32 chars) before booting in production."
     )
+  }
+  const selectedAiPort = env.UMLSTUDIO_AI_PORT
+  const usesDefaultAiServiceUrl =
+    env.AI_SERVICE_URL === undefined || env.AI_SERVICE_URL === DEFAULT_AI_SERVICE_URL
+  if (env.NODE_ENV !== "production" && selectedAiPort && usesDefaultAiServiceUrl) {
+    const port = Number(selectedAiPort)
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new Error(`Invalid port in UMLSTUDIO_AI_PORT: ${selectedAiPort}`)
+    }
+    return { ...result.data, AI_SERVICE_URL: `http://127.0.0.1:${port}` }
   }
   return result.data
 }

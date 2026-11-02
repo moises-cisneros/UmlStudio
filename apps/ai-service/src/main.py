@@ -131,9 +131,12 @@ def require_internal_token(
     response_model=RoomRespondResponse,
     dependencies=[Depends(require_internal_token)],
 )
-async def respond_to_room(request: RoomRespondRequest) -> RoomRespondResponse:
+async def respond_to_room(
+    request: RoomRespondRequest,
+    x_room_ai_message_id: Optional[str] = Header(default=None, alias="X-Room-AI-Message-ID"),
+) -> RoomRespondResponse:
     try:
-        return await RoomResponseService.respond(request)
+        return await RoomResponseService.respond(request, message_id=x_room_ai_message_id)
     except RoomPromptTooLongError as exc:
         raise HTTPException(
             status_code=413, detail="Room AI prompt exceeds the 10,000-token limit"
@@ -156,9 +159,12 @@ async def respond_to_room(request: RoomRespondRequest) -> RoomRespondResponse:
     response_model=RoomProfileDeriveResponse,
     dependencies=[Depends(require_internal_token)],
 )
-async def derive_room_profile(request: RoomProfileDeriveRequest) -> RoomProfileDeriveResponse:
+async def derive_room_profile(
+    request: RoomProfileDeriveRequest,
+    x_room_ai_message_id: Optional[str] = Header(default=None, alias="X-Room-AI-Message-ID"),
+) -> RoomProfileDeriveResponse:
     try:
-        return await RoomProfileService.derive(request)
+        return await RoomProfileService.derive(request, message_id=x_room_ai_message_id)
     except RoomProfilePromptTooLongError as exc:
         raise HTTPException(status_code=413, detail="Room AI profile prompt exceeds the token limit") from exc
     except RoomTokenizerUnavailableError as exc:
