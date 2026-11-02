@@ -73,8 +73,8 @@ describe("INT-CU15: room AI events over WebSocket", () => {
     await roomAi.postMessage({
       diagramId: DIAGRAM_ID,
       author: { id: "juan-id", name: "Juan", color: "#ff0000" } as never,
-      text: "Add an Order class",
-      intent: "change",
+      text: "Explain the Order class",
+      intent: "ask",
     })
     await settle()
 
@@ -82,7 +82,7 @@ describe("INT-CU15: room AI events over WebSocket", () => {
     expect(envelope.kind).toBe("room-ai")
     expect(envelope.event.type).toBe("message.created")
     expect(envelope.event.message.author).toMatchObject({ id: "juan-id", name: "Juan" })
-    expect(envelope.event.message.text).toBe("Add an Order class")
+    expect(envelope.event.message.text).toBe("Explain the Order class")
   })
 
   it("publishes the pending message's queue position", async () => {

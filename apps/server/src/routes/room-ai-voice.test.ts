@@ -18,7 +18,7 @@ function appWith(voiceQuestion: ReturnType<typeof vi.fn>) {
     "/api",
     mountRoomAiRoutes({
       auth,
-      roomAi: {} as RoomAiService,
+      roomAi: { assertRequestAllowed: vi.fn() } as unknown as RoomAiService,
       voiceQuestion,
     })
   )

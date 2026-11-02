@@ -7,6 +7,7 @@ function createRedis(evalResult: number | [number, number] = 1) {
   const values = new Map<string, string>()
   return {
     exists: vi.fn(async () => 1),
+    hGetAll: vi.fn(async () => ({})),
     eval: vi.fn(async () => evalResult),
     get: vi.fn(async (key: string) => values.get(key) ?? null),
     set: vi.fn(async (key: string, value: string) => {
