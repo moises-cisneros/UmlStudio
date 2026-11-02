@@ -102,6 +102,11 @@ export interface TranslationDictionary {
     sendError: string
     queueFullError: string
     inputPlaceholder: string
+    intentModeLabel: string
+    askIntent: string
+    changeIntent: string
+    changeShortcutHint: string
+    mentorOnlyHint: string
     send: string
     you: string
     aiAuthor: string

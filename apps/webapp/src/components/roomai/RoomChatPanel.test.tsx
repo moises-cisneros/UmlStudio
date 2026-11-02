@@ -100,14 +100,79 @@ describe("RoomChatPanel", () => {
     expect(screen.getByRole("alert").textContent).toContain("teaching preferences")
   })
 
-  it("sends the trimmed draft and clears the input", async () => {
+  it("sends the trimmed draft with the default Ask intent and clears the input", async () => {
     const onSend = vi.fn()
     render(<RoomChatPanel messages={[]} aiStatus={IDLE_ROOM_AI_STATUS} onSend={onSend} />)
+    const askButton = screen.getByRole("button", { name: "Ask" })
+    const changeButton = screen.getByRole("button", { name: "Request change" })
+    expect(askButton.getAttribute("aria-pressed")).toBe("true")
+    expect(changeButton.getAttribute("aria-pressed")).toBe("false")
+
     const input = screen.getByPlaceholderText("Ask the AI about this diagram...")
     await userEvent.type(input, "  hello  ")
     await userEvent.click(screen.getByRole("button", { name: "Send" }))
-    expect(onSend).toHaveBeenCalledWith("hello")
+    expect(onSend).toHaveBeenCalledWith("hello", "ask")
     expect((input as HTMLInputElement).value).toBe("")
+  })
+
+  it("switches between Ask and Request change buttons and sends the selected intent", async () => {
+    const onSend = vi.fn()
+    render(<RoomChatPanel messages={[]} aiStatus={IDLE_ROOM_AI_STATUS} onSend={onSend} />)
+    const askButton = screen.getByRole("button", { name: "Ask" })
+    const changeButton = screen.getByRole("button", { name: "Request change" })
+    const input = screen.getByPlaceholderText("Ask the AI about this diagram...")
+
+    await userEvent.click(changeButton)
+    expect(changeButton.getAttribute("aria-pressed")).toBe("true")
+    expect(askButton.getAttribute("aria-pressed")).toBe("false")
+
+    await userEvent.type(input, "Add a Customer class")
+    await userEvent.click(screen.getByRole("button", { name: "Send" }))
+    expect(onSend).toHaveBeenCalledWith("Add a Customer class", "change")
+
+    await userEvent.click(askButton)
+    expect(askButton.getAttribute("aria-pressed")).toBe("true")
+    expect(changeButton.getAttribute("aria-pressed")).toBe("false")
+
+    await userEvent.type(input, "Why is Customer abstract?")
+    await userEvent.click(screen.getByRole("button", { name: "Send" }))
+    expect(onSend).toHaveBeenLastCalledWith("Why is Customer abstract?", "ask")
+  })
+
+  it("supports the /cambio shortcut to select change mode and strips the prefix on send", async () => {
+    const onSend = vi.fn()
+    render(<RoomChatPanel messages={[]} aiStatus={IDLE_ROOM_AI_STATUS} onSend={onSend} />)
+    const changeButton = screen.getByRole("button", { name: "Request change" })
+    const input = screen.getByPlaceholderText("Ask the AI about this diagram...")
+
+    await userEvent.type(input, "/cambio Add Order relation")
+    expect(changeButton.getAttribute("aria-pressed")).toBe("true")
+
+    await userEvent.click(screen.getByRole("button", { name: "Send" }))
+    expect(onSend).toHaveBeenCalledWith("Add Order relation", "change")
+    expect((input as HTMLInputElement).value).toBe("")
+  })
+
+  it("disables Request change and keeps Ask intent when allowChanges is false", async () => {
+    const onSend = vi.fn()
+    render(
+      <RoomChatPanel
+        messages={[]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        allowChanges={false}
+        onSend={onSend}
+      />
+    )
+    const askButton = screen.getByRole("button", { name: "Ask" })
+    const changeButton = screen.getByRole("button", { name: "Request change" })
+    expect((changeButton as HTMLButtonElement).disabled).toBe(true)
+    expect(askButton.getAttribute("aria-pressed")).toBe("true")
+    expect(changeButton.getAttribute("aria-pressed")).toBe("false")
+
+    const input = screen.getByPlaceholderText("Ask the AI about this diagram...")
+    await userEvent.type(input, "/cambio Add Order relation")
+    await userEvent.click(screen.getByRole("button", { name: "Send" }))
+    expect(onSend).toHaveBeenCalledWith("Add Order relation", "ask")
   })
 
   it("exposes voice recording in the shared Room conversation", async () => {

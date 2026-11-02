@@ -1,9 +1,25 @@
 import { useState, type FC, type FormEvent } from "react"
 import { MicIcon, SendIcon, SparklesIcon, SquareIcon, XCircleIcon } from "lucide-react"
-import type { RoomChatMessage } from "@umlstudio/core"
+import type { RoomAiIntent, RoomChatMessage } from "@umlstudio/core"
 import { useTranslation } from "@/i18n"
 import type { RoomAiStatusState } from "@/queries/roomAiCache"
 import { formatElapsed, type VoiceRecorderStatus } from "@/hooks/useVoiceRecorder"
+
+const CAMBIO_COMMAND_RE = /^\/cambio(?:\s+(.*))?$/is
+
+function resolveDraftSubmission(
+  rawDraft: string,
+  selectedIntent: RoomAiIntent,
+  allowChanges: boolean
+): { text: string; intent: RoomAiIntent } {
+  const trimmed = rawDraft.trim()
+  const match = CAMBIO_COMMAND_RE.exec(trimmed)
+  const hasCambioPrefix = match !== null
+  const text = (match ? (match[1] ?? "") : trimmed).trim()
+  const requestedIntent: RoomAiIntent = hasCambioPrefix ? "change" : selectedIntent
+  const intent: RoomAiIntent = allowChanges ? requestedIntent : "ask"
+  return { text, intent }
+}
 
 export interface RoomVoiceControls {
   status: VoiceRecorderStatus
@@ -22,13 +38,14 @@ export interface RoomChatPanelProps {
   messages: RoomChatMessage[]
   aiStatus: RoomAiStatusState
   currentUserId?: string
+  allowChanges?: boolean
   isLoading?: boolean
   hasLoadError?: boolean
   sendErrorKind?: "generic" | "queueFull" | null
   hasProfileSyncError?: boolean
   hasVoiceError?: boolean
   isSending?: boolean
-  onSend: (text: string) => void
+  onSend: (text: string, intent: RoomAiIntent) => void
   voiceControls?: RoomVoiceControls
 }
 
@@ -36,6 +53,7 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   messages,
   aiStatus,
   currentUserId,
+  allowChanges = true,
   isLoading = false,
   hasLoadError = false,
   sendErrorKind = null,
@@ -47,13 +65,27 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
 }) => {
   const { t } = useTranslation()
   const [draft, setDraft] = useState("")
+  const [selectedIntent, setSelectedIntent] = useState<RoomAiIntent>("ask")
   const byId = new Map(messages.map((m) => [m.id, m]))
+  const resolved = resolveDraftSubmission(draft, selectedIntent, allowChanges)
+  const effectiveIntent = resolved.intent
+
+  const selectAskIntent = () => {
+    setSelectedIntent("ask")
+    if (CAMBIO_COMMAND_RE.test(draft.trim())) {
+      setDraft((prev) => prev.replace(/^\s*\/cambio\s*/i, ""))
+    }
+  }
+
+  const selectChangeIntent = () => {
+    if (!allowChanges) return
+    setSelectedIntent("change")
+  }
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    const text = draft.trim()
-    if (!text || isSending) return
-    onSend(text)
+    if (!resolved.text || isSending) return
+    onSend(resolved.text, effectiveIntent)
     setDraft("")
   }
 
@@ -260,13 +292,55 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
             ) : null}
           </div>
         )}
+        <div
+          role="group"
+          aria-label={t.roomAi.intentModeLabel}
+          className="mb-1.5 flex items-center justify-between gap-1.5"
+        >
+          <div className="inline-flex items-center gap-1 rounded-md border border-border-subtle/70 bg-surface-raised p-0.5">
+            <button
+              type="button"
+              aria-pressed={effectiveIntent === "ask"}
+              onClick={selectAskIntent}
+              disabled={isSending}
+              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                effectiveIntent === "ask"
+                  ? "bg-(--umlstudio-primary) text-white"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.roomAi.askIntent}
+            </button>
+            <button
+              type="button"
+              aria-pressed={effectiveIntent === "change"}
+              onClick={selectChangeIntent}
+              disabled={!allowChanges || isSending}
+              title={!allowChanges ? t.roomAi.mentorOnlyHint : undefined}
+              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                effectiveIntent === "change"
+                  ? "bg-(--umlstudio-primary) text-white"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.roomAi.changeIntent}
+            </button>
+          </div>
+          <span className="text-[10px] text-muted-foreground">{t.roomAi.changeShortcutHint}</span>
+        </div>
         <form
           onSubmit={submit}
           className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-raised p-1.5 shadow-sm"
         >
           <input
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              const nextDraft = e.target.value
+              setDraft(nextDraft)
+              if (allowChanges && CAMBIO_COMMAND_RE.test(nextDraft.trim())) {
+                setSelectedIntent("change")
+              }
+            }}
             placeholder={t.roomAi.inputPlaceholder}
             aria-label={t.roomAi.inputPlaceholder}
             className="min-w-0 flex-1 bg-transparent px-1.5 py-1 text-xs text-foreground outline-none placeholder:text-muted-foreground"
@@ -287,7 +361,7 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
             )}
           <button
             type="submit"
-            disabled={!draft.trim() || isSending}
+            disabled={!resolved.text || isSending}
             aria-label={t.roomAi.send}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-(--umlstudio-primary) text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >

@@ -127,6 +127,7 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     await waitFor(() =>
       expect(mocks.sendSharedMessage).toHaveBeenCalledWith({
         text: "Explain this",
+        intent: "ask",
         teachingProfile: initialProfile,
         profileRevision: currentRevision,
       })
@@ -138,6 +139,44 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
       })
     )
     expect(JSON.stringify(mocks.sendSharedMessage.mock.calls)).not.toContain("personal notes")
+  })
+
+  it("forwards the selected Request change intent or /cambio shortcut to room.sendMessage", async () => {
+    const user = userEvent.setup()
+    render(<RoomChatPanelContainer diagramId="diagram-1" />)
+    await waitFor(() => expect(mocks.getPersonalProfileRevision).toHaveBeenCalled())
+
+    await user.click(screen.getByRole("button", { name: "Request change" }))
+    await user.type(
+      screen.getByPlaceholderText("Ask the AI about this diagram..."),
+      "Add Customer class"
+    )
+    await user.click(screen.getByRole("button", { name: "Send" }))
+
+    await waitFor(() =>
+      expect(mocks.sendSharedMessage).toHaveBeenCalledWith({
+        text: "Add Customer class",
+        intent: "change",
+        teachingProfile: initialProfile,
+        profileRevision: currentRevision,
+      })
+    )
+
+    await user.click(screen.getByRole("button", { name: "Ask" }))
+    await user.type(
+      screen.getByPlaceholderText("Ask the AI about this diagram..."),
+      "/cambio Rename Customer to Client"
+    )
+    await user.click(screen.getByRole("button", { name: "Send" }))
+
+    await waitFor(() =>
+      expect(mocks.sendSharedMessage).toHaveBeenLastCalledWith({
+        text: "Rename Customer to Client",
+        intent: "change",
+        teachingProfile: initialProfile,
+        profileRevision: currentRevision,
+      })
+    )
   })
 
   it("keeps the saved profile when automatic learning fails", async () => {
@@ -160,6 +199,7 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     expect(mocks.writePersonalRoomProfile).not.toHaveBeenCalled()
     expect(mocks.sendSharedMessage).toHaveBeenCalledWith({
       text: "Explain this",
+      intent: "ask",
       teachingProfile: updatedProfile,
       profileRevision: currentRevision,
     })
