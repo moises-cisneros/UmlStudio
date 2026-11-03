@@ -226,12 +226,12 @@ describe("Room AI query flow", () => {
     await dispatcher.drainRoom(diagramId)
     await dispatcher.close()
     expect(learningCalls).toEqual([
-      { profile: aliceProfile, interaction: aliceInteraction },
-      { profile: bobProfile, interaction: bobInteraction },
+      { profile: { ...aliceProfile, preferences: [] }, interaction: aliceInteraction },
+      { profile: { ...bobProfile, preferences: [] }, interaction: bobInteraction },
     ])
     expect(requests.map((request) => [request.requester.id, request.teachingProfile])).toEqual([
-      ["alice", aliceProfile],
-      ["bob", bobProfile],
+      ["alice", { ...aliceProfile, preferences: [] }],
+      ["bob", { ...bobProfile, preferences: [] }],
     ])
     expect(requests[0]?.contextJson).not.toContain(JSON.stringify(bobProfile))
     expect(requests[1]?.contextJson).not.toContain(JSON.stringify(aliceProfile))

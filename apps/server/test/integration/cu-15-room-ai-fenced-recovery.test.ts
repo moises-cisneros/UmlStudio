@@ -221,7 +221,7 @@ describe("Room AI Fenced Recovery (T1)", () => {
 
     // Wait for worker 1's claim lease to expire
     await new Promise((resolve) => setTimeout(resolve, 150))
-    expect(worker1SeenProfile).toEqual(teachingProfile)
+    expect(worker1SeenProfile).toEqual({ ...teachingProfile, preferences: [] })
     worker1Events.length = 0
 
     // Worker 2 recovers the claim and still receives the preserved personal profile sidecar
@@ -252,7 +252,7 @@ describe("Room AI Fenced Recovery (T1)", () => {
     expect(await worker2.processRoom(diagramId)).toBe(true)
     await worker2.waitForIdle()
     expect(worker2Ran).toBe(true)
-    expect(worker2SeenProfile).toEqual(teachingProfile)
+    expect(worker2SeenProfile).toEqual({ ...teachingProfile, preferences: [] })
     expect(worker2RecordPublicMessage).toHaveBeenCalledTimes(2)
     expect(await redis.get(k.aiPersonalProfile(diagramId, initialPost.messageId))).toBeNull()
 

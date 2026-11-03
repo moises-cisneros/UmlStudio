@@ -191,12 +191,20 @@ export interface PostRoomMessageInput {
 }
 
 export interface PostRoomMessageResult {
-  messageId: string
+  messageId?: string
   /** 1-based position among the room's queued messages, including this one. */
-  queuePosition: number
+  queuePosition?: number
   /** Returned only to the requester; never included in room broadcasts or history. */
   profileUpdate?: { profile: RoomAiTeachingProfile; revision: string }
   profileLearningFailed?: boolean
+  /** The browser-local profile was updated without creating a shared Room message. */
+  preferenceUpdated?: boolean
+}
+
+function isExplicitPreferenceRequest(text: string): boolean {
+  return /\b(recuerda|recordá|guarda|guardá|memoriza|prefiero|a partir de ahora|para mis siguientes|siempre)\b/i.test(
+    text
+  )
 }
 
 export interface RoomAiService {
@@ -436,9 +444,26 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
         const changed =
           learnedProfile !== null &&
           (learnedProfile.detailLevel !== teachingProfile.detailLevel ||
-            learnedProfile.exampleStyle !== teachingProfile.exampleStyle)
+            learnedProfile.exampleStyle !== teachingProfile.exampleStyle ||
+            learnedProfile.preferences.join("\u0000") !==
+              teachingProfile.preferences.join("\u0000"))
 
         if (changed) {
+          const preferencesChanged =
+            learnedProfile!.preferences.join("\u0000") !==
+            teachingProfile.preferences.join("\u0000")
+          if (preferencesChanged && isExplicitPreferenceRequest(text)) {
+            const advanced = await profileRevisions.withAdvancedRevision(
+              diagramId,
+              author.id,
+              profileRevision!,
+              async () => undefined
+            )
+            return {
+              profileUpdate: { profile: learnedProfile!, revision: advanced.revision },
+              preferenceUpdated: true,
+            }
+          }
           const advanced = await profileRevisions.withAdvancedRevision(
             diagramId,
             author.id,

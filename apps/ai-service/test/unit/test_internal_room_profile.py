@@ -56,9 +56,13 @@ class TestInternalRoomProfile(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {
-            "profile": {"detailLevel": "step_by_step", "exampleStyle": "uml"}
+            "profile": {
+                "detailLevel": "step_by_step",
+                "exampleStyle": "uml",
+                "preferences": [],
+            }
         })
-        self.assertIn(json.dumps(previous), adapter.prompts[0])
+        self.assertIn(json.dumps({**previous, "preferences": []}), adapter.prompts[0])
         self.assertIn(interaction, adapter.prompts[0])
         self.assertIn("current interaction", adapter.prompts[0].lower())
         self.assertNotIn("Please explain", response.text)
@@ -76,7 +80,7 @@ class TestInternalRoomProfile(unittest.TestCase):
             response = self.post("What does this association mean?", profile=previous)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"profile": previous})
+        self.assertEqual(response.json(), {"profile": {**previous, "preferences": []}})
         self.assertIn("preserve both prior values unchanged", adapter.prompts[0])
 
     def test_rejects_free_text_or_unknown_profile_values_without_returning_them(self):

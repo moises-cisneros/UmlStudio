@@ -1,6 +1,7 @@
 import { validateDiff, type ModelDiff, type RoomAiIntent, type UMLModel } from "@umlstudio/core"
 import type { RoomAiTeachingProfile } from "./room-ai-personal-profile.js"
 import {
+  ConfirmedInferenceTerminatedError,
   ConfirmedInferenceNotStartedError,
   InferenceTerminationUnconfirmedError,
 } from "./inference-not-started.js"
@@ -177,6 +178,13 @@ export function createRoomAiResponder(options: RoomAiResponderOptions) {
     }
     if (response.status === 413) throw new RoomAiPromptTooLargeError()
     if (response.status === 503) throw new RoomAiTokenizerUnavailableError()
+    if (response.status === 422) {
+      throw new ConfirmedInferenceTerminatedError("Room AI could not generate a valid UML change", {
+        stage: "downstream_http_response",
+        reasonCode: "invalid_provider_output",
+        upstreamStatus: response.status,
+      })
+    }
     if (response.status === 404) {
       throw new ConfirmedInferenceNotStartedError("Room AI inference endpoint was not found", {
         stage: "responder_http_rejection",

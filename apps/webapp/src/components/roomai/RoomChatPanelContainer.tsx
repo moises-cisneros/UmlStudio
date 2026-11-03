@@ -73,12 +73,21 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
     return flushSharedReplica()
   }, [flushSharedReplica])
   const room = useRoomAi(diagramId, flush)
-  const sendErrorKind =
-    room.sendError === null
-      ? null
-      : room.sendError instanceof ApiError && room.sendError.code === "ROOM_AI_QUEUE_FULL"
-        ? "queueFull"
-        : "generic"
+  const sendErrorKind = (() => {
+    if (room.sendError === null) return null
+    if (!(room.sendError instanceof ApiError)) return "generic"
+
+    switch (room.sendError.code) {
+      case "ROOM_AI_QUEUE_FULL":
+        return "queueFull"
+      case "ROOM_AI_DISABLED":
+        return "roomAiDisabled"
+      case "ROOM_AI_CHANGES_DISABLED":
+        return "roomAiChangesDisabled"
+      default:
+        return "generic"
+    }
+  })()
   const getPersonalProfileRevision = room.getPersonalProfileRevision
   const [profileRecord, setProfileRecord] = useState<PersonalRoomProfileRecord | null>(null)
   const [profileReady, setProfileReady] = useState(() => !user?.id)
@@ -214,17 +223,18 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
     }
   }
 
-  const setChangeRequestsAllowed = (allowChanges: boolean) => {
-    const policy = room.policy
-    if (!policy?.canConfigure) return
-    void room
-      .updatePolicy({
-        enabled: policy.enabled,
-        allowChanges,
-        applyMode: policy.applyMode,
-        proactive: policy.proactive,
-      })
-      .catch(() => undefined)
+  const savePreferences = async (preferences: string[]) => {
+    if (!user?.id) throw new Error("A signed-in user is required")
+    const current = await getProfileForInteraction()
+    if (!current) throw new Error("Room profile storage is unavailable")
+    const profile = { ...current.teachingProfile, preferences }
+    await writePersonalRoomProfile(user.id, diagramId, {
+      profile,
+      revision: current.profileRevision,
+    })
+    setProfileRecord({ profile, revision: current.profileRevision })
+    setProfileStorageAvailable(true)
+    setProfileSyncError(false)
   }
 
   const applyProposal = useCallback(
@@ -292,6 +302,7 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
       messages={room.messages}
       aiStatus={room.aiStatus}
       currentUserId={user?.id}
+      policy={room.policy}
       allowChanges={room.policy?.allowChanges ?? false}
       canConfigurePolicy={room.policy?.canConfigure ?? false}
       isUpdatingPolicy={room.isUpdatingPolicy}
@@ -304,7 +315,11 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
       onApplyProposal={(messageId) => void applyProposal(messageId).catch(() => undefined)}
       onRejectProposal={(messageId) => void rejectProposal(messageId).catch(() => undefined)}
       proposalBusyId={proposalBusyId}
-      onChangeRequestsChange={setChangeRequestsAllowed}
+      onPolicyChange={({ enabled, allowChanges, applyMode, proactive }) =>
+        room.updatePolicy({ enabled, allowChanges, applyMode, proactive })
+      }
+      preferences={profileRecord?.profile.preferences ?? []}
+      onSavePreferences={user?.id ? savePreferences : undefined}
       hasVoiceError={voiceError}
       voiceControls={{
         status: recorder.status,

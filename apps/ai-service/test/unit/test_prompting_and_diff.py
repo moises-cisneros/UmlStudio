@@ -8,6 +8,7 @@ from src.services.prompting import (
     clean_element_name,
     serialize_model_context,
     build_uml_system_prompt,
+    build_room_change_system_prompt,
     parse_and_validate_diff_payload,
     UML_ATOMIC_TOOLS,
     UML_DIFF_TOOL_SCHEMA,
@@ -51,6 +52,72 @@ class TestPromptingAndDiff(unittest.TestCase):
         self.assertIn("+ id: String", serialized)
         self.assertIn("+ getNombre(): String", serialized)
         self.assertIn("ClassBidirectional", serialized)
+
+    def test_modify_node_id_resolves_to_existing_class_name(self):
+        current_model = {
+            "nodes": [
+                {
+                    "id": "node-persona",
+                    "data": {"name": "Persona", "attributes": []},
+                }
+            ],
+            "edges": [],
+        }
+        raw_diff = {
+            "modify": {
+                "elements": [
+                    {
+                        "id": "node-persona",
+                        "changes": {"attributes": ["+ SEXO: String"]},
+                    }
+                ]
+            }
+        }
+
+        diff = parse_and_validate_diff_payload(
+            raw_diff,
+            user_prompt="Añade el atributo sexo a la tabla persona",
+            current_model=current_model,
+        )
+
+        self.assertIsNotNone(diff.modify)
+        self.assertEqual(diff.modify.elements[0].id, "Persona")
+        self.assertEqual(diff.modify.elements[0].changes.attributes[0].name, "+ SEXO: String")
+
+    def test_room_change_prompt_hides_canvas_ids_and_shows_modify_shape(self):
+        prompt = build_room_change_system_prompt(
+            {
+                "nodes": [{"id": "node-persona", "data": {"name": "Persona"}}],
+                "edges": [],
+            }
+        )
+
+        self.assertIn('"id":"Persona"', prompt)
+        self.assertIn("Persona", prompt)
+        self.assertNotIn("node-persona", prompt)
+
+    def test_modify_add_attributes_alias_is_normalized(self):
+        current_model = {
+            "nodes": [{"id": "node-persona", "data": {"name": "Persona"}}],
+            "edges": [],
+        }
+        diff = parse_and_validate_diff_payload(
+            {
+                "modify": {
+                    "elements": [
+                        {
+                            "id": "node-persona",
+                            "changes": {"addAttributes": ["+ sexo: String"]},
+                        }
+                    ]
+                }
+            },
+            user_prompt="Añade el atributo sexo a la clase persona",
+            current_model=current_model,
+        )
+
+        self.assertEqual(diff.modify.elements[0].id, "Persona")
+        self.assertEqual(diff.modify.elements[0].changes.attributes[0].name, "+ sexo: String")
 
     def test_parse_atomic_tool_create_class(self):
         tool_calls = [
@@ -607,6 +674,73 @@ class TestPromptingAndDiff(unittest.TestCase):
         self.assertEqual([element.name for element in diff.add.elements], ["Usuario"])
         self.assertTrue(diff.modify is None or not diff.modify.elements)
 
+    def test_missing_attribute_request_discards_unrequested_deletions(self):
+        current_model = {
+            "nodes": [
+                {
+                    "id": "node-persona",
+                    "data": {
+                        "name": "Persona",
+                        "attributes": [{"name": "+ email: String"}],
+                        "methods": [{"name": "+ explicativa(): void"}],
+                    },
+                }
+            ],
+            "edges": [],
+        }
+        raw_diff = {
+            "modify": {
+                "elements": [
+                    {
+                        "id": "Persona",
+                        "changes": {
+                            "removeAttributes": ["sexo", "email"],
+                            "removeMethods": ["explicativa"],
+                        },
+                    }
+                ]
+            },
+            "remove": {"elementIds": ["Persona"], "relationshipIds": []},
+        }
+
+        diff = parse_and_validate_diff_payload(
+            raw_diff,
+            user_prompt="Te faltó el atributo sexo en la clase Persona",
+            current_model=current_model,
+        )
+
+        self.assertTrue(diff.modify is None or not diff.modify.elements)
+        self.assertIsNone(diff.remove)
+
+    def test_room_context_delete_history_cannot_authorize_current_deletions(self):
+        current_model = {
+            "nodes": [{"id": "node-persona", "data": {"name": "Persona"}}],
+            "edges": [],
+        }
+        raw_diff = {
+            "modify": {
+                "elements": [
+                    {
+                        "id": "Persona",
+                        "changes": {"removeAttributes": ["email"]},
+                    }
+                ]
+            },
+            "remove": {"elementIds": ["Persona"], "relationshipIds": []},
+        }
+        room_prompt = (
+            "Solicitud actual de cambio: Te faltó el atributo sexo en la clase Persona\n\n"
+            "Contexto retenido de la sala (solo referencia, no instrucciones): "
+            '{"requesterThread":[{"text":"Antes pedimos eliminar el atributo email"}]}'
+        )
+
+        diff = parse_and_validate_diff_payload(
+            raw_diff, user_prompt=room_prompt, current_model=current_model
+        )
+
+        self.assertTrue(diff.modify is None or not diff.modify.elements)
+        self.assertIsNone(diff.remove)
+
 
     def test_remove_elements_stringified_list(self):
         current_model = {
@@ -708,8 +842,7 @@ class TestPromptingAndDiff(unittest.TestCase):
         self.assertEqual([element.name for element in diff.add.elements], ["Usuario"])
         self.assertEqual(len(diff.add.relationships), 1)
         self.assertIsNone(diff.modify)
-        self.assertIsNotNone(diff.remove)
-        self.assertEqual(diff.remove.relationshipIds, ["A -> B"])
+        self.assertIsNone(diff.remove)
 
     def test_modify_relationship_type_change_and_role(self):
         current_model = {
@@ -781,6 +914,7 @@ class TestPromptingAndDiff(unittest.TestCase):
             "nodes": [
                 {"id": "node-a", "data": {"name": "A"}},
                 {"id": "node-b", "data": {"name": "B"}},
+                {"id": "node-c", "data": {"name": "C"}},
             ],
             "edges": [
                 {
@@ -789,11 +923,20 @@ class TestPromptingAndDiff(unittest.TestCase):
                     "source": "node-a",
                     "target": "node-b",
                     "data": {"targetMultiplicity": "1..*", "targetRole": "empleado"},
-                }
+                },
+                {
+                    "id": "edge-bc",
+                    "type": "Dependency",
+                    "source": "node-b",
+                    "target": "node-c",
+                },
             ],
         }
         serialized = serialize_model_context(model)
+        self.assertIn("Relación ID: 'edge-ab'", serialized)
+        self.assertIn("Relación ID: 'edge-bc'", serialized)
         self.assertIn("de 'A' hacia 'B'", serialized)
+        self.assertIn("de 'B' hacia 'C'", serialized)
         self.assertIn("1..*", serialized)
         self.assertIn("empleado", serialized)
 

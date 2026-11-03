@@ -30,7 +30,19 @@ const pendingProposal: RoomChatMessage = {
   proposal: {
     diff: {
       add: { elements: [{ name: "Customer", type: "class" }] },
-      modify: { elements: [{ id: "Order", changes: { name: "Order" } }] },
+      modify: {
+        elements: [
+          {
+            id: "Order",
+            changes: {
+              attributes: [{ name: "email" }],
+              removeAttributes: ["sex"],
+              methods: [{ name: "validate" }],
+              removeMethods: ["explain"],
+            },
+          },
+        ],
+      },
       remove: { elementIds: ["LegacyOrder"] },
     },
     status: "pending",
@@ -93,7 +105,10 @@ describe("RoomChatPanel", () => {
     expect(screen.queryByText("1 added · 1 modified · 1 removed")).toBeNull()
     expect(screen.queryByText("Strategy and Factory.")).toBeNull()
     expect(screen.getByText("+ class Customer")).toBeTruthy()
-    expect(screen.getByText("~ Modify element Order")).toBeTruthy()
+    expect(screen.getByText("~ Order: set attribute email")).toBeTruthy()
+    expect(screen.getByText("~ Order: remove attribute sex")).toBeTruthy()
+    expect(screen.getByText("~ Order: set method validate")).toBeTruthy()
+    expect(screen.getByText("~ Order: remove method explain")).toBeTruthy()
     expect(screen.getByText("- Remove element LegacyOrder")).toBeTruthy()
     await userEvent.click(screen.getByRole("button", { name: "Apply" }))
     await userEvent.click(screen.getByRole("button", { name: "Reject" }))

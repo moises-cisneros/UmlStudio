@@ -104,10 +104,11 @@ export interface RoomAiProfileUpdate {
 }
 
 export interface RoomAiMessageResult {
-  messageId: string
-  queuePosition: number
+  messageId?: string
+  queuePosition?: number
   profileUpdate?: RoomAiProfileUpdate
   profileLearningFailed?: boolean
+  preferenceUpdated?: boolean
 }
 
 export const DiagramApiClient = {

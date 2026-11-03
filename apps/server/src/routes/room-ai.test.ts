@@ -3,6 +3,10 @@ import { Hono } from "hono"
 import type { AppEnv } from "../http/env.js"
 import { errorHandler } from "../http/middleware/errors.js"
 import type { AuthService } from "../services/auth-service.js"
+import {
+  RoomAiChangesDisabledError,
+  RoomAiDisabledError,
+} from "../services/room-ai/room-ai-service.js"
 import { mountRoomAiRoutes } from "./room-ai.js"
 import type { RoomAiService } from "../services/room-ai/room-ai-service.js"
 
@@ -26,6 +30,29 @@ function appWith(roomAi: RoomAiService) {
 }
 
 describe("Room AI routes", () => {
+  it.each([
+    [new RoomAiChangesDisabledError(), "ROOM_AI_CHANGES_DISABLED", "change"],
+    [new RoomAiDisabledError(), "ROOM_AI_DISABLED", "ask"],
+  ])("returns a typed policy error for a blocked $2 request", async (error, code, intent) => {
+    const postMessage = vi.fn(async () => {
+      throw error
+    })
+    const app = appWith({ postMessage } as unknown as RoomAiService)
+
+    const response = await app.request("/api/rooms/room-1/ai/messages", {
+      method: "POST",
+      headers: { Authorization: "Bearer valid", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "Explain this diagram",
+        intent,
+        replica: { generation: "a".repeat(64), revision: 3 },
+      }),
+    })
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toMatchObject({ error: code })
+  })
+
   it("passes only an approved teaching profile and revision to the shared queue", async () => {
     const profileUpdate = {
       profile: { detailLevel: "concise", exampleStyle: "uml" as const },
@@ -61,7 +88,7 @@ describe("Room AI routes", () => {
       author: { id: "user-1", email: "user@example.test", name: "User" },
       text: "Explain this diagram",
       intent: "ask",
-      teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy" },
+      teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy", preferences: [] },
       profileRevision: "00000000-0000-4000-8000-000000000001",
       replica: { generation: "a".repeat(64), revision: 3 },
     })

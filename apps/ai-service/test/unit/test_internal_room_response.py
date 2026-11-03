@@ -12,7 +12,16 @@ from fastapi.testclient import TestClient
 
 from src.core.config import settings
 from src.main import app
-from src.models.uml import DiffAddBlock, DiffElementAdd, ModelDiff, RoomRespondRequest
+from src.models.uml import (
+    DiffAddBlock,
+    DiffAttribute,
+    DiffElementAdd,
+    DiffElementModify,
+    DiffElementModifyChanges,
+    DiffModifyBlock,
+    ModelDiff,
+    RoomRespondRequest,
+)
 from src.services.room_response import RoomResponseService, _safe_provider_http_status
 
 
@@ -43,6 +52,23 @@ class StubAdapter:
     async def generate_diff(self, prompt, current_model):
         self.diff_prompts.append((prompt, current_model))
         return self.diff
+
+
+class RoomChangeAdapter(StubAdapter):
+    async def generate_room_diff(self, prompt, current_model, system_prompt):
+        self.diff_prompts.append((prompt, current_model, system_prompt))
+        return ModelDiff(
+            modify=DiffModifyBlock(
+                elements=[
+                    DiffElementModify(
+                        id="Persona",
+                        changes=DiffElementModifyChanges(
+                            attributes=[DiffAttribute(name="+ SEXO: String")]
+                        ),
+                    )
+                ]
+            )
+        )
 
 
 class TestInternalRoomResponse(unittest.TestCase):
@@ -117,6 +143,42 @@ class TestInternalRoomResponse(unittest.TestCase):
         self.assertIn("Order", adapter.text_prompts[0])
         self.assertIn("The room is modeling orders.", adapter.text_prompts[0])
         self.assertEqual(adapter.diff_prompts, [])
+
+    def test_change_uses_compact_context_and_keeps_requester_preference(self):
+        adapter = RoomChangeAdapter()
+        request = RoomRespondRequest.model_validate(
+            {
+                "mode": "change",
+                "requester": {"id": "user-1", "name": "Ada"},
+                "question": "Te faltó el atributo sexo en la clase Persona",
+                "board": {
+                    "nodes": [{"id": "persona", "data": {"name": "Persona"}}],
+                    "edges": [],
+                },
+                "context": {
+                    "memory": {"summary": "Shared room", "decisions": []},
+                    "threadMessages": [
+                        {"author": {"id": "user-1"}, "text": "Prefiero atributos en MAYÚSCULA."}
+                    ],
+                    "publicMessages": [{"text": "PUBLIC_CONTEXT_CANARY"}],
+                },
+                "provider": "self_hosted",
+                "route": "shared",
+            }
+        )
+        with patch("src.services.room_response._room_adapter", return_value=adapter), patch(
+            "src.services.room_response.count_room_ai_prompt_tokens", return_value=1
+        ):
+            response = asyncio.run(RoomResponseService.respond(request))
+
+        self.assertIsNotNone(response.diff)
+        prompt, current_model, system_prompt = adapter.diff_prompts[0]
+        self.assertIn("MAYÚSCULA", prompt)
+        self.assertIn("sexo", prompt)
+        self.assertNotIn("PUBLIC_CONTEXT_CANARY", prompt)
+        self.assertEqual(current_model, request.board)
+        self.assertNotIn("EJEMPLOS CANÓNICOS", system_prompt)
+        self.assertIn("Persona", system_prompt)
 
     def test_explain_prompt_requires_a_direct_concise_scannable_answer(self):
         adapter = StubAdapter()
@@ -311,7 +373,7 @@ class TestInternalRoomResponse(unittest.TestCase):
             "src.adapters.get_adapter", return_value=adapter
         ):
             response = self.post({**REQUEST, "mode": "change"})
-        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.status_code, 422)
         self.assertNotIn("Propuesta de cambio UML generada", response.text)
 
     def test_corrupted_diff_does_not_leak_provider_content_in_warnings(self):

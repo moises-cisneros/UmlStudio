@@ -305,5 +305,18 @@ describe("Room AI internal responder", () => {
       reasonCode: "inference_endpoint_not_found",
       upstreamStatus: 404,
     })
+
+    const responder422 = createRoomAiResponder({
+      serviceUrl: "http://127.0.0.1:8001",
+      internalToken: "secret",
+      fetcher: vi.fn(async () => new Response(null, { status: 422 })),
+    })
+    await expect(responder422(request)).rejects.toMatchObject({
+      name: "ConfirmedInferenceTerminatedError",
+      diagnostic: {
+        stage: "downstream_http_response",
+        upstreamStatus: 422,
+      },
+    })
   })
 })

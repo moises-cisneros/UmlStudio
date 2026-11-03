@@ -112,7 +112,9 @@ describe("Room AI public publication boundary", () => {
       revision: 1,
     })
 
-    expect(respond).toHaveBeenCalledWith(expect.objectContaining({ teachingProfile: profile }))
+    expect(respond).toHaveBeenCalledWith(
+      expect.objectContaining({ teachingProfile: { ...profile, preferences: [] } })
+    )
     expect(JSON.stringify(respond.mock.calls)).not.toContain("PRIVATE_NOTE_CANARY")
     expect(JSON.stringify(harness.redis.multi.mock.calls)).not.toContain("PRIVATE_NOTE_CANARY")
     expect(harness.chat.append).not.toHaveBeenCalled()

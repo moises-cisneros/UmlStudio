@@ -60,7 +60,7 @@ describe("Room AI service privacy boundary", () => {
     })
 
     expect(profileDeriver).toHaveBeenCalledWith(
-      previousProfile,
+      { ...previousProfile, preferences: [] },
       "Please use a UML example",
       result.messageId
     )
@@ -68,7 +68,10 @@ describe("Room AI service privacy boundary", () => {
     const sidecar = JSON.parse(options.arguments[5]!)
     expect(sidecar).toMatchObject({ requesterId: "user-1", teachingProfile: learnedProfile })
     expect(sidecar.revision).not.toBe(profileRevision)
-    expect(result.profileUpdate).toEqual({ profile: learnedProfile, revision: sidecar.revision })
+    expect(result.profileUpdate).toEqual({
+      profile: { ...learnedProfile, preferences: [] },
+      revision: sidecar.revision,
+    })
     expect(options.arguments[1]).not.toContain("personalMemory")
     expect(JSON.stringify(publish.mock.calls)).not.toContain(JSON.stringify(learnedProfile))
 
@@ -112,7 +115,7 @@ describe("Room AI service privacy boundary", () => {
     const [, options] = vi.mocked(redis.eval).mock.calls[0]!
     expect(JSON.parse(options.arguments[5]!)).toEqual({
       requesterId: "user-1",
-      teachingProfile,
+      teachingProfile: { ...teachingProfile, preferences: [] },
       revision: profileRevision,
     })
     expect(result.profileLearningFailed).toBe(true)

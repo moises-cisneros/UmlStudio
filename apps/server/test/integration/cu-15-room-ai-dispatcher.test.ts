@@ -4,6 +4,7 @@ import { logger } from "../../src/logger.js"
 import { k } from "../../src/redis.js"
 import { getRoomAiReplicaRequirement } from "../../src/services/room-ai/chat-repository.js"
 import {
+  ConfirmedInferenceTerminatedError,
   ConfirmedInferenceNotStartedError,
   InferenceTerminationUnconfirmedError,
 } from "../../src/services/room-ai/inference-not-started.js"
@@ -533,6 +534,42 @@ describe("Room AI distributed dispatcher", () => {
     expect(JSON.parse(raw!)).toMatchObject({ status: "failed", failureReason: "network failure" })
     expect(await second.processRoom("second")).toBe(false)
     await second.close()
+  })
+
+  it("releases the room and global slots when inference terminates with unusable output", async () => {
+    const redis = await getRedis()
+    const room = "confirmed-inference-terminated"
+    for (const id of ["failed", "next"]) {
+      await redis.rPush(k.aiQueue(room), id)
+      await redis.rPush(k.aiChat(room), JSON.stringify({ id, diagramId: room, status: "queued" }))
+    }
+    const seen: string[] = []
+    const dispatcher = createRoomAiDispatcher({
+      redis,
+      maxConcurrency: 1,
+      infer: async (_, id) => {
+        seen.push(id)
+        if (id === "failed")
+          throw new ConfirmedInferenceTerminatedError("Room AI response was unusable", {
+            stage: "downstream_http_response",
+            reasonCode: "invalid_provider_output",
+            upstreamStatus: 422,
+          })
+      },
+    })
+
+    await dispatcher.drainRoom(room)
+    await dispatcher.waitForIdle()
+
+    const messages = (await redis.lRange(k.aiChat(room), 0, -1)).map((raw) => JSON.parse(raw!))
+    expect(seen).toEqual(["failed", "next"])
+    expect(messages.map((message) => message.status)).toEqual(["failed", "answered"])
+    expect(messages[0]).toMatchObject({
+      id: "failed",
+      failureReason: "AI could not generate a valid UML change",
+    })
+    expect(await redis.lRange(k.aiQueue(room), 0, -1)).toEqual([])
+    await dispatcher.close()
   })
 
   it("logs the safe downstream failure stage and HTTP status", async () => {

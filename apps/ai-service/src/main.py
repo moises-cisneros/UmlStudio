@@ -52,7 +52,11 @@ from .models.uml import (
     ProductivityAuditResponse,
 )
 from .services.pipeline import AIPipeline
-from .services.room_response import RoomPromptTooLongError, RoomResponseService
+from .services.room_response import (
+    RoomNoChangeProposedError,
+    RoomPromptTooLongError,
+    RoomResponseService,
+)
 from .services.room_profile import (
     RoomProfilePromptTooLongError,
     RoomProfileService,
@@ -140,6 +144,11 @@ async def respond_to_room(
     except RoomPromptTooLongError as exc:
         raise HTTPException(
             status_code=413, detail="Room AI prompt exceeds the 10,000-token limit"
+        ) from exc
+    except RoomNoChangeProposedError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="Room AI could not generate a UML change for this request",
         ) from exc
     except RoomTokenizerUnavailableError as exc:
         raise HTTPException(status_code=503, detail="Room AI tokenizer is not configured") from exc
