@@ -147,6 +147,21 @@ export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
               question: message.text,
               board,
               contextJson,
+              ...(intent === "ask"
+                ? {
+                    onDelta: async (delta: string) => {
+                      await activeClaimContext?.assertCurrentClaim()
+                      try {
+                        await deps.publish?.(diagramId, { type: "ai.delta", messageId, delta })
+                      } catch (err) {
+                        logger.warn(
+                          { err, diagramId, messageId },
+                          "failed to publish Room AI streaming delta"
+                        )
+                      }
+                    },
+                  }
+                : {}),
               ...(personalProfile.teachingProfile
                 ? { teachingProfile: personalProfile.teachingProfile }
                 : {}),

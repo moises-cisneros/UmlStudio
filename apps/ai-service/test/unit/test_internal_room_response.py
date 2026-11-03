@@ -49,6 +49,11 @@ class StubAdapter:
         self.text_prompts.append(prompt)
         return "An interface defines a contract."
 
+    async def stream_text(self, prompt):
+        self.text_prompts.append(prompt)
+        yield "An interface "
+        yield "defines a contract."
+
     async def generate_diff(self, prompt, current_model):
         self.diff_prompts.append((prompt, current_model))
         return self.diff
@@ -143,6 +148,24 @@ class TestInternalRoomResponse(unittest.TestCase):
         self.assertIn("Order", adapter.text_prompts[0])
         self.assertIn("The room is modeling orders.", adapter.text_prompts[0])
         self.assertEqual(adapter.diff_prompts, [])
+
+    def test_stream_explanation_emits_text_deltas_then_provider(self):
+        adapter = StubAdapter()
+        request = RoomRespondRequest.model_validate(REQUEST)
+
+        async def collect():
+            with patch("src.adapters.get_adapter", return_value=adapter):
+                return [event async for event in RoomResponseService.stream_explanation(request)]
+
+        events = asyncio.run(collect())
+        self.assertEqual(
+            events,
+            [
+                {"type": "delta", "text": "An interface "},
+                {"type": "delta", "text": "defines a contract."},
+                {"type": "done", "provider": "stub"},
+            ],
+        )
 
     def test_change_uses_compact_context_and_keeps_requester_preference(self):
         adapter = RoomChangeAdapter()

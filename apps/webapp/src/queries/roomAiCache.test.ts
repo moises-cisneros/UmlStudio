@@ -46,6 +46,65 @@ describe("applyRoomAiEventToCache", () => {
     expect(page(client)?.hasMore).toBe(true)
   })
 
+  it("accumulates streamed Room AI text and replaces it with the persisted answer", () => {
+    const client = setup({ messages: [message("question")], hasMore: false })
+    applyRoomAiEventToCache(client, "d1", {
+      type: "ai.delta",
+      messageId: "question",
+      delta: "First ",
+    })
+    applyRoomAiEventToCache(client, "d1", {
+      type: "ai.delta",
+      messageId: "question",
+      delta: "answer.",
+    })
+
+    expect(page(client)?.messages.at(-1)).toMatchObject({
+      id: "stream:question",
+      replyTo: "question",
+      text: "First answer.",
+    })
+
+    applyRoomAiEventToCache(client, "d1", {
+      type: "message.created",
+      message: {
+        ...message("answer", "First answer."),
+        author: { id: "room-ai", name: "Room AI", kind: "ai" },
+        replyTo: "question",
+      },
+    })
+
+    expect(page(client)?.messages.map((item) => item.id)).toEqual(["question", "answer"])
+  })
+
+  it("removes streamed text when the requester message fails", () => {
+    const client = setup({ messages: [message("question")], hasMore: false })
+    applyRoomAiEventToCache(client, "d1", {
+      type: "ai.delta",
+      messageId: "question",
+      delta: "Partial",
+    })
+    applyRoomAiEventToCache(client, "d1", {
+      type: "message.updated",
+      message: { ...message("question"), status: "failed" },
+    })
+    expect(page(client)?.messages.map((item) => item.id)).toEqual(["question"])
+  })
+
+  it("does not recreate streamed text after the requester has failed", () => {
+    const client = setup({ messages: [message("question")], hasMore: false })
+    applyRoomAiEventToCache(client, "d1", {
+      type: "message.updated",
+      message: { ...message("question"), status: "failed" },
+    })
+    applyRoomAiEventToCache(client, "d1", {
+      type: "ai.delta",
+      messageId: "question",
+      delta: "Late text",
+    })
+    expect(page(client)?.messages.map((item) => item.id)).toEqual(["question"])
+  })
+
   it("ignores messages while the history has not loaded", () => {
     const client = setup()
     applyRoomAiEventToCache(client, "d1", { type: "message.created", message: message("a") })

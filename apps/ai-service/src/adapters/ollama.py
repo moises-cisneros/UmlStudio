@@ -3,8 +3,10 @@ Ollama Local Adapter (:11434).
 Utilizes local OpenAI-compatible endpoint running via Ollama.
 """
 
+import json
 import logging
 import httpx
+from collections.abc import AsyncIterator
 from typing import Dict, Any, Optional
 from .base import BaseAIAdapter
 from ..models.uml import ModelDiff
@@ -51,6 +53,48 @@ class OllamaAdapter(BaseAIAdapter):
             if not isinstance(content, str) or not content.strip():
                 raise ValueError("Ollama returned an empty text completion")
             return content.strip()
+
+    async def stream_text(self, prompt: str) -> AsyncIterator[str]:
+        """Stream OpenAI-compatible text deltas without exposing provider framing upstream."""
+        url = f"{self.endpoint_url}/chat/completions"
+        payload = {
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2,
+            "stream": True,
+        }
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            async with client.stream("POST", url, json=payload) as resp:
+                if resp.status_code != 200:
+                    raise RuntimeError(f"Ollama text completion failed ({resp.status_code})")
+                content_type = resp.headers.get("content-type", "")
+                if "text/event-stream" not in content_type.lower():
+                    data = json.loads((await resp.aread()).decode("utf-8"))
+                    content = data["choices"][0]["message"]["content"]
+                    if not isinstance(content, str) or not content.strip():
+                        raise ValueError("Ollama returned an empty text completion")
+                    yield content.strip()
+                    return
+
+                received = False
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        payload = json.loads(data)
+                        delta = payload["choices"][0].get("delta", {}).get("content", "")
+                    except (IndexError, KeyError, TypeError, json.JSONDecodeError) as exc:
+                        raise ValueError("Ollama returned an invalid streaming text completion") from exc
+                    if not isinstance(delta, str):
+                        raise ValueError("Ollama returned an invalid streaming text completion")
+                    if delta:
+                        received = True
+                        yield delta
+                if not received:
+                    raise ValueError("Ollama returned an empty streaming text completion")
 
     async def generate_diff(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
         return await self.generate_room_diff(

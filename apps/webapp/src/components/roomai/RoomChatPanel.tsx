@@ -1,4 +1,12 @@
-import { useState, type FC, type FormEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FC,
+  type FormEvent,
+} from "react"
 import {
   MicIcon,
   SendIcon,
@@ -20,6 +28,69 @@ function resolveDraftSubmission(
   allowChanges: boolean
 ): { text: string; intent: RoomAiIntent } {
   return { text: rawDraft.trim(), intent: allowChanges ? selectedIntent : "ask" }
+}
+
+const STREAM_CHARACTERS_PER_FRAME = 3
+
+function useProgressiveStreamText(messages: RoomChatMessage[]): Record<string, string> {
+  const [visibleText, setVisibleText] = useState<Record<string, string>>({})
+  const visibleTextRef = useRef<Record<string, string>>({})
+  const pendingTextRef = useRef(new Map<string, string>())
+  const animationFrameRef = useRef<number | null>(null)
+
+  const scheduleFrame = useCallback(() => {
+    if (animationFrameRef.current !== null) return
+    const runFrame = () => {
+      animationFrameRef.current = null
+      let changed = false
+      for (const [id, pending] of pendingTextRef.current) {
+        const next = pending.slice(0, STREAM_CHARACTERS_PER_FRAME)
+        const remaining = pending.slice(STREAM_CHARACTERS_PER_FRAME)
+        visibleTextRef.current[id] = `${visibleTextRef.current[id] ?? ""}${next}`
+        if (remaining) pendingTextRef.current.set(id, remaining)
+        else pendingTextRef.current.delete(id)
+        changed = true
+      }
+      if (changed) setVisibleText({ ...visibleTextRef.current })
+      if (pendingTextRef.current.size > 0)
+        animationFrameRef.current = requestAnimationFrame(runFrame)
+    }
+    animationFrameRef.current = requestAnimationFrame(runFrame)
+  }, [])
+
+  useEffect(() => {
+    const activeStreamIds = new Set<string>()
+    for (const message of messages) {
+      if (!message.id.startsWith("stream:")) continue
+      activeStreamIds.add(message.id)
+      const visible = visibleTextRef.current[message.id] ?? ""
+      if (!message.text.startsWith(visible)) {
+        visibleTextRef.current[message.id] = ""
+        if (message.text) pendingTextRef.current.set(message.id, message.text)
+        else pendingTextRef.current.delete(message.id)
+      } else {
+        const pending = message.text.slice(visible.length)
+        if (pending) pendingTextRef.current.set(message.id, pending)
+        else pendingTextRef.current.delete(message.id)
+      }
+    }
+    for (const id of Object.keys(visibleTextRef.current)) {
+      if (!activeStreamIds.has(id)) delete visibleTextRef.current[id]
+    }
+    for (const id of pendingTextRef.current.keys()) {
+      if (!activeStreamIds.has(id)) pendingTextRef.current.delete(id)
+    }
+    if (pendingTextRef.current.size > 0) scheduleFrame()
+  }, [messages, scheduleFrame])
+
+  useEffect(
+    () => () => {
+      if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current)
+    },
+    []
+  )
+
+  return visibleText
 }
 
 type ProposalItem = { type: "add" | "mod" | "del"; text: string }
@@ -197,7 +268,11 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   const [selectedIntent, setSelectedIntent] = useState<RoomAiIntent>("ask")
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [preferencesOpen, setPreferencesOpen] = useState(false)
+  const messageListRef = useRef<HTMLOListElement>(null)
+  const didScrollInitialHistoryRef = useRef(false)
+  const stickToBottomRef = useRef(true)
   const byId = new Map(messages.map((m) => [m.id, m]))
+  const progressiveStreamText = useProgressiveStreamText(messages)
   const resolved = resolveDraftSubmission(draft, selectedIntent, allowChanges)
   const effectiveIntent = resolved.intent
 
@@ -216,6 +291,23 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
     onSend(resolved.text, effectiveIntent)
     setDraft("")
   }
+
+  const updateStickToBottom = () => {
+    const list = messageListRef.current
+    if (!list) return
+    stickToBottomRef.current = list.scrollHeight - list.scrollTop - list.clientHeight <= 32
+  }
+
+  useLayoutEffect(() => {
+    const list = messageListRef.current
+    if (!list) return
+    if (!didScrollInitialHistoryRef.current) {
+      if (isLoading) return
+      didScrollInitialHistoryRef.current = true
+      stickToBottomRef.current = true
+    }
+    if (stickToBottomRef.current) list.scrollTop = list.scrollHeight
+  }, [isLoading, messages, progressiveStreamText])
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden" aria-label={t.roomAi.title}>
@@ -246,6 +338,9 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
       </header>
 
       <ol
+        ref={messageListRef}
+        data-testid="room-ai-message-list"
+        onScroll={updateStickToBottom}
         className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3"
         aria-live="polite"
       >
@@ -269,6 +364,8 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
         {messages.map((message) => {
           const isAi = message.author.kind === "ai"
           const isMine = !isAi && message.author.id === currentUserId
+          const isStreamedReply = message.id.startsWith("stream:")
+          const text = isStreamedReply ? (progressiveStreamText[message.id] ?? "") : message.text
           const question = message.replyTo ? byId.get(message.replyTo) : undefined
           const authorName = isAi ? t.roomAi.aiAuthor : isMine ? t.roomAi.you : message.author.name
           return (
@@ -307,8 +404,11 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
                   </blockquote>
                 )}
                 {!message.proposal && (
-                  <p className="break-words whitespace-pre-wrap text-xs leading-relaxed text-foreground">
-                    {message.text}
+                  <p
+                    {...(isStreamedReply ? { "data-testid": "room-ai-stream-text" } : {})}
+                    className="break-words whitespace-pre-wrap text-xs leading-relaxed text-foreground"
+                  >
+                    {text}
                   </p>
                 )}
                 {message.proposal && (
