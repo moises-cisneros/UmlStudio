@@ -45,6 +45,7 @@ export interface RelayHook {
     generation: string,
     revision: number
   ) => BoardReplica | undefined
+  getSharedBoardReplica?: (diagramId: string) => BoardReplica | undefined
 }
 
 export interface AppDeps {
@@ -127,6 +128,9 @@ export function buildApp(deps: AppDeps): ServerType {
       ...(relay?.publishRoomAi ? { publish: relay.publishRoomAi } : {}),
       ...(relay?.getSharedBoardReplicaAtLeast
         ? { getSharedBoardReplicaAtLeast: relay.getSharedBoardReplicaAtLeast }
+        : {}),
+      ...(relay?.getSharedBoardReplica
+        ? { getSharedBoardReplica: relay.getSharedBoardReplica }
         : {}),
     })
   const voiceQuestion = createRoomAiVoiceQuestionService({

@@ -14,6 +14,8 @@ export type RoomChatMessage = {
     status: "pending" | "claimed" | "applied" | "rejected" | "failed" | "stale"
     claimedBy?: string
     baseRev: number
+    /** Replica lifetime that produced this proposal; together with baseRev detects stale work. */
+    baseGeneration?: string
   }
   provider?: string
   status?: "queued" | "answered" | "failed"

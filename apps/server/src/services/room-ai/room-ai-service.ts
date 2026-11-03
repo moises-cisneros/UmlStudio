@@ -1,5 +1,14 @@
 import { randomUUID } from "node:crypto"
-import type { RoomAiEvent, RoomAiIntent, RoomAiPolicy, RoomChatMessage } from "@umlstudio/core"
+import {
+  findTargetEdge,
+  findTargetNode,
+  validateDiff,
+  type RoomAiEvent,
+  type RoomAiIntent,
+  type RoomAiPolicy,
+  type RoomChatMessage,
+  type UMLModel,
+} from "@umlstudio/core"
 import { k, type Redis } from "../../redis.js"
 import type { AuthProfile } from "../auth-service.js"
 import type { BoardReplica } from "./board-replica.js"
@@ -12,6 +21,7 @@ import {
   type RoomAiTeachingProfile,
 } from "./room-ai-personal-profile.js"
 import { createRoomAiPolicyRepository, type RoomAiPolicyRepository } from "./room-ai-policy.js"
+import { createRoomAiProposalRepository } from "./room-ai-proposal-repository.js"
 import {
   createChatRepository,
   enqueueChatMessage,
@@ -23,6 +33,43 @@ import {
 import { GLOBAL_LIMIT, GLOBAL_SLOTS } from "./inference-slots.js"
 
 const ROOM_AI_QUEUE_CAPACITY = 5
+
+/**
+ * Applying a diff is intentionally forgiving, so it cannot establish freshness: it silently
+ * ignores unresolved targets. Claims fail closed when an existing target no longer resolves on
+ * the current shared replica; additive operations remain applicable to a newer board.
+ */
+function isProposalApplicable(model: UMLModel, message: RoomChatMessage): boolean {
+  const proposal = message.proposal
+  if (!proposal || !validateDiff(proposal.diff).valid) return false
+  const elements = model.nodes ?? []
+  const relationships = model.edges ?? []
+
+  if (
+    proposal.diff.modify?.elements?.some((element) => !findTargetNode(elements, element.id)) ||
+    proposal.diff.remove?.elementIds?.some((id) => !findTargetNode(elements, id))
+  ) {
+    return false
+  }
+  if (
+    proposal.diff.modify?.relationships?.some(
+      (relationship) =>
+        !findTargetEdge(
+          relationships,
+          elements,
+          relationship.id,
+          relationship.source,
+          relationship.target
+        )
+    ) ||
+    proposal.diff.remove?.relationshipIds?.some(
+      (id) => !findTargetEdge(relationships, elements, id)
+    )
+  ) {
+    return false
+  }
+  return true
+}
 
 function isRoomAiDevLoggingEnabled(): boolean {
   if (process.env.NODE_ENV === "production") return false
@@ -146,6 +193,13 @@ export interface RoomAiService {
   getPolicy(diagramId: string): Promise<RoomAiPolicy>
   canConfigurePolicy(diagramId: string, userId: string): Promise<boolean>
   updatePolicy(diagramId: string, userId: string, policy: RoomAiPolicy): Promise<RoomAiPolicy>
+  claimProposal(diagramId: string, messageId: string, userId: string): Promise<RoomChatMessage>
+  completeProposal(
+    diagramId: string,
+    messageId: string,
+    userId: string,
+    status: "applied" | "failed" | "rejected"
+  ): Promise<void>
 }
 
 /** Thrown when the room (diagram) does not exist; routes map it to a 404. */
@@ -198,6 +252,27 @@ export class RoomAiPolicyOwnerRequiredError extends Error {
   }
 }
 
+export class RoomAiProposalNotFoundError extends Error {
+  constructor() {
+    super("Room AI proposal was not found")
+    this.name = "RoomAiProposalNotFoundError"
+  }
+}
+
+export class RoomAiProposalClaimConflictError extends Error {
+  constructor() {
+    super("Room AI proposal is already claimed or no longer pending")
+    this.name = "RoomAiProposalClaimConflictError"
+  }
+}
+
+export class RoomAiProposalStaleError extends Error {
+  constructor() {
+    super("Room AI proposal is stale because the shared diagram changed")
+    this.name = "RoomAiProposalStaleError"
+  }
+}
+
 export interface RoomMemoryStore {
   snapshot(diagramId: string): Promise<RoomMemorySnapshot>
   pinDecision(diagramId: string, decision: string): Promise<void>
@@ -225,6 +300,7 @@ interface RoomAiServiceDeps {
     generation: string,
     revision: number
   ) => BoardReplica | undefined
+  getSharedBoardReplica?: (diagramId: string) => BoardReplica | undefined
 }
 
 export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
@@ -233,6 +309,7 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
   const profileRevisions =
     deps.profileRevisions ?? createRoomAiPersonalProfileRevisionCoordinator(redis, ttlSeconds)
   const policyRepository = deps.policyRepository ?? createRoomAiPolicyRepository(redis, ttlSeconds)
+  const proposals = createRoomAiProposalRepository(redis, ttlSeconds)
 
   async function assertRoomExists(diagramId: string): Promise<void> {
     if ((await redis.exists(k.diagram(diagramId))) === 0) throw new RoomNotFoundError()
@@ -402,7 +479,8 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
 
     async listMessages(diagramId, options) {
       await assertRoomExists(diagramId)
-      return chat.list(diagramId, options)
+      const page = await chat.list(diagramId, options)
+      return { ...page, messages: await proposals.hydrate(page.messages) }
     },
 
     async getSharedMemory(diagramId) {
@@ -435,6 +513,41 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
       const policy = await policyRepository.set(diagramId, rawPolicy)
       publish?.(diagramId, { type: "policy.updated", policy })
       return policy
+    },
+
+    async claimProposal(diagramId, messageId, userId) {
+      await assertRoomExists(diagramId)
+      const message = (await chat.list(diagramId, { limit: 200 })).messages.find(
+        (item) => item.id === messageId
+      )
+      if (!message?.proposal) throw new RoomAiProposalNotFoundError()
+
+      const replica = deps.getSharedBoardReplica?.(diagramId)
+      const isFresh =
+        replica?.isComplete() &&
+        isProposalApplicable(replica.getModel(), message) &&
+        replica.isComplete()
+      if (!isFresh) {
+        const stale = await proposals.markStale(diagramId, messageId)
+        if (stale.kind === "missing") throw new RoomAiProposalNotFoundError()
+        if (stale.kind === "conflict") throw new RoomAiProposalClaimConflictError()
+        publish?.(diagramId, { type: "message.updated", message: stale.message })
+        throw new RoomAiProposalStaleError()
+      }
+
+      const claimed = await proposals.claim(diagramId, messageId, userId)
+      if (claimed.kind === "missing") throw new RoomAiProposalNotFoundError()
+      if (claimed.kind === "conflict") throw new RoomAiProposalClaimConflictError()
+      publish?.(diagramId, { type: "message.updated", message: claimed.message })
+      return claimed.message
+    },
+
+    async completeProposal(diagramId, messageId, userId, status) {
+      await assertRoomExists(diagramId)
+      const completed = await proposals.complete(diagramId, messageId, userId, status)
+      if (completed.kind === "missing") throw new RoomAiProposalNotFoundError()
+      if (completed.kind === "conflict") throw new RoomAiProposalClaimConflictError()
+      publish?.(diagramId, { type: "message.updated", message: completed.message })
     },
   }
 }

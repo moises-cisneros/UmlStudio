@@ -72,6 +72,7 @@ export interface InferenceTerminationDiagnostic {
     | "non_success_http_status"
     | "invalid_json"
     | "invalid_response_shape"
+    | "invalid_proposal_diff"
   upstreamStatus?: number
   transportErrorName?: string
 }

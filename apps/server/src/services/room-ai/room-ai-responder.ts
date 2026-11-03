@@ -1,4 +1,4 @@
-import type { RoomAiIntent, UMLModel } from "@umlstudio/core"
+import { validateDiff, type ModelDiff, type RoomAiIntent, type UMLModel } from "@umlstudio/core"
 import type { RoomAiTeachingProfile } from "./room-ai-personal-profile.js"
 import {
   ConfirmedInferenceNotStartedError,
@@ -36,9 +36,10 @@ export interface RoomAiInferenceRequest {
   teachingProfile?: RoomAiTeachingProfile
 }
 
-interface RoomAiServiceResponse {
+export interface RoomAiServiceResponse {
   text: string
   provider: string
+  diff?: ModelDiff
 }
 
 interface RoomAiResponderOptions {
@@ -208,7 +209,7 @@ export function createRoomAiResponder(options: RoomAiResponderOptions) {
         upstreamStatus: response.status,
       })
     }
-    const { text, provider } = result as Record<string, unknown>
+    const { text, provider, diff } = result as Record<string, unknown>
     if (
       typeof text !== "string" ||
       !text.trim() ||
@@ -221,6 +222,15 @@ export function createRoomAiResponder(options: RoomAiResponderOptions) {
         upstreamStatus: response.status,
       })
     }
-    return { text, provider }
+    if (diff === undefined || diff === null) return { text, provider }
+    const normalizedDiff = structuredClone(diff) as ModelDiff
+    if (!validateDiff(normalizedDiff).valid) {
+      throw new InferenceTerminationUnconfirmedError("Room AI returned an invalid proposal", {
+        stage: "downstream_response",
+        reasonCode: "invalid_proposal_diff",
+        upstreamStatus: response.status,
+      })
+    }
+    return { text, provider, diff: normalizedDiff }
   }
 }

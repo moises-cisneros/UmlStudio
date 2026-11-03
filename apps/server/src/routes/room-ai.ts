@@ -13,6 +13,9 @@ import {
   RoomAiChangesDisabledError,
   RoomAiDisabledError,
   RoomAiPolicyOwnerRequiredError,
+  RoomAiProposalClaimConflictError,
+  RoomAiProposalNotFoundError,
+  RoomAiProposalStaleError,
   SharedBoardSnapshotNotReadyError,
   type RoomAiService,
 } from "../services/room-ai/room-ai-service.js"
@@ -65,6 +68,8 @@ const PinDecisionBody = z.object({
 })
 
 const UpdatePolicyBody = RoomAiPolicySchema
+const ProposalParams = DiagramIdParams.extend({ messageId: z.string().uuid() })
+const ProposalResultBody = z.object({ status: z.enum(["applied", "failed", "rejected"]) }).strict()
 
 export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<AppEnv> {
   const router = new Hono<AppEnv>()
@@ -99,6 +104,49 @@ export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<A
       } catch (err) {
         if (err instanceof RoomNotFoundError) throw Errors.notFound("room not found")
         if (err instanceof RoomAiPolicyOwnerRequiredError) throw Errors.forbidden(err.message)
+        throw err
+      }
+    })
+  )
+
+  router.post(
+    "/rooms/:diagramId/ai/proposals/:messageId/claim",
+    validate({ params: ProposalParams }, async (c, { params }) => {
+      const user = c.get("user")
+      if (!user) throw Errors.unauthorized()
+      try {
+        const message = await roomAi.claimProposal(params.diagramId, params.messageId, user.id)
+        return c.json({ diff: message.proposal!.diff })
+      } catch (err) {
+        if (err instanceof RoomNotFoundError || err instanceof RoomAiProposalNotFoundError) {
+          throw Errors.notFound(err.message)
+        }
+        if (err instanceof RoomAiProposalStaleError) {
+          throw new ApiError(409, "ROOM_AI_PROPOSAL_STALE", err.message)
+        }
+        if (err instanceof RoomAiProposalClaimConflictError) {
+          throw new ApiError(409, "ROOM_AI_PROPOSAL_CLAIM_CONFLICT", err.message)
+        }
+        throw err
+      }
+    })
+  )
+
+  router.post(
+    "/rooms/:diagramId/ai/proposals/:messageId/result",
+    validate({ params: ProposalParams, body: ProposalResultBody }, async (c, { params, body }) => {
+      const user = c.get("user")
+      if (!user) throw Errors.unauthorized()
+      try {
+        await roomAi.completeProposal(params.diagramId, params.messageId, user.id, body.status)
+        return c.body(null, 204)
+      } catch (err) {
+        if (err instanceof RoomNotFoundError || err instanceof RoomAiProposalNotFoundError) {
+          throw Errors.notFound(err.message)
+        }
+        if (err instanceof RoomAiProposalClaimConflictError) {
+          throw new ApiError(409, "ROOM_AI_PROPOSAL_CLAIM_CONFLICT", err.message)
+        }
         throw err
       }
     })

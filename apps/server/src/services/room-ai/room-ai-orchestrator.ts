@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import type { RoomAiEvent, RoomChatMessage, UMLModel } from "@umlstudio/core"
+import type { ModelDiff, RoomAiEvent, RoomChatMessage, UMLModel } from "@umlstudio/core"
 import type { Redis } from "../../redis.js"
 import { consumeRoomAiPersonalProfile, createChatRepository } from "./chat-repository.js"
 import type { RoomAiReplicaRequirement } from "./chat-repository.js"
@@ -18,6 +18,7 @@ import {
   type RoomAiPersonalProfileRevisionCoordinator,
   type RoomAiTeachingProfile,
 } from "./room-ai-personal-profile.js"
+import type { RoomAiServiceResponse } from "./room-ai-responder.js"
 
 export type { RoomAiDispatchClaimContext } from "./inference-not-started.js"
 
@@ -37,7 +38,7 @@ interface OrchestratorDeps {
     board: UMLModel
     contextJson: string
     teachingProfile?: RoomAiTeachingProfile
-  }) => Promise<{ text: string; provider: string }>
+  }) => Promise<RoomAiServiceResponse>
   publish?: (diagramId: string, event: RoomAiEvent) => void | Promise<void>
   recordPublicMessage?: (diagramId: string, message: string, board: UMLModel) => Promise<void>
 }
@@ -190,6 +191,16 @@ export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
         text,
         replyTo: message.id,
         provider: result.provider,
+        ...(intent === "change" && result.diff
+          ? {
+              proposal: {
+                diff: result.diff as ModelDiff,
+                status: "pending" as const,
+                baseRev: replicaRequirement.revision,
+                baseGeneration: replicaRequirement.generation,
+              },
+            }
+          : {}),
         createdAt: new Date().toISOString(),
       }
       await profileRevisions.withRoomLock(diagramId, async () => {

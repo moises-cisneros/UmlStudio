@@ -68,6 +68,23 @@ describe("Room AI internal responder", () => {
     })
   })
 
+  it("preserves a valid change diff for the proposal claim lifecycle", async () => {
+    const proposal = { add: { elements: [], relationships: [] } }
+    const respond = createRoomAiResponder({
+      serviceUrl: "https://ai.internal",
+      internalToken: "secret",
+      fetcher: vi.fn(async () =>
+        Response.json({ text: "I prepared the change.", diff: proposal, provider: "self-hosted" })
+      ),
+    })
+
+    await expect(respond({ ...request, intent: "change" })).resolves.toEqual({
+      text: "I prepared the change.",
+      provider: "self-hosted",
+      diff: proposal,
+    })
+  })
+
   it("rejects nested personal fields in shared context", async () => {
     const fetcher = vi.fn()
     const respond = createRoomAiResponder({
