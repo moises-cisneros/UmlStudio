@@ -53,7 +53,13 @@ class OllamaAdapter(BaseAIAdapter):
             return content.strip()
 
     async def generate_diff(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
-        system_prompt = build_uml_system_prompt(current_model)
+        return await self.generate_room_diff(
+            prompt, current_model, build_uml_system_prompt(current_model)
+        )
+
+    async def generate_room_diff(
+        self, prompt: str, current_model: Dict[str, Any], system_prompt: str
+    ) -> ModelDiff:
         url = f"{self.endpoint_url}/chat/completions"
 
         payload = {

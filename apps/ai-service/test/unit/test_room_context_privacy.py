@@ -32,7 +32,7 @@ class TestRoomContextPrivacy(unittest.TestCase):
             **BASE, "provider": "self_hosted", "route": "shared",
             "teaching_profile": profile,
         })
-        self.assertEqual(request.teaching_profile.model_dump(), profile)
+        self.assertEqual(request.teaching_profile.model_dump(), {**profile, "preferences": []})
         for routing in ({}, {"provider": "self_hosted", "route": "private"}):
             with self.subTest(routing=routing), self.assertRaises(ValidationError):
                 RoomRespondRequest.model_validate({

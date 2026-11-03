@@ -10,6 +10,7 @@ interface PersonalRoomProfileDB extends DBSchema {
 export interface PersonalRoomTeachingProfile {
   detailLevel: "concise" | "balanced" | "step_by_step"
   exampleStyle: "uml" | "code" | "analogy" | "none"
+  preferences?: string[]
 }
 
 export interface PersonalRoomProfileRecord {
@@ -47,7 +48,16 @@ function isTeachingProfile(value: unknown): value is PersonalRoomTeachingProfile
   if (!isRecord(value)) return false
   return (
     ["concise", "balanced", "step_by_step"].includes(String(value.detailLevel)) &&
-    ["uml", "code", "analogy", "none"].includes(String(value.exampleStyle))
+    ["uml", "code", "analogy", "none"].includes(String(value.exampleStyle)) &&
+    (value.preferences === undefined ||
+      (Array.isArray(value.preferences) &&
+        value.preferences.length <= 20 &&
+        value.preferences.every(
+          (preference) =>
+            typeof preference === "string" &&
+            preference.trim().length > 0 &&
+            preference.length <= 280
+        )))
   )
 }
 
@@ -85,6 +95,7 @@ export async function readPersonalRoomProfile(
       profile: {
         detailLevel: stored.profile.detailLevel,
         exampleStyle: stored.profile.exampleStyle,
+        ...(stored.profile.preferences ? { preferences: stored.profile.preferences } : {}),
       },
       revision: stored.revision,
     }
@@ -107,6 +118,7 @@ export async function writePersonalRoomProfile(
         profile: {
           detailLevel: record.profile.detailLevel,
           exampleStyle: record.profile.exampleStyle,
+          ...(record.profile.preferences ? { preferences: record.profile.preferences } : {}),
         },
         revision: record.revision,
       },

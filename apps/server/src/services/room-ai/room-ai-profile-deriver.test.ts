@@ -26,6 +26,7 @@ describe("Room AI private profile deriver", () => {
     ).resolves.toEqual({
       detailLevel: "balanced",
       exampleStyle: "analogy",
+      preferences: [],
     })
     expect(String(fetcher.mock.calls[0]?.[0])).toBe(
       "http://127.0.0.1:8001/internal/v1/room/profile"

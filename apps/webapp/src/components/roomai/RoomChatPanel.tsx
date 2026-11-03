@@ -1,9 +1,18 @@
 import { useState, type FC, type FormEvent } from "react"
-import { MicIcon, SendIcon, SparklesIcon, SquareIcon, XCircleIcon } from "lucide-react"
-import type { ModelDiff, RoomAiIntent, RoomChatMessage } from "@umlstudio/core"
+import {
+  MicIcon,
+  SendIcon,
+  SettingsIcon,
+  SparklesIcon,
+  SquareIcon,
+  XCircleIcon,
+} from "lucide-react"
+import type { ModelDiff, RoomAiIntent, RoomAiPolicy, RoomChatMessage } from "@umlstudio/core"
 import { useTranslation } from "@/i18n"
 import type { RoomAiStatusState } from "@/queries/roomAiCache"
 import { formatElapsed, type VoiceRecorderStatus } from "@/hooks/useVoiceRecorder"
+import { RoomAiSettingsDialog } from "./RoomAiSettingsDialog"
+import { RoomAiPreferencesDialog } from "./RoomAiPreferencesDialog"
 
 function resolveDraftSubmission(
   rawDraft: string,
@@ -21,6 +30,15 @@ function buildProposalItems(
     proposalAddElement: (name: string, type: string) => string
     proposalAddRelationship: (type: string, source: string, target: string) => string
     proposalModifyElement: (id: string) => string
+    proposalRenameElement: (id: string, name: string) => string
+    proposalSetElementStereotype: (id: string, stereotype: string) => string
+    proposalSetElementAttribute: (id: string, name: string) => string
+    proposalRemoveElementAttribute: (id: string, name: string) => string
+    proposalClearElementAttributes: (id: string) => string
+    proposalSetElementMethod: (id: string, name: string) => string
+    proposalRemoveElementMethod: (id: string, name: string) => string
+    proposalClearElementMethods: (id: string) => string
+    proposalMoveElement: (id: string, x: number, y: number) => string
     proposalModifyRelationship: (id: string) => string
     proposalRemoveElement: (id: string) => string
     proposalRemoveRelationship: (id: string) => string
@@ -39,10 +57,66 @@ function buildProposalItems(
         relationship.target
       ),
     })),
-    ...(diff.modify?.elements ?? []).map((element) => ({
-      type: "mod" as const,
-      text: labels.proposalModifyElement(element.id),
-    })),
+    ...(diff.modify?.elements ?? []).flatMap((element) => {
+      const { changes } = element
+      const items: ProposalItem[] = []
+
+      if (changes.name) {
+        items.push({ type: "mod", text: labels.proposalRenameElement(element.id, changes.name) })
+      }
+      if (changes.stereotype) {
+        items.push({
+          type: "mod",
+          text: labels.proposalSetElementStereotype(element.id, changes.stereotype),
+        })
+      }
+      if (changes.removeAttributes?.length) {
+        items.push(
+          ...changes.removeAttributes.map((name) => ({
+            type: "mod" as const,
+            text: labels.proposalRemoveElementAttribute(element.id, name),
+          }))
+        )
+      }
+      if (changes.attributes) {
+        items.push(
+          ...(changes.attributes.length === 0
+            ? [{ type: "mod" as const, text: labels.proposalClearElementAttributes(element.id) }]
+            : changes.attributes.map((attribute) => ({
+                type: "mod" as const,
+                text: labels.proposalSetElementAttribute(element.id, attribute.name),
+              })))
+        )
+      }
+      if (changes.removeMethods?.length) {
+        items.push(
+          ...changes.removeMethods.map((name) => ({
+            type: "mod" as const,
+            text: labels.proposalRemoveElementMethod(element.id, name),
+          }))
+        )
+      }
+      if (changes.methods) {
+        items.push(
+          ...(changes.methods.length === 0
+            ? [{ type: "mod" as const, text: labels.proposalClearElementMethods(element.id) }]
+            : changes.methods.map((method) => ({
+                type: "mod" as const,
+                text: labels.proposalSetElementMethod(element.id, method.name),
+              })))
+        )
+      }
+      if (changes.position) {
+        items.push({
+          type: "mod",
+          text: labels.proposalMoveElement(element.id, changes.position.x, changes.position.y),
+        })
+      }
+
+      return items.length > 0
+        ? items
+        : [{ type: "mod" as const, text: labels.proposalModifyElement(element.id) }]
+    }),
     ...(diff.modify?.relationships ?? []).map((relationship) => ({
       type: "mod" as const,
       text: labels.proposalModifyRelationship(relationship.id ?? "relationship"),
@@ -75,12 +149,13 @@ export interface RoomChatPanelProps {
   messages: RoomChatMessage[]
   aiStatus: RoomAiStatusState
   currentUserId?: string
+  policy?: RoomAiPolicy
   allowChanges?: boolean
   canConfigurePolicy?: boolean
   isUpdatingPolicy?: boolean
   isLoading?: boolean
   hasLoadError?: boolean
-  sendErrorKind?: "generic" | "queueFull" | null
+  sendErrorKind?: "generic" | "queueFull" | "roomAiDisabled" | "roomAiChangesDisabled" | null
   hasProfileSyncError?: boolean
   hasVoiceError?: boolean
   isSending?: boolean
@@ -88,7 +163,9 @@ export interface RoomChatPanelProps {
   onApplyProposal?: (messageId: string) => void
   onRejectProposal?: (messageId: string) => void
   proposalBusyId?: string | null
-  onChangeRequestsChange?: (allowChanges: boolean) => void
+  onPolicyChange?: (policy: RoomAiPolicy) => Promise<unknown>
+  preferences?: string[]
+  onSavePreferences?: (preferences: string[]) => Promise<void>
   voiceControls?: RoomVoiceControls
 }
 
@@ -96,6 +173,7 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   messages,
   aiStatus,
   currentUserId,
+  policy,
   allowChanges = true,
   canConfigurePolicy = false,
   isUpdatingPolicy = false,
@@ -109,12 +187,16 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   onApplyProposal,
   onRejectProposal,
   proposalBusyId = null,
-  onChangeRequestsChange,
+  onPolicyChange,
+  preferences = [],
+  onSavePreferences,
   voiceControls,
 }) => {
   const { t } = useTranslation()
   const [draft, setDraft] = useState("")
   const [selectedIntent, setSelectedIntent] = useState<RoomAiIntent>("ask")
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [preferencesOpen, setPreferencesOpen] = useState(false)
   const byId = new Map(messages.map((m) => [m.id, m]))
   const resolved = resolveDraftSubmission(draft, selectedIntent, allowChanges)
   const effectiveIntent = resolved.intent
@@ -317,7 +399,13 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
             role="alert"
             className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-[11px] text-destructive"
           >
-            {sendErrorKind === "queueFull" ? t.roomAi.queueFullError : t.roomAi.sendError}
+            {sendErrorKind === "queueFull"
+              ? t.roomAi.queueFullError
+              : sendErrorKind === "roomAiDisabled"
+                ? t.roomAi.roomAiDisabledError
+                : sendErrorKind === "roomAiChangesDisabled"
+                  ? t.roomAi.roomAiChangesDisabledError
+                  : t.roomAi.sendError}
           </p>
         )}
         {hasProfileSyncError && (
@@ -440,14 +528,26 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
             </button>
           </div>
         </div>
-        {canConfigurePolicy && onChangeRequestsChange && (
+        {canConfigurePolicy && policy && onPolicyChange && (
           <button
             type="button"
-            onClick={() => onChangeRequestsChange(!allowChanges)}
+            onClick={() => setSettingsOpen(true)}
             disabled={isUpdatingPolicy}
-            className="mb-1.5 text-[10px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={t.roomAi.settingsButton}
+            className="mb-1.5 flex items-center gap-1 text-[10px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {allowChanges ? t.roomAi.disableChangeRequests : t.roomAi.enableChangeRequests}
+            <SettingsIcon className="size-3" aria-hidden />
+            {t.roomAi.settingsButton}
+          </button>
+        )}
+        {onSavePreferences && !(canConfigurePolicy && policy && onPolicyChange) && (
+          <button
+            type="button"
+            onClick={() => setPreferencesOpen(true)}
+            className="mb-1.5 flex items-center gap-1 text-[10px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          >
+            <SettingsIcon className="size-3" aria-hidden />
+            {t.roomAi.preferencesButton}
           </button>
         )}
         <form
@@ -488,6 +588,25 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
           </button>
         </form>
       </div>
+      {canConfigurePolicy && policy && onPolicyChange && (
+        <RoomAiSettingsDialog
+          open={settingsOpen}
+          policy={policy}
+          isSaving={isUpdatingPolicy}
+          onOpenChange={setSettingsOpen}
+          onSave={onPolicyChange}
+          preferences={preferences}
+          onSavePreferences={onSavePreferences}
+        />
+      )}
+      {onSavePreferences && (
+        <RoomAiPreferencesDialog
+          open={preferencesOpen}
+          preferences={preferences}
+          onOpenChange={setPreferencesOpen}
+          onSave={onSavePreferences}
+        />
+      )}
     </section>
   )
 }

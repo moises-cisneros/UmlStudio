@@ -53,7 +53,7 @@ describe("Room voice question route", () => {
         filename: "question.webm",
         contentType: "audio/webm",
         replica: { generation: "a".repeat(64), revision: 3 },
-        teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy" },
+        teachingProfile: { detailLevel: "balanced", exampleStyle: "analogy", preferences: [] },
         profileRevision: "00000000-0000-4000-8000-000000000001",
       })
     )

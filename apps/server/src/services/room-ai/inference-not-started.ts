@@ -72,9 +72,21 @@ export interface InferenceTerminationDiagnostic {
     | "non_success_http_status"
     | "invalid_json"
     | "invalid_response_shape"
+    | "invalid_provider_output"
     | "invalid_proposal_diff"
   upstreamStatus?: number
   transportErrorName?: string
+}
+
+/** A downstream response confirms that inference ended, but it was unusable. */
+export class ConfirmedInferenceTerminatedError extends Error {
+  constructor(
+    message: string,
+    readonly diagnostic: InferenceTerminationDiagnostic
+  ) {
+    super(message)
+    this.name = "ConfirmedInferenceTerminatedError"
+  }
 }
 
 /** The provider request began, but its termination cannot be confirmed. */

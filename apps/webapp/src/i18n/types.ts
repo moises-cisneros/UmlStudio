@@ -101,6 +101,8 @@ export interface TranslationDictionary {
     loadError: string
     sendError: string
     queueFullError: string
+    roomAiDisabledError: string
+    roomAiChangesDisabledError: string
     inputPlaceholder: string
     intentModeLabel: string
     askIntent: string
@@ -108,6 +110,29 @@ export interface TranslationDictionary {
     mentorOnlyHint: string
     enableChangeRequests: string
     disableChangeRequests: string
+    settingsButton: string
+    settingsTitle: string
+    settingsDescription: string
+    enabledLabel: string
+    enabledDescription: string
+    allowChangesLabel: string
+    allowChangesDescription: string
+    applyModeLabel: string
+    applyModeDescription: string
+    applyModeConfirm: string
+    applyModeAuto: string
+    proactiveLabel: string
+    proactiveDescription: string
+    settingsSaveError: string
+    policyTab: string
+    preferencesTab: string
+    preferencesButton: string
+    preferencesTitle: string
+    preferencesDescription: string
+    preferenceInput: string
+    addPreference: string
+    deletePreference: string
+    preferencesSaveError: string
     send: string
     you: string
     aiAuthor: string
@@ -142,6 +167,15 @@ export interface TranslationDictionary {
     proposalAddElement: (name: string, type: string) => string
     proposalAddRelationship: (type: string, source: string, target: string) => string
     proposalModifyElement: (id: string) => string
+    proposalRenameElement: (id: string, name: string) => string
+    proposalSetElementStereotype: (id: string, stereotype: string) => string
+    proposalSetElementAttribute: (id: string, name: string) => string
+    proposalRemoveElementAttribute: (id: string, name: string) => string
+    proposalClearElementAttributes: (id: string) => string
+    proposalSetElementMethod: (id: string, name: string) => string
+    proposalRemoveElementMethod: (id: string, name: string) => string
+    proposalClearElementMethods: (id: string) => string
+    proposalMoveElement: (id: string, x: number, y: number) => string
     proposalModifyRelationship: (id: string) => string
     proposalRemoveElement: (id: string) => string
     proposalRemoveRelationship: (id: string) => string

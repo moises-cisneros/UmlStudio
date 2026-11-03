@@ -4,6 +4,7 @@ import { logger } from "../../logger.js"
 import { k, type Redis } from "../../redis.js"
 import { createChatRepository, type RoomAiReplicaRequirement } from "./chat-repository.js"
 import {
+  ConfirmedInferenceTerminatedError,
   ConfirmedInferenceNotStartedError,
   InferenceTerminationUnconfirmedError,
   InferenceNotStartedError,
@@ -422,25 +423,45 @@ export function createRoomAiDispatcher(deps: DispatcherDeps) {
               await releaseConfirmedSlot(diagramId, token, id)
               return
             }
-            if (err instanceof InferenceNotStartedError) {
+            if (
+              err instanceof InferenceNotStartedError ||
+              err instanceof ConfirmedInferenceTerminatedError
+            ) {
+              const inferenceNotStarted = err instanceof InferenceNotStartedError
               logger.warn(
                 {
-                  event: "room_ai.dispatch.inference_not_started",
+                  event: inferenceNotStarted
+                    ? "room_ai.dispatch.inference_not_started"
+                    : "room_ai.dispatch.inference_terminated",
                   diagramId,
                   messageId: id,
-                  stage: err.stage,
-                  reasonCode: err.reasonCode,
-                  ...(err.upstreamStatus !== undefined
+                  ...(inferenceNotStarted
+                    ? { stage: err.stage, reasonCode: err.reasonCode }
+                    : err.diagnostic),
+                  ...(inferenceNotStarted && err.upstreamStatus !== undefined
                     ? { upstreamStatus: err.upstreamStatus }
                     : {}),
-                  confirmedNotStarted: err instanceof ConfirmedInferenceNotStartedError,
+                  confirmedNotStarted:
+                    inferenceNotStarted && err instanceof ConfirmedInferenceNotStartedError,
+                  confirmedTerminated: err instanceof ConfirmedInferenceTerminatedError,
                   errorName: err.name,
                   timedOut,
                 },
-                "room AI inference not started; marked Inference unavailable"
+                inferenceNotStarted
+                  ? "room AI inference not started; marked Inference unavailable"
+                  : "room AI inference ended with unusable output; released slot"
               )
               try {
-                if (!timedOut) await update(diagramId, id, "failed", "Inference unavailable", token)
+                if (!timedOut)
+                  await update(
+                    diagramId,
+                    id,
+                    "failed",
+                    inferenceNotStarted
+                      ? "Inference unavailable"
+                      : "AI could not generate a valid UML change",
+                    token
+                  )
                 if (await isCurrentClaim(diagramId, token)) {
                   await cleanupSidecars(diagramId, id, token, true)
                   await publishStatus(diagramId, "idle", token)

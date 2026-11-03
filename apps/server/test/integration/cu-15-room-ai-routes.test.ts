@@ -156,6 +156,7 @@ describe("INT-CU15: room AI message routes", () => {
     expect(result.profileUpdate.profile).toEqual({
       detailLevel: "balanced",
       exampleStyle: "analogy",
+      preferences: [],
     })
     expect(result.profileUpdate.revision).not.toBe(revision)
     const sidecar = await redis.get(k.aiPersonalProfile(DIAGRAM_ID, messageId))

@@ -20,7 +20,7 @@ describe("Room AI personal teaching profiles", () => {
   it("accepts only the exact allowlisted teaching controls", () => {
     expect(
       RoomAiTeachingProfileSchema.parse({ detailLevel: "step_by_step", exampleStyle: "uml" })
-    ).toEqual({ detailLevel: "step_by_step", exampleStyle: "uml" })
+    ).toEqual({ detailLevel: "step_by_step", exampleStyle: "uml", preferences: [] })
     expect(() =>
       RoomAiTeachingProfileSchema.parse({
         detailLevel: "balanced",

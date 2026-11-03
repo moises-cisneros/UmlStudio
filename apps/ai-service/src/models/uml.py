@@ -3,7 +3,7 @@ UmlStudio AI Service — Data Models for OMG UML 2.5 Metamodel.
 """
 
 from typing import List, Optional, Dict, Any, Literal
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class DiffAttribute(BaseModel):
@@ -139,8 +139,14 @@ class ChatResponse(BaseModel):
 class RoomAiTeachingProfile(BaseModel):
     detailLevel: Literal["concise", "balanced", "step_by_step"]
     exampleStyle: Literal["uml", "code", "analogy", "none"]
+    preferences: List[str] = Field(default_factory=list, max_length=20)
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("preferences")
+    @classmethod
+    def validate_preferences(cls, values: List[str]) -> List[str]:
+        return list(dict.fromkeys(value.strip() for value in values if value.strip()))
 
 
 class RoomRespondRequest(BaseModel):

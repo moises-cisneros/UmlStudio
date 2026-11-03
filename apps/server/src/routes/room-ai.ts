@@ -211,9 +211,10 @@ export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<A
         if (err instanceof RoomAiPersonalProfileStaleError) {
           throw new ApiError(409, "ROOM_AI_PROFILE_STALE", err.message)
         }
-        if (err instanceof RoomAiDisabledError || err instanceof RoomAiChangesDisabledError) {
-          throw Errors.forbidden(err.message)
-        }
+        if (err instanceof RoomAiDisabledError)
+          throw new ApiError(403, "ROOM_AI_DISABLED", err.message)
+        if (err instanceof RoomAiChangesDisabledError)
+          throw new ApiError(403, "ROOM_AI_CHANGES_DISABLED", err.message)
         throw err
       }
     })
@@ -301,9 +302,10 @@ export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<A
       if (err instanceof RoomAiPersonalProfileStaleError) {
         throw new ApiError(409, "ROOM_AI_PROFILE_STALE", err.message)
       }
-      if (err instanceof RoomAiDisabledError || err instanceof RoomAiChangesDisabledError) {
-        throw Errors.forbidden(err.message)
-      }
+      if (err instanceof RoomAiDisabledError)
+        throw new ApiError(403, "ROOM_AI_DISABLED", err.message)
+      if (err instanceof RoomAiChangesDisabledError)
+        throw new ApiError(403, "ROOM_AI_CHANGES_DISABLED", err.message)
       if (err instanceof RoomAiTranscriptionUnavailableError) {
         throw new ApiError(
           503,

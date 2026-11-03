@@ -160,6 +160,20 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Could not send your message.")
   })
 
+  it.each([
+    ["ROOM_AI_CHANGES_DISABLED", "This room's policy does not allow change requests."],
+    ["ROOM_AI_DISABLED", "Room AI is disabled for this room."],
+  ] as const)("explains the room policy rejection %s", async (code, message) => {
+    mocks.useRoomAi.mockReturnValue({
+      ...mocks.useRoomAi(),
+      sendError: new ApiError(403, code, "Forbidden"),
+    })
+
+    render(<RoomChatPanelContainer diagramId="diagram-1" />)
+
+    expect((await screen.findByRole("alert")).textContent).toContain(message)
+  })
+
   it("learns automatically from a typed public interaction and saves only the closed result locally", async () => {
     const user = userEvent.setup()
     render(<RoomChatPanelContainer diagramId="diagram-1" />)
@@ -210,7 +224,7 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     )
   })
 
-  it("lets the diagram owner enable change requests", async () => {
+  it("lets the diagram owner configure every Room AI policy field", async () => {
     mocks.useRoomAi.mockReturnValue({
       ...mocks.useRoomAi(),
       policy: {
@@ -224,14 +238,37 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     const user = userEvent.setup()
     render(<RoomChatPanelContainer diagramId="diagram-1" />)
 
-    await user.click(screen.getByRole("button", { name: "Enable change requests" }))
+    await user.click(screen.getByRole("button", { name: "Room AI settings" }))
+    await user.click(screen.getByTestId("room-ai-enabled"))
+    await user.click(screen.getByTestId("room-ai-allow-changes"))
+    await user.click(screen.getByTestId("room-ai-proactive"))
+    await user.click(screen.getByRole("combobox", { name: "Apply mode" }))
+    await user.click(screen.getByRole("option", { name: "Automatic" }))
+    await user.click(screen.getByRole("button", { name: "Save" }))
 
     expect(mocks.updatePolicy).toHaveBeenCalledWith({
-      enabled: true,
+      enabled: false,
       allowChanges: true,
-      applyMode: "confirm",
-      proactive: false,
+      applyMode: "auto",
+      proactive: true,
     })
+  })
+
+  it("does not show Room AI settings to non-owners", () => {
+    mocks.useRoomAi.mockReturnValue({
+      ...mocks.useRoomAi(),
+      policy: {
+        enabled: true,
+        allowChanges: true,
+        applyMode: "confirm",
+        proactive: false,
+        canConfigure: false,
+      },
+    })
+
+    render(<RoomChatPanelContainer diagramId="diagram-1" />)
+
+    expect(screen.queryByRole("button", { name: "Room AI settings" })).toBeNull()
   })
 
   it("keeps the saved profile when automatic learning fails", async () => {

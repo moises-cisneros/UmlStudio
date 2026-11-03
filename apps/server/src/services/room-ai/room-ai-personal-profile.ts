@@ -6,6 +6,7 @@ export const RoomAiTeachingProfileSchema = z
   .object({
     detailLevel: z.enum(["concise", "balanced", "step_by_step"]),
     exampleStyle: z.enum(["uml", "code", "analogy", "none"]),
+    preferences: z.array(z.string().trim().min(1).max(280)).max(20).default([]),
   })
   .strict()
 
