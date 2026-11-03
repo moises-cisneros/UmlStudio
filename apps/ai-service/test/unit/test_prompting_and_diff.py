@@ -579,6 +579,34 @@ class TestPromptingAndDiff(unittest.TestCase):
         self.assertIn("Vehiculo", elem_names)
         self.assertNotIn("ConcreteStrategyA", elem_names)
 
+    def test_additive_request_discards_unrequested_existing_element_modifications(self):
+        current_model = {
+            "nodes": [
+                {"id": "node-assoc", "data": {"name": "asociacion", "methods": [{"name": "+ de(): void"}]}},
+            ]
+        }
+        raw_diff = {
+            "add": {
+                "elements": [{"name": "Usuario", "type": "Class"}],
+                "relationships": [],
+            },
+            "modify": {
+                "elements": [
+                    {"id": "asociacion", "changes": {"removeMethods": ["de"]}},
+                ]
+            },
+        }
+
+        diff = parse_and_validate_diff_payload(
+            raw_diff,
+            user_prompt="Agrega cuatro clases y relaciónalas entre todas",
+            current_model=current_model,
+        )
+
+        self.assertIsNotNone(diff.add)
+        self.assertEqual([element.name for element in diff.add.elements], ["Usuario"])
+        self.assertTrue(diff.modify is None or not diff.modify.elements)
+
 
     def test_remove_elements_stringified_list(self):
         current_model = {
@@ -645,6 +673,43 @@ class TestPromptingAndDiff(unittest.TestCase):
         # Classes must stay untouched: no element mods, no removals
         self.assertTrue(not diff.modify.elements)
         self.assertIsNone(diff.remove)
+
+    def test_sanitizes_invalid_relationship_operations_without_dropping_valid_additions(self):
+        current_model = {
+            "nodes": [
+                {"id": "node-a", "data": {"name": "A"}},
+                {"id": "node-b", "data": {"name": "B"}},
+            ],
+            "edges": [
+                {"id": "edge-ab", "type": "ClassBidirectional", "source": "node-a", "target": "node-b"},
+            ],
+        }
+        raw_diff = {
+            "add": {
+                "elements": [{"name": "Usuario", "type": "Class"}],
+                "relationships": [{"type": "ClassBidirectional", "source": "Usuario", "target": "A"}],
+            },
+            "modify": {
+                "elements": [{"changes": {"attributes": ["+ ignored: String"]}}],
+                "relationships": [
+                    {"source": "A", "target": "Missing", "changes": {"targetMultiplicity": "1..*"}}
+                ],
+            },
+            "remove": {"relationshipIds": ["missing-edge", "A -> B"]},
+        }
+
+        diff = parse_and_validate_diff_payload(
+            raw_diff,
+            user_prompt="Agrega Usuario y relaciónalo con A",
+            current_model=current_model,
+        )
+
+        self.assertIsNotNone(diff.add)
+        self.assertEqual([element.name for element in diff.add.elements], ["Usuario"])
+        self.assertEqual(len(diff.add.relationships), 1)
+        self.assertIsNone(diff.modify)
+        self.assertIsNotNone(diff.remove)
+        self.assertEqual(diff.remove.relationshipIds, ["A -> B"])
 
     def test_modify_relationship_type_change_and_role(self):
         current_model = {

@@ -210,6 +210,7 @@ PROTOCOLO DE RAZONAMIENTO Y MODIFICACIÓN ESTRUCTURAL:
    - Cuando el usuario pide agregar atributos o métodos a una clase existente, incluye ÚNICAMENTE los nuevos miembros en "changes.attributes" o "changes.methods". El sistema los anexará automáticamente sin borrar los miembros existentes.
    - NUNCA devuelvas una lista vacía [] en attributes o methods a menos que el usuario haya pedido explícitamente vaciar o borrar todos los atributos/métodos de esa clase.
    - NUNCA inventes atributos ni métodos de relleno ("+ attr: tipo", "+ method(): void"). Si el usuario no especificó miembros, déjalos vacíos [].
+   - CAMBIO MÍNIMO: no agregues entradas en "modify" ni "remove" por inferencia. Úsalas únicamente cuando el usuario pidió explícitamente modificar o eliminar una entidad existente. Una solicitud de crear clases o relaciones NO autoriza alterar otros elementos existentes.
 
 3. ELIMINACIÓN EXPLÍCITA (ANTI-DESTRUCCIÓN — REGLA DE ORO):
    - Para eliminar un atributo específico de una clase (ej. "Elimina el atributo nombre de la clase Usuario"):
@@ -1284,6 +1285,48 @@ def _sanitize_relationships(
                 rel.source, rel.target = rel.target, rel.source
 
 
+def _existing_node_id(query: Any, nodes: List[Dict[str, Any]]) -> Optional[str]:
+    if not isinstance(query, str):
+        return None
+    cleaned_query = clean_element_name(query).casefold()
+    if not cleaned_query:
+        return None
+    for node in nodes:
+        node_id = node.get("id")
+        if isinstance(node_id, str) and node_id.casefold() == cleaned_query:
+            return node_id
+        node_name = clean_element_name(node.get("data", {}).get("name", "")).casefold()
+        if node_name and node_name == cleaned_query and isinstance(node_id, str):
+            return node_id
+    return None
+
+
+def _existing_relationship_target(
+    edges: List[Dict[str, Any]],
+    nodes: List[Dict[str, Any]],
+    relationship_id: Optional[str] = None,
+    source: Optional[str] = None,
+    target: Optional[str] = None,
+) -> bool:
+    """Matches the public ModelDiff relationship selectors against the current board."""
+    if relationship_id:
+        if any(edge.get("id") == relationship_id for edge in edges):
+            return True
+        endpoint_parts = re.split(r"\s*(?:->|→)\s*", relationship_id)
+        if len(endpoint_parts) == 2:
+            source, target = endpoint_parts
+
+    source_id = _existing_node_id(source, nodes)
+    target_id = _existing_node_id(target, nodes)
+    if not source_id or not target_id:
+        return False
+    return any(
+        (edge.get("source") == source_id and edge.get("target") == target_id)
+        or (edge.get("source") == target_id and edge.get("target") == source_id)
+        for edge in edges
+    )
+
+
 def _extract_relationship_ends(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
     Pulls label, roles and multiplicities out of a raw relationship dict (top level or
@@ -1670,6 +1713,8 @@ def parse_and_validate_diff_payload(
 
     # Pre-calculate existing diagram names and IDs for deterministic healing
     existing_nodes = (current_model or {}).get("nodes", []) if isinstance(current_model, dict) else []
+    existing_edges = (current_model or {}).get("edges", []) if isinstance(current_model, dict) else []
+    has_edge_snapshot = isinstance(current_model, dict) and "edges" in current_model
     existing_names_map: Dict[str, str] = {}  # lower name or lower id -> canonical class name
     node_id_to_name: Dict[str, str] = {}
     existing_node_data: Dict[str, Dict[str, Any]] = {}
@@ -2076,6 +2121,18 @@ def parse_and_validate_diff_payload(
                 )
             )
 
+    if has_edge_snapshot:
+        filtered_rel_mods: List[DiffRelationshipModify] = []
+        for mod in rel_mods:
+            if _existing_relationship_target(existing_edges, existing_nodes, mod.id, mod.source, mod.target):
+                filtered_rel_mods.append(mod)
+                continue
+            logger.info(
+                "Descartando modificación de relación inexistente '%s'.",
+                mod.id or f"{mod.source} -> {mod.target}",
+            )
+        rel_mods = filtered_rel_mods
+
     # Auto-healing fallback for member deletion if model generated no modifications
     if user_prompt and (has_attr_delete_intent or has_method_delete_intent) and not has_class_delete_intent:
         if prompt_extracted_attrs:
@@ -2238,13 +2295,52 @@ def parse_and_validate_diff_payload(
         raw_rel_ids = extract_clean_list(
             raw_rem.get("relationshipIds") or raw_rem.get("relationship_ids") or raw_rem.get("relationships") or []
         )
-        cleaned_rel_ids = [clean_element_name(r) for r in raw_rel_ids if clean_element_name(r)]
+        cleaned_rel_ids: List[str] = []
+        for relationship_id in raw_rel_ids:
+            if not isinstance(relationship_id, str) or not relationship_id.strip():
+                continue
+            normalized_relationship_id = relationship_id.strip()
+            if has_edge_snapshot and not _existing_relationship_target(
+                existing_edges, existing_nodes, normalized_relationship_id
+            ):
+                logger.info(
+                    "Descartando eliminación de relación inexistente '%s'.",
+                    normalized_relationship_id,
+                )
+                continue
+            cleaned_rel_ids.append(normalized_relationship_id)
 
         if cleaned_elem_ids or cleaned_rel_ids:
             remove_block = DiffRemoveBlock(
                 elementIds=cleaned_elem_ids if cleaned_elem_ids else None,
                 relationshipIds=cleaned_rel_ids if cleaned_rel_ids else None,
             )
+
+    if current_model is not None:
+        prompt_lower = user_prompt.casefold() if user_prompt else ""
+        explicit_mutation = bool(
+            re.search(r"\b(modifica|cambia|actualiza|renombra|elimina|borra|quita|remueve)\b", prompt_lower)
+        )
+        filtered_mods: List[DiffElementModify] = []
+        for mod in mods:
+            target_key = clean_element_name(mod.id).casefold()
+            canonical_target = existing_names_map.get(target_key)
+            if not canonical_target:
+                logger.info("Descartando modificación de objetivo inexistente '%s'.", mod.id)
+                continue
+            target_mentioned = bool(
+                prompt_lower
+                and re.search(rf"(?<!\w){re.escape(canonical_target.casefold())}(?!\w)", prompt_lower)
+            )
+            if user_prompt and not explicit_mutation and not target_mentioned:
+                logger.info(
+                    "Descartando modificación no solicitada de '%s' en una petición aditiva.",
+                    canonical_target,
+                )
+                continue
+            mod.id = canonical_target
+            filtered_mods.append(mod)
+        mods = filtered_mods
 
     if mods:
         for m in mods:

@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useState, type FC } from "react"
-import type { RoomAiIntent } from "@umlstudio/core"
+import { useCallback, useEffect, useRef, useState, type FC } from "react"
+import {
+  applyDiff,
+  findTargetEdge,
+  findTargetNode,
+  type ModelDiff,
+  type RoomAiIntent,
+  type UMLModel,
+} from "@umlstudio/core"
 import { useRoomAi } from "@/queries/roomAiQueries"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useEditorContext } from "@/contexts"
@@ -19,6 +26,39 @@ const DEFAULT_TEACHING_PROFILE: PersonalRoomTeachingProfile = {
   exampleStyle: "none",
 }
 
+function isDiffApplicable(model: UMLModel, diff: ModelDiff): boolean {
+  const elements = model.nodes ?? []
+  const relationships = model.edges ?? []
+  const addedElementTargets = new Set(
+    (diff.add?.elements ?? []).flatMap((element) =>
+      [element.id, element.name].filter((value): value is string => typeof value === "string")
+    )
+  )
+  return !(
+    diff.modify?.elements?.some((element) => !findTargetNode(elements, element.id)) ||
+    diff.remove?.elementIds?.some((id) => !findTargetNode(elements, id)) ||
+    diff.modify?.relationships?.some(
+      (relationship) =>
+        !findTargetEdge(
+          relationships,
+          elements,
+          relationship.id,
+          relationship.source,
+          relationship.target
+        )
+    ) ||
+    diff.remove?.relationshipIds?.some((id) => !findTargetEdge(relationships, elements, id)) ||
+    diff.add?.relationships?.some((relationship) =>
+      [relationship.source, relationship.target].some(
+        (endpoint) =>
+          Boolean(endpoint) &&
+          !findTargetNode(elements, endpoint) &&
+          !addedElementTargets.has(endpoint)
+      )
+    )
+  )
+}
+
 export const RoomChatPanelContainer: FC<{ diagramId: string }> = ({ diagramId }) => {
   const userId = useAuthStore((s) => s.user?.id ?? null)
   const scopeKey = JSON.stringify([userId, diagramId])
@@ -27,7 +67,7 @@ export const RoomChatPanelContainer: FC<{ diagramId: string }> = ({ diagramId })
 
 const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) => {
   const user = useAuthStore((s) => s.user)
-  const { flushSharedReplica } = useEditorContext()
+  const { editor, flushSharedReplica } = useEditorContext()
   const flush = useCallback(() => {
     if (!flushSharedReplica) return Promise.reject(new Error("Shared replica is unavailable"))
     return flushSharedReplica()
@@ -46,6 +86,8 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
   const [profileSyncError, setProfileSyncError] = useState(false)
   const [voiceError, setVoiceError] = useState(false)
   const recorder = useVoiceRecorder({ onError: () => setVoiceError(true) })
+  const [proposalBusyId, setProposalBusyId] = useState<string | null>(null)
+  const autoAttemptedRef = useRef(new Set<string>())
 
   useEffect(() => {
     let active = true
@@ -185,6 +227,66 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
       .catch(() => undefined)
   }
 
+  const applyProposal = useCallback(
+    async (messageId: string) => {
+      if (!editor || editor.isReadonly() || proposalBusyId) return
+      setProposalBusyId(messageId)
+      try {
+        const diff = await room.claimProposal(messageId)
+        if (editor.isReadonly()) {
+          await room.completeProposal(messageId, "failed").catch(() => undefined)
+          return
+        }
+        if (!isDiffApplicable(editor.model, diff)) {
+          await room.completeProposal(messageId, "stale").catch(() => undefined)
+          return
+        }
+        try {
+          editor.model = applyDiff(editor.model, diff)
+        } catch {
+          await room.completeProposal(messageId, "failed").catch(() => undefined)
+          return
+        }
+        // A completion failure must not overwrite a successfully applied local change as failed.
+        await room.completeProposal(messageId, "applied")
+      } finally {
+        setProposalBusyId(null)
+      }
+    },
+    [editor, proposalBusyId, room]
+  )
+
+  const rejectProposal = useCallback(
+    async (messageId: string) => {
+      if (proposalBusyId) return
+      setProposalBusyId(messageId)
+      try {
+        await room.claimProposal(messageId)
+        await room.completeProposal(messageId, "rejected")
+      } finally {
+        setProposalBusyId(null)
+      }
+    },
+    [proposalBusyId, room]
+  )
+
+  useEffect(() => {
+    if (room.policy?.applyMode !== "auto" || !user?.id || proposalBusyId || editor?.isReadonly()) {
+      return
+    }
+    const proposal = room.messages.find(
+      (message) =>
+        message.proposal?.status === "pending" &&
+        message.replyTo &&
+        room.messages.find((candidate) => candidate.id === message.replyTo)?.author.id ===
+          user.id &&
+        !autoAttemptedRef.current.has(message.id)
+    )
+    if (!proposal) return
+    autoAttemptedRef.current.add(proposal.id)
+    void applyProposal(proposal.id)
+  }, [applyProposal, editor, proposalBusyId, room.messages, room.policy?.applyMode, user?.id])
+
   return (
     <RoomChatPanel
       messages={room.messages}
@@ -199,6 +301,9 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
       hasProfileSyncError={profileSyncError}
       isSending={room.isSending || room.isSendingVoice || !profileReady}
       onSend={(text, intent) => void sendQuestion(text, intent).catch(() => undefined)}
+      onApplyProposal={(messageId) => void applyProposal(messageId).catch(() => undefined)}
+      onRejectProposal={(messageId) => void rejectProposal(messageId).catch(() => undefined)}
+      proposalBusyId={proposalBusyId}
       onChangeRequestsChange={setChangeRequestsAllowed}
       hasVoiceError={voiceError}
       voiceControls={{

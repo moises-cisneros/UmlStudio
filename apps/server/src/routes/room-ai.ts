@@ -69,7 +69,9 @@ const PinDecisionBody = z.object({
 
 const UpdatePolicyBody = RoomAiPolicySchema
 const ProposalParams = DiagramIdParams.extend({ messageId: z.string().uuid() })
-const ProposalResultBody = z.object({ status: z.enum(["applied", "failed", "rejected"]) }).strict()
+const ProposalResultBody = z
+  .object({ status: z.enum(["applied", "failed", "rejected", "stale"]) })
+  .strict()
 
 export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<AppEnv> {
   const router = new Hono<AppEnv>()
@@ -138,7 +140,7 @@ export function mountRoomAiRoutes({ auth, roomAi, voiceQuestion }: Deps): Hono<A
       const user = c.get("user")
       if (!user) throw Errors.unauthorized()
       try {
-        await roomAi.completeProposal(params.diagramId, params.messageId, user.id, body.status)
+        await roomAi.completeProposal(params.diagramId, params.messageId, user, body.status)
         return c.body(null, 204)
       } catch (err) {
         if (err instanceof RoomNotFoundError || err instanceof RoomAiProposalNotFoundError) {

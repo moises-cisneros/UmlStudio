@@ -44,6 +44,11 @@ function isProposalApplicable(model: UMLModel, message: RoomChatMessage): boolea
   if (!proposal || !validateDiff(proposal.diff).valid) return false
   const elements = model.nodes ?? []
   const relationships = model.edges ?? []
+  const addedElementTargets = new Set(
+    (proposal.diff.add?.elements ?? []).flatMap((element) =>
+      [element.id, element.name].filter((value): value is string => typeof value === "string")
+    )
+  )
 
   if (
     proposal.diff.modify?.elements?.some((element) => !findTargetNode(elements, element.id)) ||
@@ -64,6 +69,18 @@ function isProposalApplicable(model: UMLModel, message: RoomChatMessage): boolea
     ) ||
     proposal.diff.remove?.relationshipIds?.some(
       (id) => !findTargetEdge(relationships, elements, id)
+    )
+  ) {
+    return false
+  }
+  if (
+    proposal.diff.add?.relationships?.some((relationship) =>
+      [relationship.source, relationship.target].some(
+        (endpoint) =>
+          Boolean(endpoint) &&
+          !findTargetNode(elements, endpoint) &&
+          !addedElementTargets.has(endpoint)
+      )
     )
   ) {
     return false
@@ -197,8 +214,8 @@ export interface RoomAiService {
   completeProposal(
     diagramId: string,
     messageId: string,
-    userId: string,
-    status: "applied" | "failed" | "rejected"
+    user: AuthProfile,
+    status: "applied" | "failed" | "rejected" | "stale"
   ): Promise<void>
 }
 
@@ -542,9 +559,9 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
       return claimed.message
     },
 
-    async completeProposal(diagramId, messageId, userId, status) {
+    async completeProposal(diagramId, messageId, user, status) {
       await assertRoomExists(diagramId)
-      const completed = await proposals.complete(diagramId, messageId, userId, status)
+      const completed = await proposals.complete(diagramId, messageId, user, status)
       if (completed.kind === "missing") throw new RoomAiProposalNotFoundError()
       if (completed.kind === "conflict") throw new RoomAiProposalClaimConflictError()
       publish?.(diagramId, { type: "message.updated", message: completed.message })

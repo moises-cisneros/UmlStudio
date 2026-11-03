@@ -1,6 +1,6 @@
 import { useState, type FC, type FormEvent } from "react"
 import { MicIcon, SendIcon, SparklesIcon, SquareIcon, XCircleIcon } from "lucide-react"
-import type { RoomAiIntent, RoomChatMessage } from "@umlstudio/core"
+import type { ModelDiff, RoomAiIntent, RoomChatMessage } from "@umlstudio/core"
 import { useTranslation } from "@/i18n"
 import type { RoomAiStatusState } from "@/queries/roomAiCache"
 import { formatElapsed, type VoiceRecorderStatus } from "@/hooks/useVoiceRecorder"
@@ -11,6 +11,51 @@ function resolveDraftSubmission(
   allowChanges: boolean
 ): { text: string; intent: RoomAiIntent } {
   return { text: rawDraft.trim(), intent: allowChanges ? selectedIntent : "ask" }
+}
+
+type ProposalItem = { type: "add" | "mod" | "del"; text: string }
+
+function buildProposalItems(
+  diff: ModelDiff,
+  labels: {
+    proposalAddElement: (name: string, type: string) => string
+    proposalAddRelationship: (type: string, source: string, target: string) => string
+    proposalModifyElement: (id: string) => string
+    proposalModifyRelationship: (id: string) => string
+    proposalRemoveElement: (id: string) => string
+    proposalRemoveRelationship: (id: string) => string
+  }
+): ProposalItem[] {
+  return [
+    ...(diff.add?.elements ?? []).map((element) => ({
+      type: "add" as const,
+      text: labels.proposalAddElement(element.name, element.stereotype ?? element.type ?? "Class"),
+    })),
+    ...(diff.add?.relationships ?? []).map((relationship) => ({
+      type: "add" as const,
+      text: labels.proposalAddRelationship(
+        relationship.type,
+        relationship.source,
+        relationship.target
+      ),
+    })),
+    ...(diff.modify?.elements ?? []).map((element) => ({
+      type: "mod" as const,
+      text: labels.proposalModifyElement(element.id),
+    })),
+    ...(diff.modify?.relationships ?? []).map((relationship) => ({
+      type: "mod" as const,
+      text: labels.proposalModifyRelationship(relationship.id ?? "relationship"),
+    })),
+    ...(diff.remove?.elementIds ?? []).map((id) => ({
+      type: "del" as const,
+      text: labels.proposalRemoveElement(id),
+    })),
+    ...(diff.remove?.relationshipIds ?? []).map((id) => ({
+      type: "del" as const,
+      text: labels.proposalRemoveRelationship(id),
+    })),
+  ]
 }
 
 export interface RoomVoiceControls {
@@ -40,6 +85,9 @@ export interface RoomChatPanelProps {
   hasVoiceError?: boolean
   isSending?: boolean
   onSend: (text: string, intent: RoomAiIntent) => void
+  onApplyProposal?: (messageId: string) => void
+  onRejectProposal?: (messageId: string) => void
+  proposalBusyId?: string | null
   onChangeRequestsChange?: (allowChanges: boolean) => void
   voiceControls?: RoomVoiceControls
 }
@@ -58,6 +106,9 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   hasVoiceError = false,
   isSending = false,
   onSend,
+  onApplyProposal,
+  onRejectProposal,
+  proposalBusyId = null,
   onChangeRequestsChange,
   voiceControls,
 }) => {
@@ -173,9 +224,76 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
                     {t.roomAi.replyingTo} {question.author.name}: {question.text}
                   </blockquote>
                 )}
-                <p className="break-words whitespace-pre-wrap text-xs leading-relaxed text-foreground">
-                  {message.text}
-                </p>
+                {!message.proposal && (
+                  <p className="break-words whitespace-pre-wrap text-xs leading-relaxed text-foreground">
+                    {message.text}
+                  </p>
+                )}
+                {message.proposal && (
+                  <div className="agent-diff-card mt-2 rounded-lg border border-border-subtle bg-surface-raised p-2 shadow-md">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-bold tracking-tight text-foreground">
+                        {t.roomAi.changeProposal}
+                      </p>
+                      <span className="rounded border border-(--umlstudio-primary)/40 bg-(--umlstudio-primary)/15 px-1 py-px font-mono text-[9px] font-semibold text-(--umlstudio-primary)">
+                        UML 2.5
+                      </span>
+                    </div>
+                    <div className="mt-1.5 space-y-1 font-mono text-[10px]">
+                      {buildProposalItems(message.proposal.diff, t.roomAi).map((item) => (
+                        <div
+                          key={`${item.type}-${item.text}`}
+                          className={`rounded px-1.5 py-0.5 font-medium leading-tight ${
+                            item.type === "add"
+                              ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : item.type === "del"
+                                ? "border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
+                                : "border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                          }`}
+                        >
+                          {item.text}
+                        </div>
+                      ))}
+                    </div>
+                    {message.proposal.status === "pending" && (
+                      <div className="mt-2 flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onApplyProposal?.(message.id)}
+                          disabled={!onApplyProposal || proposalBusyId !== null}
+                          className="rounded bg-(--umlstudio-primary) px-2 py-1 text-[10px] font-medium text-white disabled:opacity-50"
+                        >
+                          {proposalBusyId === message.id
+                            ? t.roomAi.applyingProposal
+                            : t.roomAi.applyProposal}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onRejectProposal?.(message.id)}
+                          disabled={!onRejectProposal || proposalBusyId !== null}
+                          className="rounded border border-border-subtle px-2 py-1 text-[10px] text-muted-foreground disabled:opacity-50"
+                        >
+                          {t.roomAi.rejectProposal}
+                        </button>
+                      </div>
+                    )}
+                    {message.proposal.status !== "pending" && (
+                      <p className="mt-1.5 text-[10px] text-muted-foreground">
+                        {message.proposal.status === "applied" && message.proposal.completedBy
+                          ? t.roomAi.proposalAppliedBy(message.proposal.completedBy.name)
+                          : message.proposal.status === "applied"
+                            ? t.roomAi.proposalApplied
+                            : message.proposal.status === "rejected"
+                              ? t.roomAi.proposalRejected
+                              : message.proposal.status === "failed"
+                                ? t.roomAi.proposalFailed
+                                : message.proposal.status === "stale"
+                                  ? t.roomAi.proposalStale
+                                  : t.roomAi.proposalClaimed}
+                      </p>
+                    )}
+                  </div>
+                )}
                 {(message.status === "queued" || message.status === "failed") && (
                   <p
                     className={`mt-1 text-[10px] ${message.status === "failed" ? "text-destructive" : "text-muted-foreground"}`}

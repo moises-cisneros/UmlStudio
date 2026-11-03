@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   sendSharedMessage: vi.fn(),
   updatePolicy: vi.fn(),
   sendVoiceMessage: vi.fn(),
+  claimProposal: vi.fn(),
+  completeProposal: vi.fn(),
   flushSharedReplica: vi.fn(),
   useVoiceRecorder: vi.fn(),
   cancelRecording: vi.fn(),
@@ -38,6 +40,17 @@ const sharedMessage: RoomChatMessage = {
   createdAt: "2026-10-28T00:00:00.000Z",
 }
 
+const pendingProposal: RoomChatMessage = {
+  ...sharedMessage,
+  id: "proposal-1",
+  author: { id: "room-ai", name: "Room AI", kind: "ai" },
+  proposal: {
+    diff: { add: { elements: [{ name: "Customer", type: "class" }] } },
+    status: "pending",
+    baseRev: 1,
+  },
+}
+
 const initialProfile = { detailLevel: "balanced", exampleStyle: "none" } as const
 const currentRevision = "11111111-1111-4111-8111-111111111111"
 const updatedProfile = { detailLevel: "concise", exampleStyle: "analogy" } as const
@@ -49,12 +62,17 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     mocks.useAuthStore.mockImplementation((selector) =>
       selector({ user: { id: "user-1", name: "User" } })
     )
-    mocks.useEditorContext.mockReturnValue({ flushSharedReplica: mocks.flushSharedReplica })
+    mocks.useEditorContext.mockReturnValue({
+      editor: { isReadonly: () => false },
+      flushSharedReplica: mocks.flushSharedReplica,
+    })
     mocks.flushSharedReplica.mockResolvedValue({ generation: "a".repeat(64), revision: 3 })
     mocks.readPersonalRoomProfile.mockResolvedValue(null)
     mocks.writePersonalRoomProfile.mockResolvedValue(undefined)
     mocks.getPersonalProfileRevision.mockResolvedValue(currentRevision)
     mocks.sendVoiceMessage.mockResolvedValue({ messageId: "voice-1", queuePosition: 1 })
+    mocks.claimProposal.mockResolvedValue(pendingProposal.proposal!.diff)
+    mocks.completeProposal.mockResolvedValue(undefined)
     mocks.sendSharedMessage.mockResolvedValue({
       messageId: "message-1",
       queuePosition: 1,
@@ -84,6 +102,8 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
       aiStatus: { status: "idle", queueLength: 0 },
       sendMessage: mocks.sendSharedMessage,
       sendVoiceMessage: mocks.sendVoiceMessage,
+      claimProposal: mocks.claimProposal,
+      completeProposal: mocks.completeProposal,
       getPersonalProfileRevision: mocks.getPersonalProfileRevision,
       isSendingVoice: false,
       sendVoiceError: null,
@@ -103,6 +123,20 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     expect(screen.queryByLabelText(/personal memory/i)).toBeNull()
     expect(screen.queryByRole("button", { name: /memory|profile|pin/i })).toBeNull()
     expect(screen.getByText("Shared room message")).toBeTruthy()
+  })
+
+  it("does not claim a proposal while the editor is read-only", async () => {
+    mocks.useEditorContext.mockReturnValue({
+      editor: { isReadonly: () => true },
+      flushSharedReplica: mocks.flushSharedReplica,
+    })
+    mocks.useRoomAi.mockReturnValue({ ...mocks.useRoomAi(), messages: [pendingProposal] })
+    const user = userEvent.setup()
+    render(<RoomChatPanelContainer diagramId="diagram-1" />)
+
+    await user.click(screen.getByRole("button", { name: "Apply" }))
+
+    expect(mocks.claimProposal).not.toHaveBeenCalled()
   })
 
   it("explains when the Room AI queue is full and the message was rejected", async () => {

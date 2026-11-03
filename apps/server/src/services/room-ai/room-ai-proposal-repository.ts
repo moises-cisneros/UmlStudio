@@ -56,7 +56,7 @@ for _, raw in ipairs(items) do
     local status = redis.call('HGET', KEYS[2], 'status') or message.proposal.status
     local claimedBy = redis.call('HGET', KEYS[2], 'claimedBy')
     if status ~= 'claimed' or claimedBy ~= ARGV[2] or redis.call('GET', KEYS[3]) ~= ARGV[2] then return {1} end
-    redis.call('HSET', KEYS[2], 'status', ARGV[3])
+    redis.call('HSET', KEYS[2], 'status', ARGV[3], 'completedBy', ARGV[2], 'completedByName', ARGV[5])
     redis.call('HDEL', KEYS[2], 'claimedBy')
     redis.call('DEL', KEYS[3])
     expireStateWithChat(ARGV[4])
@@ -108,7 +108,8 @@ function decodeResult(result: unknown): { code: number; message?: RoomChatMessag
 function withState(
   message: RoomChatMessage,
   status: NonNullable<RoomChatMessage["proposal"]>["status"],
-  claimedBy?: string
+  claimedBy?: string,
+  completedBy?: { id: string; name: string }
 ): RoomChatMessage {
   if (!message.proposal)
     throw new Error("Room AI proposal transition returned a message without a proposal")
@@ -118,6 +119,7 @@ function withState(
       ...message.proposal,
       status,
       ...(claimedBy ? { claimedBy } : {}),
+      ...(completedBy ? { completedBy } : {}),
     },
   }
 }
@@ -133,7 +135,11 @@ export function createRoomAiProposalRepository(redis: Redis, ttlSeconds: number)
           const status = state.status as
             | NonNullable<RoomChatMessage["proposal"]>["status"]
             | undefined
-          return status ? withState(message, status, state.claimedBy) : message
+          const completedBy =
+            state.completedBy && state.completedByName
+              ? { id: state.completedBy, name: state.completedByName }
+              : undefined
+          return status ? withState(message, status, state.claimedBy, completedBy) : message
         })
       )
     },
@@ -161,8 +167,8 @@ export function createRoomAiProposalRepository(redis: Redis, ttlSeconds: number)
     async complete(
       diagramId: string,
       messageId: string,
-      userId: string,
-      status: "applied" | "failed" | "rejected"
+      actor: { id: string; name: string },
+      status: "applied" | "failed" | "rejected" | "stale"
     ): Promise<ProposalResult> {
       const result = decodeResult(
         await redis.eval(COMPLETE_PROPOSAL, {
@@ -171,12 +177,12 @@ export function createRoomAiProposalRepository(redis: Redis, ttlSeconds: number)
             k.aiProposalState(diagramId, messageId),
             k.aiProposalClaim(diagramId, messageId),
           ],
-          arguments: [messageId, userId, status, String(ttlSeconds)],
+          arguments: [messageId, actor.id, status, String(ttlSeconds), actor.name],
         })
       )
       if (result.code === 0) return { kind: "missing" }
       if (result.code === 1) return { kind: "conflict" }
-      return { kind: "updated", message: withState(result.message!, status) }
+      return { kind: "updated", message: withState(result.message!, status, undefined, actor) }
     },
 
     async markStale(diagramId: string, messageId: string): Promise<ProposalResult> {
