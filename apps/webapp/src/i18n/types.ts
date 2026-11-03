@@ -129,6 +129,22 @@ export interface TranslationDictionary {
     recording: string
     voiceUnavailable: string
     voiceError: string
+    changeProposal: string
+    applyProposal: string
+    applyingProposal: string
+    rejectProposal: string
+    proposalAppliedBy: (name: string) => string
+    proposalApplied: string
+    proposalRejected: string
+    proposalFailed: string
+    proposalStale: string
+    proposalClaimed: string
+    proposalAddElement: (name: string, type: string) => string
+    proposalAddRelationship: (type: string, source: string, target: string) => string
+    proposalModifyElement: (id: string) => string
+    proposalModifyRelationship: (id: string) => string
+    proposalRemoveElement: (id: string) => string
+    proposalRemoveRelationship: (id: string) => string
   }
   collaborators: {
     activeUsers: string

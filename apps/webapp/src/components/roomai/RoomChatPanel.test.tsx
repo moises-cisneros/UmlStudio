@@ -24,6 +24,20 @@ const aiAnswer: RoomChatMessage = {
   createdAt: "2026-10-27T10:00:05.000Z",
 }
 
+const pendingProposal: RoomChatMessage = {
+  ...aiAnswer,
+  id: "proposal-1",
+  proposal: {
+    diff: {
+      add: { elements: [{ name: "Customer", type: "class" }] },
+      modify: { elements: [{ id: "Order", changes: { name: "Order" } }] },
+      remove: { elementIds: ["LegacyOrder"] },
+    },
+    status: "pending",
+    baseRev: 1,
+  },
+}
+
 describe("RoomChatPanel", () => {
   it("shows the author of each message", () => {
     render(
@@ -61,6 +75,50 @@ describe("RoomChatPanel", () => {
     const answer = screen.getAllByTestId("room-ai-message")[1]
     expect(answer.getAttribute("data-author-kind")).toBe("ai")
     expect(within(answer).getByText(/Replying to Juan: What patterns are used here\?/)).toBeTruthy()
+  })
+
+  it("shows a pending change proposal and delegates Apply or Reject", async () => {
+    const onApplyProposal = vi.fn()
+    const onRejectProposal = vi.fn()
+    render(
+      <RoomChatPanel
+        messages={[juanQuestion, pendingProposal]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        onSend={vi.fn()}
+        onApplyProposal={onApplyProposal}
+        onRejectProposal={onRejectProposal}
+      />
+    )
+    expect(screen.getByText("Change proposal")).toBeTruthy()
+    expect(screen.queryByText("1 added · 1 modified · 1 removed")).toBeNull()
+    expect(screen.queryByText("Strategy and Factory.")).toBeNull()
+    expect(screen.getByText("+ class Customer")).toBeTruthy()
+    expect(screen.getByText("~ Modify element Order")).toBeTruthy()
+    expect(screen.getByText("- Remove element LegacyOrder")).toBeTruthy()
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }))
+    await userEvent.click(screen.getByRole("button", { name: "Reject" }))
+    expect(onApplyProposal).toHaveBeenCalledWith("proposal-1")
+    expect(onRejectProposal).toHaveBeenCalledWith("proposal-1")
+  })
+
+  it("renders a stale proposal as terminal without actions", () => {
+    render(
+      <RoomChatPanel
+        messages={[
+          juanQuestion,
+          { ...pendingProposal, proposal: { ...pendingProposal.proposal!, status: "stale" } },
+        ]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        onSend={vi.fn()}
+        onApplyProposal={vi.fn()}
+        onRejectProposal={vi.fn()}
+      />
+    )
+    expect(
+      screen.getByText("Could not apply: a required diagram item no longer exists.")
+    ).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Apply" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull()
   })
 
   it("shows who the AI is thinking for and the queue length", () => {

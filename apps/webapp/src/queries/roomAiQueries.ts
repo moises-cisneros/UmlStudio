@@ -79,6 +79,22 @@ export function useRoomAi(
     onSuccess: () => queryClient.invalidateQueries({ queryKey: roomAiKeys.messages(diagramId) }),
   })
 
+  const claimProposal = useMutation({
+    mutationFn: (messageId: string) => DiagramApiClient.claimRoomAiProposal(diagramId, messageId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: roomAiKeys.messages(diagramId) }),
+  })
+
+  const completeProposal = useMutation({
+    mutationFn: ({
+      messageId,
+      status,
+    }: {
+      messageId: string
+      status: "applied" | "failed" | "rejected" | "stale"
+    }) => DiagramApiClient.completeRoomAiProposal(diagramId, messageId, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: roomAiKeys.messages(diagramId) }),
+  })
+
   const getPersonalProfileRevision = useCallback(
     () => DiagramApiClient.fetchRoomAiPersonalProfileRevision(diagramId),
     [diagramId]
@@ -94,6 +110,9 @@ export function useRoomAi(
     isUpdatingPolicy: updatePolicy.isPending,
     sendMessage: send.mutateAsync,
     sendVoiceMessage: sendVoice.mutateAsync,
+    claimProposal: claimProposal.mutateAsync,
+    completeProposal: (messageId: string, status: "applied" | "failed" | "rejected" | "stale") =>
+      completeProposal.mutateAsync({ messageId, status }),
     getPersonalProfileRevision,
     isSendingVoice: sendVoice.isPending,
     sendVoiceError: sendVoice.error,

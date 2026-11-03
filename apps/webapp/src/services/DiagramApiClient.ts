@@ -1,4 +1,10 @@
-import type { RoomAiIntent, RoomAiPolicy, RoomChatMessage, UMLModel } from "@umlstudio/core"
+import type {
+  ModelDiff,
+  RoomAiIntent,
+  RoomAiPolicy,
+  RoomChatMessage,
+  UMLModel,
+} from "@umlstudio/core"
 import { serverURL } from "@/constants"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { resolveShareOrigin } from "@/utils/sharedDiagramLinks"
@@ -132,6 +138,25 @@ export const DiagramApiClient = {
       { signal: opts.signal }
     )
     return { messages: data, hasMore: res.headers.get("X-Has-More") === "true" }
+  },
+
+  async claimRoomAiProposal(diagramId: string, messageId: string): Promise<ModelDiff> {
+    const { data } = await request<{ diff: ModelDiff }>(
+      `/api/rooms/${diagramId}/ai/proposals/${messageId}/claim`,
+      { method: "POST" }
+    )
+    return data.diff
+  },
+
+  async completeRoomAiProposal(
+    diagramId: string,
+    messageId: string,
+    status: "applied" | "failed" | "rejected" | "stale"
+  ): Promise<void> {
+    await request<void>(`/api/rooms/${diagramId}/ai/proposals/${messageId}/result`, {
+      method: "POST",
+      body: { status },
+    })
   },
 
   async postRoomAiMessage(

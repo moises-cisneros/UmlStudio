@@ -134,6 +134,23 @@ describe("INT-CU16: Room AI proposal claims", () => {
     )
   })
 
+  it("marks a relationship addition stale when a required endpoint is no longer present", async () => {
+    const alice = await register("stale-endpoint@example.com", "Alice")
+    const messageId = "99999999-9999-4999-8999-999999999999"
+    await seedProposal(messageId, {
+      diff: {
+        add: {
+          relationships: [{ source: "Customer", target: "Order", type: "association" }],
+        },
+      },
+    })
+
+    const response = await claim(alice.token, messageId)
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toMatchObject({ error: "ROOM_AI_PROPOSAL_STALE" })
+  })
+
   it("keeps a valid proposal claimable after unrelated diagram edits", async () => {
     const alice = await register("unrelated-edit@example.com", "Alice")
     const messageId = "44444444-4444-4444-8444-444444444444"
@@ -197,6 +214,8 @@ describe("INT-CU16: Room AI proposal claims", () => {
     expect(JSON.parse(raw[0]!).proposal.diff).toEqual(diff)
     const proposalStateKey = k.aiProposalState(DIAGRAM_ID, messageId)
     expect(await redis.hGet(proposalStateKey, "status")).toBe("applied")
+    expect(await redis.hGet(proposalStateKey, "completedBy")).toBe(alice.id)
+    expect(await redis.hGet(proposalStateKey, "completedByName")).toBe("Alice")
     expect(await redis.ttl(proposalStateKey)).toBeGreaterThan(3000)
 
     await redis.expire(proposalStateKey, 1)
@@ -213,7 +232,29 @@ describe("INT-CU16: Room AI proposal claims", () => {
     const history = await app.request(`/api/rooms/${DIAGRAM_ID}/ai/messages`, {
       headers: { Authorization: `Bearer ${alice.token}` },
     })
-    expect((await history.json())[0].proposal.status).toBe("applied")
+    expect((await history.json())[0].proposal).toMatchObject({
+      status: "applied",
+      completedBy: { id: alice.id, name: "Alice" },
+    })
     expect(events.filter((entry) => entry.event.type === "message.updated")).toHaveLength(2)
+  })
+
+  it("allows the claimant to report that a proposal became stale after its claim", async () => {
+    const alice = await register("late-stale@example.com", "Alice")
+    const messageId = "88888888-8888-4888-8888-888888888888"
+    await seedProposal(messageId)
+    expect((await claim(alice.token, messageId)).status).toBe(200)
+
+    const response = await app.request(
+      `/api/rooms/${DIAGRAM_ID}/ai/proposals/${messageId}/result`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${alice.token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "stale" }),
+      }
+    )
+
+    expect(response.status).toBe(204)
+    expect(await redis.hGet(k.aiProposalState(DIAGRAM_ID, messageId), "status")).toBe("stale")
   })
 })

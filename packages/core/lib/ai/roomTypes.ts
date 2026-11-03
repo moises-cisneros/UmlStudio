@@ -13,6 +13,7 @@ export type RoomChatMessage = {
     diff: ModelDiff
     status: "pending" | "claimed" | "applied" | "rejected" | "failed" | "stale"
     claimedBy?: string
+    completedBy?: { id: string; name: string }
     baseRev: number
     /** Replica lifetime that produced this proposal; together with baseRev detects stale work. */
     baseGeneration?: string
