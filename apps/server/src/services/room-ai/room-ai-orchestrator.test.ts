@@ -20,7 +20,8 @@ const requesterMessage = {
 
 function createHarness(
   respond: ReturnType<typeof vi.fn>,
-  getBoard: () => unknown | Promise<unknown> = () => ({ id: "room-1", nodes: [], edges: [] })
+  getBoard: () => unknown | Promise<unknown> = () => ({ id: "room-1", nodes: [], edges: [] }),
+  requester = requesterMessage
 ) {
   const values = new Map<string, string>()
   const multi = {
@@ -42,7 +43,7 @@ function createHarness(
         revision,
       })
     ),
-    lRange: vi.fn(async () => [JSON.stringify(requesterMessage)]),
+    lRange: vi.fn(async () => [JSON.stringify(requester)]),
     multi: vi.fn(() => multi),
   } as unknown as Redis
   const rawChat = chatRepositoryModule.createChatRepository(redis, 3600)
@@ -133,6 +134,41 @@ describe("Room AI public publication boundary", () => {
       expect.objectContaining({ type: "message.created" })
     )
     expect(callOrder).toEqual(["commitAnswer", "publish"])
+  })
+
+  it("persists a change response as a pending proposal with its replica base", async () => {
+    const proposal = { add: { elements: [], relationships: [] } }
+    const changeRequester = { ...requesterMessage, intent: "change" as const }
+    const respond = vi.fn(async () => ({
+      text: "I prepared the change.",
+      provider: "local",
+      diff: proposal,
+    }))
+    const harness = createHarness(respond, undefined, changeRequester)
+    await harness.profileRevisions.revokeRevision("room-1", "user-1")
+    const currentRevision = await harness.profileRevisions.getOrCreateRevision("room-1", "user-1")
+    harness.redis.eval = vi.fn(async () =>
+      JSON.stringify({ requesterId: "user-1", teachingProfile: profile, revision: currentRevision })
+    ) as never
+
+    await harness.orchestrator.infer("room-1", changeRequester.id, {
+      generation: "b".repeat(64),
+      revision: 7,
+    })
+
+    expect(harness.chat.commitAnswer).toHaveBeenCalledWith(
+      "room-1",
+      changeRequester,
+      expect.objectContaining({
+        intent: "change",
+        proposal: {
+          diff: proposal,
+          status: "pending",
+          baseGeneration: "b".repeat(64),
+          baseRev: 7,
+        },
+      })
+    )
   })
 
   it("does not publish an assistant answer event or return success when commitAnswer returns false", async () => {

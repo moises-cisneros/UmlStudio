@@ -89,6 +89,7 @@ async function main() {
     },
     getSharedBoardReplicaAtLeast: (diagramId: string, generation: string, revision: number) =>
       relay?.getSharedBoardReplicaAtLeast(diagramId, generation, revision),
+    getSharedBoardReplica: (diagramId: string) => relay?.getSharedBoardReplica(diagramId),
   }
 
   const responder = createRoomAiResponder({
@@ -176,6 +177,7 @@ async function main() {
     }),
     memory: roomMemory,
     getSharedBoardReplicaAtLeast: relayPublish.getSharedBoardReplicaAtLeast,
+    getSharedBoardReplica: relayPublish.getSharedBoardReplica,
     publish: relayPublish.publishRoomAi,
     onQueueFull: (diagramId) => {
       void dispatcher

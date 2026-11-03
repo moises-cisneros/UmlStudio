@@ -66,7 +66,22 @@ end
 return 0
 `
 
+const REFRESH_PROPOSAL_STATE_TTLS = `
+local function refreshProposalStateTtls(chatKey, ttlMs)
+  local roomPrefix = string.sub(chatKey, 1, string.len(chatKey) - string.len(':ai:chat'))
+  local items = redis.call('LRANGE', chatKey, 0, -1)
+  for _, raw in ipairs(items) do
+    local ok, message = pcall(cjson.decode, raw)
+    if ok and type(message) == 'table' and type(message.proposal) == 'table' and
+      type(message.id) == 'string' and message.id:match('^[%w%-]+$') then
+      redis.call('PEXPIRE', roomPrefix .. ':ai:proposal:' .. message.id, ttlMs)
+    end
+  end
+end
+`
+
 const APPEND_CHAT = `
+${REFRESH_PROPOSAL_STATE_TTLS}
 if ARGV[4] and ARGV[4] ~= '' then
   if redis.call('GET', KEYS[2]) ~= ARGV[4] then return -1 end
   local leaseExpiry = tonumber(redis.call('GET', KEYS[3]))
@@ -75,10 +90,12 @@ end
 redis.call('RPUSH', KEYS[1], ARGV[1])
 redis.call('LTRIM', KEYS[1], -tonumber(ARGV[3]), -1)
 redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))
+refreshProposalStateTtls(KEYS[1], redis.call('PTTL', KEYS[1]))
 return 1
 `
 
 const COMMIT_ANSWER = `
+${REFRESH_PROPOSAL_STATE_TTLS}
 if not ARGV[7] or ARGV[7] == '' then return -1 end
 if redis.call('GET', KEYS[2]) ~= ARGV[7] then return -1 end
 local leaseExpiry = tonumber(redis.call('GET', KEYS[3]))
@@ -104,6 +121,7 @@ if requesterIndex == nil then
 end
 if requesterStatus == 'answered' and answerExists then
   redis.call('EXPIRE', KEYS[1], tonumber(ARGV[5]))
+  refreshProposalStateTtls(KEYS[1], redis.call('PTTL', KEYS[1]))
   return 1
 end
 if requesterStatus ~= 'queued' then
@@ -123,10 +141,12 @@ if not answerExists then
   end
 end
 redis.call('EXPIRE', KEYS[1], tonumber(ARGV[5]))
+refreshProposalStateTtls(KEYS[1], redis.call('PTTL', KEYS[1]))
 return 1
 `
 
 const ENQUEUE = `
+${REFRESH_PROPOSAL_STATE_TTLS}
 local count = redis.call('LLEN', KEYS[1])
 local legacy = {}
 if redis.call('EXISTS', KEYS[1]) == 0 and redis.call('EXISTS', KEYS[3]) == 0 then
@@ -149,6 +169,7 @@ if ARGV[4] ~= '' then redis.call('SET', KEYS[6], ARGV[4], 'EX', ARGV[5]) end
 redis.call('SET', KEYS[7], ARGV[6], 'EX', ARGV[5])
 redis.call('EXPIRE', KEYS[1], ARGV[3])
 redis.call('EXPIRE', KEYS[2], ARGV[3])
+refreshProposalStateTtls(KEYS[2], redis.call('PTTL', KEYS[2]))
 redis.call('SET', KEYS[3], '1', 'EX', ARGV[3])
 return {count + 1, redis.call('EXISTS', KEYS[5])}
 `
@@ -269,15 +290,6 @@ export function createChatRepository<T extends ChatRecord = ChatRecord>(
     async append(diagramId, message) {
       const key = k.aiChat(diagramId)
       const activeClaim = getActiveRoomAiDispatchClaimContext()
-      if (!activeClaim && typeof redis.multi === "function") {
-        await redis
-          .multi()
-          .rPush(key, JSON.stringify(message))
-          .lTrim(key, -CHAT_MAX_MESSAGES, -1)
-          .expire(key, ttlSeconds)
-          .exec()
-        return
-      }
       const res = await redis.eval(APPEND_CHAT, {
         keys: [key, k.aiActive(diagramId), k.aiActiveLease(diagramId)],
         arguments: [
