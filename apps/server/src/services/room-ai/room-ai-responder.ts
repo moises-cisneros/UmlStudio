@@ -35,6 +35,7 @@ export interface RoomAiInferenceRequest {
   board: UMLModel
   contextJson: string
   teachingProfile?: RoomAiTeachingProfile
+  onDelta?: (delta: string) => void | Promise<void>
 }
 
 export interface RoomAiServiceResponse {
@@ -48,6 +49,129 @@ interface RoomAiResponderOptions {
   internalToken: string
   timeoutMs?: number
   fetcher?: typeof fetch
+}
+
+async function readStreamingResponse(
+  response: Response,
+  onDelta: ((delta: string) => void | Promise<void>) | undefined
+): Promise<RoomAiServiceResponse> {
+  if (!response.body) {
+    throw new InferenceTerminationUnconfirmedError(
+      "Room AI returned an invalid streaming response",
+      {
+        stage: "downstream_response",
+        reasonCode: "invalid_response_shape",
+        upstreamStatus: response.status,
+      }
+    )
+  }
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let pending = ""
+  let provider: string | undefined
+  let completed = false
+  const chunks: string[] = []
+
+  const handleFrame = async (frame: string): Promise<void> => {
+    const lines = frame.split(/\r?\n/)
+    const event = lines
+      .find((line) => line.startsWith("event:"))
+      ?.slice(6)
+      .trim()
+    const data = lines
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim())
+      .join("\n")
+    if (!event || !data) return
+    let payload: unknown
+    try {
+      payload = JSON.parse(data)
+    } catch {
+      throw new InferenceTerminationUnconfirmedError(
+        "Room AI returned an invalid streaming response",
+        {
+          stage: "downstream_response",
+          reasonCode: "invalid_json",
+          upstreamStatus: response.status,
+        }
+      )
+    }
+    if (!payload || typeof payload !== "object") {
+      throw new InferenceTerminationUnconfirmedError(
+        "Room AI returned an invalid streaming response",
+        {
+          stage: "downstream_response",
+          reasonCode: "invalid_response_shape",
+          upstreamStatus: response.status,
+        }
+      )
+    }
+    if (event === "delta") {
+      const delta = (payload as { text?: unknown }).text
+      if (typeof delta !== "string" || !delta) {
+        throw new InferenceTerminationUnconfirmedError(
+          "Room AI returned an invalid streaming response",
+          {
+            stage: "downstream_response",
+            reasonCode: "invalid_response_shape",
+            upstreamStatus: response.status,
+          }
+        )
+      }
+      chunks.push(delta)
+      await onDelta?.(delta)
+      return
+    }
+    if (event === "done") {
+      const value = (payload as { provider?: unknown }).provider
+      if (typeof value !== "string" || !value.trim()) {
+        throw new InferenceTerminationUnconfirmedError(
+          "Room AI returned an invalid streaming response",
+          {
+            stage: "downstream_response",
+            reasonCode: "invalid_response_shape",
+            upstreamStatus: response.status,
+          }
+        )
+      }
+      provider = value
+      completed = true
+      return
+    }
+    if (event === "error") {
+      const code = (payload as { code?: unknown }).code
+      if (code === "prompt_too_large") throw new RoomAiPromptTooLargeError()
+      if (code === "tokenizer_unavailable") throw new RoomAiTokenizerUnavailableError()
+      throw new InferenceTerminationUnconfirmedError("Room AI streaming inference failed", {
+        stage: "downstream_response",
+        reasonCode: "invalid_response_shape",
+        upstreamStatus: response.status,
+      })
+    }
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    pending += decoder.decode(value, { stream: !done })
+    let boundary: number
+    while ((boundary = pending.search(/\r?\n\r?\n/)) !== -1) {
+      const frame = pending.slice(0, boundary)
+      pending = pending.slice(boundary).replace(/^\r?\n\r?\n/, "")
+      await handleFrame(frame)
+    }
+    if (done) break
+  }
+  if (!completed || !provider || !chunks.join("").trim()) {
+    throw new InferenceTerminationUnconfirmedError(
+      "Room AI returned an incomplete streaming response",
+      {
+        stage: "downstream_response",
+        reasonCode: "invalid_response_shape",
+        upstreamStatus: response.status,
+      }
+    )
+  }
+  return { text: chunks.join(""), provider }
 }
 
 function containsPrivateData(value: unknown): boolean {
@@ -119,7 +243,10 @@ export function createRoomAiResponder(options: RoomAiResponderOptions) {
 
     let endpoint: URL
     try {
-      endpoint = new URL("/internal/v1/room/respond", options.serviceUrl)
+      endpoint = new URL(
+        request.intent === "ask" ? "/internal/v1/room/respond/stream" : "/internal/v1/room/respond",
+        options.serviceUrl
+      )
     } catch {
       throw new ConfirmedInferenceNotStartedError("Room AI service is not configured", {
         stage: "responder_config",
@@ -162,6 +289,7 @@ export function createRoomAiResponder(options: RoomAiResponderOptions) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(request.intent === "ask" ? { Accept: "text/event-stream" } : {}),
           "X-Internal-Token": options.internalToken,
           "X-Room-AI-Message-ID": request.messageId,
         },
@@ -199,6 +327,8 @@ export function createRoomAiResponder(options: RoomAiResponderOptions) {
         upstreamStatus: response.status,
       })
     }
+
+    if (request.intent === "ask") return readStreamingResponse(response, request.onDelta)
 
     let result: unknown
     try {

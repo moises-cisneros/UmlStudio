@@ -78,18 +78,19 @@ class TestInternalTranscription(unittest.TestCase):
         self.assertEqual(response.json(), {"text": "public transcript", "confidence": 0.8})
         transcribe.assert_awaited_once()
 
-    def test_existing_internal_room_route_still_rejects_browser_origin(self):
+    def test_internal_room_routes_reject_browser_origins(self):
         with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret", create=True):
-            response = self.client.post(
-                "/internal/v1/room/respond",
-                headers={
-                    "X-Internal-Token": "test-secret",
-                    "Origin": "http://localhost:5173",
-                },
-                json={},
-            )
-
-        self.assertEqual(response.status_code, 403)
+            for path in ("/internal/v1/room/respond", "/internal/v1/room/respond/stream"):
+                with self.subTest(path=path):
+                    response = self.client.post(
+                        path,
+                        headers={
+                            "X-Internal-Token": "test-secret",
+                            "Origin": "http://localhost:5173",
+                        },
+                        json={},
+                    )
+                    self.assertEqual(response.status_code, 403)
 
 
 if __name__ == "__main__":

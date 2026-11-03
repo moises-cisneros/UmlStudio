@@ -83,6 +83,31 @@ function createHarness(
 }
 
 describe("Room AI public publication boundary", () => {
+  it("broadcasts explanation deltas before committing the final public answer", async () => {
+    const respond = vi.fn(async (input: { onDelta?: (delta: string) => Promise<void> }) => {
+      await input.onDelta?.("First ")
+      await input.onDelta?.("answer")
+      return { text: "First answer", provider: "local" }
+    })
+    const harness = createHarness(respond)
+    await harness.profileRevisions.revokeRevision("room-1", "user-1")
+    const currentRevision = await harness.profileRevisions.getOrCreateRevision("room-1", "user-1")
+    harness.redis.eval = vi.fn(async () =>
+      JSON.stringify({ requesterId: "user-1", teachingProfile: profile, revision: currentRevision })
+    ) as never
+
+    await harness.orchestrator.infer("room-1", requesterMessage.id, {
+      generation: "a".repeat(64),
+      revision: 1,
+    })
+
+    expect(harness.publish.mock.calls.map(([, event]) => event)).toEqual([
+      { type: "ai.delta", messageId: requesterMessage.id, delta: "First " },
+      { type: "ai.delta", messageId: requesterMessage.id, delta: "answer" },
+      expect.objectContaining({ type: "message.created" }),
+    ])
+  })
+
   it("passes only the allowlisted profile to shared inference, never the private note", async () => {
     const respond = vi.fn(async () => ({
       text: "Here is a step-by-step explanation.",

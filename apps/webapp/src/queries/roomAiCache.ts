@@ -25,6 +25,15 @@ function upsertMessage(
   return { ...page, messages }
 }
 
+function removeStreamedReply(
+  page: RoomAiMessagesPage | undefined,
+  replyTo: string
+): RoomAiMessagesPage | undefined {
+  if (!page) return page
+  const messages = page.messages.filter((message) => message.id !== `stream:${replyTo}`)
+  return messages.length === page.messages.length ? page : { ...page, messages }
+}
+
 export function applyRoomAiEventToCache(
   queryClient: QueryClient,
   diagramId: string,
@@ -34,11 +43,62 @@ export function applyRoomAiEventToCache(
     case "message.created":
     case "message.updated":
       queryClient.setQueryData<RoomAiMessagesPage>(roomAiKeys.messages(diagramId), (page) =>
-        upsertMessage(page, event.message)
+        upsertMessage(
+          event.message.author.kind === "ai" && event.message.replyTo
+            ? removeStreamedReply(page, event.message.replyTo)
+            : event.message.status === "failed"
+              ? removeStreamedReply(page, event.message.id)
+              : page,
+          event.message
+        )
       )
       if (event.type === "message.created" && event.message.author.kind === "ai") {
         void queryClient.invalidateQueries({ queryKey: roomAiKeys.memory(diagramId) })
       }
+      return
+    case "ai.delta":
+      queryClient.setQueryData<RoomAiMessagesPage>(roomAiKeys.messages(diagramId), (page) => {
+        if (!page) return page
+        if (
+          page.messages.some(
+            (message) => message.id === event.messageId && message.status === "failed"
+          )
+        ) {
+          return page
+        }
+        if (
+          page.messages.some(
+            (message) =>
+              message.id !== `stream:${event.messageId}` &&
+              message.author.kind === "ai" &&
+              message.replyTo === event.messageId
+          )
+        ) {
+          return page
+        }
+        const id = `stream:${event.messageId}`
+        const index = page.messages.findIndex((message) => message.id === id)
+        if (index === -1) {
+          return {
+            ...page,
+            messages: [
+              ...page.messages,
+              {
+                id,
+                diagramId,
+                author: { id: "room-ai", name: "Room AI", kind: "ai" },
+                intent: "ask",
+                text: event.delta,
+                replyTo: event.messageId,
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }
+        }
+        const messages = page.messages.slice()
+        messages[index] = { ...messages[index], text: `${messages[index].text}${event.delta}` }
+        return { ...page, messages }
+      })
       return
     case "memory.updated":
       void queryClient.invalidateQueries({ queryKey: roomAiKeys.memory(diagramId) })

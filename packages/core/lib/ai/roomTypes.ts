@@ -36,6 +36,7 @@ export type RoomAiStatus = "thinking" | "idle"
 export type RoomAiEvent =
   | { type: "message.created"; message: RoomChatMessage }
   | { type: "message.updated"; message: RoomChatMessage }
+  | { type: "ai.delta"; messageId: string; delta: string }
   | { type: "memory.updated" }
   | {
       type: "ai.status"

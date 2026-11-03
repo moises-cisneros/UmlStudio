@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from typing import Dict, Any, List, Optional
 from fastapi import Depends, FastAPI, Header, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 # Configure stdout logging so server logs are clearly visible in the console
 logging.basicConfig(
@@ -100,6 +100,7 @@ class InternalBrowserGuard:
 
     blocked_paths = {
         "/internal/v1/room/respond",
+        "/internal/v1/room/respond/stream",
         "/internal/v1/room/profile",
         "/internal/v1/transcribe",
     }
@@ -161,6 +162,35 @@ async def respond_to_room(
     except Exception as exc:
         logger.error("Room inference failed (%s)", type(exc).__name__)
         raise HTTPException(status_code=502, detail="AI provider failed to respond") from exc
+
+
+@app.post(
+    "/internal/v1/room/respond/stream",
+    dependencies=[Depends(require_internal_token)],
+)
+async def stream_room_response(
+    request: RoomRespondRequest,
+    x_room_ai_message_id: Optional[str] = Header(default=None, alias="X-Room-AI-Message-ID"),
+) -> StreamingResponse:
+    """Stream only Room AI explanation text; UML change proposals stay atomic JSON responses."""
+
+    async def events():
+        try:
+            async for event in RoomResponseService.stream_explanation(request, x_room_ai_message_id):
+                yield f"event: {event['type']}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except RoomPromptTooLongError:
+            yield 'event: error\ndata: {"code":"prompt_too_large"}\n\n'
+        except RoomTokenizerUnavailableError:
+            yield 'event: error\ndata: {"code":"tokenizer_unavailable"}\n\n'
+        except Exception as exc:
+            logger.error("Room streaming inference failed (%s)", type(exc).__name__)
+            yield 'event: error\ndata: {"code":"provider_inference_failed"}\n\n'
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post(

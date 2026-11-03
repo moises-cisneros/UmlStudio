@@ -11,10 +11,18 @@ const request = {
   contextJson: JSON.stringify({ summary: "shared" }),
 }
 
+function stream(events: Array<{ event: string; data: object }>): Response {
+  return new Response(
+    events.map(({ event, data }) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`).join(""),
+    { headers: { "Content-Type": "text/event-stream" } }
+  )
+}
+
 describe("Room AI internal responder", () => {
   it("calls only the configured internal service with explicit self-hosted routing", async () => {
     const fetcher = vi.fn(async (_input: string | URL, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({
+        Accept: "text/event-stream",
         "X-Internal-Token": "internal-secret",
         "X-Room-AI-Message-ID": "message-123",
       })
@@ -25,7 +33,11 @@ describe("Room AI internal responder", () => {
         requester: request.requester,
         context: { summary: "shared" },
       })
-      return Response.json({ text: "Answer", diff: null, provider: "self-hosted" })
+      return stream([
+        { event: "delta", data: { type: "delta", text: "An" } },
+        { event: "delta", data: { type: "delta", text: "swer" } },
+        { event: "done", data: { type: "done", provider: "self-hosted" } },
+      ])
     })
     const respond = createRoomAiResponder({
       serviceUrl: "http://127.0.0.1:8001/",
@@ -33,10 +45,16 @@ describe("Room AI internal responder", () => {
       fetcher,
     })
 
-    await expect(respond(request)).resolves.toEqual({ text: "Answer", provider: "self-hosted" })
+    const onDelta = vi.fn()
+    await expect(respond({ ...request, onDelta })).resolves.toEqual({
+      text: "Answer",
+      provider: "self-hosted",
+    })
+    expect(onDelta).toHaveBeenNthCalledWith(1, "An")
+    expect(onDelta).toHaveBeenNthCalledWith(2, "swer")
     expect(fetcher).toHaveBeenCalledOnce()
     expect(String(fetcher.mock.calls[0]?.[0])).toBe(
-      "http://127.0.0.1:8001/internal/v1/room/respond"
+      "http://127.0.0.1:8001/internal/v1/room/respond/stream"
     )
   })
 
@@ -51,7 +69,10 @@ describe("Room AI internal responder", () => {
       expect(body.context).not.toHaveProperty("personal_memory")
       expect(body.context).not.toHaveProperty("private_context")
       expect(body).not.toHaveProperty("personal_memory")
-      return Response.json({ text: "Room answer", diff: null, provider: "self-hosted" })
+      return stream([
+        { event: "delta", data: { type: "delta", text: "Room answer" } },
+        { event: "done", data: { type: "done", provider: "self-hosted" } },
+      ])
     })
     const respond = createRoomAiResponder({
       serviceUrl: "https://ai.internal",
@@ -84,6 +105,47 @@ describe("Room AI internal responder", () => {
       diff: proposal,
     })
   })
+
+  it("keeps UML change proposals on the non-streaming validated endpoint", async () => {
+    const fetcher = vi.fn(async () =>
+      Response.json({
+        text: "I prepared the change.",
+        diff: { add: { elements: [], relationships: [] } },
+        provider: "self-hosted",
+      })
+    )
+    const respond = createRoomAiResponder({
+      serviceUrl: "https://ai.internal",
+      internalToken: "secret",
+      fetcher,
+    })
+
+    await expect(respond({ ...request, intent: "change" })).resolves.toMatchObject({
+      text: "I prepared the change.",
+    })
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe("https://ai.internal/internal/v1/room/respond")
+    expect(fetcher.mock.calls[0]?.[1]?.headers).not.toHaveProperty("Accept")
+  })
+
+  it.each([
+    ["prompt_too_large", "RoomAiPromptTooLargeError", "prompt_too_large"],
+    ["tokenizer_unavailable", "RoomAiTokenizerUnavailableError", "tokenizer_unavailable"],
+  ])(
+    "treats stream error %s as a confirmed pre-inference rejection",
+    async (code, name, reasonCode) => {
+      const respond = createRoomAiResponder({
+        serviceUrl: "https://ai.internal",
+        internalToken: "secret",
+        fetcher: vi.fn(async () => stream([{ event: "error", data: { code } }])),
+      })
+
+      await expect(respond(request)).rejects.toMatchObject({
+        name,
+        stage: "responder_http_rejection",
+        reasonCode,
+      })
+    }
+  )
 
   it("rejects nested personal fields in shared context", async () => {
     const fetcher = vi.fn()

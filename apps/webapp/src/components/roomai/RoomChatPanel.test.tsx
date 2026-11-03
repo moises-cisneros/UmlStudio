@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { RoomChatMessage } from "@umlstudio/core"
@@ -51,6 +51,79 @@ const pendingProposal: RoomChatMessage = {
 }
 
 describe("RoomChatPanel", () => {
+  it("opens at the newest message and follows streamed text while at the bottom", () => {
+    const { rerender } = render(
+      <RoomChatPanel messages={[juanQuestion]} aiStatus={IDLE_ROOM_AI_STATUS} onSend={vi.fn()} />
+    )
+    const list = screen.getByTestId("room-ai-message-list") as HTMLOListElement
+    Object.defineProperties(list, {
+      clientHeight: { configurable: true, value: 100 },
+      scrollHeight: { configurable: true, value: 400 },
+    })
+
+    rerender(
+      <RoomChatPanel
+        messages={[juanQuestion, aiAnswer]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        onSend={vi.fn()}
+      />
+    )
+    expect(list.scrollTop).toBe(400)
+
+    Object.defineProperty(list, "scrollHeight", { configurable: true, value: 520 })
+    rerender(
+      <RoomChatPanel
+        messages={[juanQuestion, { ...aiAnswer, id: "stream:m1", text: "Strategy and " }]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        onSend={vi.fn()}
+      />
+    )
+    expect(list.scrollTop).toBe(520)
+
+    list.scrollTop = 0
+    fireEvent.scroll(list)
+    Object.defineProperty(list, "scrollHeight", { configurable: true, value: 640 })
+    rerender(
+      <RoomChatPanel
+        messages={[juanQuestion, { ...aiAnswer, id: "stream:m1", text: "Strategy and Factory" }]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        onSend={vi.fn()}
+      />
+    )
+    expect(list.scrollTop).toBe(0)
+  })
+
+  it("reveals streamed Room AI text progressively", () => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frames.push(callback)
+      return frames.length
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    try {
+      render(
+        <RoomChatPanel
+          messages={[{ ...aiAnswer, id: "stream:m1", text: "abcdef", replyTo: "m1" }]}
+          aiStatus={IDLE_ROOM_AI_STATUS}
+          onSend={vi.fn()}
+        />
+      )
+      const list = screen.getByTestId("room-ai-message-list") as HTMLOListElement
+      Object.defineProperties(list, {
+        clientHeight: { configurable: true, value: 100 },
+        scrollHeight: { configurable: true, value: 130 },
+      })
+      expect(screen.getByTestId("room-ai-stream-text").textContent).toBe("")
+
+      act(() => frames.shift()?.(0))
+      expect(screen.getByTestId("room-ai-stream-text").textContent).toBe("abc")
+      expect(list.scrollTop).toBe(130)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it("shows the author of each message", () => {
     render(
       <RoomChatPanel
