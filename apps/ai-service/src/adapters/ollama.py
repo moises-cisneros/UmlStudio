@@ -26,16 +26,32 @@ class OllamaAdapter(BaseAIAdapter):
         model_name: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
         api_key: Optional[str] = None,
+        token_issuer: Optional[Any] = None,
     ):
         self.endpoint_url = (endpoint_url or settings.OLLAMA_URL).rstrip("/")
         self.model_name = model_name or settings.OLLAMA_MODEL
+        self._custom_headers = dict(headers) if headers is not None else None
+        self.token_issuer = token_issuer
         if headers is not None:
             self.headers = dict(headers)
         else:
-            self.headers = settings.get_ollama_headers()
+            self.headers = settings.get_ollama_headers(
+                token_issuer=self.token_issuer, target_url=self.endpoint_url
+            )
         if api_key:
             auth_val = api_key if api_key.lower().startswith("bearer ") else f"Bearer {api_key}"
             self.headers["Authorization"] = auth_val
+
+    def _get_request_headers(self) -> Dict[str, str]:
+        if self._custom_headers is not None:
+            return dict(self.headers)
+        fresh_headers = settings.get_ollama_headers(
+            token_issuer=self.token_issuer, target_url=self.endpoint_url
+        )
+        for k, v in self.headers.items():
+            if k not in fresh_headers:
+                fresh_headers[k] = v
+        return fresh_headers
 
     @property
     def provider_name(self) -> str:
@@ -44,7 +60,9 @@ class OllamaAdapter(BaseAIAdapter):
     async def is_available(self) -> bool:
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
-                resp = await client.get(f"{self.endpoint_url}/models", headers=self.headers)
+                resp = await client.get(
+                    f"{self.endpoint_url}/models", headers=self._get_request_headers()
+                )
                 return resp.status_code == 200
         except Exception:
             return False
@@ -57,7 +75,7 @@ class OllamaAdapter(BaseAIAdapter):
             "temperature": 0.2,
         }
         async with httpx.AsyncClient(timeout=45.0) as client:
-            resp = await client.post(url, json=payload, headers=self.headers)
+            resp = await client.post(url, json=payload, headers=self._get_request_headers())
             if resp.status_code != 200:
                 raise RuntimeError(f"Ollama text completion failed ({resp.status_code})")
             content = resp.json()["choices"][0]["message"]["content"]
@@ -75,7 +93,9 @@ class OllamaAdapter(BaseAIAdapter):
             "stream": True,
         }
         async with httpx.AsyncClient(timeout=45.0) as client:
-            async with client.stream("POST", url, json=payload, headers=self.headers) as resp:
+            async with client.stream(
+                "POST", url, json=payload, headers=self._get_request_headers()
+            ) as resp:
                 if resp.status_code != 200:
                     raise RuntimeError(f"Ollama text completion failed ({resp.status_code})")
                 content_type = resp.headers.get("content-type", "")
@@ -98,7 +118,9 @@ class OllamaAdapter(BaseAIAdapter):
                         payload = json.loads(data)
                         delta = payload["choices"][0].get("delta", {}).get("content", "")
                     except (IndexError, KeyError, TypeError, json.JSONDecodeError) as exc:
-                        raise ValueError("Ollama returned an invalid streaming text completion") from exc
+                        raise ValueError(
+                            "Ollama returned an invalid streaming text completion"
+                        ) from exc
                     if not isinstance(delta, str):
                         raise ValueError("Ollama returned an invalid streaming text completion")
                     if delta:
@@ -129,7 +151,7 @@ class OllamaAdapter(BaseAIAdapter):
 
         logger.info(f"Ollama: enviando petición a '{url}' con modelo '{self.model_name}'...")
         async with httpx.AsyncClient(timeout=45.0) as client:
-            resp = await client.post(url, json=payload, headers=self.headers)
+            resp = await client.post(url, json=payload, headers=self._get_request_headers())
             if resp.status_code == 200:
                 data = resp.json()
                 content = data["choices"][0]["message"]["content"]

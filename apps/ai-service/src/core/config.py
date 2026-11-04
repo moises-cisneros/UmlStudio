@@ -6,7 +6,7 @@ Robustly discovers and loads .env files and manages provider settings.
 import os
 import logging
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger("umlstudio.ai_service.config")
 
@@ -56,7 +56,8 @@ class Settings:
 
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "").strip()
     OPENROUTER_MODEL: str = os.getenv(
-        "OPENROUTER_MODEL", "qwen/qwen-2.5-coder-32b-instruct,meta-llama/llama-3.1-8b-instruct:free,liquid/lfm-2.5-2.6b:free"
+        "OPENROUTER_MODEL",
+        "qwen/qwen-2.5-coder-32b-instruct,meta-llama/llama-3.1-8b-instruct:free,liquid/lfm-2.5-2.6b:free",
     ).strip()
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
@@ -67,11 +68,23 @@ class Settings:
     LMSTUDIO_MODEL: str = os.getenv("LMSTUDIO_MODEL", "qwen3-4b-toolcalling-codex").strip()
     LMSTUDIO_VISION_MODEL: str = os.getenv("LMSTUDIO_VISION_MODEL", "qwen3-vl-4b-instruct").strip()
 
-    # Ollama settings (:11434)
-    OLLAMA_URL: str = os.getenv("OLLAMA_URL", os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")).strip()
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", os.getenv("LOCAL_LLM_MODEL", "qwen2.5:7b-instruct")).strip()
+    # Ollama settings (:11434 / Cloud Run)
+    OLLAMA_URL: str = os.getenv(
+        "OLLAMA_URL", os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
+    ).strip()
+    OLLAMA_MODEL: str = os.getenv(
+        "OLLAMA_MODEL", os.getenv("LOCAL_LLM_MODEL", "qwen2.5:7b-instruct")
+    ).strip()
+    # Auth modes: 'none' | 'bearer' | 'gcp-id-token'
+    OLLAMA_AUTH: str = os.getenv("OLLAMA_AUTH", "").strip().lower()
     OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", os.getenv("OLLAMA_AUTH_TOKEN", "")).strip()
     OLLAMA_AUTH_HEADER: str = os.getenv("OLLAMA_AUTH_HEADER", "").strip()
+    # Google Cloud Run service account key JSON and audience
+    GCP_SA_KEY_JSON: str = os.getenv("GCP_SA_KEY_JSON", "").strip()
+    GCP_TARGET_AUDIENCE: str = os.getenv(
+        "GCP_TARGET_AUDIENCE", os.getenv("OLLAMA_GCP_AUDIENCE", "")
+    ).strip()
+    _gcp_token_issuer: Any = None
 
     # Room provider order when no specific provider is requested:
     # Comma-separated list of providers tried in sequence (e.g. "ollama,gemini").
@@ -91,7 +104,9 @@ class Settings:
     # Directory holding the pre-downloaded model (Docker: /opt/whisper-models). Empty = library default cache.
     WHISPER_MODEL_DIR: str = os.getenv("WHISPER_MODEL_DIR", "").strip()
     # Load the model in the background at startup so the first request is not slow.
-    WHISPER_PRELOAD: bool = os.getenv("WHISPER_PRELOAD", "false").strip().lower() in ("1", "true", "yes", "on")
+    WHISPER_PRELOAD: bool = (
+        os.getenv("WHISPER_PRELOAD", "false").strip().lower() in ("1", "true", "yes", "on")
+    )
 
     # Provider strategy:
     # - 'auto': complexity-based cloud order (complex prompt: Gemini -> OpenRouter -> Cloudflare;
@@ -104,7 +119,10 @@ class Settings:
     def get_cors_origins(self) -> List[str]:
         raw = getattr(self, "CORS_ORIGIN", None)
         if raw is None:
-            raw = os.getenv("CORS_ORIGIN", os.getenv("CORS_ORIGINS", os.getenv("WEBAPP_ORIGIN", "http://localhost:5173")))
+            raw = os.getenv(
+                "CORS_ORIGIN",
+                os.getenv("CORS_ORIGINS", os.getenv("WEBAPP_ORIGIN", "http://localhost:5173")),
+            )
         if not raw:
             return ["http://localhost:5173"]
         origins = [item.strip() for item in raw.split(",") if item.strip()]
@@ -119,7 +137,70 @@ class Settings:
         order = [item.strip().lower() for item in raw.split(",") if item.strip()]
         return order or ["ollama", "gemini"]
 
-    def get_ollama_headers(self) -> Dict[str, str]:
+    def get_ollama_auth_mode(self) -> str:
+        raw = getattr(self, "OLLAMA_AUTH", None)
+        if raw is None:
+            raw = os.getenv("OLLAMA_AUTH", "")
+        raw = (raw or "").strip().lower()
+        if raw in ("none", "bearer", "gcp-id-token"):
+            return raw
+        if raw:
+            raise ValueError(
+                f"Invalid OLLAMA_AUTH mode '{raw}'. Allowed modes are 'none', 'bearer', or 'gcp-id-token'."
+            )
+        # Backward compatibility when OLLAMA_AUTH is unset:
+        api_key = getattr(self, "OLLAMA_API_KEY", None)
+        if api_key is None:
+            api_key = os.getenv("OLLAMA_API_KEY", os.getenv("OLLAMA_AUTH_TOKEN", ""))
+        header_val = getattr(self, "OLLAMA_AUTH_HEADER", None)
+        if header_val is None:
+            header_val = os.getenv("OLLAMA_AUTH_HEADER", "")
+        if (api_key and api_key.strip()) or (header_val and header_val.strip()):
+            return "bearer"
+        return "none"
+
+    def get_gcp_target_audience(self, target_url: Optional[str] = None) -> str:
+        aud = getattr(self, "GCP_TARGET_AUDIENCE", None)
+        if aud is None:
+            aud = os.getenv("GCP_TARGET_AUDIENCE", os.getenv("OLLAMA_GCP_AUDIENCE", ""))
+        aud = (aud or "").strip()
+        if aud:
+            return aud
+        from .gcp_auth import extract_default_audience
+
+        url = target_url or getattr(self, "OLLAMA_URL", "") or os.getenv("OLLAMA_URL", "")
+        return extract_default_audience(url)
+
+    def get_gcp_id_token(
+        self, token_issuer: Optional[Any] = None, target_url: Optional[str] = None
+    ) -> str:
+        if token_issuer is not None:
+            return token_issuer() if callable(token_issuer) else token_issuer.get_token()
+
+        sa_key = getattr(self, "GCP_SA_KEY_JSON", None)
+        if sa_key is None:
+            sa_key = os.getenv("GCP_SA_KEY_JSON", "")
+        sa_key = (sa_key or "").strip()
+        if not sa_key:
+            raise ValueError("GCP_SA_KEY_JSON is required when OLLAMA_AUTH is 'gcp-id-token'")
+
+        audience = self.get_gcp_target_audience(target_url=target_url)
+        from .gcp_auth import GoogleIdTokenIssuer
+
+        if (
+            self._gcp_token_issuer is None
+            or getattr(self._gcp_token_issuer, "target_audience", None) != audience
+        ):
+            self._gcp_token_issuer = GoogleIdTokenIssuer(sa_key=sa_key, target_audience=audience)
+        return self._gcp_token_issuer.get_token()
+
+    def get_ollama_headers(
+        self, token_issuer: Optional[Any] = None, target_url: Optional[str] = None
+    ) -> Dict[str, str]:
+        mode = self.get_ollama_auth_mode()
+        if mode == "none":
+            return {}
+
         headers: Dict[str, str] = {}
         header_val = getattr(self, "OLLAMA_AUTH_HEADER", None)
         if header_val is None:
@@ -129,19 +210,28 @@ class Settings:
             if ":" in header_val:
                 name, val = header_val.split(":", 1)
                 headers[name.strip()] = val.strip()
-            elif header_val.lower().startswith("bearer "):
-                headers["Authorization"] = header_val
-            else:
-                headers["Authorization"] = f"Bearer {header_val}"
 
-        api_key = getattr(self, "OLLAMA_API_KEY", None)
-        if api_key is None:
-            api_key = os.getenv("OLLAMA_API_KEY", os.getenv("OLLAMA_AUTH_TOKEN", ""))
-        api_key = (api_key or "").strip()
-        if api_key and "Authorization" not in headers:
-            headers["Authorization"] = (
-                api_key if api_key.lower().startswith("bearer ") else f"Bearer {api_key}"
-            )
+        if mode == "bearer":
+            token = ""
+            if token_issuer is not None:
+                token = token_issuer() if callable(token_issuer) else token_issuer.get_token()
+            else:
+                api_key = getattr(self, "OLLAMA_API_KEY", None)
+                if api_key is None:
+                    api_key = os.getenv("OLLAMA_API_KEY", os.getenv("OLLAMA_AUTH_TOKEN", ""))
+                token = (api_key or "").strip()
+                if not token and header_val and ":" not in header_val:
+                    token = header_val
+
+            if token:
+                auth_val = token if token.lower().startswith("bearer ") else f"Bearer {token}"
+                headers["Authorization"] = auth_val
+
+        elif mode == "gcp-id-token":
+            token = self.get_gcp_id_token(token_issuer=token_issuer, target_url=target_url)
+            if token:
+                auth_val = token if token.lower().startswith("bearer ") else f"Bearer {token}"
+                headers["Authorization"] = auth_val
 
         return headers
 
@@ -172,6 +262,7 @@ class Settings:
                 "configured": True,
                 "url": self.OLLAMA_URL,
                 "model": self.OLLAMA_MODEL,
+                "auth_mode": self.get_ollama_auth_mode(),
                 "auth_configured": bool(self.get_ollama_headers()),
             },
             "room_provider_order": self.get_room_provider_order(),
