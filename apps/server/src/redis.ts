@@ -40,6 +40,8 @@ export const k = {
   aiActive: (id: string) => `diagram:{${id}}:ai:active`,
   aiAuthorship: (id: string) => `diagram:{${id}}:ai:authorship`,
   aiPolicy: (id: string) => `diagram:{${id}}:ai:policy`,
+  aiLongTermMemory: (id: string) => `diagram:{${id}}:ai:long-term-memory`,
+  aiLongTermMemoryPendingDeletes: "room-ai:long-term-memory:pending-deletes",
   aiProposalClaim: (id: string, messageId: string) => `diagram:{${id}}:ai:claim:${messageId}`,
   aiProposalState: (id: string, messageId: string) => `diagram:{${id}}:ai:proposal:${messageId}`,
   authUser: (id: string) => `auth:user:{${id}}`,

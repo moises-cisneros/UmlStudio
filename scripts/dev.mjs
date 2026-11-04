@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { spawn } from "node:child_process"
+import { randomBytes } from "node:crypto"
 import fs from "node:fs"
 import net from "node:net"
 import path from "node:path"
@@ -28,6 +29,39 @@ const PREFIX_COLORS = {
   docs: "\u001B[36m",
 }
 const PREFIX_RESET = "\u001B[39m"
+
+function loadLocalEnvironment() {
+  const envFile = path.join(repoRoot, ".env.local")
+  if (!fs.existsSync(envFile)) {
+    return
+  }
+
+  process.loadEnvFile(envFile)
+  console.log("[dev] Loaded local configuration from .env.local")
+}
+
+function configureLocalRoomAi() {
+  if (!process.env.AI_INTERNAL_TOKEN) {
+    process.env.AI_INTERNAL_TOKEN = randomBytes(32).toString("hex")
+    console.log("[dev] Generated an ephemeral internal Room AI token for this development session")
+  }
+
+  const tokenizerShimPath = process.env.ROOM_AI_TOKENIZER_SHIM_PATH?.trim()
+  if (!tokenizerShimPath) {
+    return
+  }
+
+  const resolvedShimPath = path.resolve(repoRoot, tokenizerShimPath)
+  if (!fs.existsSync(resolvedShimPath) || !fs.statSync(resolvedShimPath).isDirectory()) {
+    throw new Error(
+      `ROOM_AI_TOKENIZER_SHIM_PATH must be an existing directory: ${resolvedShimPath}. ` +
+        "Update .env.local with the tokenizer shim directory."
+    )
+  }
+
+  const pythonPathEntries = [resolvedShimPath, process.env.PYTHONPATH].filter(Boolean)
+  process.env.PYTHONPATH = pythonPathEntries.join(path.delimiter)
+}
 
 function readPort(name, fallback) {
   const rawValue = process.env[name]
@@ -137,6 +171,22 @@ function parseRedisUrl(redisUrl) {
     port: Number(url.port || DEFAULT_PORTS.redis),
     url: `redis://${url.hostname || "127.0.0.1"}:${Number(url.port || DEFAULT_PORTS.redis)}`,
   }
+}
+
+function parsePostgresUrl(databaseUrl) {
+  const url = new URL(databaseUrl)
+  if (url.protocol !== "postgres:" && url.protocol !== "postgresql:") {
+    throw new Error(`Unsupported MEMORY_DATABASE_URL protocol: ${url.protocol}`)
+  }
+
+  return {
+    host: url.hostname || "127.0.0.1",
+    port: Number(url.port || 5432),
+  }
+}
+
+function isLoopbackHost(host) {
+  return host === "127.0.0.1" || host === "::1" || host === "localhost"
 }
 
 function commandBinary(relativeDirectory, binaryName) {
@@ -270,6 +320,47 @@ async function resolveRedisEndpoint(preferredRedisPort, reservedPorts) {
     url: `redis://127.0.0.1:${redisPort}`,
     source: "Docker Redis",
   }
+}
+
+async function ensureLocalPostgresMemory() {
+  if (process.env.ROOM_MEMORY !== "postgres") {
+    return null
+  }
+
+  const databaseUrl = process.env.MEMORY_DATABASE_URL
+  if (!databaseUrl) {
+    throw new Error("MEMORY_DATABASE_URL is required when ROOM_MEMORY=postgres")
+  }
+
+  const endpoint = parsePostgresUrl(databaseUrl)
+  if (!isLoopbackHost(endpoint.host)) {
+    console.log(`[dev]   postgres:  external ${endpoint.host}:${endpoint.port}`)
+    return endpoint
+  }
+
+  if (!(await canConnect(endpoint.host, endpoint.port))) {
+    console.log(`[dev] Starting PostgreSQL via Docker on ${endpoint.host}:${endpoint.port}`)
+    await runCommand(
+      "docker",
+      ["compose", "-f", "docker/compose.local.db.yml", "up", "-d", "postgres"],
+      {
+        env: {
+          ...process.env,
+          POSTGRES_PORT: String(endpoint.port),
+        },
+      }
+    )
+  }
+
+  const startedAt = Date.now()
+  while (Date.now() - startedAt < 30_000) {
+    if (await canConnect(endpoint.host, endpoint.port)) {
+      return endpoint
+    }
+    await delay(500)
+  }
+
+  throw new Error(`Timed out waiting for PostgreSQL on ${endpoint.host}:${endpoint.port}`)
 }
 
 function prefixOutput(name, stream) {
@@ -421,6 +512,8 @@ async function stopManagedProcesses(children) {
 }
 
 async function main() {
+  loadLocalEnvironment()
+  configureLocalRoomAi()
   delete process.env.NO_COLOR
 
   const preferredPorts = getPreferredPorts()
@@ -451,6 +544,7 @@ async function main() {
   reservedPorts.add(docsPort)
 
   const redis = await resolveRedisEndpoint(preferredPorts.redis, reservedPorts)
+  const postgres = await ensureLocalPostgresMemory()
 
   console.log("[dev] Selected development ports:")
   console.log(`[dev]   webapp:    http://localhost:${webappPort}`)
@@ -461,6 +555,9 @@ async function main() {
   console.log(`[dev]   mcp:       http://127.0.0.1:${mcpPort}`)
   console.log(`[dev]   docs:      http://127.0.0.1:${docsPort}`)
   console.log(`[dev]   redis:     ${redis.url} (${redis.source})`)
+  if (postgres && isLoopbackHost(postgres.host)) {
+    console.log(`[dev]   postgres: postgresql://${postgres.host}:${postgres.port}`)
+  }
 
   const sharedEnv = {
     ...process.env,

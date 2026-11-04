@@ -5,19 +5,21 @@ import type { AppEnv } from "../http/env.js"
 import { gunzipJson, gzipJson, k, type Redis } from "../redis.js"
 import type { Diagram } from "../types.js"
 import type { RelayHook } from "../http/app.js"
-import { Errors } from "../http/errors.js"
+import { ApiError, Errors } from "../http/errors.js"
 import { validate } from "../http/middleware/validate.js"
 import { setOwnerCookie } from "../http/middleware/owner.js"
 import { logger } from "../logger.js"
 import { tryAutoVersion } from "../services/autoVersion.js"
 import { authGuard } from "../http/middleware/auth.js"
 import type { AuthService } from "../services/auth-service.js"
+import { RoomLongTermMemoryDeletionPendingError } from "../services/room-ai/room-long-term-memory.js"
 import { DiagramBody, DiagramIdParams, PutDiagramBody, PatchDiagramBody } from "./_schemas.js"
 
 interface Deps {
   config: Config
   redis: Redis
   auth?: AuthService
+  forgetRoomMemory?: (diagramId: string, userId: string) => Promise<void>
 }
 
 /**
@@ -95,7 +97,13 @@ export async function saveHead(
 }
 
 /** Cascade-deletes the diagram and its entire version family. */
-export async function cascadeDeleteDiagram(redis: Redis, id: string): Promise<number> {
+export async function cascadeDeleteDiagram(
+  redis: Redis,
+  id: string,
+  forgetRoomMemory?: (diagramId: string, userId: string) => Promise<void>,
+  userId = "system"
+): Promise<number> {
+  await forgetRoomMemory?.(id, userId)
   const meta = await redis.hGetAll(k.diagramMeta(id))
   if (meta?.userId) {
     await redis.sRem(k.userDiagrams(meta.userId), id)
@@ -125,7 +133,10 @@ function generateDiagramId(): string {
 // Router
 // ---------------------------------------------------------------------------
 
-export function mountDiagramRoutes({ config, redis, auth }: Deps, relay?: RelayHook): Hono<AppEnv> {
+export function mountDiagramRoutes(
+  { config, redis, auth, forgetRoomMemory }: Deps,
+  relay?: RelayHook
+): Hono<AppEnv> {
   const router = new Hono<AppEnv>()
 
   if (auth) {
@@ -281,7 +292,20 @@ export function mountDiagramRoutes({ config, redis, auth }: Deps, relay?: RelayH
   router.delete(
     "/diagrams/:diagramId",
     validate({ params: DiagramIdParams }, async (c, { params }) => {
-      const deleted = await cascadeDeleteDiagram(redis, params.diagramId)
+      const user = c.get("user")
+      let deleted: number
+      try {
+        deleted = await cascadeDeleteDiagram(redis, params.diagramId, forgetRoomMemory, user?.id)
+      } catch (err) {
+        if (err instanceof RoomLongTermMemoryDeletionPendingError) {
+          throw new ApiError(
+            503,
+            "ROOM_AI_MEMORY_DELETE_PENDING",
+            "Room AI memory cleanup is pending; retry diagram deletion shortly"
+          )
+        }
+        throw err
+      }
       relay?.publishControl(params.diagramId, { type: "DIAGRAM_DELETED" })
       logger.info(
         {

@@ -58,16 +58,19 @@ function createHarness(
     .mockReturnValueOnce(chat as never)
   const profileRevisions = createRoomAiPersonalProfileRevisionCoordinator(redis, 3600)
   const recordPublicMessage = vi.fn(async () => undefined)
+  const rememberLongTerm = vi.fn(async () => undefined)
+  const getMemory = vi.fn(async () => ({ summary: "Shared", decisions: [] }))
   const publish = vi.fn(async () => undefined)
   const orchestrator = createRoomAiOrchestrator({
     redis,
     ttlSeconds: 3600,
     getBoard: getBoard as never,
-    getMemory: async () => ({ summary: "Shared", decisions: [] }),
+    getMemory,
     getAuthorship: async () => ({}),
     profileRevisions,
     respond,
     recordPublicMessage,
+    rememberLongTerm,
     publish,
   })
   createChatRepositorySpy.mockRestore()
@@ -76,6 +79,8 @@ function createHarness(
     profileRevisions,
     orchestrator,
     recordPublicMessage,
+    rememberLongTerm,
+    getMemory,
     publish,
     multi,
     chat,
@@ -83,6 +88,29 @@ function createHarness(
 }
 
 describe("Room AI public publication boundary", () => {
+  it("recalls durable memory with the authenticated requester and persists the public exchange", async () => {
+    const respond = vi.fn(async () => ({ text: "A useful answer", provider: "local" }))
+    const harness = createHarness(respond)
+    await harness.profileRevisions.revokeRevision("room-1", "user-1")
+    const currentRevision = await harness.profileRevisions.getOrCreateRevision("room-1", "user-1")
+    harness.redis.eval = vi.fn(async () =>
+      JSON.stringify({ requesterId: "user-1", teachingProfile: profile, revision: currentRevision })
+    ) as never
+
+    await harness.orchestrator.infer("room-1", requesterMessage.id, {
+      generation: "a".repeat(64),
+      revision: 1,
+    })
+
+    expect(harness.getMemory).toHaveBeenCalledWith("room-1", "user-1", "Explain the diagram")
+    expect(harness.rememberLongTerm).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "room", kind: "question", authorId: "user-1" })
+    )
+    expect(harness.rememberLongTerm).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "room", kind: "summary", authorId: "room-ai" })
+    )
+  })
+
   it("broadcasts explanation deltas before committing the final public answer", async () => {
     const respond = vi.fn(async (input: { onDelta?: (delta: string) => Promise<void> }) => {
       await input.onDelta?.("First ")

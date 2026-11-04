@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { Hono } from "hono"
 import type { AppEnv } from "../../src/http/env.js"
 import { mountDiagramRoutes, readDiagram, saveHead } from "../../src/routes/diagrams.js"
@@ -14,6 +14,7 @@ import {
   createRedisUserRepository,
   type AuthService,
 } from "../../src/services/auth-service.js"
+import { RoomLongTermMemoryDeletionPendingError } from "../../src/services/room-ai/room-long-term-memory.js"
 
 const TEST_JWT_SECRET = "cu13-test-jwt-secret-min-32-chars!!"
 
@@ -42,6 +43,65 @@ describe("INT-CU13: Case of Use CU-13 Diagram Management Integration (Rename, De
     testApp.route("/api", mountDiagramRoutes({ config, redis: r, auth }, relayMock))
     return testApp
   }
+
+  it("forgets durable Room AI memory when a diagram is deleted", async () => {
+    const forgetRoomMemory = vi.fn(async () => undefined)
+    const testApp = new Hono<AppEnv>()
+    testApp.onError(errorHandler)
+    testApp.route("/api", mountDiagramRoutes({ config, redis, forgetRoomMemory }, relayMock))
+    const diagramId = "cu13-memory-delete"
+    await saveHead(redis, config, {
+      version: "4.0.0",
+      id: diagramId,
+      title: "Memory lifecycle",
+      type: "ClassDiagram",
+      assessments: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      nodes: [],
+      edges: [],
+    })
+
+    await expect(
+      testApp.request(`/api/diagrams/${diagramId}`, { method: "DELETE" })
+    ).resolves.toMatchObject({ status: 204 })
+    expect(forgetRoomMemory).toHaveBeenCalledWith(diagramId, "system")
+  })
+
+  it("does not delete the diagram while durable memory cleanup is pending", async () => {
+    const testApp = new Hono<AppEnv>()
+    testApp.onError(errorHandler)
+    testApp.route(
+      "/api",
+      mountDiagramRoutes(
+        {
+          config,
+          redis,
+          forgetRoomMemory: async () => {
+            throw new RoomLongTermMemoryDeletionPendingError()
+          },
+        },
+        relayMock
+      )
+    )
+    const diagramId = "cu13-memory-pending"
+    await saveHead(redis, config, {
+      version: "4.0.0",
+      id: diagramId,
+      title: "Pending memory cleanup",
+      type: "ClassDiagram",
+      assessments: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      nodes: [],
+      edges: [],
+    })
+
+    const response = await testApp.request(`/api/diagrams/${diagramId}`, { method: "DELETE" })
+    expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toMatchObject({ error: "ROOM_AI_MEMORY_DELETE_PENDING" })
+    await expect(readDiagram(redis, diagramId)).resolves.not.toBeNull()
+  })
 
   it("executes full lifecycle: creation, retrieval for sharing, atomic rename via PATCH, and cascade deletion via DELETE", async () => {
     const testApp = createTestApp(redis)

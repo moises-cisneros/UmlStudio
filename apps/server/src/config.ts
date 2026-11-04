@@ -3,25 +3,37 @@ import { z } from "zod"
 const intEnv = (fallback: number) => z.coerce.number().int().positive().default(fallback)
 const DEFAULT_AI_SERVICE_URL = "http://127.0.0.1:8001"
 
-const ConfigSchema = z.object({
-  HOST: z.string().default("localhost"),
-  PORT: intEnv(8000),
-  WS_PORT: intEnv(4444),
-  CORS_ORIGIN: z.string().optional(),
-  REDIS_URL: z.string().default("redis://localhost:6379"),
-  AI_MAX_CONCURRENCY: intEnv(1),
-  ROOM_AI_SUMMARY_EVERY: z.coerce.number().int().min(1).max(10).default(10),
-  AI_SERVICE_URL: z.string().url().default(DEFAULT_AI_SERVICE_URL),
-  AI_INTERNAL_TOKEN: z.string().default(""),
-  OWNER_SECRET: z.string().min(32).default("development-only-replace-in-prod"),
-  MAX_VERSIONS_PER_DIAGRAM: intEnv(50),
-  MAX_SNAPSHOT_BYTES: intEnv(5 * 1024 * 1024),
-  MAX_DESCRIPTION_LENGTH: intEnv(240),
-  MAX_NAME_LENGTH: intEnv(80),
-  DIAGRAM_TTL_SECONDS: intEnv(120 * 24 * 3600),
-  VERSION_TTL_SECONDS: intEnv(121 * 24 * 3600),
-  AUTO_VERSION_INTERVAL_SECONDS: intEnv(30 * 60),
-})
+const ConfigSchema = z
+  .object({
+    HOST: z.string().default("localhost"),
+    PORT: intEnv(8000),
+    WS_PORT: intEnv(4444),
+    CORS_ORIGIN: z.string().optional(),
+    REDIS_URL: z.string().default("redis://localhost:6379"),
+    ROOM_MEMORY: z.enum(["redis", "postgres"]).default("redis"),
+    MEMORY_DATABASE_URL: z.string().url().optional(),
+    AI_MAX_CONCURRENCY: intEnv(1),
+    ROOM_AI_SUMMARY_EVERY: z.coerce.number().int().min(1).max(10).default(10),
+    AI_SERVICE_URL: z.string().url().default(DEFAULT_AI_SERVICE_URL),
+    AI_INTERNAL_TOKEN: z.string().default(""),
+    OWNER_SECRET: z.string().min(32).default("development-only-replace-in-prod"),
+    MAX_VERSIONS_PER_DIAGRAM: intEnv(50),
+    MAX_SNAPSHOT_BYTES: intEnv(5 * 1024 * 1024),
+    MAX_DESCRIPTION_LENGTH: intEnv(240),
+    MAX_NAME_LENGTH: intEnv(80),
+    DIAGRAM_TTL_SECONDS: intEnv(120 * 24 * 3600),
+    VERSION_TTL_SECONDS: intEnv(121 * 24 * 3600),
+    AUTO_VERSION_INTERVAL_SECONDS: intEnv(30 * 60),
+  })
+  .superRefine((value, context) => {
+    if (value.ROOM_MEMORY === "postgres" && !value.MEMORY_DATABASE_URL) {
+      context.addIssue({
+        code: "custom",
+        path: ["MEMORY_DATABASE_URL"],
+        message: "is required when ROOM_MEMORY=postgres",
+      })
+    }
+  })
 
 export type Config = z.infer<typeof ConfigSchema>
 

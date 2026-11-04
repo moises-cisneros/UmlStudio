@@ -12,6 +12,7 @@ import { createRoomAiDispatcher } from "./services/room-ai/room-ai-dispatcher.js
 import { createRoomAiOrchestrator } from "./services/room-ai/room-ai-orchestrator.js"
 import { createRoomAiResponder } from "./services/room-ai/room-ai-responder.js"
 import { createRoomMemoryRepository } from "./services/room-ai/room-memory-repository.js"
+import { createLongTermMemory } from "./services/room-ai/room-long-term-memory.js"
 import { createRoomAiProfileDeriver } from "./services/room-ai/room-ai-profile-deriver.js"
 import { createRoomAiPersonalProfileRevisionCoordinator } from "./services/room-ai/room-ai-personal-profile.js"
 import { getRoomAiReplicaRequirement } from "./services/room-ai/chat-repository.js"
@@ -117,6 +118,31 @@ async function main() {
       return result.text
     },
   })
+  const longTermMemory = createLongTermMemory({
+    mode: config.ROOM_MEMORY,
+    redis,
+    ttlSeconds: config.DIAGRAM_TTL_SECONDS,
+    ...(config.MEMORY_DATABASE_URL ? { databaseUrl: config.MEMORY_DATABASE_URL } : {}),
+  })
+  const purgeRoomMemory = () =>
+    Promise.resolve(longTermMemory.flushPendingDeletes?.())
+      .then(() => longTermMemory.purgeExpired())
+      .then((deleted) => {
+        if (deleted > 0)
+          logger.info(
+            { event: "room_ai.long_term_memory.purged", deleted },
+            "expired Room AI memories purged"
+          )
+      })
+      .catch((err) =>
+        logger.warn(
+          { err, event: "room_ai.long_term_memory.purge_failed" },
+          "Room AI memory retention purge failed"
+        )
+      )
+  void purgeRoomMemory()
+  const roomMemoryPurgeTimer = setInterval(purgeRoomMemory, 24 * 60 * 60 * 1000)
+  roomMemoryPurgeTimer.unref()
   const personalProfileRevisions = createRoomAiPersonalProfileRevisionCoordinator(
     redis,
     config.DIAGRAM_TTL_SECONDS
@@ -145,15 +171,22 @@ async function main() {
       }
       return board
     },
-    getMemory: async (diagramId) => {
+    getMemory: async (diagramId, userId, query) => {
       const { summary, decisions } = await roomMemory.snapshot(diagramId)
-      return { summary, decisions }
+      const remembered = await longTermMemory.recall({ diagramId, userId, query, scope: "room" })
+      return {
+        summary,
+        decisions: [...decisions, ...remembered.map((entry) => `${entry.title}: ${entry.content}`)],
+      }
     },
     getAuthorship: (diagramId) => authorship.getAll(diagramId),
     profileRevisions: personalProfileRevisions,
     respond: responder,
     publish: (diagramId, event) => roomAiBus.publish(diagramId, event),
     recordPublicMessage: (diagramId, message) => roomMemory.recordPublicMessage(diagramId, message),
+    rememberLongTerm: async (input) => {
+      await longTermMemory.remember(input)
+    },
   })
   const dispatcher = createRoomAiDispatcher({
     redis,
@@ -201,7 +234,14 @@ async function main() {
   }
 
   if (sharedPort) {
-    const app = buildApp({ config, redis, relay: relayPublish, auth, roomAi })
+    const app = buildApp({
+      config,
+      redis,
+      relay: relayPublish,
+      auth,
+      roomAi,
+      forgetRoomMemory: (diagramId, userId) => longTermMemory.forget({ diagramId, userId }),
+    })
     httpServer = app.listen(config.PORT, config.HOST, () => {
       logger.info(
         { event: "http.listen", host: config.HOST, port: config.PORT },
@@ -222,7 +262,14 @@ async function main() {
       resolveUserProfile: (userId) => auth.getProfile(userId),
       authorship,
     })
-    const app = buildApp({ config, redis, relay: relayPublish, auth, roomAi })
+    const app = buildApp({
+      config,
+      redis,
+      relay: relayPublish,
+      auth,
+      roomAi,
+      forgetRoomMemory: (diagramId, userId) => longTermMemory.forget({ diagramId, userId }),
+    })
     httpServer = app.listen(config.PORT, config.HOST, () => {
       logger.info(
         { event: "http.listen", host: config.HOST, port: config.PORT },
@@ -252,9 +299,15 @@ async function main() {
       logger.error({ err }, "ws close failed")
     }
     try {
+      clearInterval(roomMemoryPurgeTimer)
       await roomAiBus.close()
     } catch (err) {
       logger.error({ err }, "room AI event bus close failed")
+    }
+    try {
+      await longTermMemory.close?.()
+    } catch (err) {
+      logger.error({ err }, "Room AI long-term memory close failed")
     }
     try {
       await redis.quit()
