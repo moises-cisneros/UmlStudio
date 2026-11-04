@@ -21,10 +21,21 @@ logger = logging.getLogger("umlstudio.ai_service.adapters.ollama")
 
 class OllamaAdapter(BaseAIAdapter):
     def __init__(
-        self, endpoint_url: Optional[str] = None, model_name: Optional[str] = None
+        self,
+        endpoint_url: Optional[str] = None,
+        model_name: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
+        api_key: Optional[str] = None,
     ):
         self.endpoint_url = (endpoint_url or settings.OLLAMA_URL).rstrip("/")
         self.model_name = model_name or settings.OLLAMA_MODEL
+        if headers is not None:
+            self.headers = dict(headers)
+        else:
+            self.headers = settings.get_ollama_headers()
+        if api_key:
+            auth_val = api_key if api_key.lower().startswith("bearer ") else f"Bearer {api_key}"
+            self.headers["Authorization"] = auth_val
 
     @property
     def provider_name(self) -> str:
@@ -33,7 +44,7 @@ class OllamaAdapter(BaseAIAdapter):
     async def is_available(self) -> bool:
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
-                resp = await client.get(f"{self.endpoint_url}/models")
+                resp = await client.get(f"{self.endpoint_url}/models", headers=self.headers)
                 return resp.status_code == 200
         except Exception:
             return False
@@ -46,7 +57,7 @@ class OllamaAdapter(BaseAIAdapter):
             "temperature": 0.2,
         }
         async with httpx.AsyncClient(timeout=45.0) as client:
-            resp = await client.post(url, json=payload)
+            resp = await client.post(url, json=payload, headers=self.headers)
             if resp.status_code != 200:
                 raise RuntimeError(f"Ollama text completion failed ({resp.status_code})")
             content = resp.json()["choices"][0]["message"]["content"]
@@ -64,7 +75,7 @@ class OllamaAdapter(BaseAIAdapter):
             "stream": True,
         }
         async with httpx.AsyncClient(timeout=45.0) as client:
-            async with client.stream("POST", url, json=payload) as resp:
+            async with client.stream("POST", url, json=payload, headers=self.headers) as resp:
                 if resp.status_code != 200:
                     raise RuntimeError(f"Ollama text completion failed ({resp.status_code})")
                 content_type = resp.headers.get("content-type", "")
@@ -118,7 +129,7 @@ class OllamaAdapter(BaseAIAdapter):
 
         logger.info(f"Ollama: enviando petición a '{url}' con modelo '{self.model_name}'...")
         async with httpx.AsyncClient(timeout=45.0) as client:
-            resp = await client.post(url, json=payload)
+            resp = await client.post(url, json=payload, headers=self.headers)
             if resp.status_code == 200:
                 data = resp.json()
                 content = data["choices"][0]["message"]["content"]

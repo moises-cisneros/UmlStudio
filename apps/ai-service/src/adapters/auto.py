@@ -11,7 +11,8 @@ If no provider succeeds, raises an explicit error stating no active models.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from collections.abc import AsyncIterator
+from typing import Dict, Any, Optional, List
 from .base import BaseAIAdapter
 from .cloudflare import CloudflareAdapter
 from .openrouter import OpenRouterAdapter
@@ -26,16 +27,63 @@ logger = logging.getLogger("umlstudio.ai_service.adapters.auto")
 
 
 class AutoAdaptiveAdapter(BaseAIAdapter):
-    def __init__(self, mode: Optional[str] = None):
+    def __init__(
+        self,
+        mode: Optional[str] = None,
+        provider_order: Optional[List[str]] = None,
+    ):
         self.mode = (mode or settings.DEFAULT_PROVIDER or "auto").lower().strip()
+        self.provider_order = [p.lower().strip() for p in provider_order] if provider_order else None
+        if self.mode == "room" and self.provider_order is None:
+            self.provider_order = settings.get_room_provider_order()
         self._active_provider = f"auto-adaptive ({self.mode})"
 
     @property
     def provider_name(self) -> str:
         return self._active_provider
 
+    def _create_provider_adapter(self, provider_key: str) -> Optional[BaseAIAdapter]:
+        k = provider_key.lower().strip()
+        if k == "ollama":
+            return OllamaAdapter()
+        elif k == "gemini":
+            return GeminiAdapter()
+        elif k == "openrouter":
+            return OpenRouterAdapter()
+        elif k == "cloudflare":
+            return CloudflareAdapter()
+        elif k == "lmstudio":
+            return LMStudioAdapter()
+        return None
+
+    async def _is_adapter_usable(self, adapter: BaseAIAdapter) -> bool:
+        if isinstance(adapter, OllamaAdapter):
+            return await adapter.is_available()
+        elif isinstance(adapter, GeminiAdapter):
+            return bool(settings.GEMINI_API_KEY)
+        elif isinstance(adapter, CloudflareAdapter):
+            return bool(settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN)
+        elif isinstance(adapter, OpenRouterAdapter):
+            return bool(settings.OPENROUTER_API_KEY)
+        elif isinstance(adapter, LMStudioAdapter):
+            return await adapter.is_available()
+        return True
+
     async def complete_text(self, prompt: str) -> str:
         """Use text-capable providers without changing the existing diff cascade."""
+        if self.provider_order:
+            for name in self.provider_order:
+                adapter = self._create_provider_adapter(name)
+                if adapter is None or not await self._is_adapter_usable(adapter):
+                    continue
+                try:
+                    text = await adapter.complete_text(prompt)
+                    self._active_provider = adapter.provider_name
+                    return text
+                except Exception as exc:
+                    logger.warning("Text completion via %s failed (%s)", adapter.provider_name, type(exc).__name__)
+            raise RuntimeError(f"No configured AI provider in {self.provider_order} is available")
+
         candidates = []
         if self.mode not in ("local", "laptop") and settings.GEMINI_API_KEY:
             candidates.append(GeminiAdapter())
@@ -54,7 +102,54 @@ class AutoAdaptiveAdapter(BaseAIAdapter):
 
         raise RuntimeError("No configured text-capable AI provider is available")
 
+    async def stream_text(self, prompt: str) -> AsyncIterator[str]:
+        """Stream text deltas according to configured provider order."""
+        order = self.provider_order or (["ollama", "gemini"] if self.mode != "cloud" else ["gemini"])
+        for name in order:
+            adapter = self._create_provider_adapter(name)
+            if adapter is None or not await self._is_adapter_usable(adapter):
+                continue
+            try:
+                received = False
+                async for chunk in adapter.stream_text(prompt):
+                    if chunk:
+                        received = True
+                        yield chunk
+                if received:
+                    self._active_provider = adapter.provider_name
+                    return
+            except Exception as exc:
+                logger.warning("Streaming text via %s failed (%s)", adapter.provider_name, type(exc).__name__)
+
+        raise RuntimeError(f"No configured streaming AI provider in {order} is available")
+
+    async def generate_room_diff(
+        self, prompt: str, current_model: Dict[str, Any], system_prompt: str
+    ) -> ModelDiff:
+        order = self.provider_order or settings.get_room_provider_order()
+        for name in order:
+            adapter = self._create_provider_adapter(name)
+            if adapter is None or not await self._is_adapter_usable(adapter):
+                continue
+            try:
+                room_fn = getattr(adapter, "generate_room_diff", None)
+                if callable(room_fn):
+                    res = await room_fn(prompt, current_model, system_prompt)
+                else:
+                    res = await adapter.generate_diff(prompt, current_model)
+                self._active_provider = adapter.provider_name
+                return res
+            except Exception as exc:
+                logger.warning("Room diff via %s failed (%s)", adapter.provider_name, type(exc).__name__)
+        raise RuntimeError(f"No configured room diff AI provider in {order} is available")
+
     async def generate_diff(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
+        if self.provider_order:
+            from ..services.prompting import build_uml_system_prompt
+            return await self.generate_room_diff(
+                prompt, current_model, build_uml_system_prompt(current_model)
+            )
+
         # MODE: LOCAL (Prioritize local models on user's machine)
         if self.mode in ("local", "laptop"):
             return await self._run_local_cascade(prompt, current_model)

@@ -45,10 +45,16 @@ class GeminiAdapter(BaseAIAdapter):
             return content.strip()
 
     async def generate_diff(self, prompt: str, current_model: Dict[str, Any]) -> ModelDiff:
+        return await self.generate_room_diff(
+            prompt, current_model, build_uml_system_prompt(current_model)
+        )
+
+    async def generate_room_diff(
+        self, prompt: str, current_model: Dict[str, Any], system_prompt: str
+    ) -> ModelDiff:
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY no está configurada.")
 
-        system_prompt = build_uml_system_prompt(current_model)
         url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self.model_name}:generateContent?key={self.api_key}"

@@ -228,7 +228,7 @@ def _room_adapter(request: RoomRespondRequest):
     from ..adapters import OllamaAdapter, get_adapter
 
     if request.provider is None:
-        return get_adapter()
+        return get_adapter("room")
     endpoint = settings.ROOM_AI_SELF_HOSTED_URL.strip()
     model = settings.ROOM_AI_SELF_HOSTED_MODEL.strip()
     parsed = urlsplit(endpoint)

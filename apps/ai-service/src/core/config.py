@@ -6,7 +6,7 @@ Robustly discovers and loads .env files and manages provider settings.
 import os
 import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 logger = logging.getLogger("umlstudio.ai_service.config")
 
@@ -42,6 +42,10 @@ class Settings:
     # Server network settings
     PORT: int = int(os.getenv("AI_SERVICE_PORT", os.getenv("PORT", "8001")))
     HOST: str = os.getenv("AI_SERVICE_HOST", os.getenv("HOST", "0.0.0.0"))
+    CORS_ORIGIN: str = os.getenv(
+        "CORS_ORIGIN",
+        os.getenv("CORS_ORIGINS", os.getenv("WEBAPP_ORIGIN", "http://localhost:5173")),
+    ).strip()
     # Shared only with the server; never expose this value to the webapp.
     AI_INTERNAL_TOKEN: str = os.getenv("AI_INTERNAL_TOKEN", "").strip()
 
@@ -65,7 +69,13 @@ class Settings:
 
     # Ollama settings (:11434)
     OLLAMA_URL: str = os.getenv("OLLAMA_URL", os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")).strip()
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", os.getenv("LOCAL_LLM_MODEL", "gemma:2b")).strip()
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", os.getenv("LOCAL_LLM_MODEL", "qwen2.5:7b-instruct")).strip()
+    OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", os.getenv("OLLAMA_AUTH_TOKEN", "")).strip()
+    OLLAMA_AUTH_HEADER: str = os.getenv("OLLAMA_AUTH_HEADER", "").strip()
+
+    # Room provider order when no specific provider is requested:
+    # Comma-separated list of providers tried in sequence (e.g. "ollama,gemini").
+    ROOM_PROVIDER_ORDER: str = os.getenv("ROOM_PROVIDER_ORDER", "ollama,gemini").strip()
 
     # Dedicated Room AI endpoint; no default or provider fallback.
     ROOM_AI_SELF_HOSTED_URL: str = os.getenv("ROOM_AI_SELF_HOSTED_URL", "").strip()
@@ -91,40 +101,85 @@ class Settings:
     # - specific: 'cloudflare' | 'openrouter' | 'gemini' | 'lmstudio' | 'ollama'
     DEFAULT_PROVIDER: str = os.getenv("DEFAULT_PROVIDER", "auto").strip()
 
-    @classmethod
-    def get_provider_status(cls) -> Dict[str, Any]:
+    def get_cors_origins(self) -> List[str]:
+        raw = getattr(self, "CORS_ORIGIN", None)
+        if raw is None:
+            raw = os.getenv("CORS_ORIGIN", os.getenv("CORS_ORIGINS", os.getenv("WEBAPP_ORIGIN", "http://localhost:5173")))
+        if not raw:
+            return ["http://localhost:5173"]
+        origins = [item.strip() for item in raw.split(",") if item.strip()]
+        return origins or ["http://localhost:5173"]
+
+    def get_room_provider_order(self) -> List[str]:
+        raw = getattr(self, "ROOM_PROVIDER_ORDER", None)
+        if raw is None:
+            raw = os.getenv("ROOM_PROVIDER_ORDER", "ollama,gemini")
+        if not raw:
+            return ["ollama", "gemini"]
+        order = [item.strip().lower() for item in raw.split(",") if item.strip()]
+        return order or ["ollama", "gemini"]
+
+    def get_ollama_headers(self) -> Dict[str, str]:
+        headers: Dict[str, str] = {}
+        header_val = getattr(self, "OLLAMA_AUTH_HEADER", None)
+        if header_val is None:
+            header_val = os.getenv("OLLAMA_AUTH_HEADER", "")
+        header_val = (header_val or "").strip()
+        if header_val:
+            if ":" in header_val:
+                name, val = header_val.split(":", 1)
+                headers[name.strip()] = val.strip()
+            elif header_val.lower().startswith("bearer "):
+                headers["Authorization"] = header_val
+            else:
+                headers["Authorization"] = f"Bearer {header_val}"
+
+        api_key = getattr(self, "OLLAMA_API_KEY", None)
+        if api_key is None:
+            api_key = os.getenv("OLLAMA_API_KEY", os.getenv("OLLAMA_AUTH_TOKEN", ""))
+        api_key = (api_key or "").strip()
+        if api_key and "Authorization" not in headers:
+            headers["Authorization"] = (
+                api_key if api_key.lower().startswith("bearer ") else f"Bearer {api_key}"
+            )
+
+        return headers
+
+    def get_provider_status(self) -> Dict[str, Any]:
         return {
             "cloudflare": {
-                "configured": bool(cls.CLOUDFLARE_ACCOUNT_ID and cls.CLOUDFLARE_API_TOKEN),
-                "model": cls.CLOUDFLARE_MODEL,
-                "token_preview": _mask_secret(cls.CLOUDFLARE_API_TOKEN),
+                "configured": bool(self.CLOUDFLARE_ACCOUNT_ID and self.CLOUDFLARE_API_TOKEN),
+                "model": self.CLOUDFLARE_MODEL,
+                "token_preview": _mask_secret(self.CLOUDFLARE_API_TOKEN),
             },
             "openrouter": {
-                "configured": bool(cls.OPENROUTER_API_KEY),
-                "model": cls.OPENROUTER_MODEL,
-                "key_preview": _mask_secret(cls.OPENROUTER_API_KEY),
+                "configured": bool(self.OPENROUTER_API_KEY),
+                "model": self.OPENROUTER_MODEL,
+                "key_preview": _mask_secret(self.OPENROUTER_API_KEY),
             },
             "gemini": {
-                "configured": bool(cls.GEMINI_API_KEY),
-                "model": cls.GEMINI_MODEL,
-                "key_preview": _mask_secret(cls.GEMINI_API_KEY),
+                "configured": bool(self.GEMINI_API_KEY),
+                "model": self.GEMINI_MODEL,
+                "key_preview": _mask_secret(self.GEMINI_API_KEY),
             },
             "lmstudio": {
                 "configured": True,
-                "url": cls.LMSTUDIO_URL,
-                "model": cls.LMSTUDIO_MODEL,
-                "vision_model": cls.LMSTUDIO_VISION_MODEL,
+                "url": self.LMSTUDIO_URL,
+                "model": self.LMSTUDIO_MODEL,
+                "vision_model": self.LMSTUDIO_VISION_MODEL,
             },
             "ollama": {
                 "configured": True,
-                "url": cls.OLLAMA_URL,
-                "model": cls.OLLAMA_MODEL,
+                "url": self.OLLAMA_URL,
+                "model": self.OLLAMA_MODEL,
+                "auth_configured": bool(self.get_ollama_headers()),
             },
+            "room_provider_order": self.get_room_provider_order(),
             "local_whisper": {
                 "configured": True,
-                "engine": cls.WHISPER_ENGINE,
-                "model": cls.WHISPER_MODEL,
-                "language": cls.WHISPER_LANGUAGE,
+                "engine": self.WHISPER_ENGINE,
+                "model": self.WHISPER_MODEL,
+                "language": self.WHISPER_LANGUAGE,
             },
         }
 
