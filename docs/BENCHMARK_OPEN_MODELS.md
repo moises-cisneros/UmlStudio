@@ -1,7 +1,7 @@
 # Benchmark de Modelos Abiertos para la IA de Sala
 
-> **Trazabilidad**: Ciclo 2 · Iteración I2 · CU-15, CU-16 · RF-57, RF-58 · Issue #28 (E5-01)
-> **Fecha de ejecución**: 2026-11-04 13:46:53
+> **Trazabilidad**: Ciclo 2 · Iteración I2 · CU-15, CU-16 · RF-57, RF-58 · Issue #28 (E5-01) y #29 (E5-02)  
+> **Fecha de ejecución**: 2026-11-04 13:46:53  
 > **Entorno de prueba**: Portátil del equipo — NVIDIA GeForce RTX 3050 Laptop GPU (6 GB VRAM, 2048 CUDA cores), 16 GB RAM, Windows 11.
 
 ---
@@ -64,9 +64,26 @@ Se diseñó una batería reproducible de **10 prompts fijos** (5 de modo mentor 
 Se elige formalmente a **`qwen2.5:7b-instruct`** como el modelo base para la IA de sala de UmlStudio (:8001 / Ollama).
 Como salvaguarda de baja huella de memoria para desarrollo o laptops secundarias, se adopta **`qwen2.5:3b`** como fallback ligero.
 
+### 4.1 Modelo Personalizado `umlstudio-mentor` (Issue #29 / E5-02)
+
+Para garantizar consistencia determinista y evitar alucinaciones conceptuales o fugas de código en modo mentor (CU-15 / RF-57), se construyó y versionó el archivo `apps/ai-service/ollama/Modelfile` sobre la base de `qwen2.5:7b-instruct`.
+
+- **Temperatura**: `0.2`
+- **Ventana de contexto (`num_ctx`)**: `8192`
+- **Prompt del sistema**: Especializado en OMG UML 2.5 y modo mentor en español con preservación del canvas.
+
+Comando reproducible de creación:
+
 ```bash
-# Configuración recomendada en apps/ai-service/.env:
+ollama create umlstudio-mentor -f apps/ai-service/ollama/Modelfile
+```
+
+Configuración en `apps/ai-service/.env`:
+
+```bash
+OLLAMA_URL=http://localhost:11434/v1
+OLLAMA_MODEL=umlstudio-mentor
 ROOM_AI_SELF_HOSTED_URL=http://localhost:11434/v1
-ROOM_AI_SELF_HOSTED_MODEL=qwen2.5:7b-instruct
+ROOM_AI_SELF_HOSTED_MODEL=umlstudio-mentor
 ROOM_AI_LIGHT_FALLBACK_MODEL=qwen2.5:3b
 ```
