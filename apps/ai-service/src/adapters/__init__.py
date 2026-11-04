@@ -7,10 +7,20 @@ from .ollama import OllamaAdapter
 from .auto import AutoAdaptiveAdapter
 
 
+def get_room_adapter() -> BaseAIAdapter:
+    from ..core.config import settings
+
+    return AutoAdaptiveAdapter(
+        mode="room", provider_order=settings.get_room_provider_order()
+    )
+
+
 def get_adapter(provider_name: str = None) -> BaseAIAdapter:
     from ..core.config import settings
 
     normalized = (provider_name or "").lower().strip()
+    if normalized == "room":
+        return get_room_adapter()
     if not normalized or normalized == "default":
         normalized = (settings.DEFAULT_PROVIDER or "auto").lower().strip()
 
@@ -42,4 +52,5 @@ __all__ = [
     "OllamaAdapter",
     "AutoAdaptiveAdapter",
     "get_adapter",
+    "get_room_adapter",
 ]

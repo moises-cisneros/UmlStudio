@@ -86,9 +86,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+class DynamicCORSMiddleware(CORSMiddleware):
+    """CORS middleware dynamically evaluated against settings.get_cors_origins()."""
+
+    def is_allowed_origin(self, origin: str) -> bool:
+        allowed = settings.get_cors_origins()
+        if "*" in allowed:
+            return True
+        return origin in allowed
+
+
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
+    DynamicCORSMiddleware,
+    allow_origins=settings.get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
