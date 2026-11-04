@@ -1,0 +1,22 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}"
+      - "-f"
+      - "apps/ai-service/ollama/Dockerfile"
+      - "."
+    timeout: "1800s"
+
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}"
+
+substitutions:
+  _REGION: "us-central1"
+  _REPOSITORY: "umlstudio"
+  _SERVICE_NAME: "umlstudio-llm"
+  _TAG: "latest"
+
+options:
+  machineType: "E2_HIGHCPU_8"
