@@ -56,6 +56,7 @@ export interface AppDeps {
   conversionResource?: ConversionResource
   auth?: AuthService
   roomAi?: RoomAiService
+  forgetRoomMemory?: (diagramId: string, userId: string) => Promise<void>
 }
 
 export function buildApp(deps: AppDeps): ServerType {
@@ -114,7 +115,18 @@ export function buildApp(deps: AppDeps): ServerType {
   app.route("/health", mountHealthRoutes({ redis }))
   app.route("/api/auth", mountAuthRoutes({ redis, auth }))
   app.route("/api/users", mountUserRoutes({ auth }))
-  app.route("/api", mountDiagramRoutes({ config, redis, auth }, relay))
+  app.route(
+    "/api",
+    mountDiagramRoutes(
+      {
+        config,
+        redis,
+        auth,
+        ...(deps.forgetRoomMemory ? { forgetRoomMemory: deps.forgetRoomMemory } : {}),
+      },
+      relay
+    )
+  )
   app.route("/api", mountVersionRoutes({ config, redis, auth }, relay))
   const roomAi =
     providedRoomAi ??

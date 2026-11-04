@@ -14,5 +14,22 @@ services:
       - --appendfsync
       - everysec
 
+  postgres:
+    image: postgres:17.6-alpine
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: umlstudio
+      POSTGRES_PASSWORD: umlstudio_local_owner
+    volumes:
+      - postgresdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d umlstudio"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   dbdata:
+  postgresdata:

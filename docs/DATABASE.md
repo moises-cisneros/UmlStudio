@@ -4,12 +4,13 @@
 
 ## 1. Visión general
 
-| Ámbito                     | Motor                                | Paradigma         | Uso                                                                                        |
-| :------------------------- | :----------------------------------- | :---------------- | :----------------------------------------------------------------------------------------- |
-| Sistema (servidor)         | **Redis 7** (Valkey en Render)       | NoSQL clave-valor | Usuarios, sesiones de refresco, diagramas compartidos, versiones                           |
-| Sistema (navegador)        | **IndexedDB** (`umlstudio-versions`) | NoSQL documental  | Versiones de diagramas locales                                                             |
-| Sistema (navegador)        | `localStorage`                       | Clave-valor       | Diagramas locales y preferencias de la webapp                                              |
-| Aplicaciones **generadas** | **PostgreSQL 16+**                   | SQL relacional    | Base del backend Spring Boot que produce CU-06. UmlStudio no la usa en tiempo de ejecución |
+| Ámbito                       | Motor                                | Paradigma         | Uso                                                                                        |
+| :--------------------------- | :----------------------------------- | :---------------- | :----------------------------------------------------------------------------------------- |
+| Sistema (servidor)           | **Redis 7** (Valkey en Render)       | NoSQL clave-valor | Usuarios, sesiones, diagramas, versiones y memoria operativa de Room AI                    |
+| Sistema (servidor, opcional) | **PostgreSQL 17**                    | SQL relacional    | Memoria durable de Room AI aislada por sala y usuario                                      |
+| Sistema (navegador)          | **IndexedDB** (`umlstudio-versions`) | NoSQL documental  | Versiones de diagramas locales                                                             |
+| Sistema (navegador)          | `localStorage`                       | Clave-valor       | Diagramas locales y preferencias de la webapp                                              |
+| Aplicaciones **generadas**   | **PostgreSQL 16+**                   | SQL relacional    | Base del backend Spring Boot que produce CU-06. UmlStudio no la usa en tiempo de ejecución |
 
 El estado colaborativo en vivo **no** se guarda en una base: vive en el `Y.Doc` de cada cliente (CRDT) y se persiste por REST como un snapshot del diagrama.
 
@@ -44,6 +45,15 @@ La memoria compartida no guarda contexto personal. Cada lote contiene N mensajes
 La clave de requisito de réplica solo guarda el identificador de generación y la revisión mínima, nunca el prompt. Si esa clave expira o el relay no puede servir una réplica completa en esa generación y revisión, la inferencia falla cerrada; no usa un snapshot local distinto.
 
 No se requiere el módulo RedisJSON: todo se guarda con `SET`/`GET` y hashes.
+
+## 3. Memoria durable de Room AI
+
+Cuando `ROOM_MEMORY=postgres` y `MEMORY_DATABASE_URL` apunta al rol de aplicación, Room AI conserva recuerdos duraderos en `room_memory`. Redis sigue siendo dueño de la cola, locks, resumen operativo y decisiones fijadas; también es el fallback si PostgreSQL no está disponible.
+
+Cada operación PostgreSQL abre una transacción y fija `app.diagram_id` y `app.user_id`. Las políticas RLS restringen las filas a la sala activa y a los recuerdos públicos o del usuario autenticado. La búsqueda usa `websearch_to_tsquery('spanish', ...)`, devuelve como máximo tres recuerdos y los `topic_key` actualizan la misma fila incrementando `revision`. La retención elimina diariamente filas sin actualizar durante 120 días.
+
+El compose local incorpora PostgreSQL y crea el rol sin `BYPASSRLS`; su script de inicialización está en `docker/postgres/init/001-room-memory.sql`.
+Para habilitarlo en el servidor local se configura `ROOM_MEMORY=postgres` y una `MEMORY_DATABASE_URL` que use ese rol; si falta la URL, el servidor rechaza la configuración en lugar de presentar Redis como PostgreSQL.
 
 ### 2.2 Funciones Lua (librería `umlstudio`)
 

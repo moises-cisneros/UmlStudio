@@ -19,6 +19,7 @@ import {
   type RoomAiTeachingProfile,
 } from "./room-ai-personal-profile.js"
 import type { RoomAiServiceResponse } from "./room-ai-responder.js"
+import type { RememberRoomMemoryInput } from "./room-long-term-memory.js"
 
 export type { RoomAiDispatchClaimContext } from "./inference-not-started.js"
 
@@ -26,7 +27,11 @@ interface OrchestratorDeps {
   redis: Redis
   ttlSeconds: number
   getBoard: (diagramId: string, replica: RoomAiReplicaRequirement) => UMLModel | Promise<UMLModel>
-  getMemory: (diagramId: string) => Promise<{ summary: string; decisions: string[] }>
+  getMemory: (
+    diagramId: string,
+    userId: string,
+    query: string
+  ) => Promise<{ summary: string; decisions: string[] }>
   getAuthorship: (diagramId: string) => Promise<Record<string, string>>
   profileRevisions?: RoomAiPersonalProfileRevisionCoordinator
   respond: (request: {
@@ -41,6 +46,7 @@ interface OrchestratorDeps {
   }) => Promise<RoomAiServiceResponse>
   publish?: (diagramId: string, event: RoomAiEvent) => void | Promise<void>
   recordPublicMessage?: (diagramId: string, message: string, board: UMLModel) => Promise<void>
+  rememberLongTerm?: (input: RememberRoomMemoryInput) => Promise<void>
 }
 
 export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
@@ -103,7 +109,7 @@ export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
         intent,
         route: "shared",
         question: message.text,
-        memory: await deps.getMemory(diagramId),
+        memory: await deps.getMemory(diagramId, message.author.id, message.text),
         authorship: await deps.getAuthorship(diagramId),
         publicMessages: messages.filter((item) => item.id !== messageId),
         threadMessages: messages.filter((item) => item.id !== messageId),
@@ -246,6 +252,35 @@ export function createRoomAiOrchestrator(deps: OrchestratorDeps) {
               logger.warn({ err, diagramId }, "shared Room AI memory update failed")
               if (err instanceof InferenceTerminationUnconfirmedError) throw err
               break
+            }
+          }
+        }
+        if (deps.rememberLongTerm) {
+          const memories: RememberRoomMemoryInput[] = [
+            {
+              diagramId,
+              userId: message.author.id,
+              authorId: message.author.id,
+              scope: "room",
+              kind: "question",
+              title: "Room AI question",
+              content: message.text,
+            },
+            {
+              diagramId,
+              userId: message.author.id,
+              authorId: "room-ai",
+              scope: "room",
+              kind: "summary",
+              title: "Room AI answer",
+              content: answer.text,
+            },
+          ]
+          for (const memory of memories) {
+            try {
+              await deps.rememberLongTerm(memory)
+            } catch (err) {
+              logger.warn({ err, diagramId, messageId }, "long-term Room AI memory update failed")
             }
           }
         }

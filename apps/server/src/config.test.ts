@@ -7,4 +7,10 @@ describe("server configuration", () => {
       "ROOM_AI_SUMMARY_EVERY"
     )
   })
+
+  it("requires a Postgres URL when durable Room AI memory selects Postgres", () => {
+    expect(() => loadConfig({ ROOM_MEMORY: "postgres" } as NodeJS.ProcessEnv)).toThrow(
+      "MEMORY_DATABASE_URL"
+    )
+  })
 })
