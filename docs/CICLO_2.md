@@ -89,12 +89,12 @@ flowchart TB
 
 ### 3.4 Riesgos críticos
 
-| Riesgo                                                                    | CU           | Mitigación                                                                   |
-| :------------------------------------------------------------------------ | :----------- | :--------------------------------------------------------------------------- |
-| IA no determinista: un modelo local chico genera diffs inválidos          | CU-16        | `validateDiff` antes de proponer, confirmación humana y benchmark de modelos |
-| Concurrencia: preguntas simultáneas o doble aplicación                    | CU-15, CU-16 | Cola FIFO por sala y _claim_ atómico en Redis                                |
-| Disponibilidad del modelo propio (servidor apagado o en arranque en frío) | CU-15        | Respaldo en la nube rotulado en cada respuesta; nunca datos simulados        |
-| Arranque en frío de Render durante la defensa                             | Todos        | Precalentar los `/health` antes de la demo                                   |
+| Riesgo                                                                    | CU           | Mitigación                                                                                                                       |
+| :------------------------------------------------------------------------ | :----------- | :------------------------------------------------------------------------------------------------------------------------------- |
+| IA no determinista: un modelo local chico genera diffs inválidos          | CU-16        | `validateDiff` antes de proponer, confirmación humana y [benchmark de modelos](BENCHMARK_OPEN_MODELS.md) (`qwen2.5:7b-instruct`) |
+| Concurrencia: preguntas simultáneas o doble aplicación                    | CU-15, CU-16 | Cola FIFO por sala y _claim_ atómico en Redis                                                                                    |
+| Disponibilidad del modelo propio (servidor apagado o en arranque en frío) | CU-15        | Respaldo en la nube rotulado en cada respuesta; nunca datos simulados                                                            |
+| Arranque en frío de Render durante la defensa                             | Todos        | Precalentar los `/health` antes de la demo                                                                                       |
 
 ---
 
