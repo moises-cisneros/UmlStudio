@@ -1,5 +1,14 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
-CREATE ROLE umlstudio_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD 'umlstudio_local_app';
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'memory_app') THEN
+    CREATE ROLE memory_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD 'memory_app_secure_password';
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'umlstudio_app') THEN
+    CREATE ROLE umlstudio_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD 'umlstudio_local_app';
+  END IF;
+END
+$$;
 CREATE TABLE room_memory (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), diagram_id text NOT NULL,
   scope text NOT NULL CHECK (scope IN ('room','user')), user_id text,
@@ -15,7 +24,7 @@ ALTER TABLE room_memory FORCE ROW LEVEL SECURITY;
 CREATE POLICY room_memory_isolation ON room_memory
   USING (diagram_id = current_setting('app.diagram_id', true) AND (scope = 'room' OR user_id = current_setting('app.user_id', true)))
   WITH CHECK (diagram_id = current_setting('app.diagram_id', true) AND (scope = 'room' OR user_id = current_setting('app.user_id', true)));
-GRANT SELECT, INSERT, UPDATE, DELETE ON room_memory TO umlstudio_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON room_memory TO umlstudio_app, memory_app;
 CREATE FUNCTION room_memory_forget_diagram(target_diagram_id text) RETURNS void
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -26,4 +35,4 @@ BEGIN
 END;
 $$;
 CREATE FUNCTION room_memory_purge_expired() RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ DECLARE deleted_count integer; BEGIN DELETE FROM room_memory WHERE updated_at < now() - interval '120 days'; GET DIAGNOSTICS deleted_count = ROW_COUNT; RETURN deleted_count; END; $$;
-GRANT EXECUTE ON FUNCTION room_memory_forget_diagram(text), room_memory_purge_expired() TO umlstudio_app;
+GRANT EXECUTE ON FUNCTION room_memory_forget_diagram(text), room_memory_purge_expired() TO umlstudio_app, memory_app;
