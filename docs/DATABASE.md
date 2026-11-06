@@ -55,6 +55,8 @@ Cada operación PostgreSQL abre una transacción y fija `app.diagram_id` y `app.
 El compose local incorpora PostgreSQL y crea el rol sin `BYPASSRLS`; su script de inicialización está en `docker/postgres/init/001-room-memory.sql`.
 Para habilitarlo en el servidor local se configura `ROOM_MEMORY=postgres` y una `MEMORY_DATABASE_URL` que use ese rol; si falta la URL, el servidor rechaza la configuración en lugar de presentar Redis como PostgreSQL.
 
+En producción, la memoria de sala reside en un proyecto dedicado de Neon (`umlstudio-memory`, plan gratuito) con ramas `main` (producción) y `dev` (desarrollo), asegurando aislamiento total entre ambientes. El rol de aplicación es `memory_app` (sin `BYPASSRLS`) y la URL de conexión se inyecta en Render mediante el secreto `MEMORY_DATABASE_URL`. El script de aprovisionamiento automatizado se encuentra en `scripts/setup-neon-memory.mjs` y `scripts/setup-neon-memory.sh`.
+
 ### 2.2 Funciones Lua (librería `umlstudio`)
 
 Se cargan al arrancar el servidor con `FUNCTION LOAD REPLACE`. Si el proveedor no lo permite, el servidor lo registra como advertencia.
@@ -107,7 +109,7 @@ Convenciones SQL generadas: tablas en plural y `snake_case`, FK `<entidad>_id`. 
 
 ## 5. Entornos
 
-| Entorno    | Redis                                                                                  | PostgreSQL                                   |
-| :--------- | :------------------------------------------------------------------------------------- | :------------------------------------------- |
-| Local      | `redis/redis-stack-server:7.4.0` en Docker, AOF activo (`docker/compose.local.db.yml`) | Lo provee quien ejecute el proyecto generado |
-| Producción | Render Key Value (Valkey), solo red interna                                            | Neon, para probar los proyectos generados    |
+| Entorno    | Redis                                                                                  | PostgreSQL                                                                                                       |
+| :--------- | :------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| Local      | `redis/redis-stack-server:7.4.0` en Docker, AOF activo (`docker/compose.local.db.yml`) | Lo provee quien ejecute el proyecto generado                                                                     |
+| Producción | Render Key Value (Valkey), solo red interna                                            | Neon `umlstudio-memory` (`main`/`dev`, rol `memory_app`), más Neon independiente para probar proyectos generados |
