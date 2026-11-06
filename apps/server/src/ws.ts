@@ -72,6 +72,8 @@ export interface StartOptions {
   resolveUserProfile?: (userId: string) => Promise<SharedUserProfile | undefined>
   /** Where to record which authenticated user created or changed each board element. */
   authorship?: AuthorshipRepository
+  /** Callback invoked when a shared board replica receives a valid document update. */
+  onBoardChanged?: (diagramId: string) => void
 }
 
 /** Close code for rejected shared-room joins (app-level unauthorized). */
@@ -385,6 +387,9 @@ export function startRelayServer(opts: StartOptions): RelayServer {
               parsed.diagramData,
               ws.authenticatedUserId
             )
+            if (validUpdate && mode === "shared") {
+              opts.onBoardChanged?.(validDiagramId)
+            }
             if (challenge && validUpdate && isCompleteDocumentFrame(parsed.diagramData))
               challenge.receivedUpdate = true
             const decoded = Buffer.from(parsed.diagramData, "base64")
