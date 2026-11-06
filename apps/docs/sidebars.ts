@@ -44,6 +44,7 @@ const sidebars: SidebarsConfig = {
       label: "5. Asistente de Inteligencia Artificial",
       items: [
         "asistente-ia/modelado-por-lenguaje-natural",
+        "asistente-ia/ia-de-sala",
         "asistente-ia/diff-visual-y-revision",
         "asistente-ia/sugerencias-de-patrones",
         "asistente-ia/protocolo-mcp",

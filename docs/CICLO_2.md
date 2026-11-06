@@ -13,10 +13,10 @@ El Ciclo 2 parte de la versión v1.0 y termina en la **release v2.0**. Recorre l
 
 | Fase             | Objetivo                                                                 | Artefactos y resultados                                                                                                                                | Estado |
 | :--------------- | :----------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
-| **Inicio**       | Delimitar la extensión: una IA centralizada que participa en la sala     | Requisitos RF-51…62 y RNF-30…35, actores, CU-15…17, diagnóstico del producto v1.0 y riesgos (sección 3.4)                                              |   🟡   |
-| **Elaboración**  | Fijar la arquitectura de la IA de sala y detallar los CU de mayor riesgo | Orquestador en el servidor, réplica del tablero, contratos REST/WS, memoria de sala y topología de inferencia; especificación de CU (sección 4)        |   ⏳   |
-| **Construcción** | Implementar los CU en 3 iteraciones (sección 2)                          | Código en `apps/server`, `apps/ai-service`, `apps/webapp` y `packages/core`; pruebas de integración `INT-CU15…17` (sección 5)                          |   ⏳   |
-| **Transición**   | Entregar v2.0 en producción con el modelo propio accesible y verificarla | Modelo propio desplegado en un servidor con GPU (solo en la ventana de presentación), respaldo verificado, manual, ensayo con dos equipos y tag `v2.0` |   ⏳   |
+| **Inicio**       | Delimitar la extensión: una IA centralizada que participa en la sala     | Requisitos RF-51…62 y RNF-30…35, actores, CU-15…17, diagnóstico del producto v1.0 y riesgos (sección 3.4)                                              |   ✅   |
+| **Elaboración**  | Fijar la arquitectura de la IA de sala y detallar los CU de mayor riesgo | Orquestador en el servidor, réplica del tablero, contratos REST/WS, memoria de sala y topología de inferencia; especificación de CU (sección 4)        |   ✅   |
+| **Construcción** | Implementar los CU en 3 iteraciones (sección 2)                          | Código en `apps/server`, `apps/ai-service`, `apps/webapp` y `packages/core`; pruebas de integración `INT-CU15…17` (sección 5)                          |   ✅   |
+| **Transición**   | Entregar v2.0 en producción con el modelo propio accesible y verificarla | Modelo propio desplegado en un servidor con GPU (solo en la ventana de presentación), respaldo verificado, manual, ensayo con dos equipos y tag `v2.0` |   ✅   |
 
 ✅ terminado · 🟡 en curso · ⏳ pendiente
 
@@ -83,9 +83,9 @@ flowchart TB
 
 | CU    | Nombre                             | Actor       | Paquete | Iteración | Prioridad | Riesgo  | RF                   | Estado |
 | :---- | :--------------------------------- | :---------- | :-----: | :-------: | :-------- | :------ | :------------------- | :----: |
-| CU-15 | Consultar a la IA de Sala          | Modelador   |    2    |  I1, I2   | Alta      | Crítico | RF-51..57, RF-60..62 |   ⏳   |
-| CU-16 | Aplicar Propuesta de la IA de Sala | Modelador   |    2    |    I2     | Alta      | Crítico | RF-58                |   ⏳   |
-| CU-17 | Configurar la IA de Sala           | Propietario |    2    |    I2     | Media     | Bajo    | RF-59                |   ⏳   |
+| CU-15 | Consultar a la IA de Sala          | Modelador   |    2    |  I1, I2   | Alta      | Crítico | RF-51..57, RF-60..62 |   ✅   |
+| CU-16 | Aplicar Propuesta de la IA de Sala | Modelador   |    2    |    I2     | Alta      | Crítico | RF-58                |   ✅   |
+| CU-17 | Configurar la IA de Sala           | Propietario |    2    |    I2     | Media     | Bajo    | RF-59                |   ✅   |
 
 ### 3.4 Riesgos críticos
 
@@ -162,21 +162,75 @@ Mismo formato que el Ciclo 1: propósito, precondición, flujo principal, flujos
 
 Se mantiene la regla del Ciclo 1: **al menos una prueba de integración automatizada por CU** (`INT-CUxx` = `cu-xx-*.test.ts`). Las pruebas `INT-CU01…14` siguen corriendo en el CI como regresión.
 
-| ID       | Archivo (previsto)                                            | Qué verifica                                                                                                                     |
-| :------- | :------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------- |
-| INT-CU15 | `apps/server/test/integration/cu-15-room-ai-query.test.ts`    | Dos clientes reciben la pregunta y la respuesta con el nombre del autor; dos preguntas simultáneas reciben cada una su respuesta |
-| INT-CU16 | `apps/server/test/integration/cu-16-room-ai-proposal.test.ts` | Dos _claims_ simultáneos: uno `200` y otro `409`; propuesta desactualizada → `stale`                                             |
-| INT-CU17 | `apps/server/test/integration/cu-17-room-ai-policy.test.ts`   | Un participante que no es propietario recibe `403`; el cambio de política llega a todos                                          |
+| ID       | Archivo                                                                | Qué verifica                                                                                                                     | Estado |
+| :------- | :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| INT-CU15 | `apps/server/src/__tests__/integration/cu-15-room-ai-query.test.ts`    | Dos clientes reciben la pregunta y la respuesta con el nombre del autor; dos preguntas simultáneas reciben cada una su respuesta |   ✅   |
+| INT-CU16 | `apps/server/src/__tests__/integration/cu-16-room-ai-proposal.test.ts` | Dos _claims_ simultáneos: uno `200` y otro `409`; propuesta desactualizada → `stale`                                             |   ✅   |
+| INT-CU17 | `apps/server/src/__tests__/integration/cu-17-room-ai-policy.test.ts`   | Un participante que no es propietario recibe `403`; el cambio de política llega a todos                                          |   ✅   |
 
-En `ai-service`, el endpoint interno de la sala se prueba con `unittest`, un adaptador _stub_ y el rechazo sin token.
+En `ai-service`, el endpoint interno de la sala se prueba con `test_room_ai_service.py` y `test_issue_33_contingency_tunnel.py` (con `unittest`), adaptadores de prueba y rechazo estricto ante falta de token.
 
 ## 6. Cierre del ciclo
 
-| Criterio                                                                | Estado |
-| :---------------------------------------------------------------------- | :----: |
-| CU-15 a CU-17 implementados y desplegados en producción                 |   ⏳   |
-| Una prueba de integración por CU nuevo y regresión del Ciclo 1 en verde |   ⏳   |
-| Modelo local accesible en producción y respaldo verificado              |   ⏳   |
-| Arquitectura actualizada (vistas de procesos y despliegue)              |   ⏳   |
-| Manual de usuario actualizado (`apps/docs`)                             |   ⏳   |
-| Tag `v2.0` creado                                                       |   ⏳   |
+| Criterio                                                                | Estado | Verificación / Evidencia                                                                 |
+| :---------------------------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------- |
+| CU-15 a CU-17 implementados y desplegados en producción                 |   ✅   | Orquestador en `apps/server`, UI en `apps/webapp`, inferencia en `apps/ai-service`       |
+| Una prueba de integración por CU nuevo y regresión del Ciclo 1 en verde |   ✅   | `apps/server/src/__tests__/integration/cu-15…17`, suites completas en CI en verde        |
+| Modelo local accesible en producción y respaldo verificado              |   ✅   | Cloud Run L4 GPU (`deploy-cloud-run.sh`), túnel local (`contingency-tunnel.sh`) y Gemini |
+| Arquitectura actualizada (vistas de procesos y despliegue)              |   ✅   | `ARCHITECTURE.md` §1, §4.5, §5.1, §5.3 y §6 (AD-08 a AD-12)                              |
+| Manual de usuario actualizado (`apps/docs`)                             |   ✅   | `apps/docs/docs/asistente-ia/ia-de-sala.md` y `sidebars.ts` integrados                   |
+| Tag `v2.0` creado                                                       |   ✅   | Rama `main` estabilizada y tag `v2.0` etiquetado para la entrega del segundo parcial     |
+
+### 6.1 Trazabilidad de Requisitos Ciclo 2
+
+| Requisito  | Descripción                                                           | Implementación                                                                        | Estado |
+| :--------- | :-------------------------------------------------------------------- | :------------------------------------------------------------------------------------ | :----: |
+| **RF-51**  | Asistente de sala único y visible para todos los colaboradores        | `apps/server/src/services/room-ai/room-ai-orchestrator.ts`, SSE / Relay WS            |   ✅   |
+| **RF-52**  | Identidad del autor en cada interacción de la IA                      | JWT verificado, encabezado de respuesta `Hola <Autor>, ...`                           |   ✅   |
+| **RF-53**  | Cola FIFO concurrente por sala sin mezcla de contextos                | Cola en memoria/Redis por `diagramId` en `RoomAiOrchestrator`                         |   ✅   |
+| **RF-54**  | Difusión de estado de inferencia ("IA pensando para...")              | Eventos SSE y WebSocket `ai_state` a todos los clientes de la sala                    |   ✅   |
+| **RF-55**  | Modos de interacción: Mentor (explicación) y Ejecutor (propuesta)     | Parámetro `mode: 'mentor' \| 'executor'` en `POST /messages`                          |   ✅   |
+| **RF-56**  | Generación de propuesta en formato `ModelDiff` validado               | Esquema `ModelDiff` de `@umlstudio/core` validado antes de emitir                     |   ✅   |
+| **RF-57**  | Memoria compartida de sala en PostgreSQL / Neon con RLS               | `docker/postgres/init/001-room-memory.sql`, Neon `umlstudio-memory`                   |   ✅   |
+| **RF-58**  | Reclamación atómica de propuestas (claim único)                       | `POST /proposals/:messageId/claim` con transacción atómica en Redis                   |   ✅   |
+| **RF-59**  | Política de sala configurable exclusivamente por el propietario       | `PUT /policy` verificado contra `meta.userId` del diagrama                            |   ✅   |
+| **RF-60**  | Perfil adaptativo individual cerrado (`detailLevel`, `exampleStyle`)  | Perfil cerrado transmitido localmente por el cliente sin persistencia libre en server |   ✅   |
+| **RF-61**  | Despliegue de modelo abierto en servidor con GPU para la presentación | Script `deploy-cloud-run.sh` con NVIDIA L4 y túnel de contingencia Cloudflare         |   ✅   |
+| **RF-62**  | Moderador proactivo con observaciones de diseño no invasivas          | `RoomAiModerator` evaluando heurísticas cada 20s de inactividad                       |   ✅   |
+| **RNF-30** | Tiempo de respuesta de la IA de sala < 5 s en GPU                     | Inferencia acelerada en Ollama (`qwen2.5:7b-instruct`)                                |   ✅   |
+| **RNF-31** | Alta disponibilidad con respaldo rotulado ante contingencias          | Conmutación transparente: Cloud Run -> Túnel laptop -> Gemini                         |   ✅   |
+| **RNF-32** | Privacidad de sala y aislamiento estricto entre tableros              | Políticas RLS en Neon PostgreSQL y canales Redis con clave `room:${diagramId}`        |   ✅   |
+| **RNF-33** | Control de costos cloud: $0.00 activos tras la presentación           | Manual de ciclo de vida `PRESENTATION_RUNBOOK.md` y script `presentation-lifecycle`   |   ✅   |
+| **RNF-34** | Consistencia eventual y convergencia del tablero con Yjs              | `applyDiff` ejecutado en cliente y propagado por Y.Doc CRDT                           |   ✅   |
+| **RNF-35** | Compatibilidad total con la suite de regresión del Ciclo 1            | Pruebas `INT-CU01..14` y 100% de herramientas v1.0 preservadas                        |   ✅   |
+
+---
+
+## 7. Respuestas clave para la defensa: aplicaciones integrales de IA en UmlStudio
+
+Ante la pregunta del tribunal evaluador sobre **dónde y cómo aplica Inteligencia Artificial UmlStudio en todo el sistema**, la respuesta se estructura en 6 capacidades concretas e interconectadas:
+
+1. **Modelado Asistido por Lenguaje Natural (Texto - Chat 1:1)**:
+   - _Dónde_: Panel de IA del editor (`apps/webapp`, `apps/ai-service`).
+   - _Cómo_: Traduce prompts en español natural a un contrato estructurado `ModelDiff` (crear, modificar o eliminar clases, atributos, métodos y relaciones).
+   - _Garantía_: Validación semántica en `@umlstudio/core` previa a cualquier mutación en el canvas.
+
+2. **Entrada de Voz y Transcripción en Tiempo Real**:
+   - _Dónde_: Micrófono del panel de IA y chat de sala.
+   - _Cómo_: Captura audio en el navegador, lo transmite a `apps/ai-service` y lo transcribe con Whisper, insertándolo como texto para consulta o generación.
+
+3. **Visión por Computadora: Importación de Diagramas desde Bocetos o Imágenes**:
+   - _Dónde_: Menú **Importar > Imagen / Bosquejo**.
+   - _Cómo_: Analiza fotos de pizarras o diagramas dibujados a mano, detecta clases, nombres, visibilidad y asociaciones, y los reconstruye fielmente en el canvas interactivo.
+
+4. **Auditoría Heurística de Calidad de Diseño UML**:
+   - _Dónde_: Panel de Auditoría / Métricas del editor.
+   - _Cómo_: Evalúa métricas orientadas a objetos (WMC, DIT, NOC, LCOM, clases acumuladoras con exceso de métodos) y sugiere refactorizaciones aplicando patrones GoF (Strategy, State, Factory).
+
+5. **Auditoría de Productividad y Análisis de Commits**:
+   - _Dónde_: Módulo de Productividad (`apps/server`, `apps/webapp`).
+   - _Cómo_: Sintetiza la evolución del modelado frente al historial de Git, detecta disparidades entre la arquitectura modelada y el código real, y emite sugerencias de coherencia.
+
+6. **IA de Sala Compartida y Moderador Proactivo (Ciclo 2)**:
+   - _Dónde_: Sala colaborativa multiusuario (`/diagram/:id`).
+   - _Cómo_: Actúa como un compañero de equipo centralizado. En **Modo Mentor** explica arquitectura dirigiéndose a cada participante por su nombre y adaptando su estilo a su perfil cerrado. En **Modo Ejecutor** entrega propuestas aplicables con _claim_ atómico. Como **Moderador Proactivo**, detecta clases complejas tras 20 s de inactividad e inicia discusiones de diseño.
