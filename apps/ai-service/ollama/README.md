@@ -190,7 +190,25 @@ Cálculo basado en la región `us-central1` (Tier 1) para la configuración **1�
 
 ---
 
-## 6. Criterios de Aceptación Verificados
+## 6. Guía de Contingencia: Modelo en Portátil con Cloudflare Quick Tunnel (Issue #33 / E5-06)
+
+Si Cloud Run no está disponible durante la presentación, el portátil del equipo puede servir el modelo localmente a través de un túnel saliente efímero sin abrir puertos en el router:
+
+1. **Proxy Caddy con Autenticación Bearer** (`apps/ai-service/ollama/Caddyfile`):
+   Escucha en `:8080`, exige `Authorization: Bearer <token>` y redirige a Ollama en `localhost:11434`.
+2. **Túnel Cloudflare**:
+   Se inicia mediante `./contingency-tunnel.sh` o `python contingency_tunnel.py`, generando una URL temporal `https://*.trycloudflare.com`.
+3. **Variables en Render**:
+   - `OLLAMA_URL=https://<subdomain>.trycloudflare.com/v1`
+   - `OLLAMA_AUTH=bearer`
+   - `OLLAMA_API_KEY=<token>`
+   - `OLLAMA_MODEL=umlstudio-mentor`
+
+Guía paso a paso completa: [`docs/CONTINGENCY_GUIDE.md`](../../../docs/CONTINGENCY_GUIDE.md).
+
+---
+
+## 7. Criterios de Aceptación Verificados
 
 - [x] `apps/ai-service/ollama/Modelfile` versionado en el repositorio con parámetros y prompt del sistema OMG UML 2.5 (Issue #29).
 - [x] Comando `ollama create umlstudio-mentor -f Modelfile` documentado y reproducible (Issue #29).
@@ -199,3 +217,4 @@ Cálculo basado en la región `us-central1` (Tier 1) para la configuración **1�
 - [x] Script `apps/ai-service/ollama/deploy-cloud-run.sh` con `gcloud run deploy umlstudio-llm`, GPU L4, `--no-allow-unauthenticated`, `min-instances=0`, `max-instances=1` (Issue #30).
 - [x] Cuota de GPU y desglose de precios por segundo documentados y registrados (Issue #30).
 - [x] Cero recursos de pago desplegados antes de la ventana de presentación (Issue #30).
+- [x] Proxy inverso Caddy con autenticación Bearer y túnel saliente Cloudflare documentados y probados (Issue #33).
