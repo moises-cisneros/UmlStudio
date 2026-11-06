@@ -15,7 +15,11 @@ import { createRoomMemoryRepository } from "./services/room-ai/room-memory-repos
 import { createLongTermMemory } from "./services/room-ai/room-long-term-memory.js"
 import { createRoomAiProfileDeriver } from "./services/room-ai/room-ai-profile-deriver.js"
 import { createRoomAiPersonalProfileRevisionCoordinator } from "./services/room-ai/room-ai-personal-profile.js"
-import { getRoomAiReplicaRequirement } from "./services/room-ai/chat-repository.js"
+import {
+  createChatRepository,
+  getRoomAiReplicaRequirement,
+} from "./services/room-ai/chat-repository.js"
+import { createAuditService, createRoomAiModerator } from "./services/room-ai/room-ai-moderator.js"
 import { InferenceNotStartedError } from "./services/room-ai/inference-not-started.js"
 
 async function main() {
@@ -233,6 +237,20 @@ async function main() {
     },
   }
 
+  const chat = createChatRepository<import("@umlstudio/core").RoomChatMessage>(
+    redis,
+    config.DIAGRAM_TTL_SECONDS
+  )
+  const roomAiModerator = createRoomAiModerator({
+    getPolicy: (diagramId) => queuedRoomAi.getPolicy(diagramId),
+    getBoardReplica: (diagramId) => relayPublish.getSharedBoardReplica(diagramId),
+    authorship,
+    resolveUserProfile: (userId) => auth.getProfile(userId),
+    chat,
+    publish: (diagramId, event) => roomAiBus.publish(diagramId, event),
+    audit: createAuditService({ serviceUrl: config.AI_SERVICE_URL }),
+  })
+
   if (sharedPort) {
     const app = buildApp({
       config,
@@ -253,6 +271,7 @@ async function main() {
       verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
       resolveUserProfile: (userId) => auth.getProfile(userId),
       authorship,
+      onBoardChanged: (diagramId) => roomAiModerator.onBoardChanged(diagramId),
     })
   } else {
     relay = startRelayServer({
@@ -261,6 +280,7 @@ async function main() {
       verifyToken: (token) => auth.verifyAccess(token).then((v) => v.userId),
       resolveUserProfile: (userId) => auth.getProfile(userId),
       authorship,
+      onBoardChanged: (diagramId) => roomAiModerator.onBoardChanged(diagramId),
     })
     const app = buildApp({
       config,
@@ -288,6 +308,7 @@ async function main() {
       logger.error({ err }, "http server close failed")
     }
     try {
+      roomAiModerator.closeAll()
       await dispatcher.close()
       await dispatcher.waitForIdle()
     } catch (err) {
