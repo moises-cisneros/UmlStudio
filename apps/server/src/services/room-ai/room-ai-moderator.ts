@@ -157,6 +157,10 @@ export function createRoomAiModerator(deps: RoomAiModeratorDeps): RoomAiModerato
         auditResult.violations.find((v) => v.element_id && authors[v.element_id]) ??
         auditResult.violations[0]
 
+      if (!chosenViolation) {
+        return undefined
+      }
+
       const authorId = chosenViolation.element_id ? authors[chosenViolation.element_id] : undefined
       let authorName: string | undefined
 
