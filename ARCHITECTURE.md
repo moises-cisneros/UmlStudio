@@ -1,22 +1,25 @@
 # Arquitectura de Software — UmlStudio
 
 > **Modelo**: vistas 4+1 de Kruchten (PUDS).
-> **Versión documentada**: v1.0, cierre del [Ciclo 1](docs/CICLO_1.md).
+> **Versión documentada**: v2.0, cierre del [Ciclo 2](docs/CICLO_2.md).
 > **Alcance**: herramienta CASE exclusiva para **diagramas de clases UML 2.5**, colaborativa en tiempo real y asistida por IA.
 
 ---
 
 ## 1. Vista de casos de uso
 
-Los 14 casos de uso, sus actores (Modelador UML, Cliente MCP Externo) y su especificación están en [`docs/CICLO_1.md`](docs/CICLO_1.md). Estos son los que condicionan la arquitectura:
+Los casos de uso del sistema (14 del Ciclo 1 y 3 del Ciclo 2), sus actores (Modelador UML, Cliente MCP Externo, Participante Colaborativo) y su especificación completa están en [`docs/CICLO_1.md`](docs/CICLO_1.md) y [`docs/CICLO_2.md`](docs/CICLO_2.md). Estos son los que condicionan la arquitectura:
 
-| CU                                        | Decisión que impone                                              |
-| :---------------------------------------- | :--------------------------------------------------------------- |
-| CU-02 Colaborar en tiempo real            | CRDT (Yjs) en el cliente + relay WebSocket con JWT               |
-| CU-03/CU-04 IA texto, voz e imagen        | Microservicio Python separado con adaptadores intercambiables    |
-| CU-06/CU-07 Generar Spring Boot / OpenAPI | Microservicio de generación que consume Spring Initializr        |
-| CU-08 Versionado                          | Funciones Lua atómicas en Redis                                  |
-| CU-09 MCP                                 | Servidor MCP independiente que reutiliza el contrato `ModelDiff` |
+| CU                                        | Decisión que impone                                                                    |
+| :---------------------------------------- | :------------------------------------------------------------------------------------- |
+| CU-02 Colaborar en tiempo real            | CRDT (Yjs) en el cliente + relay WebSocket con JWT                                     |
+| CU-03/CU-04 IA texto, voz e imagen        | Microservicio Python separado con adaptadores intercambiables                          |
+| CU-06/CU-07 Generar Spring Boot / OpenAPI | Microservicio de generación que consume Spring Initializr                              |
+| CU-08 Versionado                          | Funciones Lua atómicas en Redis                                                        |
+| CU-09 MCP                                 | Servidor MCP independiente que reutiliza el contrato `ModelDiff`                       |
+| CU-15 IA de Sala (Room AI)                | Orquestador en servidor, réplica Yjs en memoria, proveedor self-hosted y streaming SSE |
+| CU-16 Aplicar Propuesta de IA             | Revalidación atómica contra la réplica y ciclo de vida de claims                       |
+| CU-17 Configurar IA de Sala               | Política por sala en Redis (mentor/ejecutor, auto/confirm, moderador proactivo)        |
 
 ## 2. Vista lógica
 
@@ -165,20 +168,60 @@ Navegador → `POST /api/codegen/spring-boot` (server) → `apps/codegen` → `s
 
 `commit_snapshot`, `restore_version` y `list_versions_before` son funciones Lua de la librería `umlstudio`, cargadas al arrancar (`FUNCTION LOAD REPLACE`). Garantizan atomicidad sin transacciones del cliente. Detalle en [`docs/DATABASE.md`](docs/DATABASE.md).
 
+### 4.5 IA de Sala (Room AI), Réplica y Orquestador del Servidor
+
+A diferencia de la IA individual (donde el cliente consulta directo a `ai-service`), la **IA de Sala** (CU-15, CU-16, CU-17) es compartida y opera orquestada desde el servidor para garantizar sincronización honesta, contexto verificado e imparcialidad:
+
+```mermaid
+sequenceDiagram
+    actor P as Participante
+    participant W as Webapp (SPA)
+    participant S as Server (Hono)
+    participant BR as BoardReplica (Yjs)
+    participant R as Redis (Queue & Locks)
+    participant AI as ai-service (FastAPI)
+    participant DB as Neon (PostgreSQL RLS)
+
+    P->>W: envía pregunta (texto o voz)
+    W->>S: POST /api/rooms/:id/ai/messages (JWT)
+    S->>R: encolar mensaje + adquirir slot de inferencia
+    S-->>W: 202 Accepted { queuePosition, status: "queued" }
+    S->>S: difundir status "IA pensando para Juan" por WebSocket
+
+    Note over S,BR: Cuando llega el turno:
+    S->>BR: obtener snapshot del modelo actual (getModel)
+    S->>DB: recuperar memoria semántica duradera (RLS)
+    S->>R: leer conversación pública y sidecar de perfil pedagógico
+    S->>AI: POST /internal/v1/room/respond (SSE streaming + X-Internal-Token)
+    AI-->>S: stream de deltas (ai.delta)
+    S->>W: reenvío de deltas en tiempo real por relay WS
+
+    Note over S,DB: Al finalizar inferencia:
+    S->>R: commit atómico de respuesta (RoomChatMessage)
+    S->>DB: registrar memoria duradera en PostgreSQL
+    S->>W: difusión de message.created (y propuesta si mode=change)
+```
+
+- **Réplica del tablero (`BoardReplica`)**: el servidor mantiene una réplica Yjs en memoria por cada sala compartida activa, alimentada por los frames del relay. Se valida su completitud mediante un mecanismo de reto-respuesta (`replica-flush-challenge` / `replica-flush-ack`).
+- **Contexto en tres niveles**: (1) conversación pública reciente, (2) snapshot estricto del canvas desde la réplica, y (3) memoria compartida condensada y memoria a largo plazo en PostgreSQL.
+- **Ciclo de vida de propuestas (CU-16)**: si la sala permite soluciones (`allowChanges: true`), las respuestas ejecutores incluyen un `ModelDiff` en estado `pending`. Cualquier participante puede reclamar la propuesta (`claim`), revalidándose contra la versión actual del tablero (`baseRev`/`baseGeneration`), pasando por los estados `claimed`, `applied` o `stale`.
+- **Moderador proactivo (CU-15 FA-07 / RF-62)**: cuando `proactive: true` en la política de la sala, tras 20 segundos de inactividad sin cambios en el lienzo, el servidor ejecuta una auditoría heurística de principios SOLID (SRP / God Class) sobre la réplica y difunde como máximo una observación cada 2 minutos, dirigida al autor del elemento evaluado.
+
 ## 5. Vista de despliegue
 
 ### 5.1 Producción
 
-| Nodo       | Plataforma                               | Contenido                                                                 |
-| :--------- | :--------------------------------------- | :------------------------------------------------------------------------ |
-| Frontend   | Cloudflare Pages (`umlstudio.pages.dev`) | SPA estática                                                              |
-| Backend    | Render (`umlstudio-server`)              | REST + WebSocket en el mismo puerto (`/ws`)                               |
-| IA         | Render (`umlstudio-ai-service`)          | FastAPI + Whisper `base` int8 en la imagen                                |
-| Codegen    | Render (`umlstudio-codegen`)             | Generador Spring Boot                                                     |
-| Redis      | Render Key Value (Valkey)                | Diagramas, versiones, sesiones                                            |
-| PostgreSQL | Neon                                     | Solo para las aplicaciones Spring Boot **generadas**; UmlStudio no lo usa |
-
-Restricciones conocidas: el plan gratuito de Render duerme los servicios (arranque en frío de 30–60 s) y limita la memoria a 512 MB.
+| Nodo                      | Plataforma                               | Contenido                                                                                                   |
+| :------------------------ | :--------------------------------------- | :---------------------------------------------------------------------------------------------------------- |
+| **Frontend**              | Cloudflare Pages (`umlstudio.pages.dev`) | SPA compilada (Vite, React 19, Tailwind v4)                                                                 |
+| **Backend REST & Relay**  | Render (`umlstudio-server`)              | Servidor Hono, relay WebSocket en `/ws`, orquestador de sala, réplicas de tablero y moderador               |
+| **Servicio de IA**        | Render (`umlstudio-ai-service`)          | FastAPI, pipeline de IA, transcripción Whisper, validación de diffs y adaptadores intercambiables           |
+| **Modelo Principal**      | Google Cloud Run (`umlstudio-llm`)       | Ollama con imagen baked-in `umlstudio-mentor` (Qwen 2.5 7B) en GPU NVIDIA L4 (Tier 1), auth Google OIDC     |
+| **Túnel de Contingencia** | Portátil del equipo (conmutación)        | Ollama (`umlstudio-mentor` en NVIDIA RTX 3050), proxy Caddy `:8080` (Bearer auth) y Cloudflare Quick Tunnel |
+| **Codegen**               | Render (`umlstudio-codegen`)             | Generador de proyectos Spring Boot 3.x, SQL DDL y OpenAPI                                                   |
+| **Redis**                 | Render Key Value (Valkey)                | Cola de inferencia, locks distribuidos, presencia, sesiones JWT y diagramas                                 |
+| **Memoria Room AI**       | Neon PostgreSQL (`umlstudio-memory`)     | Proyecto dedicado (`main`/`dev`, rol `memory_app`), RLS por sala y usuario, purge diario de retención       |
+| **BBDD Apps Generadas**   | Neon PostgreSQL (instancias de prueba)   | PostgreSQL aislado para validar los proyectos Spring Boot generados por los usuarios                        |
 
 ### 5.2 Local
 
@@ -194,14 +237,49 @@ Restricciones conocidas: el plan gratuito de Render duerme los servicios (arranq
 | mcp-server (SSE)  | 8003                                          |
 | docs (Docusaurus) | 3001                                          |
 | Redis             | 6379                                          |
+| PostgreSQL Local  | 5433 (para pruebas de memoria duradera)       |
+
+### 5.3 Notas de Despliegue para el Equipo (Team Deployment Notes)
+
+#### Matriz de Variables de Entorno
+
+| Variable              | Servicio    | Producción                                                         | Contingencia Local                                   |
+| :-------------------- | :---------- | :----------------------------------------------------------------- | :--------------------------------------------------- |
+| `AI_INTERNAL_TOKEN`   | server / ai | Secreto compartido de alta entropía (mínimo 32 caracteres)         | Secreto compartido local                             |
+| `OLLAMA_URL`          | ai-service  | `https://umlstudio-llm-<hash>.a.run.app/v1`                        | `https://<tunnel-id>.trycloudflare.com/v1`           |
+| `OLLAMA_AUTH`         | ai-service  | `gcp-id-token`                                                     | `bearer`                                             |
+| `GCP_SA_KEY_JSON`     | ai-service  | Service Account JSON con rol `roles/run.invoker`                   | Vacío / no requerido                                 |
+| `OLLAMA_API_KEY`      | ai-service  | No requerido (usa token OIDC dinámico)                             | `<token generado para Caddy>`                        |
+| `OLLAMA_MODEL`        | ai-service  | `umlstudio-mentor`                                                 | `umlstudio-mentor`                                   |
+| `ROOM_MEMORY`         | server      | `postgres`                                                         | `postgres` (o `redis` como fallback)                 |
+| `MEMORY_DATABASE_URL` | server      | `postgres://memory_app:...@ep-...neon.tech/neondb?sslmode=require` | `postgres://memory_app:...@localhost:5433/umlstudio` |
+
+#### Procedimiento de Conmutación de Proveedores (Sin Caída)
+
+La conmutación de infraestructura cumple con **RNF-31** y se realiza modificando únicamente variables de entorno en el panel de Render, sin recompilar ni alterar el código:
+
+1. **Escenario Cloud Run (Principal)**:
+   - `OLLAMA_URL=https://umlstudio-llm-...run.app/v1`
+   - `OLLAMA_AUTH=gcp-id-token`
+2. **Escenario Portátil con Túnel (Contingencia)**:
+   - Iniciar script en el portátil: `python apps/ai-service/ollama/contingency_tunnel.py`
+   - Actualizar en Render: `OLLAMA_URL=https://*.trycloudflare.com/v1`, `OLLAMA_AUTH=bearer`, `OLLAMA_API_KEY=<token>`
+3. **Escenario Gemini / Cloud (Fallback Extremo)**:
+   - Modificar en Render: `DEFAULT_PROVIDER=gemini` o `ROOM_PROVIDER_ORDER=gemini,ollama`
 
 ## 6. Decisiones de arquitectura
 
-| Decisión                                        | Motivo                                                     | Costo aceptado                                       |
-| :---------------------------------------------- | :--------------------------------------------------------- | :--------------------------------------------------- |
-| CRDT Yjs en el cliente + relay simple           | Convergencia sin conflictos y servidor liviano             | El servidor no conoce el estado del diagrama en vivo |
-| Redis como única base del sistema               | Baja latencia, TTL nativo, atomicidad con Lua              | Sin consultas relacionales; datos con TTL (120 días) |
-| Microservicio de IA en Python                   | Ecosistema de IA/voz; despliegue y escalado independientes | Un servicio más que operar                           |
-| Adaptadores de IA intercambiables               | Cambiar de proveedor (nube o local) por configuración      | Calidad variable entre modelos                       |
-| Spring Initializr como base del código generado | Proyectos que compilan con el andamiaje oficial            | Dependencia externa (mitigada con plantilla local)   |
-| Contrato `ModelDiff` común                      | Una sola validación para IA, voz y MCP                     | Mantener los tipos TS y Pydantic alineados           |
+| Decisión                                            | Motivo                                                     | Costo aceptado                                       |
+| :-------------------------------------------------- | :--------------------------------------------------------- | :--------------------------------------------------- |
+| **AD-01** CRDT Yjs en el cliente + relay simple     | Convergencia sin conflictos y servidor liviano             | El servidor no conoce el estado del diagrama en vivo |
+| **AD-02** Redis como base operativa primaria        | Baja latencia, TTL nativo, atomicidad con Lua              | Sin consultas relacionales; datos volátiles          |
+| **AD-03** Microservicio de IA en Python             | Ecosistema de IA/voz; despliegue y escalado independientes | Un servicio más que operar                           |
+| **AD-04** Adaptadores de IA intercambiables         | Cambiar de proveedor (nube o local) por configuración      | Calidad variable entre modelos                       |
+| **AD-05** Spring Initializr como base               | Proyectos que compilan con el andamiaje oficial            | Dependencia externa (mitigada con plantilla local)   |
+| **AD-06** Contrato `ModelDiff` común                | Una sola validación para IA, voz y MCP                     | Mantener los tipos TS y Pydantic alineados           |
+| **AD-07** Autenticación y presencia real (JWT)      | Cero identidades anónimas o inventadas en la sala          | Requiere inicio de sesión obligatorio                |
+| **AD-08** Réplica del tablero en el servidor        | Contexto verificado para Room AI sin consultar al cliente  | Consumo de memoria en el servidor Node               |
+| **AD-09** Orquestador de inferencia en servidor     | Control de turnos, streaming de deltas y claims atómicos   | Lógica de coordinación compleja en Node.js           |
+| **AD-10** Memoria Neon con RLS (`umlstudio-memory`) | Aislamiento estricto por sala/usuario y búsqueda semántica | Configuración de roles y políticas de PostgreSQL     |
+| **AD-11** Inferencia en Cloud Run GPU L4            | Despliegue de modelo propio 7B con escalado a cero         | Costo de GPU activa ($0.00032/s) durante la defensa  |
+| **AD-12** Túnel de contingencia con Bearer auth     | Respaldo en portátil sin abrir puertos en caso de fallo    | Dependencia de la conexión de subida del portátil    |
