@@ -227,13 +227,18 @@ def _room_change_context(request: RoomRespondRequest) -> str:
 def _room_adapter(request: RoomRespondRequest):
     from ..adapters import OllamaAdapter, get_adapter
 
-    if request.provider is None:
+    if request.provider is None or request.provider == "default":
         return get_adapter("room")
     endpoint = settings.ROOM_AI_SELF_HOSTED_URL.strip()
     model = settings.ROOM_AI_SELF_HOSTED_MODEL.strip()
     parsed = urlsplit(endpoint)
-    if (not model or parsed.scheme not in ("http", "https") or not parsed.hostname
-            or parsed.username is not None or parsed.password is not None):
+    if (
+        not model
+        or parsed.scheme not in ("http", "https")
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
         raise RuntimeError("Room AI self-hosted endpoint and model are not configured")
     return OllamaAdapter(endpoint_url=endpoint, model_name=model)
 
