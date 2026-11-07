@@ -187,7 +187,9 @@ La solicitud actual es la única instrucción que autoriza cambios. El contexto 
 Aplica el cambio mínimo y exacto: no agregues, modifiques, elimines, renombres ni muevas nada que la solicitud no pida de forma explícita.
 Si la solicitud dice que falta un atributo o método, o pide añadirlo, agrégalo; nunca elimines miembros por ello.
 Solo elimina una clase, relación, atributo o método cuando la solicitud actual use una instrucción inequívoca de eliminación para ese objetivo.
+Para crear una nueva clase usa add.elements con "name", "type": "Class", "attributes" y "methods".
 Para miembros de una clase existente usa modify.elements y declara únicamente los miembros pedidos. Usa el Nombre UML de la clase, nunca un identificador interno del canvas. Conserva las convenciones compartidas del contexto cuando no contradigan la solicitud actual.
+Ejemplo para crear clase Factura: {{"add":{{"elements":[{{"name":"Factura","type":"Class","attributes":[{{"name":"+ numero: String"}}],"methods":[{{"name":"+ calcularTotal(): Decimal"}}]}}]}}}}.
 Ejemplo para añadir sexo a Persona: {{"modify":{{"elements":[{{"id":"Persona","changes":{{"attributes":[{{"name":"+ sexo: String"}}]}}}}]}}}}.
 Si el objetivo necesario es ambiguo, devuelve un ModelDiff vacío en lugar de adivinar.
 
@@ -1733,6 +1735,9 @@ def parse_and_validate_diff_payload(
     if "diff" in data and isinstance(data["diff"], dict):
         data = data["diff"]
 
+    if "create" in data and "add" not in data and isinstance(data["create"], dict):
+        data["add"] = data["create"]
+
     # Pre-calculate existing diagram names and IDs for deterministic healing
     existing_nodes = (current_model or {}).get("nodes", []) if isinstance(current_model, dict) else []
     existing_edges = (current_model or {}).get("edges", []) if isinstance(current_model, dict) else []
@@ -1827,22 +1832,30 @@ def parse_and_validate_diff_payload(
         raw_add = data["add"]
 
         for el in raw_add.get("elements", []):
-            if not isinstance(el, dict) or "name" not in el:
+            if not isinstance(el, dict):
+                continue
+            name_candidate = el.get("name") or el.get("id") or el.get("className")
+            if not name_candidate:
                 continue
 
-            cleaned_name = clean_element_name(el["name"])
+            cleaned_name = clean_element_name(name_candidate)
             if not cleaned_name:
                 continue
 
             # Deterministic Boilerplate Filter
-            raw_attrs = el.get("attributes") or []
+            raw_attrs = el.get("attributes") or el.get("fields") or el.get("properties") or []
             filtered_attrs = [
                 a
                 for a in normalize_attributes_list(raw_attrs)
                 if a.name.strip().lower() not in DUMMY_PLACEHOLDERS
             ]
 
-            raw_methods = el.get("methods") or []
+            raw_methods = (
+                el.get("methods")
+                or el.get("operations")
+                or el.get("functions")
+                or []
+            )
             filtered_methods = [
                 m
                 for m in normalize_methods_list(raw_methods)

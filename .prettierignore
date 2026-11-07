@@ -21,6 +21,7 @@ apps/webapp/src/routeTree.gen.ts
 **/.pytest_cache
 .atl
 openspec
+tokenizer.json
 # Local-only material (excluded from git)
 docs/internal
 docs/examples

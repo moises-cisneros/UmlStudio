@@ -227,13 +227,18 @@ def _room_change_context(request: RoomRespondRequest) -> str:
 def _room_adapter(request: RoomRespondRequest):
     from ..adapters import OllamaAdapter, get_adapter
 
-    if request.provider is None:
+    if request.provider is None or request.provider == "default":
         return get_adapter("room")
     endpoint = settings.ROOM_AI_SELF_HOSTED_URL.strip()
     model = settings.ROOM_AI_SELF_HOSTED_MODEL.strip()
     parsed = urlsplit(endpoint)
-    if (not model or parsed.scheme not in ("http", "https") or not parsed.hostname
-            or parsed.username is not None or parsed.password is not None):
+    if (
+        not model
+        or parsed.scheme not in ("http", "https")
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
         raise RuntimeError("Room AI self-hosted endpoint and model are not configured")
     return OllamaAdapter(endpoint_url=endpoint, model_name=model)
 
@@ -286,7 +291,7 @@ class RoomResponseService:
                 f"Question: {request.question}"
             )
             stage = "prompt_token_count"
-            if request.provider == "self_hosted":
+            if request.provider == "self_hosted" and settings.ROOM_AI_SELF_HOSTED_URL.strip():
                 token_started = time.perf_counter()
                 try:
                     prompt_tokens = _count_room_prompt_tokens(request, prompt)
@@ -352,7 +357,7 @@ class RoomResponseService:
 
             def count_prompt_tokens(prompt_to_count: str) -> None:
                 nonlocal prompt_tokens, tokenization_ms
-                if request.provider != "self_hosted":
+                if request.provider != "self_hosted" or not settings.ROOM_AI_SELF_HOSTED_URL.strip():
                     return
                 token_started = time.perf_counter()
                 try:

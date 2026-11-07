@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import time
 from urllib.parse import urlsplit
 
@@ -97,7 +98,7 @@ def _profile_failure_reason(stage: str, error: Exception) -> str:
 
 
 def _self_hosted_adapter():
-    from ..adapters import OllamaAdapter
+    from ..adapters import OllamaAdapter, get_adapter
 
     endpoint = settings.ROOM_AI_SELF_HOSTED_URL.strip()
     model = settings.ROOM_AI_SELF_HOSTED_MODEL.strip()
@@ -149,13 +150,14 @@ class RoomProfileService:
                 f"Current interaction: {json.dumps(request.interaction, ensure_ascii=False)}"
             )
             stage = "prompt_token_count"
-            token_started = time.perf_counter()
-            try:
-                prompt_tokens = count_room_ai_prompt_tokens(prompt)
-            finally:
-                tokenization_ms = (time.perf_counter() - token_started) * 1000.0
-            if prompt_tokens > MAX_ROOM_AI_PROMPT_TOKENS:
-                raise RoomProfilePromptTooLongError("Room AI profile prompt exceeds the token limit")
+            if settings.ROOM_AI_SELF_HOSTED_URL.strip():
+                token_started = time.perf_counter()
+                try:
+                    prompt_tokens = count_room_ai_prompt_tokens(prompt)
+                finally:
+                    tokenization_ms = (time.perf_counter() - token_started) * 1000.0
+                if prompt_tokens > MAX_ROOM_AI_PROMPT_TOKENS:
+                    raise RoomProfilePromptTooLongError("Room AI profile prompt exceeds the token limit")
 
             stage = "provider_inference"
             inference_started = time.perf_counter()
@@ -167,7 +169,11 @@ class RoomProfileService:
             stage = "provider_output_validation"
             if not isinstance(raw, str) or not raw.strip():
                 raise ValueError("AI provider returned an empty teaching profile")
-            parsed = json.loads(raw)
+            cleaned_raw = raw.strip()
+            if cleaned_raw.startswith("```"):
+                cleaned_raw = re.sub(r"^```(?:json)?\s*", "", cleaned_raw)
+                cleaned_raw = re.sub(r"\s*```$", "", cleaned_raw)
+            parsed = json.loads(cleaned_raw)
             result = RoomProfileProviderOutput.model_validate(parsed)
             profile = RoomAiTeachingProfile.model_validate(result.profile.model_dump())
             response = RoomProfileDeriveResponse(profile=profile)
