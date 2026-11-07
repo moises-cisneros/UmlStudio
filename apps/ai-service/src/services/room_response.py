@@ -291,7 +291,7 @@ class RoomResponseService:
                 f"Question: {request.question}"
             )
             stage = "prompt_token_count"
-            if request.provider == "self_hosted" and settings.ROOM_AI_SELF_HOSTED_URL.strip():
+            if request.provider == "self_hosted":
                 token_started = time.perf_counter()
                 try:
                     prompt_tokens = _count_room_prompt_tokens(request, prompt)
@@ -357,7 +357,7 @@ class RoomResponseService:
 
             def count_prompt_tokens(prompt_to_count: str) -> None:
                 nonlocal prompt_tokens, tokenization_ms
-                if request.provider != "self_hosted" or not settings.ROOM_AI_SELF_HOSTED_URL.strip():
+                if request.provider != "self_hosted":
                     return
                 token_started = time.perf_counter()
                 try:

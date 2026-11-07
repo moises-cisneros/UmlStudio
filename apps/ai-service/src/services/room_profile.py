@@ -150,14 +150,13 @@ class RoomProfileService:
                 f"Current interaction: {json.dumps(request.interaction, ensure_ascii=False)}"
             )
             stage = "prompt_token_count"
-            if settings.ROOM_AI_SELF_HOSTED_URL.strip():
-                token_started = time.perf_counter()
-                try:
-                    prompt_tokens = count_room_ai_prompt_tokens(prompt)
-                finally:
-                    tokenization_ms = (time.perf_counter() - token_started) * 1000.0
-                if prompt_tokens > MAX_ROOM_AI_PROMPT_TOKENS:
-                    raise RoomProfilePromptTooLongError("Room AI profile prompt exceeds the token limit")
+            token_started = time.perf_counter()
+            try:
+                prompt_tokens = count_room_ai_prompt_tokens(prompt)
+            finally:
+                tokenization_ms = (time.perf_counter() - token_started) * 1000.0
+            if prompt_tokens > MAX_ROOM_AI_PROMPT_TOKENS:
+                raise RoomProfilePromptTooLongError("Room AI profile prompt exceeds the token limit")
 
             stage = "provider_inference"
             inference_started = time.perf_counter()
