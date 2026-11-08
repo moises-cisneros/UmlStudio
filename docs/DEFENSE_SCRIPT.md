@@ -11,9 +11,11 @@
 Antes de iniciar la exposición frente a los evaluadores:
 
 1. **Precalentamiento de Cloud Run** (evita arranques en frío de la GPU):
+
    ```bash
    gcloud run services update umlstudio-llm --region=us-central1 --min-instances=1
    ```
+
 2. **Precalentamiento de servicios en Render**:
    - Abrir en pestaña oculta `https://umlstudio-server.onrender.com/health` y `https://umlstudio-ai-service.onrender.com/health`.
 3. **Inicio de sesión en dos equipos**:
@@ -112,16 +114,21 @@ Antes de iniciar la exposición frente a los evaluadores:
   > _"Para cumplir con el estándar de confiabilidad y la restricción de $0.00 de costos posteriores, diseñamos una infraestructura de inferencia intercambiable con cero cambios de código."_
 - **Demostración de conmutación**:
   1. Mostrar que actualmente la variable en Render apunta al servicio en Google Cloud Run con GPU NVIDIA L4:
+
      ```bash
      OLLAMA_URL=https://umlstudio-llm-xyz.a.run.app
      ```
+
   2. **Simulación de contingencia**:
      - Ejecutar en la laptop local el script de túnel Cloudflare:
+
        ```bash
        bash apps/ai-service/ollama/contingency-tunnel.sh
        ```
+
      - En el dashboard de Render, conmutar `OLLAMA_URL` a la URL rápida del túnel `https://<hash>.trycloudflare.com`.
      - Enviar una nueva consulta y comprobar que la inferencia se resuelve a través de la laptop del expositor.
+
   3. **Demostración de respaldo en la nube**:
      - Si la URL de Ollama fallara o no estuviera disponible, la IA de sala conmuta automáticamente al proveedor cloud (Gemini 2.5 Flash), rotulando explícitamente en el pie de la respuesta: `[Inferencia: Respaldo Cloud]`.
 
