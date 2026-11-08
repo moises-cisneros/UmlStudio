@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import time
 from urllib.parse import urlsplit
 
@@ -97,7 +98,7 @@ def _profile_failure_reason(stage: str, error: Exception) -> str:
 
 
 def _self_hosted_adapter():
-    from ..adapters import OllamaAdapter
+    from ..adapters import OllamaAdapter, get_adapter
 
     endpoint = settings.ROOM_AI_SELF_HOSTED_URL.strip()
     model = settings.ROOM_AI_SELF_HOSTED_MODEL.strip()
@@ -167,7 +168,11 @@ class RoomProfileService:
             stage = "provider_output_validation"
             if not isinstance(raw, str) or not raw.strip():
                 raise ValueError("AI provider returned an empty teaching profile")
-            parsed = json.loads(raw)
+            cleaned_raw = raw.strip()
+            if cleaned_raw.startswith("```"):
+                cleaned_raw = re.sub(r"^```(?:json)?\s*", "", cleaned_raw)
+                cleaned_raw = re.sub(r"\s*```$", "", cleaned_raw)
+            parsed = json.loads(cleaned_raw)
             result = RoomProfileProviderOutput.model_validate(parsed)
             profile = RoomAiTeachingProfile.model_validate(result.profile.model_dump())
             response = RoomProfileDeriveResponse(profile=profile)

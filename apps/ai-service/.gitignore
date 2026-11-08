@@ -48,4 +48,8 @@ htmlcov/
 *.mp3
 *.webm
 *.ogg
+
+# Local model tokenizers / weights
+tokenizer.json
+
 *.m4a
