@@ -46,6 +46,8 @@
     "test:mcp": "pnpm --filter @umlstudio/mcp-server run test",
     "test:ai": "pnpm --filter @umlstudio/core exec vitest run --config ../../apps/ai-service/vitest.config.ts",
     "test:scripts": "vitest run",
+    "test:e2e": "pnpm --filter @umlstudio/e2e test",
+    "test:e2e:headed": "pnpm --filter @umlstudio/e2e test:headed",
     "check:ai-attribution": "node scripts/ai-attribution.mjs",
     "knip": "knip",
     "prepare": "husky || true"

@@ -32,6 +32,7 @@ Herramienta CASE web para **diagramas de clases UML 2.5** (y nada más): edició
 | Redis, IndexedDB, mapeo a PostgreSQL     | [`docs/DATABASE.md`](docs/DATABASE.md)                   |
 | Tokens y estilo visual                   | [`DESIGN.md`](DESIGN.md)                                 |
 | Calidad (ISO/IEC 25010)                  | [`docs/QUALITY_STANDARDS.md`](docs/QUALITY_STANDARDS.md) |
+| Pruebas E2E (Playwright) por CU (PUDS)   | [`docs/TESTS_E2E.md`](docs/TESTS_E2E.md)                 |
 | Flujo de trabajo, ramas, commits, PR     | [`CONTRIBUTING.md`](CONTRIBUTING.md)                     |
 
 Leé solo la sección que necesitás (buscá por `CU-06`, `RF-28`, etc.), no el archivo entero.
@@ -44,6 +45,7 @@ pnpm dev                  # webapp + server + Redis en Docker
 pnpm lint                 # ESLint en ui, core, server, webapp, codegen
 pnpm format               # Prettier
 pnpm test:all             # Vitest en core, server y codegen
+pnpm test:e2e             # Playwright E2E suites (CU-01 a CU-17)
 pnpm --filter @umlstudio/<paquete> test   # un paquete
 ```
 

@@ -62,8 +62,9 @@ target/
 # Documentation (Docusaurus)
 .docusaurus/
 
-# Stray pnpm store if pnpm is run outside the workspace root
-.pnpm-store/
+# Playwright E2E artifacts
+**/test-results/
+**/playwright-report/
 
 # IDE & AI Tooling
 .vscode/

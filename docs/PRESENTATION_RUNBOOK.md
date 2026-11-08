@@ -112,18 +112,22 @@ Costo por hora activa de GPU NVIDIA L4: **$1.16 USD / hora**.
 Inmediatamente finalizada la defensa (11 de noviembre):
 
 - [ ] **1. Eliminar el servicio Cloud Run**:
+
   ```bash
   gcloud run services delete umlstudio-llm --region=us-central1 --quiet
   ```
+
 - [ ] **2. Revertir planes en Render**:
   - Cambiar `umlstudio-server` y `umlstudio-ai-service` al plan **Free**.
 - [ ] **3. Detener túneles y proxies locales**:
   - Cancelar cualquier proceso activo de Caddy o `cloudflared` en el portátil (`Ctrl + C`).
 - [ ] **4. Rotar secretos de producción**:
   - Rotar `AI_INTERNAL_TOKEN` y revocar claves JSON de cuentas de servicio GCP de prueba:
+
   ```bash
   gcloud iam service-accounts keys delete <KEY_ID> --iam-account=cloudrun-invoker@...
   ```
+
 - [ ] **5. Auditoría de facturación final**:
   - Entrar a la consola de GCP y verificar que no existan servicios en ejecución ni costos proyectados.
   - Verificar en Render que no haya cargos recurrentes.
