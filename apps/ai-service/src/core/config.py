@@ -53,6 +53,9 @@ class Settings:
     CLOUDFLARE_ACCOUNT_ID: str = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
     CLOUDFLARE_API_TOKEN: str = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
     CLOUDFLARE_MODEL: str = os.getenv("CLOUDFLARE_MODEL", "@cf/meta/llama-3.1-8b-instruct").strip()
+    CLOUDFLARE_BASE_URL: str = os.getenv(
+        "CLOUDFLARE_BASE_URL", "https://api.cloudflare.com/client/v4"
+    ).strip().rstrip("/")
 
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "").strip()
     OPENROUTER_MODEL: str = os.getenv(

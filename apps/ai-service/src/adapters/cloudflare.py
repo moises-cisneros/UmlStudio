@@ -32,10 +32,14 @@ class CloudflareAdapter(BaseAIAdapter):
         account_id: Optional[str] = None,
         api_token: Optional[str] = None,
         model_name: Optional[str] = None,
+        base_url: Optional[str] = None,
     ):
         self.account_id = account_id or settings.CLOUDFLARE_ACCOUNT_ID
         self.api_token = api_token or settings.CLOUDFLARE_API_TOKEN
         self.model_name = model_name or settings.CLOUDFLARE_MODEL
+        self.base_url = (
+            base_url or getattr(settings, "CLOUDFLARE_BASE_URL", "https://api.cloudflare.com/client/v4")
+        ).rstrip("/")
 
     @property
     def provider_name(self) -> str:
@@ -48,7 +52,7 @@ class CloudflareAdapter(BaseAIAdapter):
         return await self.is_configured()
 
     def _get_url(self) -> str:
-        return f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}/ai/run/{self.model_name}"
+        return f"{self.base_url}/accounts/{self.account_id}/ai/run/{self.model_name}"
 
     def _get_headers(self) -> Dict[str, str]:
         return {
