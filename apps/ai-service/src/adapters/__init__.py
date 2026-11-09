@@ -4,6 +4,7 @@ from .openrouter import OpenRouterAdapter
 from .gemini import GeminiAdapter
 from .lmstudio import LMStudioAdapter
 from .ollama import OllamaAdapter
+from .vertex_bridge import VertexBridgeAdapter
 from .auto import AutoAdaptiveAdapter
 
 
@@ -40,6 +41,8 @@ def get_adapter(provider_name: str = None) -> BaseAIAdapter:
         return LMStudioAdapter()
     elif "ollama" in normalized or "gemma" in normalized:
         return OllamaAdapter()
+    elif normalized in ("vertex", "vertex-bridge", "vertex_bridge"):
+        return VertexBridgeAdapter()
     return AutoAdaptiveAdapter(mode=normalized)
 
 
@@ -50,6 +53,7 @@ __all__ = [
     "GeminiAdapter",
     "LMStudioAdapter",
     "OllamaAdapter",
+    "VertexBridgeAdapter",
     "AutoAdaptiveAdapter",
     "get_adapter",
     "get_room_adapter",
