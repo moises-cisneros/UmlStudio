@@ -59,7 +59,11 @@ class TestSelfHostedRoomProvider(unittest.IsolatedAsyncioTestCase):
         self.assertIn('"detailLevel": "balanced"', adapter.complete_text.await_args.args[0])
         self.assertIn('"exampleStyle": "analogy"', adapter.complete_text.await_args.args[0])
         self.assertNotIn("private note", adapter.complete_text.await_args.args[0])
-        self_hosted.assert_called_once_with(endpoint_url="http://model.invalid/v1", model_name="test-model")
+        self_hosted.assert_called_once_with(
+            endpoint_url="http://model.invalid/v1",
+            model_name="test-model",
+            timeout_seconds=settings.ROOM_AI_REQUEST_TIMEOUT_SECONDS,
+        )
         fallback.assert_not_called()
 
     async def test_missing_self_hosted_configuration_fails_without_fallback(self):

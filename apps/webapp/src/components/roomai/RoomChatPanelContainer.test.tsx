@@ -198,6 +198,33 @@ describe("RoomChatPanelContainer hidden teaching profile", () => {
     expect(JSON.stringify(mocks.sendSharedMessage.mock.calls)).not.toContain("personal notes")
   })
 
+  it("still sends the default profile when local preference storage is temporarily unavailable", async () => {
+    mocks.readPersonalRoomProfile.mockRejectedValue(new Error("IndexedDB unavailable"))
+    mocks.useRoomAi.mockReturnValue({
+      ...mocks.useRoomAi(),
+      policy: { enabled: true, allowChanges: true, applyMode: "confirm", proactive: false },
+    })
+    const user = userEvent.setup()
+    render(<RoomChatPanelContainer diagramId="diagram-1" />)
+    await waitFor(() => expect(mocks.readPersonalRoomProfile).toHaveBeenCalled())
+
+    await user.click(screen.getByRole("button", { name: "Changes" }))
+    await user.type(
+      screen.getByPlaceholderText("Ask the AI about this diagram..."),
+      "me gustan los atributos en mayúsculas, recuérdalo"
+    )
+    await user.click(screen.getByRole("button", { name: "Send" }))
+
+    await waitFor(() =>
+      expect(mocks.sendSharedMessage).toHaveBeenCalledWith({
+        text: "me gustan los atributos en mayúsculas, recuérdalo",
+        intent: "change",
+        teachingProfile: initialProfile,
+        profileRevision: currentRevision,
+      })
+    )
+  })
+
   it("forwards the selected Changes intent to room.sendMessage", async () => {
     mocks.useRoomAi.mockReturnValue({
       ...mocks.useRoomAi(),
