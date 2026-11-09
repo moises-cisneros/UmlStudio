@@ -122,6 +122,70 @@ describe("Room AI service privacy boundary", () => {
     expect(result.profileUpdate).toBeUndefined()
   })
 
+  it("stores an explicit preference without queuing an empty UML change", async () => {
+    const redis = createRedis([1, 0])
+    const initialProfile = { detailLevel: "balanced", exampleStyle: "none" } as const
+    const service = createRoomAiService({
+      redis,
+      ttlSeconds: 3600,
+      profileDeriver: vi.fn(async () => ({
+        ...initialProfile,
+        preferences: ["Me gustan los atributos en mayúsculas"],
+      })),
+      getSharedBoardReplicaAtLeast: () => replica as never,
+    })
+    const profileRevision = await service.getPersonalProfileRevision("room-1", "user-1")
+
+    const result = await service.postMessage({
+      diagramId: "room-1",
+      author: { id: "user-1", email: "user@example.test", name: "User" },
+      text: "me gustan los atributos en mayúsculas, recuérdalo",
+      intent: "change",
+      replica: { generation: "a".repeat(64), revision: 3 },
+      teachingProfile: initialProfile,
+      profileRevision,
+    })
+
+    expect(result.preferenceUpdated).toBe(true)
+    expect(result.messageId).toBeUndefined()
+    expect(result.profileUpdate?.profile.preferences).toEqual([
+      "Me gustan los atributos en mayúsculas",
+    ])
+    expect(redis.eval).not.toHaveBeenCalled()
+  })
+
+  it("does not queue a repeated explicit preference when the profile is unchanged", async () => {
+    const redis = createRedis([1, 0])
+    const profile = {
+      detailLevel: "balanced" as const,
+      exampleStyle: "none" as const,
+      preferences: ["me gustan los atributos en mayúsculas"],
+    }
+    const service = createRoomAiService({
+      redis,
+      ttlSeconds: 3600,
+      profileDeriver: vi.fn(async () => profile),
+      getSharedBoardReplicaAtLeast: () => replica as never,
+    })
+    const profileRevision = await service.getPersonalProfileRevision("room-1", "user-1")
+
+    const result = await service.postMessage({
+      diagramId: "room-1",
+      author: { id: "user-1", email: "user@example.test", name: "User" },
+      text: "me gustan los atributos en mayúsculas, recuérdalo",
+      intent: "change",
+      replica: { generation: "a".repeat(64), revision: 3 },
+      teachingProfile: profile,
+      profileRevision,
+    })
+
+    expect(result).toEqual({
+      profileUpdate: { profile, revision: profileRevision },
+      preferenceUpdated: true,
+    })
+    expect(redis.eval).not.toHaveBeenCalled()
+  })
+
   it("rolls back the profile revision when the shared queue rejects the message", async () => {
     const redis = createRedis([0, 0])
     const service = createRoomAiService({

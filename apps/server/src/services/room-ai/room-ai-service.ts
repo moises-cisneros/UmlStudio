@@ -202,7 +202,7 @@ export interface PostRoomMessageResult {
 }
 
 function isExplicitPreferenceRequest(text: string): boolean {
-  return /\b(recuerda|recordá|guarda|guardá|memoriza|prefiero|a partir de ahora|para mis siguientes|siempre)\b/i.test(
+  return /\b(recuerda(?:lo)?|recuérda(?:lo)?|recordá(?:lo)?|guarda(?:lo)?|guardá(?:lo)?|memoriza(?:lo)?|prefiero|a partir de ahora|para mis siguientes|siempre)\b/i.test(
     text
   )
 }
@@ -340,10 +340,15 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
     if ((await redis.exists(k.diagram(diagramId))) === 0) throw new RoomNotFoundError()
   }
 
-  async function assertRequestAllowed(diagramId: string, intent: RoomAiIntent): Promise<void> {
+  async function getActivePolicy(diagramId: string) {
     await assertRoomExists(diagramId)
     const policy = await policyRepository.get(diagramId)
     if (!policy.enabled) throw new RoomAiDisabledError()
+    return policy
+  }
+
+  async function assertRequestAllowed(diagramId: string, intent: RoomAiIntent): Promise<void> {
+    const policy = await getActivePolicy(diagramId)
     if (intent === "change" && !policy.allowChanges) throw new RoomAiChangesDisabledError()
   }
 
@@ -357,7 +362,7 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
       teachingProfile: rawTeachingProfile,
       profileRevision,
     }) {
-      await assertRequestAllowed(diagramId, intent)
+      const policy = await getActivePolicy(diagramId)
       const teachingProfile =
         rawTeachingProfile === undefined
           ? null
@@ -448,6 +453,13 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
             learnedProfile.preferences.join("\u0000") !==
               teachingProfile.preferences.join("\u0000"))
 
+        if (!changed && isExplicitPreferenceRequest(text)) {
+          return {
+            profileUpdate: { profile: teachingProfile, revision: profileRevision! },
+            preferenceUpdated: true,
+          }
+        }
+
         if (changed) {
           const preferencesChanged =
             learnedProfile!.preferences.join("\u0000") !==
@@ -491,6 +503,7 @@ export function createRoomAiService(deps: RoomAiServiceDeps): RoomAiService {
           if (queuePosition === 0) throw new RoomQueueFullError()
         }
       }
+      if (intent === "change" && !policy.allowChanges) throw new RoomAiChangesDisabledError()
       if (queuePosition === 0) throw new RoomQueueFullError()
       publish?.(diagramId, { type: "message.created", message })
       publish?.(diagramId, {

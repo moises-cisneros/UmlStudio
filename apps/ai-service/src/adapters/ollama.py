@@ -27,11 +27,15 @@ class OllamaAdapter(BaseAIAdapter):
         headers: Optional[Dict[str, str]] = None,
         api_key: Optional[str] = None,
         token_issuer: Optional[Any] = None,
+        timeout_seconds: float = 45.0,
     ):
         self.endpoint_url = (endpoint_url or settings.OLLAMA_URL).rstrip("/")
         self.model_name = model_name or settings.OLLAMA_MODEL
         self._custom_headers = dict(headers) if headers is not None else None
         self.token_issuer = token_issuer
+        if timeout_seconds <= 0:
+            raise ValueError("Ollama timeout must be greater than zero")
+        self.timeout_seconds = timeout_seconds
         if headers is not None:
             self.headers = dict(headers)
         else:
@@ -74,7 +78,7 @@ class OllamaAdapter(BaseAIAdapter):
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
         }
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
             resp = await client.post(url, json=payload, headers=self._get_request_headers())
             if resp.status_code != 200:
                 raise RuntimeError(f"Ollama text completion failed ({resp.status_code})")
@@ -92,7 +96,7 @@ class OllamaAdapter(BaseAIAdapter):
             "temperature": 0.2,
             "stream": True,
         }
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
             async with client.stream(
                 "POST", url, json=payload, headers=self._get_request_headers()
             ) as resp:
@@ -150,7 +154,7 @@ class OllamaAdapter(BaseAIAdapter):
         }
 
         logger.info(f"Ollama: enviando petición a '{url}' con modelo '{self.model_name}'...")
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
             resp = await client.post(url, json=payload, headers=self._get_request_headers())
             if resp.status_code == 200:
                 data = resp.json()
