@@ -87,8 +87,10 @@ class Settings:
     _gcp_token_issuer: Any = None
 
     # Room provider order when no specific provider is requested:
-    # Comma-separated list of providers tried in sequence (e.g. "ollama,gemini").
-    ROOM_PROVIDER_ORDER: str = os.getenv("ROOM_PROVIDER_ORDER", "ollama,gemini").strip()
+    # Comma-separated list of providers tried in sequence (e.g. "cloudflare,ollama,gemini").
+    ROOM_PROVIDER_ORDER: str = os.getenv(
+        "ROOM_PROVIDER_ORDER", "cloudflare,ollama,gemini"
+    ).strip()
 
     # Dedicated Room AI endpoint; no default or provider fallback.
     ROOM_AI_SELF_HOSTED_URL: str = os.getenv("ROOM_AI_SELF_HOSTED_URL", "").strip()
@@ -131,11 +133,11 @@ class Settings:
     def get_room_provider_order(self) -> List[str]:
         raw = getattr(self, "ROOM_PROVIDER_ORDER", None)
         if raw is None:
-            raw = os.getenv("ROOM_PROVIDER_ORDER", "ollama,gemini")
+            raw = os.getenv("ROOM_PROVIDER_ORDER", "cloudflare,ollama,gemini")
         if not raw:
-            return ["ollama", "gemini"]
+            return ["cloudflare", "ollama", "gemini"]
         order = [item.strip().lower() for item in raw.split(",") if item.strip()]
-        return order or ["ollama", "gemini"]
+        return order or ["cloudflare", "ollama", "gemini"]
 
     def get_ollama_auth_mode(self) -> str:
         raw = getattr(self, "OLLAMA_AUTH", None)
