@@ -246,7 +246,9 @@ class TestInternalRoomResponse(unittest.TestCase):
             }
         )
 
-        with patch("src.services.room_response._room_adapter", return_value=adapter):
+        with patch("src.services.room_response._room_adapter", return_value=adapter), patch(
+            "src.services.room_response.count_room_ai_prompt_tokens", return_value=1
+        ):
             response = asyncio.run(RoomResponseService.respond(request))
 
         self.assertEqual(len(adapter.diff_prompts), 2)
