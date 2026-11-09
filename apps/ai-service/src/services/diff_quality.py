@@ -171,6 +171,7 @@ def assess_diff(
         )
     elements = list(diff.add.elements or []) if diff.add else []
     relationships = list(diff.add.relationships or []) if diff.add else []
+    modified_elements = list(diff.modify.elements or []) if diff.modify else []
     existing = _existing_names(current_model)
 
     seen = set()
@@ -215,8 +216,11 @@ def assess_diff(
             "vez. Recuerda que 'source HEREDA DE target': la subclase es el source y la superclase el target."
         )
 
-    if is_complex_prompt(prompt) and elements:
-        total_classes = len(elements)
+    if is_complex_prompt(prompt) and (elements or modified_elements):
+        # A model can satisfy the requested classes through modify.elements when the
+        # board already contains them. Those classes still need the relationships
+        # required by a domain-level request.
+        total_classes = len(elements) + len(modified_elements)
         if not existing and total_classes < MIN_CLASSES_FOR_COMPLEX:
             issues.append(
                 f"El usuario describió un dominio y propusiste muy pocas clases ({total_classes}). "

@@ -9,7 +9,15 @@ import unittest
 from unittest.mock import patch
 
 from src.core.uml_text import normalize_multiplicity, normalize_relationship_type
-from src.models.uml import ModelDiff, DiffAddBlock, DiffElementAdd, DiffRelationshipAdd
+from src.models.uml import (
+    DiffAddBlock,
+    DiffElementAdd,
+    DiffElementModify,
+    DiffElementModifyChanges,
+    DiffModifyBlock,
+    DiffRelationshipAdd,
+    ModelDiff,
+)
 from src.services.diff_quality import assess_diff, is_complex_prompt, build_repair_feedback
 from src.services.pipeline import AIPipeline
 from src.services.prompting import build_uml_system_prompt, parse_and_validate_diff_payload
@@ -228,6 +236,39 @@ class TestQualityGate(unittest.TestCase):
         )
         issues = assess_diff(LONG_PROMPT, diff, {})
         self.assertTrue(any("relacion" in i.lower() for i in issues))
+
+    def test_existing_domain_classes_without_relationships_are_flagged(self):
+        prompt = (
+            "Crea un diagrama de clases para un sistema de ventas con descuentos. "
+            "Incluye Producto, Venta y Cliente, sus atributos y las relaciones necesarias."
+        )
+        diff = ModelDiff(
+            modify=DiffModifyBlock(
+                elements=[
+                    DiffElementModify(
+                        id=name,
+                        changes=DiffElementModifyChanges(
+                            attributes=[{"name": f"+ {attribute}: String"}]
+                        ),
+                    )
+                    for name, attribute in (
+                        ("Producto", "nombre"),
+                        ("Venta", "total"),
+                        ("Cliente", "nombre"),
+                    )
+                ]
+            )
+        )
+        board = {
+            "nodes": [
+                {"id": name, "data": {"name": name}}
+                for name in ("Producto", "Venta", "Cliente")
+            ]
+        }
+
+        issues = assess_diff(prompt, diff, board)
+
+        self.assertTrue(any("relacion" in issue.lower() for issue in issues))
 
     def test_bare_classes_are_flagged(self):
         diff = _diff(

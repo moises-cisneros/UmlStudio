@@ -19,10 +19,18 @@ from src.models.uml import (
     DiffElementModify,
     DiffElementModifyChanges,
     DiffModifyBlock,
+    DiffRelationshipAdd,
     ModelDiff,
     RoomRespondRequest,
 )
-from src.services.room_response import RoomResponseService, _safe_provider_http_status
+from src.services.room_response import (
+    RoomResponseService,
+    _clear_diagram_diff,
+    _add_attribute_diff,
+    _remove_all_methods_diff,
+    _room_adapter,
+    _safe_provider_http_status,
+)
 
 
 PATH = "/internal/v1/room/respond"
@@ -76,6 +84,16 @@ class RoomChangeAdapter(StubAdapter):
         )
 
 
+class RepairingRoomChangeAdapter(StubAdapter):
+    def __init__(self, diffs):
+        super().__init__()
+        self._diffs = list(diffs)
+
+    async def generate_room_diff(self, prompt, current_model, system_prompt):
+        self.diff_prompts.append((prompt, current_model, system_prompt))
+        return self._diffs.pop(0)
+
+
 class TestInternalRoomResponse(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -85,6 +103,155 @@ class TestInternalRoomResponse(unittest.TestCase):
         request_headers = {"X-Internal-Token": token} if token is not None else {}
         request_headers.update(headers or {})
         return self.client.post(PATH, json=body, headers=request_headers)
+
+    def test_self_hosted_response_uses_configured_room_timeout(self):
+        request = RoomRespondRequest.model_validate(
+            {**REQUEST, "provider": "self_hosted", "route": "shared"}
+        )
+        adapter = object()
+        with patch.object(settings, "ROOM_AI_SELF_HOSTED_URL", "http://127.0.0.1:8766/v1"), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_MODEL", "room-model"
+        ), patch.object(settings, "ROOM_AI_REQUEST_TIMEOUT_SECONDS", 300.0, create=True), patch(
+            "src.adapters.OllamaAdapter", return_value=adapter
+        ) as factory:
+            self.assertIs(_room_adapter(request), adapter)
+
+        factory.assert_called_once_with(
+            endpoint_url="http://127.0.0.1:8766/v1",
+            model_name="room-model",
+            timeout_seconds=300.0,
+        )
+
+    def test_clear_diagram_request_creates_deterministic_remove_proposal(self):
+        board = {
+            "nodes": [{"id": "persona", "data": {"name": "Persona"}}, {"id": "rol"}],
+            "edges": [{"id": "persona-rol", "source": "persona", "target": "rol"}],
+        }
+        adapter = StubAdapter()
+        request = RoomRespondRequest.model_validate(
+            {**REQUEST, "mode": "change", "provider": "self_hosted", "route": "shared", "board": board, "question": "borra todo"}
+        )
+        with patch("src.services.room_response._room_adapter", return_value=adapter):
+            response = asyncio.run(RoomResponseService.respond(request))
+
+        self.assertEqual(response.diff.remove.elementIds, ["persona", "rol"])
+        self.assertEqual(response.diff.remove.relationshipIds, ["persona-rol"])
+        self.assertEqual(adapter.diff_prompts, [])
+
+    def test_clear_diagram_does_not_match_a_scoped_delete_request(self):
+        self.assertIsNone(_clear_diagram_diff("borra todo de Persona", REQUEST["board"]))
+
+    def test_add_attribute_request_uses_profile_naming_preference_without_inference(self):
+        board = {"nodes": [{"id": "customer", "data": {"name": "Customer"}}], "edges": []}
+        adapter = StubAdapter()
+        request = RoomRespondRequest.model_validate({
+            **REQUEST,
+            "mode": "change",
+            "provider": "self_hosted",
+            "route": "shared",
+            "board": board,
+            "question": "añade el atributo sexo a Customer",
+            "teaching_profile": {
+                "detailLevel": "balanced",
+                "exampleStyle": "none",
+                "preferences": ["me gustan los atributos en mayusculas"],
+            },
+        })
+        with patch("src.services.room_response._room_adapter", return_value=adapter):
+            response = asyncio.run(RoomResponseService.respond(request))
+
+        self.assertEqual(response.diff.modify.elements[0].id, "customer")
+        self.assertEqual(response.diff.modify.elements[0].changes.attributes[0].name, "+ SEXO: String")
+        self.assertEqual(adapter.diff_prompts, [])
+
+    def test_remove_all_methods_request_creates_deterministic_proposal(self):
+        board = {
+            "nodes": [
+                {
+                    "id": "producto",
+                    "data": {
+                        "name": "Producto",
+                        "methods": [
+                            {"name": "+ precioFinal(): Decimal"},
+                            {"name": "+ aplicarDescuento(): void"},
+                        ],
+                    },
+                },
+                {
+                    "id": "venta",
+                    "data": {"name": "Venta", "methods": ["+ calcularTotal(): Decimal"]},
+                },
+            ],
+            "edges": [],
+        }
+
+        diff = _remove_all_methods_diff("elimina todos los métodos de las clases", board)
+
+        self.assertIsNotNone(diff)
+        removals = {item.id: item.changes.removeMethods for item in diff.modify.elements}
+        self.assertEqual(
+            removals,
+            {
+                "producto": ["precioFinal", "aplicarDescuento"],
+                "venta": ["calcularTotal"],
+            },
+        )
+
+    def test_room_retries_existing_domain_classes_that_omit_relationships(self):
+        board = {
+            "nodes": [
+                {"id": name, "data": {"name": name}}
+                for name in ("Producto", "Venta", "Cliente")
+            ],
+            "edges": [],
+        }
+        incomplete = ModelDiff(
+            modify=DiffModifyBlock(
+                elements=[
+                    DiffElementModify(
+                        id=name,
+                        changes=DiffElementModifyChanges(
+                            attributes=[DiffAttribute(name=f"+ {attribute}: String")]
+                        ),
+                    )
+                    for name, attribute in (
+                        ("Producto", "nombre"),
+                        ("Venta", "total"),
+                        ("Cliente", "nombre"),
+                    )
+                ]
+            )
+        )
+        repaired = ModelDiff(
+            add=DiffAddBlock(
+                relationships=[
+                    DiffRelationshipAdd(
+                        type="ClassBidirectional", source="Cliente", target="Venta"
+                    )
+                ]
+            )
+        )
+        adapter = RepairingRoomChangeAdapter([incomplete, repaired])
+        request = RoomRespondRequest.model_validate(
+            {
+                **REQUEST,
+                "mode": "change",
+                "provider": "self_hosted",
+                "route": "shared",
+                "board": board,
+                "question": (
+                    "Crea un diagrama de clases para un sistema de ventas con descuentos. "
+                    "Incluye Producto, Venta y Cliente, sus atributos y las relaciones necesarias."
+                ),
+            }
+        )
+
+        with patch("src.services.room_response._room_adapter", return_value=adapter):
+            response = asyncio.run(RoomResponseService.respond(request))
+
+        self.assertEqual(len(adapter.diff_prompts), 2)
+        self.assertIn("REVISIÓN AUTOMÁTICA", adapter.diff_prompts[1][0])
+        self.assertEqual(response.diff.add.relationships[0].source, "Cliente")
 
     def test_failure_log_reports_safe_provider_status_without_exception_body(self):
         class FailingAdapter(StubAdapter):
@@ -147,6 +314,7 @@ class TestInternalRoomResponse(unittest.TestCase):
         self.assertIn("Ada", adapter.text_prompts[0])
         self.assertIn("Order", adapter.text_prompts[0])
         self.assertIn("The room is modeling orders.", adapter.text_prompts[0])
+        self.assertIn("same language as the current question", adapter.text_prompts[0])
         self.assertEqual(adapter.diff_prompts, [])
 
     def test_stream_explanation_emits_text_deltas_then_provider(self):
@@ -341,7 +509,11 @@ class TestInternalRoomResponse(unittest.TestCase):
         self.assertIn('"detailLevel": "concise"', adapter.text_prompts[0])
         self.assertIn('"exampleStyle": "uml"', adapter.text_prompts[0])
         self.assertNotIn(private_note, adapter.text_prompts[0])
-        factory.assert_called_once_with(endpoint_url="https://model.invalid/v1", model_name="configured-model")
+        factory.assert_called_once_with(
+            endpoint_url="https://model.invalid/v1",
+            model_name="configured-model",
+            timeout_seconds=45.0,
+        )
         default.assert_not_called()
 
     def test_shared_self_hosted_route_works_without_personal_memory(self):
