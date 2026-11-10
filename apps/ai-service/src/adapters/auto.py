@@ -90,8 +90,11 @@ class AutoAdaptiveAdapter(BaseAIAdapter):
             raise RuntimeError(f"No configured AI provider in {self.provider_order} is available")
 
         candidates = []
-        if self.mode not in ("local", "laptop") and settings.GEMINI_API_KEY:
-            candidates.append(GeminiAdapter())
+        if self.mode not in ("local", "laptop"):
+            if settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN:
+                candidates.append(CloudflareAdapter())
+            if settings.GEMINI_API_KEY:
+                candidates.append(GeminiAdapter())
         if self.mode not in ("cloud", "remote"):
             candidates.append(OllamaAdapter())
 
@@ -109,7 +112,9 @@ class AutoAdaptiveAdapter(BaseAIAdapter):
 
     async def stream_text(self, prompt: str) -> AsyncIterator[str]:
         """Stream text deltas according to configured provider order."""
-        order = self.provider_order or (["ollama", "gemini"] if self.mode != "cloud" else ["gemini"])
+        order = self.provider_order or (
+            ["cloudflare", "ollama", "gemini"] if self.mode != "cloud" else ["cloudflare", "gemini"]
+        )
         for name in order:
             adapter = self._create_provider_adapter(name)
             if adapter is None or not await self._is_adapter_usable(adapter):

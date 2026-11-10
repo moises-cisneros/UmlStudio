@@ -88,6 +88,8 @@ class TestTextCompletionAdapters(unittest.TestCase):
                 return "Local answer"
 
         with patch.object(settings, "GEMINI_API_KEY", "test-key"), patch.object(
+            settings, "CLOUDFLARE_ACCOUNT_ID", ""
+        ), patch.object(settings, "CLOUDFLARE_API_TOKEN", ""), patch.object(
             auto, "GeminiAdapter", FakeGemini
         ), patch.object(auto, "OllamaAdapter", FakeOllama):
             adapter = AutoAdaptiveAdapter(mode="auto")
