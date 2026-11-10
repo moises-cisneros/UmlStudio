@@ -19,6 +19,7 @@ test.describe("CU-17: Configuración de Políticas de Sala para la IA", () => {
       .click()
     await shareModal.locator('button:has-text("Join"), button:has-text("Unirse")').first().click()
     await page.waitForURL((url) => url.pathname.startsWith("/shared/"), { timeout: 10_000 })
+    await expect(page.getByText("Loading diagram…")).not.toBeVisible({ timeout: 15_000 })
 
     const agentTrigger = page.locator('button[aria-label*="Ctrl+J"]').first()
     if (await agentTrigger.isVisible()) {
@@ -64,6 +65,7 @@ test.describe("CU-17: Configuración de Políticas de Sala para la IA", () => {
       .click()
     await shareModal.locator('button:has-text("Join"), button:has-text("Unirse")').first().click()
     await page.waitForURL((url) => url.pathname.startsWith("/shared/"), { timeout: 10_000 })
+    await expect(page.getByText("Loading diagram…")).not.toBeVisible({ timeout: 15_000 })
 
     const agentTrigger = page.locator('button[aria-label*="Ctrl+J"]').first()
     if (await agentTrigger.isVisible()) {

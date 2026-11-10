@@ -15,8 +15,15 @@ export function generateTestUser(prefix = "user"): TestUser {
   }
 }
 
-export async function registerUserViaUi(page: Page, user: TestUser): Promise<void> {
-  await page.goto("/register")
+export async function registerUserViaUi(
+  page: Page,
+  user: TestUser,
+  redirectUrl?: string
+): Promise<void> {
+  const registerPath = redirectUrl
+    ? `/register?redirect=${encodeURIComponent(redirectUrl)}`
+    : "/register"
+  await page.goto(registerPath)
   await page.fill("#register-name", user.name)
   await page.fill("#register-email", user.email)
   await page.fill("#register-password", user.password)

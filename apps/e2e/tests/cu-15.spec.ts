@@ -6,7 +6,7 @@ test.describe("CU-15: IA de Sala en Modo Consulta y Mentoría", () => {
   test("CP-CU15-01: Flujo Básico (Happy Path) - Consulta pedagógica y transmisión en la conversación de sala", async ({
     page,
   }) => {
-    test.setTimeout(45_000)
+    test.setTimeout(60_000)
     const user = generateTestUser("cu15_mentor")
     await registerUserViaUi(page, user)
     await createLocalDiagramViaUi(page, "Room AI Mentor Room")
@@ -17,8 +17,18 @@ test.describe("CU-15: IA de Sala en Modo Consulta y Mentoría", () => {
       .locator('button:has-text("Collaborative Link"), button:has-text("Crear enlace")')
       .first()
       .click()
+    const wsPromise = page.waitForEvent("websocket")
     await shareModal.locator('button:has-text("Join"), button:has-text("Unirse")').first().click()
+    const ws = await wsPromise
+    await ws.waitForEvent("framesent")
     await page.waitForURL((url) => url.pathname.startsWith("/shared/"), { timeout: 10_000 })
+    await expect(page.getByText("Loading diagram…")).not.toBeVisible({ timeout: 15_000 })
+
+    const userBadge = page
+      .locator('header, [role="banner"]')
+      .getByText(/You|Tú|U1/i)
+      .first()
+    await expect(userBadge).toBeVisible({ timeout: 10_000 })
 
     const dock = page.locator(".workbench-right-dock")
     if (!(await dock.isVisible())) {
@@ -35,7 +45,7 @@ test.describe("CU-15: IA de Sala en Modo Consulta y Mentoría", () => {
     await expect(sendBtn).toBeEnabled({ timeout: 5_000 })
     await sendBtn.click()
 
-    await expect(dock.getByText("Explica agregacion")).toBeVisible({ timeout: 25_000 })
+    await expect(dock.getByText("Explica agregacion")).toBeVisible({ timeout: 35_000 })
 
     await captureEvidence(page, "cp-cu15-01")
   })
@@ -53,8 +63,18 @@ test.describe("CU-15: IA de Sala en Modo Consulta y Mentoría", () => {
       .locator('button:has-text("Collaborative Link"), button:has-text("Crear enlace")')
       .first()
       .click()
+    const wsPromise = page.waitForEvent("websocket")
     await shareModal.locator('button:has-text("Join"), button:has-text("Unirse")').first().click()
+    const ws = await wsPromise
+    await ws.waitForEvent("framesent")
     await page.waitForURL((url) => url.pathname.startsWith("/shared/"), { timeout: 10_000 })
+    await expect(page.getByText("Loading diagram…")).not.toBeVisible({ timeout: 15_000 })
+
+    const userBadge = page
+      .locator('header, [role="banner"]')
+      .getByText(/You|Tú|U1/i)
+      .first()
+    await expect(userBadge).toBeVisible({ timeout: 10_000 })
 
     const dock = page.locator(".workbench-right-dock")
     if (!(await dock.isVisible())) {

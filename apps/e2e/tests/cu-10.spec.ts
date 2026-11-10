@@ -20,9 +20,16 @@ test.describe("CU-10: Analizar Productividad y Gestión del Tiempo", () => {
       .click()
     await shareModal.locator('button:has-text("Join"), button:has-text("Unirse")').first().click()
     await page.waitForURL((url) => url.pathname.startsWith("/shared/"), { timeout: 10_000 })
+    await expect(page.getByText("Loading diagram…")).not.toBeVisible({ timeout: 15_000 })
+    await expect(page.locator(".umlstudio-palette__cell").first()).toBeVisible({ timeout: 10_000 })
+    const userBadge = page
+      .locator('header, [role="banner"]')
+      .getByText(/You|Tú|U1/i)
+      .first()
+    await expect(userBadge).toBeVisible({ timeout: 10_000 })
 
     // Abrir modal de productividad
-    await page.getByRole("button", { name: "File" }).click()
+    await page.locator("#file-menu-button").click()
     const prodItem = page.getByRole("menuitem", { name: /Productivity|Productividad/i })
     await expect(prodItem).toBeVisible({ timeout: 5_000 })
     await prodItem.click()
@@ -51,9 +58,17 @@ test.describe("CU-10: Analizar Productividad y Gestión del Tiempo", () => {
       .click()
     await shareModal.locator('button:has-text("Join"), button:has-text("Unirse")').first().click()
     await page.waitForURL((url) => url.pathname.startsWith("/shared/"), { timeout: 10_000 })
+    await expect(page.getByText("Loading diagram…")).not.toBeVisible({ timeout: 15_000 })
+    await expect(page.locator(".umlstudio-palette__cell").first()).toBeVisible({ timeout: 10_000 })
+    const userBadge = page
+      .locator('header, [role="banner"]')
+      .getByText(/You|Tú|U1/i)
+      .first()
+    await expect(userBadge).toBeVisible({ timeout: 10_000 })
 
-    await page.getByRole("button", { name: "File" }).click()
+    await page.locator("#file-menu-button").click()
     const prodItem = page.getByRole("menuitem", { name: /Productivity|Productividad/i })
+    await expect(prodItem).toBeVisible({ timeout: 5_000 })
     await prodItem.click()
 
     const modal = page.locator('[role="dialog"]')
