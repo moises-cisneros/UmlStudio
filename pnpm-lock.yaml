@@ -265,6 +265,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.6.0(jiti@2.7.0)
+      globals:
+        specifier: 'catalog:'
+        version: 17.7.0
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
