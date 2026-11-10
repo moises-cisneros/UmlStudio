@@ -7,12 +7,13 @@ const config: Config = {
   tagline: "Estudio Profesional de Modelado de Diagramas de Clases OMG UML 2.5",
   favicon: "img/favicon.ico",
 
-  // URL de producción donde vive la app
-  url: "https://umlstudio.com",
-  baseUrl: "/docs/",
+  // URL de producción para GitHub Pages o despliegue custom
+  url: process.env.DOCS_URL || "https://moises-cisneros.github.io",
+  baseUrl: process.env.DOCS_BASE_URL || "/UmlStudio/",
 
-  organizationName: "umlstudio",
-  projectName: "umlstudio",
+  organizationName: "moises-cisneros",
+  projectName: "UmlStudio",
+  trailingSlash: false,
 
   onBrokenLinks: "warn",
   markdown: {
