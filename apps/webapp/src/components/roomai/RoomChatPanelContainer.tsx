@@ -141,7 +141,7 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
         setProfileStorageAvailable(true)
       } catch {
         setProfileSyncError(true)
-        return null
+        storedProfile = null
       }
     }
     try {

@@ -41,6 +41,23 @@ class TestInternalRoomProfile(unittest.TestCase):
             "interaction": interaction,
         }, headers=request_headers)
 
+    def test_self_hosted_profile_uses_configured_room_timeout(self):
+        from src.services.room_profile import _self_hosted_adapter
+
+        adapter = object()
+        with patch.object(settings, "ROOM_AI_SELF_HOSTED_URL", "http://127.0.0.1:8766/v1"), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_MODEL", "room-model"
+        ), patch.object(settings, "ROOM_AI_REQUEST_TIMEOUT_SECONDS", 300.0, create=True), patch(
+            "src.adapters.OllamaAdapter", return_value=adapter
+        ) as factory:
+            self.assertIs(_self_hosted_adapter(), adapter)
+
+        factory.assert_called_once_with(
+            endpoint_url="http://127.0.0.1:8766/v1",
+            model_name="room-model",
+            timeout_seconds=300.0,
+        )
+
     def test_compares_prior_closed_profile_with_only_the_current_interaction(self):
         adapter = StubAdapter('{"profile":{"detailLevel":"step_by_step","exampleStyle":"uml"}}')
         interaction = "Please explain this relationship step by step using UML examples."
@@ -66,7 +83,11 @@ class TestInternalRoomProfile(unittest.TestCase):
         self.assertIn(interaction, adapter.prompts[0])
         self.assertIn("current interaction", adapter.prompts[0].lower())
         self.assertNotIn("Please explain", response.text)
-        factory.assert_called_once_with(endpoint_url="https://model.invalid/v1", model_name="configured-model")
+        factory.assert_called_once_with(
+            endpoint_url="https://model.invalid/v1",
+            model_name="configured-model",
+            timeout_seconds=45.0,
+        )
         fallback.assert_not_called()
 
     def test_preserves_prior_profile_for_an_ordinary_question(self):
@@ -82,6 +103,41 @@ class TestInternalRoomProfile(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"profile": {**previous, "preferences": []}})
         self.assertIn("preserve both prior values unchanged", adapter.prompts[0])
+
+    def test_profile_prompt_requires_explicit_preferences_without_a_uml_change(self):
+        previous = {"detailLevel": "balanced", "exampleStyle": "none"}
+        adapter = StubAdapter(json.dumps({"profile": {
+            **previous,
+            "preferences": ["Usar nombres de atributos en mayúsculas"],
+        }}))
+        with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret", create=True), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True), patch(
+            "src.adapters.OllamaAdapter", return_value=adapter
+        ), patch("src.services.room_profile.count_room_ai_prompt_tokens", return_value=10):
+            response = self.post("Me gustan los atributos en mayúsculas, recuérdalo", profile=previous)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["profile"]["preferences"], [
+            "Usar nombres de atributos en mayúsculas"
+        ])
+        self.assertIn("MUST update preferences", adapter.prompts[0])
+        self.assertIn("Preserve the interaction language", adapter.prompts[0])
+
+    def test_preserves_explicit_preference_when_provider_returns_the_prior_profile(self):
+        previous = {"detailLevel": "balanced", "exampleStyle": "none"}
+        adapter = StubAdapter(json.dumps({"profile": previous}))
+        with patch.object(settings, "AI_INTERNAL_TOKEN", "test-secret", create=True), patch.object(
+            settings, "ROOM_AI_SELF_HOSTED_URL", "https://model.invalid/v1", create=True
+        ), patch.object(settings, "ROOM_AI_SELF_HOSTED_MODEL", "configured-model", create=True), patch(
+            "src.adapters.OllamaAdapter", return_value=adapter
+        ), patch("src.services.room_profile.count_room_ai_prompt_tokens", return_value=10):
+            response = self.post("me gustan los atributos en mayusculas, recuerdalo", profile=previous)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["profile"]["preferences"], [
+            "me gustan los atributos en mayusculas"
+        ])
 
     def test_rejects_free_text_or_unknown_profile_values_without_returning_them(self):
         for output in (

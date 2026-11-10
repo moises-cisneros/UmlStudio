@@ -66,6 +66,12 @@ class Settings:
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
 
+    # Optional OpenAI-compatible bridge for a cloud Agent AI provider.
+    # Both URL and model must be set; leaving either empty preserves the existing cloud cascade.
+    VERTEX_BRIDGE_URL: str = os.getenv("VERTEX_BRIDGE_URL", "").strip()
+    VERTEX_BRIDGE_MODEL: str = os.getenv("VERTEX_BRIDGE_MODEL", "").strip()
+    VERTEX_BRIDGE_API_KEY: str = os.getenv("VERTEX_BRIDGE_API_KEY", "").strip()
+
     # LM Studio settings (:1234)
     LMSTUDIO_URL: str = os.getenv("LMSTUDIO_URL", "http://localhost:1234/v1").strip()
     LMSTUDIO_MODEL: str = os.getenv("LMSTUDIO_MODEL", "qwen3-4b-toolcalling-codex").strip()
@@ -100,6 +106,10 @@ class Settings:
     ROOM_AI_SELF_HOSTED_MODEL: str = os.getenv("ROOM_AI_SELF_HOSTED_MODEL", "").strip()
     ROOM_AI_TOKENIZER_FILE: str = os.getenv("ROOM_AI_TOKENIZER_FILE", "").strip()
     ROOM_AI_TOKENIZER_MODEL: str = os.getenv("ROOM_AI_TOKENIZER_MODEL", "").strip()
+    # Kept separate from general Ollama timeouts because a scale-to-zero Room endpoint can cold start.
+    ROOM_AI_REQUEST_TIMEOUT_SECONDS: float = float(
+        os.getenv("ROOM_AI_REQUEST_TIMEOUT_SECONDS", "45")
+    )
 
     # Whisper STT settings (Local faster-whisper)
     WHISPER_ENGINE: str = os.getenv("WHISPER_ENGINE", "local").strip()
@@ -256,6 +266,12 @@ class Settings:
                 "configured": bool(self.GEMINI_API_KEY),
                 "model": self.GEMINI_MODEL,
                 "key_preview": _mask_secret(self.GEMINI_API_KEY),
+            },
+            "vertex_bridge": {
+                "configured": bool(self.VERTEX_BRIDGE_URL and self.VERTEX_BRIDGE_MODEL),
+                "url": self.VERTEX_BRIDGE_URL,
+                "model": self.VERTEX_BRIDGE_MODEL,
+                "auth_configured": bool(self.VERTEX_BRIDGE_API_KEY),
             },
             "lmstudio": {
                 "configured": True,

@@ -84,6 +84,32 @@ class TestCloudOrdering(unittest.TestCase):
             self._run(COMPLEX, mode="cloud", failing=("gemini", "openrouter", "cloudflare"))
         self.assertIn("No hay modelos", str(ctx.exception))
 
+    def test_unconfigured_vertex_bridge_keeps_existing_cloud_order(self):
+        with patch.object(settings, "VERTEX_BRIDGE_URL", "", create=True), patch.object(
+            settings, "VERTEX_BRIDGE_MODEL", "", create=True
+        ):
+            labels = [label for label, _, _ in AutoAdaptiveAdapter()._cloud_candidates(COMPLEX)]
+        self.assertEqual(labels, ["Gemini", "OpenRouter", "Cloudflare"])
+
+    def test_configured_vertex_bridge_precedes_cloud_fallbacks(self):
+        with patch.object(settings, "VERTEX_BRIDGE_URL", "http://127.0.0.1:8765/v1", create=True), patch.object(
+            settings, "VERTEX_BRIDGE_MODEL", "google/gemini-test", create=True
+        ):
+            labels = [label for label, _, _ in AutoAdaptiveAdapter()._cloud_candidates(SIMPLE)]
+        self.assertEqual(labels, ["Vertex bridge", "Cloudflare", "OpenRouter", "Gemini"])
+
+    def test_vertex_bridge_failure_falls_back_to_existing_cloud_provider(self):
+        calls = []
+        with patch.object(auto, "VertexBridgeAdapter", _fake("vertex", calls, fail=True)), patch.object(
+            auto, "CloudflareAdapter", _fake("cloudflare", calls)
+        ), patch.object(settings, "VERTEX_BRIDGE_URL", "http://127.0.0.1:8765/v1"), patch.object(
+            settings, "VERTEX_BRIDGE_MODEL", "google/gemini-test"
+        ), patch.object(settings, "CLOUDFLARE_ACCOUNT_ID", "acc"), patch.object(
+            settings, "CLOUDFLARE_API_TOKEN", "tok"
+        ):
+            asyncio.run(AutoAdaptiveAdapter(mode="cloud").generate_diff(SIMPLE, {}))
+        self.assertEqual(calls, ["vertex", "cloudflare"])
+
 
 if __name__ == "__main__":
     unittest.main()

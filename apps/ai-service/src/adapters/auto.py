@@ -19,6 +19,7 @@ from .openrouter import OpenRouterAdapter
 from .gemini import GeminiAdapter
 from .lmstudio import LMStudioAdapter
 from .ollama import OllamaAdapter
+from .vertex_bridge import VertexBridgeAdapter
 from ..models.uml import ModelDiff
 from ..core.config import settings
 from ..services.diff_quality import is_complex_prompt
@@ -54,6 +55,8 @@ class AutoAdaptiveAdapter(BaseAIAdapter):
             return CloudflareAdapter()
         elif k == "lmstudio":
             return LMStudioAdapter()
+        elif k in ("vertex", "vertex-bridge", "vertex_bridge"):
+            return VertexBridgeAdapter()
         return None
 
     async def _is_adapter_usable(self, adapter: BaseAIAdapter) -> bool:
@@ -66,6 +69,8 @@ class AutoAdaptiveAdapter(BaseAIAdapter):
         elif isinstance(adapter, OpenRouterAdapter):
             return bool(settings.OPENROUTER_API_KEY)
         elif isinstance(adapter, LMStudioAdapter):
+            return await adapter.is_available()
+        elif isinstance(adapter, VertexBridgeAdapter):
             return await adapter.is_available()
         return True
 
@@ -204,9 +209,16 @@ class AutoAdaptiveAdapter(BaseAIAdapter):
             bool(settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN),
             lambda: CloudflareAdapter(),
         )
+        vertex = (
+            "Vertex bridge",
+            bool(settings.VERTEX_BRIDGE_URL and settings.VERTEX_BRIDGE_MODEL),
+            lambda: VertexBridgeAdapter(),
+        )
         if is_complex_prompt(prompt):
-            return [gemini, openrouter, cloudflare]
-        return [cloudflare, openrouter, gemini]
+            candidates = [gemini, openrouter, cloudflare]
+        else:
+            candidates = [cloudflare, openrouter, gemini]
+        return [vertex, *candidates] if vertex[1] else candidates
 
     async def _try_cloud(self, prompt: str, current_model: Dict[str, Any], tag: str) -> Optional[ModelDiff]:
         for label, configured, factory in self._cloud_candidates(prompt):
