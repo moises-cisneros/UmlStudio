@@ -568,6 +568,7 @@ async function main() {
     UMLSTUDIO_AI_PORT: String(aiPort),
     UMLSTUDIO_MCP_PORT: String(mcpPort),
     UMLSTUDIO_DOCS_PORT: String(docsPort),
+    VITE_AI_SERVICE_URL: process.env.VITE_AI_SERVICE_URL || `http://127.0.0.1:${aiPort}`,
   }
 
   const coloredEnv = {

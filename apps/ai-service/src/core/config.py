@@ -136,12 +136,19 @@ class Settings:
         if raw is None:
             raw = os.getenv(
                 "CORS_ORIGIN",
-                os.getenv("CORS_ORIGINS", os.getenv("WEBAPP_ORIGIN", "http://localhost:5173")),
+                os.getenv("CORS_ORIGINS", os.getenv("WEBAPP_ORIGIN", "")),
             )
+        default_origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:4173",
+            "http://127.0.0.1:4173",
+            "https://umlstudio.pages.dev",
+        ]
         if not raw:
-            return ["http://localhost:5173"]
+            return default_origins
         origins = [item.strip() for item in raw.split(",") if item.strip()]
-        return origins or ["http://localhost:5173"]
+        return origins or default_origins
 
     def get_room_provider_order(self) -> List[str]:
         raw = getattr(self, "ROOM_PROVIDER_ORDER", None)

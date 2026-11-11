@@ -93,7 +93,19 @@ class DynamicCORSMiddleware(CORSMiddleware):
         allowed = settings.get_cors_origins()
         if "*" in allowed:
             return True
-        return origin in allowed
+        if origin in allowed:
+            return True
+        # Allow Cloudflare Pages deployments (e.g. *.umlstudio.pages.dev or preview branches)
+        # whenever https://umlstudio.pages.dev is in the allowed origins
+        if "https://umlstudio.pages.dev" in allowed and origin.startswith("https://") and origin.endswith(".pages.dev"):
+            return True
+        # Allow loopback/localhost dev ports whenever a localhost origin is configured
+        if (
+            any("localhost" in a or "127.0.0.1" in a for a in allowed)
+            and (origin.startswith("http://localhost:") or origin.startswith("http://127.0.0.1:"))
+        ):
+            return True
+        return False
 
 
 app.add_middleware(

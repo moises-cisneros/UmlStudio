@@ -55,7 +55,13 @@ export interface ProductivityAiAuditResponse {
 import type { UMLModel } from "@umlstudio/core"
 import { getLocalSessionStats } from "@/utils/localProductivityTracker"
 
-const AI_SERVICE_BASE_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://localhost:8001"
+const AI_SERVICE_BASE_URL =
+  import.meta.env.VITE_AI_SERVICE_URL ||
+  (typeof window !== "undefined" &&
+  window.location.hostname !== "localhost" &&
+  window.location.hostname !== "127.0.0.1"
+    ? "https://umlstudio-ai-service.onrender.com"
+    : "http://127.0.0.1:8001")
 
 export async function fetchProductivityReport(
   diagramId: string

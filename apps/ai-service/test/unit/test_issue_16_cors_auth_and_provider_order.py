@@ -85,6 +85,22 @@ class TestCorsOriginRestriction(unittest.TestCase):
             r3 = self.client.get("/health", headers={"Origin": "http://other.domain"})
             self.assertIsNone(r3.headers.get("access-control-allow-origin"))
 
+    def test_default_cors_allows_pages_dev_and_preview_subdomains(self):
+        with patch.object(settings, "CORS_ORIGIN", ""):
+            r1 = self.client.get("/health", headers={"Origin": "https://umlstudio.pages.dev"})
+            self.assertEqual(r1.headers.get("access-control-allow-origin"), "https://umlstudio.pages.dev")
+
+            r2 = self.client.get("/health", headers={"Origin": "https://preview-123.umlstudio.pages.dev"})
+            self.assertEqual(r2.headers.get("access-control-allow-origin"), "https://preview-123.umlstudio.pages.dev")
+
+    def test_default_cors_allows_loopback_and_alternate_ports(self):
+        with patch.object(settings, "CORS_ORIGIN", ""):
+            r1 = self.client.get("/health", headers={"Origin": "http://127.0.0.1:5173"})
+            self.assertEqual(r1.headers.get("access-control-allow-origin"), "http://127.0.0.1:5173")
+
+            r2 = self.client.get("/health", headers={"Origin": "http://localhost:5174"})
+            self.assertEqual(r2.headers.get("access-control-allow-origin"), "http://localhost:5174")
+
 
 class TestOllamaAuthConfig(unittest.TestCase):
     def test_default_ollama_has_no_auth_headers_when_unset(self):

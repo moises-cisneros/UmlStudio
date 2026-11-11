@@ -36,8 +36,13 @@ export class VisionImportError extends Error {
 }
 
 function resolveVisionUrl(): string {
-  const env = (import.meta as unknown as { env?: Record<string, string | undefined> })?.env
-  const base = env?.["VITE_AI_SERVICE_URL"] || "http://127.0.0.1:8001"
+  const base =
+    import.meta.env.VITE_AI_SERVICE_URL ||
+    (typeof window !== "undefined" &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1"
+      ? "https://umlstudio-ai-service.onrender.com"
+      : "http://127.0.0.1:8001")
   return `${base.replace(/\/$/, "")}/api/vision`
 }
 
