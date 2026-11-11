@@ -409,4 +409,25 @@ describe("RoomChatPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send voice question" }))
     expect(onSendRecording).toHaveBeenCalledOnce()
   })
+
+  it("triggers image upload when clicking the image button or selecting a file", async () => {
+    const onUploadImage = vi.fn()
+    render(
+      <RoomChatPanel
+        messages={[]}
+        aiStatus={IDLE_ROOM_AI_STATUS}
+        onSend={vi.fn()}
+        onUploadImage={onUploadImage}
+      />
+    )
+
+    const uploadBtn = screen.getByRole("button", { name: "Import diagram from image" })
+    expect(uploadBtn).toBeTruthy()
+
+    const fileInput = screen.getByTestId("room-ai-image-input")
+    const file = new File([new Uint8Array([1, 2, 3])], "class_diagram.png", { type: "image/png" })
+    fireEvent.change(fileInput, { target: { files: [file] } })
+
+    expect(onUploadImage).toHaveBeenCalledWith(file)
+  })
 })

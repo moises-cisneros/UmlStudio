@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "react-toastify"
 import { Button } from "@umlstudio/ui/components/button"
 import {
@@ -34,6 +34,8 @@ interface VisionImportDialogProps {
   onMerged?: (added: { nodes: number; edges: number }) => void
   onCreateDiagram?: (model: UMLModel) => void
   isCollaborativeBlocked?: boolean
+  allowInRoom?: boolean
+  initialFile?: File | null
 }
 
 function nodeLabel(model: UMLModel, id: string): string {
@@ -57,6 +59,8 @@ export function VisionImportDialog({
   onMerged,
   onCreateDiagram,
   isCollaborativeBlocked = false,
+  allowInRoom = false,
+  initialFile = null,
 }: VisionImportDialogProps) {
   const { editor } = useEditorContext()
   const { isShared } = useCollaborators()
@@ -67,7 +71,7 @@ export function VisionImportDialog({
   const [preview, setPreview] = useState<VisionResponse | null>(null)
 
   const busy = phase === "uploading" || phase === "merging"
-  const visionImportBlocked = isShared || isCollaborativeBlocked
+  const visionImportBlocked = (!allowInRoom && isShared) || isCollaborativeBlocked
 
   const reset = useCallback(() => {
     setPhase("idle")
@@ -111,6 +115,14 @@ export function VisionImportDialog({
     },
     [visionImportBlocked, t]
   )
+
+  useEffect(() => {
+    if (!open || !initialFile || phase !== "idle") return
+    const timer = setTimeout(() => {
+      void processFile(initialFile)
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [open, initialFile, phase, processFile])
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

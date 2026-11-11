@@ -19,6 +19,7 @@ import {
 } from "@/services/personalRoomMemory"
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder"
 import { voiceFileNameForBlob } from "@/components/agentic/voiceFileName"
+import { VisionImportDialog } from "@/components/vision/VisionImportDialog"
 import { RoomChatPanel } from "./RoomChatPanel"
 
 const DEFAULT_TEACHING_PROFILE: PersonalRoomTeachingProfile = {
@@ -94,6 +95,8 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
   const [profileStorageAvailable, setProfileStorageAvailable] = useState(true)
   const [profileSyncError, setProfileSyncError] = useState(false)
   const [voiceError, setVoiceError] = useState(false)
+  const [visionOpen, setVisionOpen] = useState(false)
+  const [visionFile, setVisionFile] = useState<File | null>(null)
   const recorder = useVoiceRecorder({ onError: () => setVoiceError(true) })
   const [proposalBusyId, setProposalBusyId] = useState<string | null>(null)
   const autoAttemptedRef = useRef(new Set<string>())
@@ -298,47 +301,64 @@ const RoomChatPanelContainerScope: FC<{ diagramId: string }> = ({ diagramId }) =
   }, [applyProposal, editor, proposalBusyId, room.messages, room.policy?.applyMode, user?.id])
 
   return (
-    <RoomChatPanel
-      messages={room.messages}
-      aiStatus={room.aiStatus}
-      currentUserId={user?.id}
-      policy={room.policy}
-      allowChanges={room.policy?.allowChanges ?? false}
-      canConfigurePolicy={room.policy?.canConfigure ?? false}
-      isUpdatingPolicy={room.isUpdatingPolicy}
-      isLoading={room.isLoading}
-      hasLoadError={room.loadError !== null}
-      sendErrorKind={sendErrorKind}
-      hasProfileSyncError={profileSyncError}
-      isSending={room.isSending || room.isSendingVoice || !profileReady}
-      onSend={(text, intent) => void sendQuestion(text, intent).catch(() => undefined)}
-      onApplyProposal={(messageId) => void applyProposal(messageId).catch(() => undefined)}
-      onRejectProposal={(messageId) => void rejectProposal(messageId).catch(() => undefined)}
-      proposalBusyId={proposalBusyId}
-      onPolicyChange={({ enabled, allowChanges, applyMode, proactive }) =>
-        room.updatePolicy({ enabled, allowChanges, applyMode, proactive })
-      }
-      preferences={profileRecord?.profile.preferences ?? []}
-      onSavePreferences={user?.id ? savePreferences : undefined}
-      hasVoiceError={voiceError}
-      voiceControls={{
-        status: recorder.status,
-        elapsed: recorder.elapsed,
-        audioUrl: recorder.audioUrl,
-        hasSupport: recorder.hasSupport,
-        isSending: Boolean(room.isSendingVoice) || !profileReady,
-        hasError: voiceError,
-        onStartRecording: () => {
-          setVoiceError(false)
-          void recorder.startRecording()
-        },
-        onStopRecording: recorder.stopRecording,
-        onCancelRecording: () => {
-          recorder.cancelRecording()
-          setVoiceError(false)
-        },
-        onSendRecording: () => void sendVoiceQuestion(),
-      }}
-    />
+    <>
+      <RoomChatPanel
+        messages={room.messages}
+        aiStatus={room.aiStatus}
+        currentUserId={user?.id}
+        policy={room.policy}
+        allowChanges={room.policy?.allowChanges ?? false}
+        canConfigurePolicy={room.policy?.canConfigure ?? false}
+        isUpdatingPolicy={room.isUpdatingPolicy}
+        isLoading={room.isLoading}
+        hasLoadError={room.loadError !== null}
+        sendErrorKind={sendErrorKind}
+        hasProfileSyncError={profileSyncError}
+        isSending={room.isSending || room.isSendingVoice || !profileReady}
+        onSend={(text, intent) => void sendQuestion(text, intent).catch(() => undefined)}
+        onApplyProposal={(messageId) => void applyProposal(messageId).catch(() => undefined)}
+        onRejectProposal={(messageId) => void rejectProposal(messageId).catch(() => undefined)}
+        proposalBusyId={proposalBusyId}
+        onPolicyChange={({ enabled, allowChanges, applyMode, proactive }) =>
+          room.updatePolicy({ enabled, allowChanges, applyMode, proactive })
+        }
+        preferences={profileRecord?.profile.preferences ?? []}
+        onSavePreferences={user?.id ? savePreferences : undefined}
+        hasVoiceError={voiceError}
+        onUploadImage={(file) => {
+          setVisionFile(file ?? null)
+          setVisionOpen(true)
+        }}
+        voiceControls={{
+          status: recorder.status,
+          elapsed: recorder.elapsed,
+          audioUrl: recorder.audioUrl,
+          hasSupport: recorder.hasSupport,
+          isSending: Boolean(room.isSendingVoice) || !profileReady,
+          hasError: voiceError,
+          onStartRecording: () => {
+            setVoiceError(false)
+            void recorder.startRecording()
+          },
+          onStopRecording: recorder.stopRecording,
+          onCancelRecording: () => {
+            recorder.cancelRecording()
+            setVoiceError(false)
+          },
+          onSendRecording: () => void sendVoiceQuestion(),
+        }}
+      />
+      {visionOpen && (
+        <VisionImportDialog
+          open={visionOpen}
+          onClose={() => {
+            setVisionOpen(false)
+            setVisionFile(null)
+          }}
+          initialFile={visionFile}
+          allowInRoom
+        />
+      )}
+    </>
   )
 }

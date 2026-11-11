@@ -8,6 +8,7 @@ import {
   type FormEvent,
 } from "react"
 import {
+  ImageIcon,
   MicIcon,
   SendIcon,
   SettingsIcon,
@@ -238,6 +239,7 @@ export interface RoomChatPanelProps {
   preferences?: string[]
   onSavePreferences?: (preferences: string[]) => Promise<void>
   voiceControls?: RoomVoiceControls
+  onUploadImage?: (file?: File) => void
 }
 
 export const RoomChatPanel: FC<RoomChatPanelProps> = ({
@@ -262,6 +264,7 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   preferences = [],
   onSavePreferences,
   voiceControls,
+  onUploadImage,
 }) => {
   const { t } = useTranslation()
   const [draft, setDraft] = useState("")
@@ -269,6 +272,7 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [preferencesOpen, setPreferencesOpen] = useState(false)
   const messageListRef = useRef<HTMLOListElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const didScrollInitialHistoryRef = useRef(false)
   const stickToBottomRef = useRef(true)
   const byId = new Map(messages.map((m) => [m.id, m]))
@@ -678,6 +682,34 @@ export const RoomChatPanel: FC<RoomChatPanelProps> = ({
                 <MicIcon className="size-3.5" aria-hidden />
               </button>
             )}
+          {onUploadImage && (
+            <>
+              <input
+                ref={imageInputRef}
+                type="file"
+                data-testid="room-ai-image-input"
+                accept="image/png,image/jpeg,image/webp,.jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    onUploadImage(file)
+                    e.target.value = ""
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={isSending}
+                aria-label={t.roomAi.uploadImage}
+                title={t.roomAi.uploadImage}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface-raised text-secondary-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ImageIcon className="size-3.5" aria-hidden />
+              </button>
+            </>
+          )}
           <button
             type="submit"
             disabled={!resolved.text || isSending}

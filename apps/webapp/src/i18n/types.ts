@@ -146,6 +146,7 @@ export interface TranslationDictionary {
     sharedConversation: string
     voiceControls: string
     recordVoice: string
+    uploadImage: string
     stopRecording: string
     cancelRecording: string
     sendVoice: string

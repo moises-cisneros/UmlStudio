@@ -151,6 +151,7 @@ export const en: TranslationDictionary = {
     sharedConversation: "Visible to everyone in this room",
     voiceControls: "Room voice question controls",
     recordVoice: "Record voice question",
+    uploadImage: "Import diagram from image",
     stopRecording: "Stop recording",
     cancelRecording: "Discard recording",
     sendVoice: "Send voice question",
